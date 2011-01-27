@@ -1,3 +1,5 @@
+package com.eucalyptus.notifications;
+
 import com.eucalyptus.component.id.Notifications;
 
 import com.eucalyptus.component.ComponentMessage;
