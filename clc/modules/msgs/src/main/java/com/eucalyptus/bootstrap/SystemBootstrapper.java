@@ -73,6 +73,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -221,7 +222,7 @@ public class SystemBootstrapper {
     LOG.warn( "Shutting down Eucalyptus." );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     EventRecord.flush( );
-    ServiceContext.shutdown( );
+    ServiceContextManager.shutdown( );
     return true;
   }
   
