@@ -102,6 +102,7 @@ public class ServiceContextManager {
   static {
     ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
     "org.apache.velocity.runtime.log.Log4JLogChute" );
+    ve.init();
   }
   private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
@@ -193,7 +194,7 @@ public class ServiceContextManager {
       LOG.info( "-> Rendering configuration for " + thisComponent.name( ) );
       StringWriter out = new StringWriter( );
       try {
-        Velocity.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
+        ve.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
         if( LogLevels.EXTREME ) {
           LOG.info( out.toString( ) );
         }
