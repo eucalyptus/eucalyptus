@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 public class EuareMessage extends BaseMessage {
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTGROUPPOLICY )
 public class PutGroupPolicyType extends EuareMessage {
   String groupName;
   String policyName;
@@ -28,6 +29,7 @@ public class AccessKeyMetadataListTypeType extends EucalyptusData {
   public AccessKeyMetadataListTypeType() {  }
   ArrayList<AccessKeyMetadataType> memberList = new ArrayList<AccessKeyMetadataType>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTGROUPPOLICIES )
 public class ListGroupPoliciesType extends EuareMessage {
   String groupName;
   String marker;
@@ -49,6 +51,7 @@ public class ListMFADevicesResultType extends EucalyptusData {
   String marker;
   public ListMFADevicesResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATELOGINPROFILE )
 public class UpdateLoginProfileType extends EuareMessage {
   String userName;
   String password;
@@ -59,17 +62,20 @@ public class GetLoginProfileResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetLoginProfileResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETGROUP )
 public class GetGroupType extends EuareMessage {
   String groupName;
   String marker;
   BigInteger maxItems;
   public GetGroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEGROUP )
 public class CreateGroupType extends EuareMessage {
   String path;
   String groupName;
   public CreateGroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESERVERCERTIFICATE )
 public class UpdateServerCertificateType extends EuareMessage {
   String serverCertificateName;
   String newPath;
@@ -85,6 +91,7 @@ public class UploadServerCertificateResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UploadServerCertificateResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEGROUPPOLICY )
 public class DeleteGroupPolicyType extends EuareMessage {
   String groupName;
   String policyName;
@@ -106,6 +113,7 @@ public class AddUserToGroupResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public AddUserToGroupResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETESERVERCERTIFICATE )
 public class DeleteServerCertificateType extends EuareMessage {
   String serverCertificateName;
   public DeleteServerCertificateType() {  }
@@ -114,6 +122,7 @@ public class UpdateAccessKeyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateAccessKeyResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPLOADSERVERCERTIFICATE )
 public class UploadServerCertificateType extends EuareMessage {
   String path;
   String serverCertificateName;
@@ -122,12 +131,14 @@ public class UploadServerCertificateType extends EuareMessage {
   String certificateChain;
   public UploadServerCertificateType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEGROUP )
 public class UpdateGroupType extends EuareMessage {
   String groupName;
   String newPath;
   String newGroupName;
   public UpdateGroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDUSERTOGROUP )
 public class AddUserToGroupType extends EuareMessage {
   String groupName;
   String userName;
@@ -159,11 +170,13 @@ public class GetGroupPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetGroupPolicyResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_REMOVEUSERFROMGROUP )
 public class RemoveUserFromGroupType extends EuareMessage {
   String groupName;
   String userName;
   public RemoveUserFromGroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTSIGNINGCERTIFICATES )
 public class ListSigningCertificatesType extends EuareMessage {
   String userName;
   String marker;
@@ -199,6 +212,7 @@ public class ServerCertificateType extends EuareMessage {
   String certificateChain;
   public ServerCertificateType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEACCESSKEY )
 public class CreateAccessKeyType extends EuareMessage {
   String userName;
   public CreateAccessKeyType() {  }
@@ -243,10 +257,12 @@ public class UserListTypeType extends EucalyptusData {
   public UserListTypeType() {  }
   ArrayList<UserType> memberList = new ArrayList<UserType>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETLOGINPROFILE )
 public class GetLoginProfileType extends EuareMessage {
   String userName;
   public GetLoginProfileType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTUSERPOLICIES )
 public class ListUserPoliciesType extends EuareMessage {
   String userName;
   String marker;
@@ -284,6 +300,7 @@ public class GetGroupPolicyResultType extends EucalyptusData {
 public class ErrorDetailType extends EucalyptusData {
   public ErrorDetailType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEACCESSKEY )
 public class UpdateAccessKeyType extends EuareMessage {
   String userName;
   String accessKeyId;
@@ -311,12 +328,14 @@ public class ErrorType extends EucalyptusData {
   ErrorDetailType detail = new ErrorDetailType( );
   public ErrorType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSER )
 public class UpdateUserType extends EuareMessage {
   String userName;
   String newPath;
   String newUserName;
   public UpdateUserType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTUSERPOLICY )
 public class PutUserPolicyType extends EuareMessage {
   String userName;
   String policyName;
@@ -335,11 +354,13 @@ public class UploadServerCertificateResultType extends EucalyptusData {
   ServerCertificateMetadataType serverCertificateMetadata = new ServerCertificateMetadataType( );
   public UploadServerCertificateResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DEACTIVATEMFADEVICE )
 public class DeactivateMFADeviceType extends EuareMessage {
   String userName;
   String serialNumber;
   public DeactivateMFADeviceType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_RESYNCMFADEVICE )
 public class ResyncMFADeviceType extends EuareMessage {
   String userName;
   String serialNumber;
@@ -354,11 +375,13 @@ public class UserType extends EuareMessage {
   String arn;
   public UserType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERPOLICY )
 public class GetUserPolicyType extends EuareMessage {
   String userName;
   String policyName;
   public GetUserPolicyType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEUSERPOLICY )
 public class DeleteUserPolicyType extends EuareMessage {
   String userName;
   String policyName;
@@ -389,6 +412,7 @@ public class GetUserResultType extends EucalyptusData {
   UserType user = new UserType( );
   public GetUserResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETESIGNINGCERTIFICATE )
 public class DeleteSigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
@@ -415,17 +439,20 @@ public class DeleteGroupPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteGroupPolicyResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEACCESSKEY )
 public class DeleteAccessKeyType extends EuareMessage {
   String userName;
   String accessKeyId;
   public DeleteAccessKeyType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTGROUPS )
 public class ListGroupsType extends EuareMessage {
   String pathPrefix;
   String marker;
   BigInteger maxItems;
   public ListGroupsType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTGROUPSFORUSER )
 public class ListGroupsForUserType extends EuareMessage {
   String userName;
   String marker;
@@ -439,6 +466,7 @@ public class GroupType extends EuareMessage {
   String arn;
   public GroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESIGNINGCERTIFICATE )
 public class UploadSigningCertificateType extends EuareMessage {
   String userName;
   String certificateBody;
@@ -454,11 +482,13 @@ public class ListGroupsResultType extends EucalyptusData {
   String marker;
   public ListGroupsResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETGROUPPOLICY )
 public class GetGroupPolicyType extends EuareMessage {
   String groupName;
   String policyName;
   public GetGroupPolicyType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ENABLEMFADEVICE )
 public class EnableMFADeviceType extends EuareMessage {
   String userName;
   String serialNumber;
@@ -466,6 +496,7 @@ public class EnableMFADeviceType extends EuareMessage {
   String authenticationCode2;
   public EnableMFADeviceType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETELOGINPROFILE )
 public class DeleteLoginProfileType extends EuareMessage {
   String userName;
   public DeleteLoginProfileType() {  }
@@ -499,16 +530,19 @@ public class DeleteSigningCertificateResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteSigningCertificateResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTACCESSKEYS )
 public class ListAccessKeysType extends EuareMessage {
   String userName;
   String marker;
   BigInteger maxItems;
   public ListAccessKeysType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEUSER )
 public class DeleteUserType extends EuareMessage {
   String userName;
   public DeleteUserType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATELOGINPROFILE )
 public class CreateLoginProfileType extends EuareMessage {
   String userName;
   String password;
@@ -541,6 +575,7 @@ public class CreateGroupResultType extends EucalyptusData {
   GroupType group = new GroupType( );
   public CreateGroupResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETSERVERCERTIFICATE )
 public class GetServerCertificateType extends EuareMessage {
   String serverCertificateName;
   public GetServerCertificateType() {  }
@@ -557,6 +592,7 @@ public class PolicyNameListTypeType extends EucalyptusData {
   public PolicyNameListTypeType() {  }
   ArrayList<String> memberList = new ArrayList<String>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSER )
 public class GetUserType extends EuareMessage {
   String userName;
   public GetUserType() {  }
@@ -569,12 +605,14 @@ public class ServerCertificateMetadataType extends EucalyptusData {
   Date uploadDate;
   public ServerCertificateMetadataType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTMFADEVICES )
 public class ListMFADevicesType extends EuareMessage {
   String userName;
   String marker;
   BigInteger maxItems;
   public ListMFADevicesType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTSERVERCERTIFICATES )
 public class ListServerCertificatesType extends EuareMessage {
   String pathPrefix;
   String marker;
@@ -612,10 +650,12 @@ public class DeleteUserPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteUserPolicyResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEGROUP )
 public class DeleteGroupType extends EuareMessage {
   String groupName;
   public DeleteGroupType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESIGNINGCERTIFICATE )
 public class UpdateSigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
@@ -635,6 +675,7 @@ public class CreateLoginProfileResultType extends EucalyptusData {
   LoginProfileType loginProfile = new LoginProfileType( );
   public CreateLoginProfileResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTUSERS )
 public class ListUsersType extends EuareMessage {
   String pathPrefix;
   String marker;

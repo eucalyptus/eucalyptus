@@ -528,6 +528,7 @@ public class EuareService {
   }
 
   public ListUsersResponseType listUsers(ListUsersType request) throws EucalyptusCloudException {
+    LOG.debug( "YE: listUsers" );
     ListUsersResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
@@ -539,8 +540,10 @@ public class EuareService {
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
       for ( User user : account.getUsers( ) ) {
+        LOG.debug( "YE: check user " + user );
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
           if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
+            LOG.debug( "YE: match user " + user );
             UserType u = new UserType( );
             fillUserResult( u, user, account.getId( ) );
             users.add( u );
@@ -550,6 +553,7 @@ public class EuareService {
     } catch ( AuthException e ) {
       throw new EucalyptusCloudException( e );
     }
+    LOG.debug( "YE: listUsers done" );
     return reply;
   }
 
