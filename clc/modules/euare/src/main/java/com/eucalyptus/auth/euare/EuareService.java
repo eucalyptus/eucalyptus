@@ -816,9 +816,11 @@ public class EuareService {
     try {
       for ( Group group : userFound.getGroups( ) ) {
         // TODO(Ye Wen, 01/16/2011): do we need to check permission here?
-        GroupType g = new GroupType( );
-        fillGroupResult( g, group, account.getId( ) );
-        groups.add( g );
+        if ( !group.isUserGroup( ) ) {
+          GroupType g = new GroupType( );
+          fillGroupResult( g, group, account.getId( ) );
+          groups.add( g );
+        }
       }
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
