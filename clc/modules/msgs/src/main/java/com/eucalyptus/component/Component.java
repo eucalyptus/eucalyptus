@@ -556,25 +556,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public int compareTo( Component that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
-  
-  /**
-   * REMOVE: promptly. Don't even think about using this.
-   * 
-   * @deprecated for sucking, too.
-   */
-  @Deprecated
-  private com.eucalyptus.bootstrap.Component initComponent( ) {
-    try {
-      com.eucalyptus.bootstrap.Component component = com.eucalyptus.bootstrap.Component.valueOf( name );
-      if ( component == null ) {
-        throw BootstrapException.throwError( "Error loading component.  Failed to find component named '" + name );
-      }
-      return component;
-    } catch ( Exception e ) {
-      throw BootstrapException.throwError( "Error loading component.  Failed to find component named '" + name, e );
-    }
-  }
-  
+    
   /**
    * @return the bootstrapper
    */

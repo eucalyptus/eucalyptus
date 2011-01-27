@@ -2,7 +2,7 @@ package com.eucalyptus.event;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.google.common.collect.Maps;
 
@@ -24,7 +24,7 @@ public class ListenerRegistry {
     super( );
     this.registryMap = Maps.newHashMap( );
     this.eventMap = new ReentrantListenerRegistry<Class<? extends Event>>( );
-    this.registryMap.put( Component.class, new ReentrantListenerRegistry<Component>( ) );
+    this.registryMap.put( ComponentId.class, new ReentrantListenerRegistry<ComponentId>( ) );
     this.registryMap.put( String.class, new ReentrantListenerRegistry<String>( ) );
   }
 

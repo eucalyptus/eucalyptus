@@ -81,6 +81,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 
 @Provides( Empyrean.class )
@@ -130,6 +132,7 @@ public class SystemCredentialProvider extends Bootstrapper {
         try {
           SystemCredentialProvider.certs.put( this.name, EucaKeyStore.getInstance( ).getCertificate( this.name ) );
           SystemCredentialProvider.keypairs.put( this.name, EucaKeyStore.getInstance( ).getKeyPair( this.name, this.name ) );
+          EventRecord.here( SystemCredentialProvider.class, EventType.COMPONENT_INFO, "init",  
           return;
         } catch ( Exception e ) {
           SystemCredentialProvider.certs.remove( this );
@@ -138,7 +141,7 @@ public class SystemCredentialProvider extends Bootstrapper {
           LOG.fatal( e, e );
           throw e;
         }
-      } else if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      } else if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
         this.createSystemCredentialProviderKey( this.name );
         return;
       }

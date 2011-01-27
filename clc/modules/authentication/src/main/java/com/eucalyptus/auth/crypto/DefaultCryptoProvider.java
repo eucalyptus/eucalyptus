@@ -19,12 +19,11 @@ import org.bouncycastle.x509.X509V3CertificateGenerator;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";

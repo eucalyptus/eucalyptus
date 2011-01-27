@@ -161,7 +161,7 @@ public abstract class Bootstrapper {
   public abstract boolean check( ) throws Exception;
   
   /**
-   * Get the list of {@link Component}s which must be on the local system for this bootstrapper to
+   * Get the list of {@link ComponentId}s which must be on the local system for this bootstrapper to
    * be executable.
    * 
    * @note If the {@link DependsLocal} annotation is not specified this bootstrapper will always
@@ -198,7 +198,7 @@ public abstract class Bootstrapper {
   }
   
   /**
-   * Get the list of {@link Component}s which must be present on a remote system for this
+   * Get the list of {@link ComponentId}s which must be present on a remote system for this
    * bootstrapper to be execute.
    * 
    * @note If the {@link DependsRemote} annotation is not specified this bootstrapper will always

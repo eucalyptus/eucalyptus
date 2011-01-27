@@ -8,6 +8,7 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
@@ -109,7 +110,7 @@ public class ComponentType extends EucalyptusData {
   public ComponentType( ) {}  
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
-    final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
+    final ComponentId c = ComponentId.lookup( component );
     return new EphemeralConfiguration( name, c, realUri );
   }
 }
