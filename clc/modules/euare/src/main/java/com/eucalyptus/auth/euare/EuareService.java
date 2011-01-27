@@ -543,14 +543,15 @@ public class EuareService {
         LOG.debug( "YE: check user " + user );
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
           if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
-            LOG.debug( "YE: match user " + user );
             UserType u = new UserType( );
             fillUserResult( u, user, account.getId( ) );
             users.add( u );
+            LOG.debug( "YE: user matched" );
           }
         }
       }
     } catch ( AuthException e ) {
+      LOG.debug( "YE: Exception" );
       throw new EucalyptusCloudException( e );
     }
     LOG.debug( "YE: listUsers done" );
