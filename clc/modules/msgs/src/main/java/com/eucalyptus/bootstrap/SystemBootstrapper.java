@@ -180,9 +180,10 @@ public class SystemBootstrapper {
       do {
         stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
+    } catch ( BootstrapException t ) {
+      LOG.fatal( t, t );
+      t.printStackTrace( );
+      throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
       System.exit( 1 );
