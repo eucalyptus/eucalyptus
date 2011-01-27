@@ -109,9 +109,13 @@ public class EuareService {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getId( ) );
     u.setPath( userFound.getPath( ) );
-    LOG.debug( "YE: before fill" );
-    u.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
-    LOG.debug( "YE: before after" );
+    LOG.debug( "YE: 1 " );
+    EuareResourceName arn = new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) );
+    LOG.debug( "YE: 2 " );
+    String arnString = arn.toString( );
+    LOG.debug( "YE: 3 " );
+    u.setArn( arnString );
+    LOG.debug( "YE: 4 " );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, String accountId ) {
@@ -530,7 +534,6 @@ public class EuareService {
   }
 
   public ListUsersResponseType listUsers(ListUsersType request) throws EucalyptusCloudException {
-    LOG.debug( "YE: listUsers" );
     ListUsersResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
@@ -542,21 +545,17 @@ public class EuareService {
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
       for ( User user : account.getUsers( ) ) {
-        LOG.debug( "YE: check user " + user );
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
           if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account.getId( ) );
-            LOG.debug( "YE: user matched" );
             users.add( u );
           }
         }
       }
     } catch ( AuthException e ) {
-      LOG.debug( "YE: Exception" );
       throw new EucalyptusCloudException( e );
     }
-    LOG.debug( "YE: listUsers done" );
     return reply;
   }
 
