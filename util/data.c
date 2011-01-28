@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -118,11 +118,12 @@ void free_metadata (ncMetadata ** metap)
 }
 
 /* instances are present in instance-related requests */
-ncInstance * allocate_instance (char *instanceId, char *reservationId, 
+ncInstance * allocate_instance (char *uuid,
+				char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize)
+                                char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -155,6 +156,10 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
     }
+    
+    if (uuid) {
+      strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+    }
 
     if (instanceId) {
       strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
@@ -179,6 +184,7 @@ ncInstance * allocate_instance (char *instanceId, char *reservationId,
     }
     inst->stateCode = stateCode;
     strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    inst->expiryTime = expiryTime;
     return inst;
 }
 

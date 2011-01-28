@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -120,6 +120,10 @@ struct nc_state_t {
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
     int (*doInitialize)		(struct nc_state_t *nc);
+    int (*doAssignAddress)	(struct nc_state_t *nc,
+				 ncMetadata *meta,
+				 char *instanceId,
+				 char *publicIp);
     int (*doPowerDown)		(struct nc_state_t *nc,
 		    		ncMetadata *meta);
     int (*doDescribeInstances)	(struct nc_state_t *nc,
@@ -130,6 +134,7 @@ struct handlers {
 				int *outInstsLen);
     int (*doRunInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
+				char *uuid,
 				char *instanceId,
 				char *reservationId,
 				virtualMachine *params,
@@ -144,6 +149,7 @@ struct handlers {
 				char *userData,
 				char *launchIndex,
 				char *platform,
+				int expiryTime,
 				char **groupNames,
 				int groupNamesSize,
 				ncInstance **outInst);
@@ -165,6 +171,7 @@ struct handlers {
 			       	ncResource **outRes);
     int (*doStartNetwork)	(struct nc_state_t *nc,
 				ncMetadata *ccMeta,
+				char *uuid,
 				char **remoteHosts,
 				int remoteHostsLen,
 				int port,
@@ -183,7 +190,11 @@ struct handlers {
 				char *localDev,
 				int force,
                                 int grab_inst_sem);
-
+    int (*doCreateImage)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *volumeId,
+				char *remoteDev);
     int (*doBundleInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
@@ -205,19 +216,23 @@ struct handlers {
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
+int doAssignAddress		(ncMetadata *meta, char *instanceId, char *publicIp);
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
 int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outRes);
-int doStartNetwork		(ncMetadata *ccMeta, char **remoteHosts, int remoteHostsLen, int port, int vlan);
+int doStartNetwork		(ncMetadata *ccMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
+
+int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -258,9 +273,11 @@ void * startup_thread(		void *arg);
 
 int check_iscsi(char* dev_string);
 void parse_target(char *dev_string);
-char* connect_iscsi_target(const char *storage_cmd_path, char *dev_string);
-int disconnect_iscsi_target(const char *storage_cmd_path, char *dev_string);
-char* get_iscsi_target(const char *storage_cmd_path, char *dev_string);
+char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+
+int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 
 // bundling structure
 struct bundling_params_t {
@@ -278,6 +295,17 @@ struct bundling_params_t {
 	char * ncBundleUploadCmd;
   	char * ncCheckBucketCmd;
   	char * ncDeleteBundleCmd;
+};
+
+// bundling structure
+struct createImage_params_t {
+	ncInstance * instance;
+        char *volumeId;
+        char *remoteDev;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
 };
 
 #endif /* INCLUDE */

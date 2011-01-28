@@ -1,3 +1,5 @@
+include ../../../../Makedefs
+
 LIBDIR=../lib
 LVM2_SO=liblvm2control.so
 PLATFORM=linux

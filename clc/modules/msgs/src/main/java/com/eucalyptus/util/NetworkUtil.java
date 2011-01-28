@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -78,12 +78,33 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class NetworkUtil {
   private static Logger LOG = Logger.getLogger( NetworkUtil.class );
+  private static List<NetworkInterface> interfaces = Lists.newArrayList( );
+  static {
+    try {
+      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
+      while( ifaces.hasMoreElements( ) ) {
+        NetworkInterface iface = ifaces.nextElement( );
+        interfaces.add( iface );
+      }    
+      interfaces = ImmutableList.copyOf( interfaces );
+    } catch ( SocketException ex ) {
+      LOG.error( ex , ex );
+      System.exit( 1 );
+    }
+  }
+  
+  public static List<NetworkInterface> getNetworkInterfaces() {
+    return interfaces;
+  }
+  
   public static List<String> getAllAddresses() throws SocketException  {
     List<String> addrs = Lists.newArrayList( );
     Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );

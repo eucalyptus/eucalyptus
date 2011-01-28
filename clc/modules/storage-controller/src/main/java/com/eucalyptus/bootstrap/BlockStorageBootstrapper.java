@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 
@@ -73,6 +74,7 @@ import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 @DependsLocal(Component.storage)
 public class BlockStorageBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
+
 	private static BlockStorageBootstrapper singleton;
 
 	public static Bootstrapper getInstance( ) {
@@ -98,7 +100,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
-		//BlockStorage.configure();
+		BlockStorage.configure();
 		return true;
 	}
 
@@ -124,7 +126,9 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
 	 */
 	@Override
-	public void destroy( ) throws Exception {}
+	public void destroy( ) throws Exception {
+		BlockStorage.stop();
+	}
 
 	/**
 	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()

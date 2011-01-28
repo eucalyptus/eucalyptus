@@ -60,7 +60,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
       this.canHas.writeLock( ).unlock( );
       try {
         ListenerRegistry.getInstance( ).fireEvent( new StateEvent<T, E>( this.states[0], oldValue ) );
-      } catch ( EventVetoedException e ) {
+      } catch ( EventFailedException e ) {
         LOG.warn( "Registry change was vetoed: " + e, e );
       }
     }
@@ -86,7 +86,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
       this.canHas.writeLock( ).unlock( );
       try {
         ListenerRegistry.getInstance( ).fireEvent( new StateEvent<T, E>( initialState, obj ) );
-      } catch ( EventVetoedException e ) {
+      } catch ( EventFailedException e ) {
         LOG.warn( "Registry change was vetoed: " + e, e );
       }
     }
@@ -107,7 +107,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
       this.canHas.writeLock( ).unlock( );
       try {
         ListenerRegistry.getInstance( ).fireEvent( new StateEvent<T, E>( initialState, obj ) );
-      } catch ( EventVetoedException e ) {
+      } catch ( EventFailedException e ) {
         LOG.warn( "Registry change was vetoed: " + e, e );
       }
     }
@@ -155,7 +155,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
       this.canHas.writeLock( ).unlock( );
       try {
         ListenerRegistry.getInstance( ).fireEvent( new StateEvent<T, E>( newState, value ) );
-      } catch ( EventVetoedException e ) {
+      } catch ( EventFailedException e ) {
         LOG.warn( "Registry change was vetoed: " + e, e );
       }
     }

@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -77,7 +77,7 @@ import com.eucalyptus.util.NetworkUtil;
 public enum Component {
   bootstrap( false, true, false ),
   component( false, true, false ),
-  eucalyptus( true, false, true ),
+  eucalyptus( true, true, true ),
   walrus( true, false, false ),
   dns( true, false, true ),
   storage( true, false, false ),
@@ -110,24 +110,12 @@ public enum Component {
     this.cloudLocal = cloudLocal;
   }
   
-  public Boolean isEnabled( ) {
-    try {
-      return Components.lookup( this ).isEnabled( );
-    } catch ( NoSuchElementException ex ) {
-      return false;
-    }
-  }
-  
   public Boolean isLocal( ) {
     try {
       return Components.lookup( this ).isLocal( );
     } catch ( NoSuchElementException ex ) {
       return false;
     }
-  }
-  
-  public String getLocalAddress( ) {
-    return this.getLocalUri( ).toASCIIString( );
   }
   
   public URI getUri( ) {
@@ -150,7 +138,7 @@ public enum Component {
   }
 
   public URI getLocalUri( ) {
-    return Components.lookup( this ).getConfiguration( ).getLocalUri( );
+    return Components.lookup( this ).getIdentity( ).getLocalEndpointUri( );
   }
   
   public Boolean isCloudLocal( ) {
@@ -169,12 +157,5 @@ public enum Component {
     return Arrays.asList( Component.values( ) );
   }
 
-  public String getRegistryKey( String hostName ) {
-    if( NetworkUtil.testLocal( hostName ) ) {
-      return this.name( ) + "@localhost";
-    } else {
-      return this.name( ) + "@" + hostName;
-    }
-  }
   
 }

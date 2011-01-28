@@ -45,10 +45,11 @@ public class Futures {
       }
       if ( reply != null ) {
         try {
-          EventRecord.caller( this.callback.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
+          EventRecord.caller( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
           this.callback.fire( reply );
         } catch ( Throwable t ) {
           LOG.error( t, t );
+          failure = t;
         }
       } else if ( failure != null ) {
         this.doFail( failure );
@@ -59,7 +60,7 @@ public class Futures {
     }
     
     private final void doFail( Throwable failure ) {
-      if ( this.callback instanceof Callback.Checked ) {
+      if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
         try {
           if ( ( failure instanceof ExecutionException ) && failure.getCause( ) != null ) {
             failure = failure.getCause( );

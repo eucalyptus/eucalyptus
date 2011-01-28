@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,12 +63,13 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;
+import com.eucalyptus.component.Components;
 
-@Provides(Component.dns)
+@Provides(Component.bootstrap)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
 @DependsLocal(Component.dns)
 public class DNSBootstrapper extends Bootstrapper {

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -93,7 +93,7 @@ DASInfo {
 	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
-	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached storage device" )
+	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached block device or volume group" )
 	@Column(name = "das_device")
 	private String DASDevice;
 

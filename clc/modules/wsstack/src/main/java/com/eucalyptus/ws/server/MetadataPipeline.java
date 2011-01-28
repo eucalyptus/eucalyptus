@@ -24,7 +24,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.Messaging;
 
 @ChannelPipelineCoverage( "one" )
 public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {

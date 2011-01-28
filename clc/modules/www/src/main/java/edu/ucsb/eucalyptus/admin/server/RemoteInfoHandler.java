@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -149,7 +149,7 @@ public class RemoteInfoHandler {
       UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
       updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
       updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
-      Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, storageControllerWeb.getHost( ) );
+      Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), storageControllerWeb.getHost( ) );
       try {
         scDispatch.send( updateStorageConfiguration );
       } catch ( Exception e ) {
@@ -164,7 +164,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
       try {
-        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunning( ) ) {
+        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isRunningLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }
@@ -197,8 +197,8 @@ public class RemoteInfoHandler {
   
   private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
-    Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, c.getHostName( ) );
-    GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration, GetStorageConfigurationResponseType.class );
+    Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), c.getHostName( ) );
+    GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
     return getStorageConfigResponse;
   }
   
@@ -213,7 +213,7 @@ public class RemoteInfoHandler {
       UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
       updateWalrusConfiguration.setName( WalrusProperties.NAME );
       updateWalrusConfiguration.setProperties(convertProps(walrusInfoWeb.getProperties()));
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
+      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
       scDispatch.send( updateWalrusConfiguration );
     }
   }
@@ -222,8 +222,8 @@ public class RemoteInfoHandler {
     List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>( );
     for ( WalrusConfiguration c : Configuration.getWalrusConfigurations( ) ) {
       GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
-      GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration, GetWalrusConfigurationResponseType.class );
+      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
+      GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
       walrusList.add( new WalrusInfoWeb( c.getName( ), 
     		  c.getHostName( ), 
     		  c.getPort( ),

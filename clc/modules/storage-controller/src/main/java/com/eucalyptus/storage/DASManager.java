@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -156,28 +156,38 @@ public class DASManager implements LogicalStorageManager {
 			String dasDevice = DASInfo.getStorageInfo().getDASDevice();
 			if(dasDevice != null) {
 				try {
-					String returnValue = getPhysicalVolume(dasDevice);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-						returnValue = createPhysicalVolume(dasDevice);
-						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
-						}
-					}
-					//PV is initialized at this point.
-					returnValue = getPhysicalVolumeVerbose(dasDevice);
-					if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-						volumeGroup = "vg-" + Hashes.getRandom(10);
-						returnValue = createVolumeGroup(dasDevice, volumeGroup);
-						if(returnValue.length() == 0) {
-							throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
-						}
-					} else {
+					String returnValue = getVolumeGroup(dasDevice);
+					if(returnValue.length() > 0) {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
 						Matcher m = volumeGroupPattern.matcher(returnValue);
 						if(m.find()) 
 							volumeGroup = m.group(1).trim();
 						else
-							throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + dasDevice);
+							throw new EucalyptusCloudException("Not a volume group: " + dasDevice);
+					} else {
+						returnValue = getPhysicalVolume(dasDevice);
+						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+							returnValue = createPhysicalVolume(dasDevice);
+							if(returnValue.length() == 0) {
+								throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
+							}
+						}
+						//PV is initialized at this point.
+						returnValue = getPhysicalVolumeVerbose(dasDevice);
+						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+							volumeGroup = "vg-" + Hashes.getRandom(10);
+							returnValue = createVolumeGroup(dasDevice, volumeGroup);
+							if(returnValue.length() == 0) {
+								throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+							}
+						} else {
+							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
+							Matcher m = volumeGroupPattern.matcher(returnValue);
+							if(m.find()) 
+								volumeGroup = m.group(1).trim();
+							else
+								throw new EucalyptusCloudException("Unable to get volume group for physical volume: " + dasDevice);
+						}
 					}
 				} catch (ExecutionException e) {
 					LOG.error(e);
@@ -199,6 +209,10 @@ public class DASManager implements LogicalStorageManager {
 
 	private String getPhysicalVolume(String partition) throws ExecutionException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvdisplay", partition});
+	}
+
+	private String getVolumeGroup(String volumeGroup) throws ExecutionException {
+		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgdisplay", volumeGroup});
 	}
 
 	private String createVolumeGroup(String pvName, String vgName) throws ExecutionException {

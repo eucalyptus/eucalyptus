@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -88,7 +88,6 @@ import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.ws.util.Messaging;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
@@ -151,14 +150,6 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-		blockManager.configure();
-		blockManager.initialize();
-		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-		try {
-			startupChecks();
-		} catch(EucalyptusCloudException ex) {
-			LOG.error("Startup checks failed ", ex);
-		}
 	}
 
 	public BlockStorage() {}
@@ -196,7 +187,15 @@ public class BlockStorage {
 	}
 
 	public static void enable() throws EucalyptusCloudException {
+		blockManager.configure();
+		blockManager.initialize();
+		try {
+			startupChecks();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Startup checks failed ", ex);
+		}
 		blockManager.enable();
+		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 	
 	public static void disable() throws EucalyptusCloudException {

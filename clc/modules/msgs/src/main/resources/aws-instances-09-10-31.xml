@@ -55,7 +55,7 @@
   ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
@@ -147,7 +147,6 @@
                 </structure>
             </collection>
         </structure>
-        <value name="additionalInfo" field="additionalInfo" usage="optional"/>
         <!--2006-10-01-->
         <structure name="userData" usage="optional">
             <value name="data" field="userData"/>
@@ -169,10 +168,13 @@
                 <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
             </collection>
         </structure>
+        <!--2009-04-04-->
         <structure name="monitoring" usage="optional">
             <value name="enabled" field="monitoring"/>
         </structure>
+        <!--2009-07-15-->
         <value name="subnetId" field="subnetId" usage="optional"/>
+        <!--2009-10-31-->
         <value name="disableApiTermination" field="disableTerminate" usage="optional"/>
         <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional"/>
     </mapping>

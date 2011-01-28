@@ -40,27 +40,27 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   @Override
   public void fire( DescribeNetworksResponseType reply ) {
     for ( Network net : Networks.getInstance( ).listValues( ) ) {
-      net.trim( reply.getAddrsPerNetwork( ) );
+      net.trim( reply.getAddrsPerNet( ) );
     }
-    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNetwork( ) );
-    this.getSubject( ).getState( ).setMode( reply.getMode( ) );
+    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
+    this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
     List<String> active = Lists.newArrayList( );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
       Network net = null;
       try {
         net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
       } catch ( NoSuchElementException e1 ) {
-        net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ) );
+        net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ) );
       }
       active.add( net.getName( ) );
       if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getVlan( ) );
+        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
         netToken = net.addTokenIfAbsent( netToken );
       }
     }
     
     for ( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
-      net.trim( reply.getAddrsPerNetwork( ) );
+      net.trim( reply.getAddrsPerNet( ) );
 //TODO: update the network index/token state here.  ultimately needed for failure modes.
     }
     List<Cluster> ccList = Clusters.getInstance( ).listValues( );

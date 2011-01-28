@@ -18,6 +18,7 @@
       
       <xs:complexType name="ccInstanceType">
 	<xs:sequence>
+	  <xs:element minOccurs="0" name="uuid" type="xs:string"/>
 	  <xs:element minOccurs="0" name="imageId" type="xs:string"/>
 	  <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
 	  <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
@@ -25,6 +26,7 @@
 	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
 	  <xs:element minOccurs="0" name="keyName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="launchTime" type="xs:dateTime"/>
+	  <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	  <xs:element minOccurs="0" name="stateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="netParams" type="tns:netConfigType"/>
 	  <xs:element minOccurs="0" name="ownerId" type="xs:string"/>
@@ -34,6 +36,9 @@
 	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	  <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
 	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
@@ -109,7 +114,7 @@
 	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
 	</xs:sequence>
       </xs:complexType>
-      
+
       <xs:complexType abstract="true" name="eucalyptusMessage">
 	<xs:sequence>
 	  <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
@@ -229,6 +234,27 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="createImageType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageResponseType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="bundleInstanceType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -343,6 +369,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
+	      <xs:element minOccurs="0" name="uuid" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
@@ -386,6 +413,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
+	      <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
 	      <xs:element name="source" type="xs:string"/>
 	      <xs:element name="dest" type="xs:string"/>
 	    </xs:sequence>
@@ -437,8 +465,13 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="useVlans" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMin" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMax" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vnetSubnet" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vnetNetmask" type="xs:string"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="activeNetworks" type="tns:networkType"/>
 	    </xs:sequence>
 	  </xs:extension>
@@ -447,6 +480,7 @@
 
       <xs:complexType name="networkType">
 	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="vlan" type="xs:int"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="netName" type="xs:string"/>
 	  <xs:element minOccurs="1" maxOccurs="1" name="userName" type="xs:string"/>
@@ -463,13 +497,19 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="publicAddressType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="sourceAddress" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+      
       <xs:complexType name="describePublicAddressesResponseType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-	      <!-- next two lists must be same length -->
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="sourceAddresses" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destAddresses" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="addresses" type="tns:publicAddressType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -528,10 +568,12 @@
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="netNames" type="xs:string"/>
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="macAddresses" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networkIndexList" type="xs:int"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="uuids" type="xs:string"/>
 	      <xs:element name="vlan" type="xs:int"/>
 	      <xs:element name="userData" type="xs:string"/>
 	      <xs:element name="launchIndex" type="xs:string"/>
 	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -672,6 +714,9 @@
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
 
+      <xs:element name="CreateImage" nillable="true" type="tns:createImageType"/>
+      <xs:element name="CreateImageResponse" nillable="true" type="tns:createImageResponseType"/>
+
       <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
       <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
 
@@ -722,6 +767,31 @@
       
     </xs:schema>
   </wsdl:types>
+
+  <wsdl:message name="DescribeServicesResponse">
+    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartServiceResponse">
+    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopServiceResponse">
+    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableServiceResponse">
+    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableServiceResponse">
+    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
   
   <wsdl:message name="DescribeServicesResponse">
     <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
@@ -755,6 +825,11 @@
 
   <wsdl:message name="DetachVolumeResponse">
     <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImageResponse">
+    <wsdl:part element="tns:CreateImageResponse" name="CreateImageResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -862,7 +937,7 @@
     <wsdl:part element="tns:DisableService" name="DisableService">
     </wsdl:part>
   </wsdl:message>
-  
+
   <wsdl:message name="AttachVolume">
     <wsdl:part element="tns:AttachVolume" name="AttachVolume">
     </wsdl:part>
@@ -870,6 +945,11 @@
 
   <wsdl:message name="DetachVolume">
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImage">
+    <wsdl:part element="tns:CreateImage" name="CreateImage">
     </wsdl:part>
   </wsdl:message>
 
@@ -996,7 +1076,7 @@
       <wsdl:output message="tns:DisableServiceResponse" name="DisableServiceResponse">
       </wsdl:output>
     </wsdl:operation>
-    
+
     <wsdl:operation name="AttachVolume">
       <wsdl:input message="tns:AttachVolume" name="AttachVolume">
       </wsdl:input>
@@ -1008,6 +1088,13 @@
       <wsdl:input message="tns:DetachVolume" name="DetachVolume">
       </wsdl:input>
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <wsdl:input message="tns:CreateImage" name="CreateImage">
+      </wsdl:input>
+      <wsdl:output message="tns:CreateImageResponse" name="CreateImageResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1203,6 +1290,16 @@
       </wsdl:input>
       <wsdl:output name="DetachVolumeResponse">
         <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <soap:operation soapAction="EucalyptusCC#CreateImage" style="document"/>
+      <wsdl:input name="CreateImage">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CreateImageResponse">
+	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
 

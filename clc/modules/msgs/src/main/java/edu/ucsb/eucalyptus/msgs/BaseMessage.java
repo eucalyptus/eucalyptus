@@ -32,6 +32,13 @@ public class BaseMessage {
     this.statusMessage = null;
   }
   
+  public BaseMessage( BaseMessage copy ) {
+    this( );
+    this.userId = copy.getUserId( );
+    this.effectiveUserId = copy.getEffectiveUserId( );
+    this.correlationId = copy.getCorrelationId( );
+  }
+  
   public String getCorrelationId( ) {
     return this.correlationId;
   }
@@ -134,7 +141,8 @@ public class BaseMessage {
       mctx.marshalDocument( this, "UTF-8", null, temp );
     } catch ( JiBXException e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
-      return null;
+    } catch ( Throwable e ) {
+      Logger.getLogger( BaseMessage.class ).error( e, e );
     }
     return temp.toString( );
   }
@@ -167,28 +175,28 @@ public class BaseMessage {
   /**
    * @return the epoch
    */
-  public Integer getEpoch( ) {
+  public Integer getBaseEpoch( ) {
     return this.epoch;
   }
 
   /**
    * @param epoch the epoch to set
    */
-  public void setEpoch( Integer epoch ) {
+  public void setBaseEpoch( Integer epoch ) {
     this.epoch = epoch;
   }
 
   /**
    * @return the services
    */
-  public ArrayList<ServiceInfoType> getServices( ) {
+  public ArrayList<ServiceInfoType> getBaseServices( ) {
     return this.services;
   }
 
   /**
    * @param services the services to set
    */
-  public void setServices( ArrayList<ServiceInfoType> services ) {
+  public void setBaseServices( ArrayList<ServiceInfoType> services ) {
     this.services = services;
   }
 }

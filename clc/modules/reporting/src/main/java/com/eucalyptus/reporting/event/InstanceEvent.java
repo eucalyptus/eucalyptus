@@ -1,10 +1,5 @@
 package com.eucalyptus.reporting.event;
 
-import javax.persistence.Column;
-
-import com.eucalyptus.reporting.instance.InstanceAttributes;
-import com.eucalyptus.reporting.instance.UsageData;
-
 /**
  * <p>InstanceEvent is an event sent from the CLC to the reporting mechanism,
  * indicating resource usage by an instance.
@@ -22,10 +17,18 @@ import com.eucalyptus.reporting.instance.UsageData;
  * received event. As a result, lost packets cause only loss of granularity of
  * time periods, but no loss of usage information.
  * 
+ * <p>InstanceEvent allows null values for usage statistics like
+ * cumulativeDiskIo. Null values signify missing information and not zero
+ * usage. Null values will be ignored while calculating aggregate usage
+ * information for reports. Null values should be used only when we don't
+ * support gathering information from an instance <i>at all</i>. Null values
+ * for resource usage will be represented as "N/A" or something similar in
+ * UIs.
+ * 
  * @author tom.werges
  */
 public class InstanceEvent
-	implements Event
+	implements Event,com.eucalyptus.event.Event
 {
 	private String uuid;
 	private String instanceId;
@@ -33,13 +36,13 @@ public class InstanceEvent
 	private String userId;
 	private String clusterName;
 	private String availabilityZone;
-	private long cumulativeNetworkIoMegs;
-	private long cumulativeDiskIoMegs;
+	private Long cumulativeNetworkIoMegs;
+	private Long cumulativeDiskIoMegs;
 	
 
 	public InstanceEvent(String uuid, String instanceId, String instanceType,
 			String userId, String clusterName, String availabilityZone,
-			long cumulativeNetworkIoMegs, long cumulativeDiskIoMegs)
+			Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
 	{
 		this.uuid = uuid;
 		this.instanceId = instanceId;
@@ -81,12 +84,12 @@ public class InstanceEvent
 		return availabilityZone;
 	}
 
-	public long getCumulativeNetworkIoMegs()
+	public Long getCumulativeNetworkIoMegs()
 	{
 		return cumulativeNetworkIoMegs;
 	}
 
-	public long getCumulativeDiskIoMegs()
+	public Long getCumulativeDiskIoMegs()
 	{
 		return cumulativeDiskIoMegs;
 	}

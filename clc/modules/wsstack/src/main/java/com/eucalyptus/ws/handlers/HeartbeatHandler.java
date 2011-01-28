@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -94,6 +94,8 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -104,7 +106,7 @@ import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -146,7 +148,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.buildService( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) );
+    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getIdentity( ).getPort( ) ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -168,9 +170,9 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), comp.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
+        ServiceConfiguration config = new BogoConfig( comp.getPeer( ), component.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        comp.buildService( config );
+        comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );
       } catch ( Exception ex ) {
         LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
@@ -255,8 +257,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
           HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
           String resp = "";
           for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                                   c.isRunning( ) );
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+                                   c.isRunningLocally( ) );
           }
           ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
           response.setContent( buf );
@@ -321,8 +323,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
     String resp = "";
     for ( Component c : Components.list( ) ) {
-      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isEnabled( ), c.isLocal( ),
-                             c.isRunning( ) );
+      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+                             c.isRunningLocally( ) );
     }
     ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
     response.setContent( buf );
@@ -338,7 +340,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     List<String> registeredComponents = Lists.newArrayList( );
     for( ComponentType started : hb.getStarted( ) ) {
       try {
-        safeLookupComponent( started.getComponent( ) ).buildService( started.toConfiguration( ) );
+        Component c = safeLookupComponent( started.getComponent( ) );
+        c.loadService( started.toConfiguration( ) );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
       } catch ( NoSuchElementException ex ) {
@@ -348,7 +351,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     for( ComponentType stopped : hb.getStarted( ) ) {
       if( Components.contains( stopped.getComponent( ) ) ) {
         try {
-          Components.lookup( stopped.getComponent( ) ).removeService( stopped.toConfiguration( ) );
+          Components.lookup( stopped.getComponent( ) ).destroyService( stopped.toConfiguration( ) );
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex , ex );
         } catch ( NoSuchElementException ex ) {
@@ -357,12 +360,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       }
     }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.
@@ -372,7 +375,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     final Component c;
     if ( !Components.contains( componentName ) ) {
       try {
-        c = Components.create( componentName, null );
+        ComponentId compId = ComponentIds.lookup( componentName );
+        c = Components.create( compId );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
         throw new RuntimeException( ex );
@@ -382,12 +386,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     return c;
   }
-
-  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {
+  
+  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
   }
   
-  private void fireStartComponent( ComponentConfiguration config ) throws EventVetoedException {
+  private void fireStartComponent( ComponentConfiguration config ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StartComponentEvent.getLocal( config ) );
   }
   

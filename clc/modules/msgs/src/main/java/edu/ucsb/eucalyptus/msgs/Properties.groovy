@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -74,18 +74,19 @@ public class Property extends EucalyptusData {
     this.description = description;
   }
 }
-public class DescribePropertiesType extends EucalyptusMessage {
+public class PropertiesMessage extends BaseMessage {}
+public class DescribePropertiesType extends PropertiesMessage {
   ArrayList<String> properties = new ArrayList<String>();
 }
-public class DescribePropertiesResponseType extends EucalyptusMessage {
+public class DescribePropertiesResponseType extends PropertiesMessage {
   ArrayList<Property> properties = new ArrayList<Property>();
 }
-public class ModifyPropertyValueType extends EucalyptusMessage {
+public class ModifyPropertyValueType extends PropertiesMessage {
   String name;
   String value;
   Boolean reset;
 }
-public class ModifyPropertyValueResponseType extends EucalyptusMessage {
+public class ModifyPropertyValueResponseType extends PropertiesMessage {
   String name;
   String value;
   String oldValue;
