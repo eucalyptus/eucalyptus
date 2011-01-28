@@ -114,6 +114,7 @@ import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -495,7 +496,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
           
           @Override
           public void fireException( Throwable t ) {
-            transitionCallback.fireException( t );
+            if( t instanceof FailedRequestException ) {
+              if( Cluster.this.getState( ).hasPublicAddressing( ) && PublicAddressStateCallback.class.isAssignableFrom( msgClass ) ) {
+                transitionCallback.fire();
+              } else {
+                transitionCallback.fireException( t );
+              }
+            } else {
+              transitionCallback.fireException( t );
+            }
           }
         };
         //TODO: retry.
@@ -521,7 +530,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     };
   }
-  
   @Override
   public void fireEvent( Event event ) {
     if( !Bootstrap.isFinished( ) ) {

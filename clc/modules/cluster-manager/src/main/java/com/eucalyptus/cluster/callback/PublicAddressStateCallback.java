@@ -1,9 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
-import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
