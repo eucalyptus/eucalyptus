@@ -86,7 +86,16 @@
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
-	<target name="build">
+  <target name="build">
+    <ant dir="." inheritall="false" target="build-all" />
+    <ant dir="." inheritall="false" target="bind" />
+    <ant dir="." inheritall="false" target="jar" />
+	</target>
+  <target name="build-all">
+    <ant dir="." inheritall="false" target="build-nogwt" />
+    <ant dir="." inheritall="false" target="build-gwt" />
+  </target>
+  <target name="build-nogwt">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/database" inheritall="false" target="builder" />
 		<ant dir="modules/hsqldb" inheritall="false" target="builder" />
@@ -103,9 +112,10 @@
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
-		<ant dir="modules/www" inheritall="false" target="builder" />
-		<ant dir="." inheritall="false" target="jar" />
 	</target>
+  <target name="build-gwt">
+    <ant dir="modules/www" inheritall="false" target="builder" />
+  </target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/database" inheritall="false" target="jar" />
