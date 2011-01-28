@@ -8,10 +8,10 @@ package com.eucalyptus.reporting;
  */
 public enum GroupByCriterion
 {
-	USER("User"),
-	ACCOUNT("Account"),
+	AVAILABILITY_ZONE("Availability Zone"),
 	CLUSTER("Cluster"),
-	AVAILABILITY_ZONE("Availability Zone");
+	ACCOUNT("Account"),
+	USER("User");
 	
 	private final String name;
 	
