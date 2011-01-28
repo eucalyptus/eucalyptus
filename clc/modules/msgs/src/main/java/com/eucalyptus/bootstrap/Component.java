@@ -83,13 +83,8 @@ public enum Component {
   any( false, true, false );
   private static Logger LOG = Logger.getLogger( Component.class );
 
-<<<<<<< TREE
-/**
-   * @note is a sub-service of {@link Component.eucalyptus}
-=======
   /**
    * @note is a sub-service of {@link Eucalyptus}
->>>>>>> MERGE-SOURCE
    */
   private final Boolean cloudLocal;
   /**

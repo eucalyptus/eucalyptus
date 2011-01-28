@@ -84,11 +84,6 @@ import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-<<<<<<< TREE
-import edu.emory.mathcs.backport.java.util.Collections;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
-=======
->>>>>>> MERGE-SOURCE
 
 /**
  * Java entry point from eucalyptus-bootstrap
