@@ -1,25 +1,31 @@
 package com.eucalyptus.reporting;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import org.apache.log4j.*;
 
+import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.reporting.instance.*;
 import com.eucalyptus.reporting.storage.*;
+import com.eucalyptus.reporting.queue.*;
+import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
 public class ReportingBootstrapper
-	//extends Bootstrapper
+	extends Bootstrapper
 {
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
-//	private final StorageEventPoller storageListener;
-//	private final InstanceEventListener instanceListener;
-//	private StarReceiver starReceiver;
-	//private final QueueBroker starBroker;
+	private static long POLLER_DELAY_MS = 1000l;
+	
+	private StorageEventPoller storagePoller;
+	private InstanceEventListener instanceListener;
+	private QueueBroker broker;
+	private Timer timer;
+	
 
 	public ReportingBootstrapper()
 	{
-//		this.storageListener = new StorageEventPoller();
-//		this.instanceListener = new InstanceEventListener();
-//		this.starBroker = QueueBroker.getInstance();
 	}
 
 	public boolean check()
@@ -44,16 +50,34 @@ public class ReportingBootstrapper
 
 	public boolean load()
 	{
-		return true;
+		try {
+			broker = QueueBroker.getInstance();
+			timer = new Timer(true);
+			return true;
+		} catch (Exception ex) {
+			log.error("ReportingBootstrapper failed to load", ex);
+			return false;
+		}
 	}
 
 	public boolean start()
 	{
 		try {
-//			starBroker.startup();
-//			this.starReceiver = StarReceiver.getInstance();
-//			this.starReceiver.addEventListener(instanceListener);
-//			this.starReceiver.addEventListener(storageListener);
+			//TODO: brokers must FIND EACH OTHER here...
+			broker.startup();
+			log.info("Queue broker started");
+			QueueFactory queueFactory = QueueFactory.getInstance();
+			final StorageEventPoller poller = new StorageEventPoller(queueFactory.getReceiver(QueueIdentifier.STORAGE));
+			timer.schedule(new TimerTask() {
+				@Override
+				public void run()
+				{
+					poller.writeEvents();
+				}
+			}, POLLER_DELAY_MS);
+			this.storagePoller = poller;
+			log.info("Storage queue poller started");
+			this.instanceListener = new InstanceEventListener();
 			log.info("ReportingBootstrapper started");
 			return true;
 		} catch (Exception ex) {
@@ -65,12 +89,12 @@ public class ReportingBootstrapper
 	public boolean stop()
 	{
 		try {
-//			starBroker.startup();
-//			this.starReceiver = StarReceiver.getInstance();
-//			this.starReceiver.removeEventListener(instanceListener);
-//			this.starReceiver.removeEventListener(storageListener);
 			log.info("ReportingBootstrapper stopped");
-			return false;
+			instanceListener.flush();
+			timer.cancel();
+			storagePoller.writeEvents();
+			broker.shutdown();
+			return true;
 		} catch (Exception ex) {
 			log.error("ReportingBootstrapper failed to stop", ex);
 			return false;
