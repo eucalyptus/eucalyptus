@@ -354,6 +354,15 @@ if [ -z "${HTTPD}" ]; then
 	exit 1
 fi
 
+if [ -z "${APACHE2_MODULE_DIR}" ]; then
+        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR"
+fi
+
+if [ ! -d "$APACHE2_MODULE_DIR" ]; then
+	echo "Cannot find APACHE2_MODULE_DIR?"
+	exit 1
+fi
+
 # set the library path correctly
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 
