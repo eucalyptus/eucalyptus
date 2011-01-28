@@ -126,8 +126,8 @@ public class BuildBindings extends Task {
   
   private void runPostBindingGenerators( Path path ) {
     ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    AntClassLoader loader = this.getProject( ).createClassLoader( path );
     try {
-      AntClassLoader loader = this.getProject( ).createClassLoader( path );
       Thread.currentThread( ).setContextClassLoader( loader );
       //        System.err.print( "class path: " + loader.getClasspath( ) );
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
@@ -158,6 +158,8 @@ public class BuildBindings extends Task {
       } catch ( Throwable e ) {
         error( e );
       }
+      loader.cleanup( );
+      System.gc( );
       Thread.currentThread( ).setContextClassLoader( old );
     }
   }
@@ -173,8 +175,8 @@ public class BuildBindings extends Task {
   
   private void runPreBindingGenerators( Path path ) {
     ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    AntClassLoader loader = this.getProject( ).createClassLoader( path );
     try {
-      AntClassLoader loader = this.getProject( ).createClassLoader( path );
       Thread.currentThread( ).setContextClassLoader( loader );
       //        System.err.print( "class path: " + loader.getClasspath( ) );
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
@@ -205,6 +207,8 @@ public class BuildBindings extends Task {
       } catch ( Throwable e ) {
         error( e );
       }
+      loader.cleanup( );
+      System.gc( );
       Thread.currentThread( ).setContextClassLoader( old );
     }
   }
