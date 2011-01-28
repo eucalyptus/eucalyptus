@@ -65,10 +65,14 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.ComponentMessage;
+
 public class StorageResponseType extends EucalyptusMessage {
 	def StorageResponseType() {}
 }
 
+@ComponentMessage(Storage.class)
 public class StorageRequestType extends EucalyptusMessage {
 	def StorageRequestType() {}
 }
