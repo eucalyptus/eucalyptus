@@ -45,6 +45,8 @@ import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceDisplayBean;
 import com.eucalyptus.reporting.instance.InstanceDisplayDb;
+import com.eucalyptus.reporting.storage.StorageDisplayBean;
+import com.eucalyptus.reporting.storage.StorageDisplayDb;
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.system.SubDirectory;
 import com.google.gwt.user.client.rpc.SerializableException;
@@ -271,6 +273,54 @@ public class Reports extends HttpServlet {
     				JasperFillManager.fillReport(report, params, dataSource);
         	}
 
+        } else if (Param.name.get(req).equals("user_storage")) {
+
+        	long start = Long.parseLong(Param.start.get(req));
+        	long end = Long.parseLong(Param.end.get(req));
+        	Period period = new Period(0, Long.MAX_VALUE);
+        	LOG.info("--> period:" + period.toString());
+        	int criterionId = Integer.parseInt(Param.criterionId.get(req));
+        	int groupById = Integer.parseInt(Param.groupById.get(req));
+        	LOG.info("--> criterionId:" + criterionId);
+        	GroupByCriterion criterion = GroupByCriterion.values()[criterionId+1]; //TODO: document magic num
+            LOG.info("--> criterion:" + criterion.toString());
+        	Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+ 
+        	Map<String,String> params = new HashMap<String,String>();
+    		params.put("criterion", criterion.toString());
+    		params.put("timeUnit", displayUnits.getTimeUnit().toString());
+    		params.put("sizeUnit", displayUnits.getSizeUnit().toString());
+    		params.put("sizeTimeTimeUnit", displayUnits.getSizeTimeTimeUnit().toString());
+    		params.put("sizeTimeSizeUnit", displayUnits.getSizeTimeSizeUnit().toString());
+        	
+        	StorageDisplayDb dbStorage = StorageDisplayDb.getInstance();
+        	if (groupById == 0) {
+        		List<StorageDisplayBean> list =
+        			dbStorage.search(period, criterion, displayUnits);
+        		LOG.info("--> list size:" + list.size());
+        		JRDataSource dataSource = new JRBeanCollectionDataSource(list);
+        		File jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + "storage.jrxml");
+        		LOG.info("--> jrXmlFile:" + jrxmlFile.getAbsolutePath());
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
+        	} else {
+            	LOG.info("--> groupById:" + criterionId);
+            	GroupByCriterion groupByCriterion = GroupByCriterion.values()[groupById-1];
+                LOG.info("--> groupBy:" + groupByCriterion);
+    			params.put("groupByCriterion", groupByCriterion.toString());
+        		List<StorageDisplayBean> list =
+        			dbStorage.searchGroupBy(period, groupByCriterion, criterion, displayUnits);
+        		LOG.info("--> list size:" + list.size());
+        		JRDataSource dataSource = new JRBeanCollectionDataSource(list);
+        		File jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + "nested_storage.jrxml");
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
+        	}
+        	
         } else {
         	jasperPrint = reportCache.getJasperPrint( req );
         }
