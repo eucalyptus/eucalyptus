@@ -10,11 +10,6 @@ public class QueueFactory
 
 	private static QueueFactory queueFactory = null;
 
-	/* These may be configurable properties in the future */
-	private static final String BROKER_URL  = "tcp://localhost:61616";
-	private static final String BROKER_NAME = "reportingBroker";
-	private static final String BROKER_DIR  = "/tmp";
-
 	public static QueueFactory getInstance()
 	{
 		if (queueFactory == null) {
@@ -32,7 +27,7 @@ public class QueueFactory
 	{
 		this.senders   = new HashMap<QueueIdentifier,QueueSenderImpl>();
 		this.receivers = new HashMap<QueueIdentifier,QueueReceiverImpl>();
-		this.broker    = new QueueBroker(BROKER_NAME, BROKER_URL, BROKER_DIR);
+		this.broker    = QueueBroker.getInstance();
 	}
 
 	public enum QueueIdentifier
