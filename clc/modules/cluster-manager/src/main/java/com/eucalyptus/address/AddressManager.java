@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -144,7 +144,7 @@ public class AddressManager {
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
-        Callbacks.newClusterRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+        Callbacks.newRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
           public void fire( BaseMessage response ) {
             vm.updatePublicAddress( address.getName( ) );
           }
@@ -158,14 +158,14 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          Callbacks.newClusterRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
+          Callbacks.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
           assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
     } else {
       unassignBystander.fire( );
     }
@@ -208,7 +208,7 @@ public class AddressManager {
     } else {
       try {
         if ( address.isSystemOwned( ) ) {
-          Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
@@ -218,7 +218,7 @@ public class AddressManager {
             }
           } ).dispatch( address.getCluster( ) );
         } else {
-          Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             @Override
             public void fire( ) {
               try {

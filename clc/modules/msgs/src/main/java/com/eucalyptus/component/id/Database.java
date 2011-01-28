@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -68,7 +68,7 @@ import com.eucalyptus.component.ComponentId;
 public class Database extends ComponentId {
 
   public Database( ) {
-    super( "db" );
+    super( "Db" );
   }
 
   @Override
@@ -100,4 +100,10 @@ public class Database extends ComponentId {
   public Boolean isCloudLocal( ) {
     return true;
   }
+  
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

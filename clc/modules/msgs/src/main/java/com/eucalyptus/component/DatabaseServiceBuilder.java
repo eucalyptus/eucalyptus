@@ -54,7 +54,7 @@ package com.eucalyptus.component;
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -154,12 +154,12 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
     try {
       if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
-        return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );      
+        return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );      
       } else {
-        return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
+        return new RemoteConfiguration( null, this.getComponent( ).getIdentity( ), uri );
       }
     } catch ( Exception e ) {
-      return new LocalConfiguration( null, this.getComponent( ).getPeer( ), uri );
+      return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );
     }
   }
 

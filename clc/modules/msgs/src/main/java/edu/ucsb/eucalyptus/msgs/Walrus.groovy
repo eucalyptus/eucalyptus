@@ -54,7 +54,7 @@ package edu.ucsb.eucalyptus.msgs
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,6 +63,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.Walrus;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
 /*
@@ -74,6 +76,7 @@ public class WalrusResponseType extends BaseMessage {
 	def WalrusResponseType() {}
 }
 
+@ComponentMessage(Walrus.class)
 public class WalrusRequestType extends BaseMessage {
 	protected String accessKeyID;
 	protected Date timeStamp;

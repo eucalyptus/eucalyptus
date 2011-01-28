@@ -2,12 +2,8 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.entities.PersistenceContexts;
 /* this crap is hsqldb specific */
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.util.*;
 
-//Component.db.markLocal( );
-//Component.db.markEnabled( );
-//Component.db.setHostAddress( "127.0.0.1" );
 props = [
   "hsqldb.script_format":"0",
   "runtime.gc_interval":"0",

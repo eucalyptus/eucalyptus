@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -62,12 +62,12 @@
  */
 package com.eucalyptus.ws.handlers;
 
-import com.eucalyptus.ws.server.EucalyptusQueryPipeline.OperationParameter;
-
+import com.eucalyptus.ws.protocol.BaseQueryBinding;
+import com.eucalyptus.ws.protocol.OperationParameter;
 
 public class EucalyptusQueryBinding extends BaseQueryBinding<OperationParameter> {
   public EucalyptusQueryBinding( ) {
     super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
   }
-
+  
 }

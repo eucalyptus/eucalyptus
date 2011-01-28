@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -67,7 +67,6 @@ package com.eucalyptus.blockstorage;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
@@ -79,7 +78,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
@@ -91,12 +89,18 @@ import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
+import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class SnapshotManager {
@@ -111,11 +115,13 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
     StorageControllerConfiguration sc;
     try {
-      sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
+      sc = Configuration.lookupSc( vol.getCluster( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException(
@@ -186,13 +192,15 @@ public class SnapshotManager {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId( ) ) );
-      if ( !State.EXTANT.equals( snap.getState() ) ) {
-        db.rollback();
-    	reply.set_return( false );
-    	return reply;
+      if ( !State.EXTANT.equals( snap.getState( ) ) ) {
+        db.rollback( );
+        reply.set_return( false );
+        return reply;
       }
       db.delete( snap );
       db.getSession( ).flush( );
@@ -200,9 +208,10 @@ public class SnapshotManager {
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
-        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ) ).info( );
+        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ),
+                          "snapshot=" + snap.getDisplayName( ) ).info( );
       } else {
-    	db.rollback();
+        db.rollback( );
         throw new EucalyptusCloudException( "Unable to delete snapshot." );
       }
     } catch ( EucalyptusCloudException e ) {
@@ -216,7 +225,9 @@ public class SnapshotManager {
   
   public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     try {
@@ -226,7 +237,7 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
-            StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+            StorageControllerConfiguration sc = Configuration.lookupSc( v.getCluster( ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.send( sc.getName( ), scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               v.setMappedState( storageSnapshot.getStatus( ) );
@@ -246,6 +257,18 @@ public class SnapshotManager {
     } catch ( Throwable e ) {
       db.rollback( );
     }
+    return reply;
+  }
+  public ResetSnapshotAttributeResponseType resetSnapshotAttribute(ResetSnapshotAttributeType request) {
+    ResetSnapshotAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ModifySnapshotAttributeResponseType modifySnapshotAttribute(ModifySnapshotAttributeType request) {
+    ModifySnapshotAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public DescribeSnapshotAttributeResponseType describeSnapshotAttribute(DescribeSnapshotAttributeType request) {
+    DescribeSnapshotAttributeResponseType reply = request.getReply( );
     return reply;
   }
 }

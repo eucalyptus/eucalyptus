@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -69,7 +69,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -227,7 +228,7 @@ public class WalrusControl {
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(request.getProperties() != null) {
 			for(ComponentProperty prop : request.getProperties()) {
@@ -248,7 +249,7 @@ public class WalrusControl {
 
 	public GetWalrusConfigurationResponseType GetWalrusConfiguration(GetWalrusConfigurationType request) throws EucalyptusCloudException {
 		GetWalrusConfigurationResponseType reply = (GetWalrusConfigurationResponseType) request.getReply();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String name = request.getName();
 		if(WalrusProperties.NAME.equals(name)) {

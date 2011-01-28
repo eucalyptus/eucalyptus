@@ -17,6 +17,7 @@
 	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
 	<classpathentry kind="src" path="modules/configuration/conf/scripts"/>
 	<classpathentry kind="src" path="modules/reporting/src/main/java"/>
+	<classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
@@ -98,13 +99,13 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/Users/decker/mule-2.0.1.orig/core/src"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/bzr/third-party/netty-3.1.5.GA"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-cglib.jar"/>
@@ -119,6 +120,7 @@
 	<classpathentry kind="lib" path="lib/spring-core-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/velocity-1.7.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>

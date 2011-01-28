@@ -16,20 +16,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.AddGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.AddGroupType;
-import edu.ucsb.eucalyptus.msgs.AddUserResponseType;
-import edu.ucsb.eucalyptus.msgs.AddUserType;
-import edu.ucsb.eucalyptus.msgs.DeleteGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteUserResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteUserType;
-import edu.ucsb.eucalyptus.msgs.DescribeGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeGroupsType;
-import edu.ucsb.eucalyptus.msgs.DescribeUsersResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
-import edu.ucsb.eucalyptus.msgs.GroupInfoType;
-import edu.ucsb.eucalyptus.msgs.UserInfoType;
 
 public class Accounts {
   private static Logger LOG = Logger.getLogger( Accounts.class );

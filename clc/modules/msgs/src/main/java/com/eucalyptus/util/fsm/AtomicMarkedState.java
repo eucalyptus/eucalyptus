@@ -60,7 +60,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   }
   
   public Callback.Completion startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
-    if ( !this.transitions.containsKey( transitionName ) ) {
+    if ( this.state.isMarked( ) ) {
+      throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
+    } else if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
       this.checkTransition( transitionName );
@@ -78,7 +80,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   }
   
   public Callback.Completion startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
-    if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
+    if ( this.state.isMarked( ) ) {
+      throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
+    } else if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
                                         + this.getTransitions( ) );
     } else {
@@ -111,7 +115,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     Transition<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> r = transition.getRule( );
     if ( !this.currentTransition.compareAndSet( null, new ActiveTransition( this.id.incrementAndGet( ), transition ) ) ) {
-      throw new ExistingTransitionException( "There is a currently pending transition: " + this.toString( ) );
+      throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
     } else if ( !this.state.compareAndSet( r.getFromState( ), r.getToState( ), r.getFromStateMark( ), true ) ) {
       this.id.decrementAndGet( );
       this.currentTransition.set( null );
@@ -166,7 +170,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
                                                               + this.toString( ) ) );
       }
       this.currentTransition.set( null );
-      this.fireInListeners( tr.getToState( ) );
+      this.state.set( tr.getErrorState( ), false );
+      this.fireInListeners( tr.getErrorState( ) );
     }
   }
   
@@ -182,8 +187,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.state.set( tr.getErrorState( ), false );
+      this.state.set( tr.getFromState( ), false );
       this.currentTransition.set( null );
+      this.fireInListeners( tr.getFromState( ) );
     }
   }
   

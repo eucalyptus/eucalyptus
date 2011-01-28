@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
@@ -146,8 +145,6 @@ public class NetworkGroupManager {
       reply.set_return( false );
       return reply;
     }
-    Network changedNetwork = ruleGroup.getVmNetwork( );
-    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     return reply;
   }
@@ -159,7 +156,14 @@ public class NetworkGroupManager {
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
-      ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+      try {
+        ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+      } catch ( IllegalArgumentException ex ) {
+        LOG.error( ex.getMessage( ) );
+        reply.set_return( false );
+        db.rollback( );
+        return reply;
+      }
     }
     if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
@@ -179,8 +183,6 @@ public class NetworkGroupManager {
     ruleGroup.getNetworkRules( ).addAll( ruleList );
     db.merge( ruleGroup );
     db.commit( );
-    Network changedNetwork = ruleGroup.getVmNetwork( );
-    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     
     return reply;

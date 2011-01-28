@@ -25,7 +25,7 @@ public class LogFileRecord extends BaseRecord {
     super( type, eventClass, creator, callerStack, userId, correlationId, other );
     if ( LogLevels.DEBUG ) {
       if ( callerStack != null && callerStack.getFileName( ) != null ) {
-        this.caller = String.format( "%s.%s.%s", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
+        this.caller = String.format( "   [%s.%s.%s]", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
       } else {
         this.caller = "unknown";
       }
@@ -38,7 +38,31 @@ public class LogFileRecord extends BaseRecord {
 
   @Override
   public String toString( ) {
-    return this.caller != null ? super.toString( ) + ":" + this.caller : super.toString( );
+    if ( LogLevels.DEBUG ) {
+      String leadIn = String.format( "%s %s %s ",
+                                        ( this.getUserId( ) != null
+                                          ? this.getUserId( )
+                                          : "" ),
+                                         ( this.getCorrelationId( ) != null
+                                             ? this.getCorrelationId( )
+                                             : "" ),
+                                       this.getType( ) );
+      StringBuilder ret = new StringBuilder( );
+      ret.append( leadIn );
+      for ( Object o : this.getOthers( ) ) {
+        if ( o == null ) continue;
+        if ( BaseRecord.NEXT.equals( o ) ) {
+          ret.append( leadIn );
+        }
+        ret.append( " " ).append( o.toString( ) );
+      }
+      return ret.toString( ).trim( );
+      
+    } else {
+      return ( this.caller != null
+        ? super.toString( ) + ":" + this.caller
+        : super.toString( ) );
+    }
   }
   
 }

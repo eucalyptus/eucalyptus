@@ -30,8 +30,11 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   public void fire( DescribeResourcesResponseType reply ) {
     this.getSubject( ).getNodeState( ).update( reply.getResources( ) );
     LOG.debug( "Adding node service tags: " + reply.getServiceTags( ) );
-    this.getSubject( ).updateNodeInfo( reply.getServiceTags( ) );
-    this.getSubject( ).updateNodeInfo( reply.getNodes( ) );
+    if( !reply.getNodes( ).isEmpty( ) ) {
+      this.getSubject( ).updateNodeInfo( reply.getNodes( ) );
+    } else {
+      this.getSubject( ).updateNodeInfo( reply.getServiceTags( ) );
+    }
   }
   
   /**

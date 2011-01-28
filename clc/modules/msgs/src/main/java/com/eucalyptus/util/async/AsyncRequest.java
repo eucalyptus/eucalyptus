@@ -14,36 +14,49 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   private static Logger LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> callback;
   private final CheckedListenableFuture<R>  response;
-  private Throwable                         callbackError = null;
   private final RequestHandler<Q, R>        handler;
   private final CallbackListenerSequence<R> callbackSequence;
   private Q                                 request;
-  private final ChannelPipelineFactory      pipelineFactory;
-  private CheckedListenableFuture<R>        callbackResult;
   
-  protected AsyncRequest( TwiceChecked<Q, R> callback, ChannelPipelineFactory factory ) {
+  protected AsyncRequest( final TwiceChecked<Q, R> cb ) {
     super( );
     this.response = Futures.newAsyncMessageFuture( );
-    this.callbackResult = Futures.newAsyncMessageFuture( );
-    this.callback = callback;
     this.handler = new AsyncRequestHandler<Q, R>( this.response );
     this.callbackSequence = new CallbackListenerSequence<R>( );
-    this.pipelineFactory = factory;
-    Futures.addListenerHandler( response, this.callback );
-    Futures.addListenerHandler( response, new Callback.Success<R>( ) {
-      
+    this.callback = new TwiceChecked<Q, R>( ) {
+
       @Override
-      public void fire( R r ) {
+      public void fireException( Throwable t ) {
         try {
-          AsyncRequest.this.callbackResult.set( AsyncRequest.this.response.get( ) );
-        } catch ( ExecutionException ex ) {
-          AsyncRequest.this.callbackResult.setException( ex.getCause( ) );
-        } catch ( InterruptedException ex ) {
+          cb.fireException( t );
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+        }
+        try {
+          AsyncRequest.this.callbackSequence.fireException( t );
+        } catch ( Exception ex ) {
           LOG.error( ex , ex );
         }
       }
-    } );
-    Futures.addListenerHandler( this.callbackResult, this.callbackSequence );
+
+      @Override
+      public void fire( R r ) {
+        try {
+          cb.fire( r );
+          try {
+            AsyncRequest.this.callbackSequence.fire( r );
+          } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
+          }
+        } catch ( Exception ex ) {
+          AsyncRequest.this.callbackSequence.fireException( ex );
+        }
+      }
+
+      @Override
+      public void initialize( Q request ) throws Exception {}
+    };
+    Futures.addListenerHandler( response, this.callback );
   }
   
   /**
@@ -52,8 +65,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( String cluster ) {
-    Services.lookupByName( Components.delegate.cluster, cluster ).enqueue( this );
+  public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
+    Services.lookupByName( com.eucalyptus.component.id.Cluster.class, cluster ).enqueue( this );
     return this.getResponse( );
   }
   
@@ -77,10 +90,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException {
-    return this.execute( endpoint ).getResponse( ).get( );
+    return this.execute( endpoint, endpoint.getPipelineFactory( ) ).getResponse( ).get( );
   }
   
-  private Request<Q, R> execute( ServiceEndpoint endpoint ) {
+  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory ) {
     Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + endpoint );
     try {
       this.callback.initialize( this.request );
@@ -93,7 +106,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       throw ex;
     }
     Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + endpoint );
-    if ( !this.handler.fire( endpoint, this.pipelineFactory, this.request ) ) {
+    if ( !this.handler.fire( endpoint, pipelineFactory, this.request ) ) {
       if ( this.response.isDone( ) ) {
         try {
           R r = this.response.get( 1, TimeUnit.MILLISECONDS );

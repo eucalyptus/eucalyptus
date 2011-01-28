@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,13 +63,17 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.List;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.ws.stages.BindingStage;
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+@ComponentPart( Eucalyptus.class )
 public class EucalyptusSoapPipeline extends FilteredPipeline {
+  private final UnrollableStage auth = new SoapUserAuthenticationStage( );
 
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
@@ -77,14 +81,14 @@ public class EucalyptusSoapPipeline extends FilteredPipeline {
   }
 
   @Override
-  public String getPipelineName( ) {
+  public String getName( ) {
     return "eucalyptus-soap";
   }
 
   @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new SoapUserAuthenticationStage( ) );
-    stages.add( new BindingStage( ) );
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    auth.unrollStage( pipeline );
+    pipeline.addLast( "binding", new BindingHandler( ) );
+    return pipeline;
   }
-
 }

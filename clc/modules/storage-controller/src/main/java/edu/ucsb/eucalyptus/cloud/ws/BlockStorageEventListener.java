@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -65,8 +65,8 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -76,7 +76,7 @@ public class BlockStorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
 
 	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.storage, new BlockStorageEventListener() );
+		ListenerRegistry.getInstance( ).register( Storage.class, new BlockStorageEventListener() );
 	}
 
 	@Override

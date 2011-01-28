@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -76,8 +76,8 @@ import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioMessageDispatcher extends AbstractMessageDispatcher {

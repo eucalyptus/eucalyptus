@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -76,8 +76,8 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -102,7 +102,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
-		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getKeyPair().getPublic();
+		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getKeyPair().getPublic();
 		Cipher cipher;
 		try {
 			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -115,7 +115,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
-		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getPrivateKey();
+		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getPrivateKey();
 		try {
 			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);

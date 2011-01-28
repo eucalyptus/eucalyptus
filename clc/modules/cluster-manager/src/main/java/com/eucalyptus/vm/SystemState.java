@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -84,17 +84,16 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.images.Image;
@@ -102,6 +101,8 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.google.common.base.Function;
@@ -194,8 +195,10 @@ public class SystemState {
     }
     long splitTime = vm.getSplitTime( );
     VmState oldState = vm.getState( );
-    vm.setUuid( runVm.getUuid( ) );
     vm.setServiceTag( runVm.getServiceTag( ) );
+    vm.setUuid( runVm.getUuid( ) );
+    vm.setPlatform( runVm.getPlatform( ) );
+    vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
@@ -275,6 +278,7 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
+      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getImageId( ) ), Tx.NOOP );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
@@ -331,13 +335,13 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, networks,
+      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ), networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
@@ -346,7 +350,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+      Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }

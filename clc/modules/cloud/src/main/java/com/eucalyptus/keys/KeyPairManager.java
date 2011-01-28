@@ -19,6 +19,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
@@ -39,8 +41,13 @@ public class KeyPairManager {
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
-      vmAllocInfo.setKeyInfo( new VmKeyInfo() );
-      return vmAllocInfo;
+//ASAP:FIXME:GRZE
+      if( "windows".equals( vmAllocInfo.getPlatform( ) ) ) {
+        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest().getImageId() );
+      } else {
+        vmAllocInfo.setKeyInfo( new VmKeyInfo() );
+        return vmAllocInfo;
+      }
     }
     SshKeyPair keypair = KeyPairUtil.getUserKeyPair( vmAllocInfo.getRequest( ).getUserId( ), vmAllocInfo.getRequest( ).getKeyName( ) );
     if ( keypair == null ) {
@@ -95,4 +102,8 @@ public class KeyPairManager {
     throw new EucalyptusCloudException( "Creation failed.  Keypair already exists: " + request.getKeyName( ) );
   }
 
+  public ImportKeyPairResponseType importKeyPair(ImportKeyPairType request) {
+    ImportKeyPairResponseType reply = request.getReply( );
+    return reply;
+  }
 }

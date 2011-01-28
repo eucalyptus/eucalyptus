@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -80,18 +80,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeType;
-import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
@@ -233,10 +221,10 @@ public class Configuration {
       for( Component c : Components.list( ) ) {
         for ( Service s : c.getServices( ) ) {
           ServiceConfiguration conf = s.getServiceConfiguration( );
-          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                   conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
           for( String d : s.getDetails( ) ) {
-            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                     conf.getName( ), "detail", d, "" ) );
           }
         }        

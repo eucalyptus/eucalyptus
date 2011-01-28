@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -69,6 +69,8 @@ import org.hsqldb.Server;
 import org.hsqldb.persist.HsqlProperties;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -78,9 +80,9 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Component.eucalyptus)
+@DependsLocal(Eucalyptus.class)
 public class LocalDatabaseBootstrapper extends Bootstrapper implements EventListener, Runnable, DatabaseBootstrapper {
   private static Logger             LOG = Logger.getLogger( LocalDatabaseBootstrapper.class );
   private static DatabaseBootstrapper singleton;

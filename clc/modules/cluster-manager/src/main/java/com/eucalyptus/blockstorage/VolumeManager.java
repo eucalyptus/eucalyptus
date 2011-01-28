@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -351,6 +351,7 @@ public class VolumeManager {
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not yet available: " + request.getVolumeId( ) );
     }
+
     AttachStorageVolumeResponseType scAttachResponse;
     try {
       scAttachResponse = StorageUtil.send( sc.getName( ), new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) ) );
@@ -359,9 +360,10 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
-    Callbacks.newClusterRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
+    attachVol.setStatus( "attaching" );
     vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getUserName( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
@@ -419,7 +421,6 @@ public class VolumeManager {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
     }
-    volume.setStatus( "detaching" );
     try {
       StorageUtil.send( scVm.getName( ), new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
@@ -430,9 +431,10 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice( ) );
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     request.setInstanceId( vm.getInstanceId( ) );
-    Callbacks.newClusterRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) ).info( );
+    volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;
   }

@@ -4,17 +4,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 
-@Provides( Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -108,8 +108,12 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
           ret.add( ( Bootstrapper ) c.newInstance( ) );
         } catch ( Exception e ) {
           EventRecord.here( BootstrapperDiscovery.class, EventType.BOOTSTRAPPER_INIT,"getInstance()L", c.getCanonicalName( ) ).info( );
-          Method m = c.getDeclaredMethod( "getInstance", new Class[] {} );
-          ret.add( ( Bootstrapper ) m.invoke( null, new Object[] {} ) );
+          try {
+            Method m = c.getDeclaredMethod( "getInstance", new Class[] {} );
+            ret.add( ( Bootstrapper ) m.invoke( null, new Object[] {} ) );
+          } catch ( NoSuchMethodException ex ) {
+            throw BootstrapException.throwFatal( "Error in <init>()V in bootstrapper: " + c.getCanonicalName( ), e );
+          }
         }
       } catch ( Exception e ) {
         throw BootstrapException.throwFatal( "Error in <init>()V and getInstance()L; in bootstrapper: " + c.getCanonicalName( ), e );

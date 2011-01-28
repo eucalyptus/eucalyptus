@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,24 +63,23 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.List;
-
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.ElasticFoxMangleStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
+@ComponentPart( Eucalyptus.class )
 public class ElasticFoxPipeline extends EucalyptusQueryPipeline {
 
-  @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    super.addStages( stages );
-    stages.add( new ElasticFoxMangleStage( ) );
-  }
+  private final UnrollableStage mangle = new ElasticFoxMangleStage( );
+  
+  
 
   @Override
-  protected boolean checkAccepts( HttpRequest message ) {
+  public boolean checkAccepts( HttpRequest message ) {
     if ( message instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       //FIXME: newest firefox breaks...
@@ -94,10 +93,15 @@ public class ElasticFoxPipeline extends EucalyptusQueryPipeline {
   }
 
   @Override
-  public String getPipelineName( ) {
-    return "elasticfox-"+super.getPipelineName( );
+  public String getName( ) {
+    return "elasticfox-"+super.getName( );
   }
 
-  
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    super.addHandlers( pipeline );
+    mangle.unrollStage( pipeline );
+    return pipeline;
+  }
   
 }

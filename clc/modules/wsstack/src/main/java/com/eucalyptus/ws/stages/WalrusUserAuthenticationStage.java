@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -70,8 +70,13 @@ import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
 
 public class WalrusUserAuthenticationStage implements UnrollableStage {
 
-	@Override
-	public String getStageName( ) {
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+	public String getName( ) {
 		return "walrus-user-authentication";
 	}
 
@@ -79,4 +84,5 @@ public class WalrusUserAuthenticationStage implements UnrollableStage {
 	public void unrollStage( ChannelPipeline pipeline ) {
 		pipeline.addLast( "walrus-verify", new WalrusAuthenticationHandler( ) );
 	}
+
 }

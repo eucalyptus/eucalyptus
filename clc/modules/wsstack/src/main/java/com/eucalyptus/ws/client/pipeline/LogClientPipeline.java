@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -66,17 +66,16 @@ package com.eucalyptus.ws.client.pipeline;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
+import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public class LogClientPipeline extends NioClientPipeline {
-  public LogClientPipeline( final NioResponseHandler handler ) {
+  public LogClientPipeline( final ResponseHandler handler ) {
     super( handler, "eucalyptus_ucsb_edu" );
   }
 
@@ -85,7 +84,7 @@ public class LogClientPipeline extends NioClientPipeline {
     ChannelPipeline pipeline = Channels.pipeline( );
     ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
+    pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );

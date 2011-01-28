@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -77,9 +77,9 @@ import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.WsSecHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.WsSecHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public class NioClientPipeline implements ChannelPipelineFactory {

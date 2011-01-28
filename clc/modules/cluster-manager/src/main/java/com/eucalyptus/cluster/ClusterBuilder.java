@@ -19,26 +19,27 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.DeregisterClusterType;
+import com.eucalyptus.config.DescribeClustersType;
+import com.eucalyptus.config.ModifyClusterAttributeType;
+import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DescribeClustersType;
-import edu.ucsb.eucalyptus.msgs.ModifyClusterAttributeType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 @DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
@@ -75,9 +76,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     try {
-      if( Components.lookup( Components.delegate.eucalyptus ).isLocal( ) ) {
+      if( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         try {
           Clusters.start( ( ClusterConfiguration ) config );
         } catch ( EucalyptusCloudException ex ) {
@@ -102,8 +103,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public com.eucalyptus.component.Component getComponent( ) {
-    return Components.lookup( Component.cluster );
+  public Component getComponent( ) {
+    return Components.lookup( com.eucalyptus.component.id.Cluster.class );
   }
   private static String         CLUSTER_KEY_FSTRING = "cc-%s";
   private static String         NODE_KEY_FSTRING    = "nc-%s";
@@ -133,7 +134,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         PEMFiles.write( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
         PEMFiles.write( directory + File.separator + "node-cert.pem", nodeX509 );
         
-        X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+        X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
         String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
         PEMFiles.write( directory + File.separator + "cloud-cert.pem", systemX509 );
         out = new FileWriter( directory + File.separator + "vtunpass" );
@@ -204,7 +205,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponent( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {
@@ -240,7 +241,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
    */
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( null, this.getComponent( ).getPeer( ), uri );
+    return new RemoteConfiguration( null, this.getComponent( ).getIdentity( ), uri );
   }
   
 }

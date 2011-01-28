@@ -1,19 +1,17 @@
 package com.eucalyptus.ws;
 
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.event.SystemClock;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Iterables;
 
-@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.Final )
 public class ServiceVerifyBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceVerifyBootstrapper.class );
@@ -31,19 +29,6 @@ public class ServiceVerifyBootstrapper extends Bootstrapper {
     LOG.info( LogUtil.subheader( "Service Dispatchers" ) );
     Iterables.all( ServiceDispatcher.values( ), Components.dispatcherPrinter( ) );
     return true;
-  }
-  
-  private static void requireComponent( com.eucalyptus.bootstrap.Component comp, String prettyName ) {
-    try {
-      Component component = Components.lookup( comp );
-      if ( !component.isRunningLocally( ) ) {
-        LOG.warn( LogUtil.header( "Failed to find a " + prettyName + " configuration.  You must register one in order to use Eucalyptus." ) );
-      }
-    } catch ( NoSuchElementException ex ) {
-      LOG.warn( LogUtil.header( "Failed to find a " + prettyName + " configuration.  You must register one in order to use Eucalyptus." ) );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-    }
   }
   
   @Override

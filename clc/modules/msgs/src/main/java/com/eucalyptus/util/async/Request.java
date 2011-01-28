@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,6 +63,7 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.ExecutionException;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -82,6 +83,7 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
    * @throws InterruptedException
    */
   public abstract R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException;
+  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory );
   //ASAP: add time information
   /**
    * TODO: DOCUMENT Request.java

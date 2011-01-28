@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -69,7 +69,6 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
@@ -99,11 +98,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );
-    try {
-      ServiceContext.dispatch( "ReplyQueue", reply );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
-    }
+    ServiceContext.response( reply );
   }
 
 

@@ -70,7 +70,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static void doDiscovery( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( com.eucalyptus.bootstrap.Component.eucalyptus.name( ) ) && f.getName( ).endsWith( ".jar" )
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {

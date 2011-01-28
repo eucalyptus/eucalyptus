@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,15 +65,19 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-public class StorageResponseType extends EucalyptusMessage {
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.ComponentMessage;
+
+public class StorageResponseType extends BaseMessage {
 	def StorageResponseType() {}
 }
 
-public class StorageRequestType extends EucalyptusMessage {
+@ComponentMessage(Storage.class)
+public class StorageRequestType extends BaseMessage {
 	def StorageRequestType() {}
 }
 
-public class StorageErrorMessageType extends EucalyptusMessage {
+public class StorageErrorMessageType extends BaseMessage {
 	def StorageErrorMessageType() {
 	}
 	
