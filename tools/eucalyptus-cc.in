@@ -358,7 +358,7 @@ if [ -z "${HTTPD}" ]; then
 fi
 
 if [ -z "${APACHE2_MODULE_DIR}" ]; then
-        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR"
+        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
 fi
 
 if [ ! -d "$APACHE2_MODULE_DIR" ]; then
