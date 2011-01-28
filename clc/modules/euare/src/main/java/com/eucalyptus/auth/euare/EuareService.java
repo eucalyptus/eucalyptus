@@ -98,6 +98,7 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -211,7 +212,7 @@ public class EuareService {
           SigningCertificateType c = new SigningCertificateType( );
           c.setUserName( userFound.getName( ) );
           c.setCertificateId( cert.getId( ) );
-          c.setCertificateBody( cert.getPem( ) );
+          c.setCertificateBody( B64.url.decString( cert.getPem( ) ) );
           c.setStatus( cert.isActive( ) ? "Active" : "Inactive" );
           c.setUploadDate( cert.getCreateDate( ) );
           certs.add( c );
@@ -243,10 +244,11 @@ public class EuareService {
       throw new EuareException( 403, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
     }
+    String encodedPem = B64.url.encString( request.getCertificateBody( ) );
     Certificate cert = null;
     try {
       for ( Certificate c : userFound.getCertificates( ) ) {
-        if ( c.getPem( ).equals( request.getCertificateBody( ) ) ) {
+        if ( c.getPem( ).equals( encodedPem ) ) {
           if ( !c.isRevoked( ) ) {
             throw new EuareException( 409, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate: " + c.getId( ) );        
           } else {
@@ -254,7 +256,7 @@ public class EuareService {
           }
         }
       }
-      X509Certificate x509 = X509CertHelper.toCertificate( request.getCertificateBody( ) );
+      X509Certificate x509 = X509CertHelper.toCertificate( encodedPem );
       if ( x509 == null ) {
         throw new EuareException( 400, EuareException.INVALID_CERTIFICATE, "Invalid certificate " + request.getCertificateBody( ) );        
       }
