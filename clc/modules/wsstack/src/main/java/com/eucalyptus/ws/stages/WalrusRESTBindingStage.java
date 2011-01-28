@@ -65,17 +65,18 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
-import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
 import com.eucalyptus.ws.handlers.WalrusRESTLoggerOutbound;
-import com.eucalyptus.ws.handlers.WalrusRESTLoggerInbound;
 
 public class WalrusRESTBindingStage implements UnrollableStage {
 
-	@Override
-	public String getStageName( ) {
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
 		return "walrus-rest-binding";
 	}
 

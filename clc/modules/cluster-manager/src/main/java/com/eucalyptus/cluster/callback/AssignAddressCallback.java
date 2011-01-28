@@ -99,10 +99,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   
@@ -146,7 +146,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
     } else if ( this.address.isAssigned( ) ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   

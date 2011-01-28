@@ -66,6 +66,8 @@ package com.eucalyptus.ws.client;
 import java.security.GeneralSecurityException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
@@ -86,17 +88,25 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.event.DisableComponentEvent;
+import com.eucalyptus.component.event.EnableComponentEvent;
 import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -104,22 +114,21 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsLocal(Component.eucalyptus)
+@DependsLocal(Eucalyptus.class)
 public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPipelineFactory, EventListener {
   private static Logger                            LOG    = Logger.getLogger( RemoteBootstrapperClient.class );
   private ConcurrentMap<String, HeartbeatClient>   heartbeatMap;
-  private Multimap<String, ServiceConfiguration> componentMap;
   private NioBootstrap                             clientBootstrap;
   private ChannelFactory                           channelFactory;
   private static RemoteBootstrapperClient          client = new RemoteBootstrapperClient( );
@@ -132,8 +141,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
     this.channelFactory = new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ), Executors.newCachedThreadPool( ) );
     this.clientBootstrap = new NioBootstrap( channelFactory );
     this.clientBootstrap.setPipelineFactory( this );
-    this.componentMap = Multimaps.newArrayListMultimap( );
-    this.heartbeatMap = Maps.newConcurrentHashMap( );
   }
 
   public ChannelPipeline getPipeline( ) throws Exception {
@@ -186,15 +193,6 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
 
   @Override
   public boolean start( ) throws Exception {
-    List<ServiceConfiguration> configs = Lists.newArrayList( );
-    configs.addAll( Configuration.getStorageControllerConfigurations( ) );
-    configs.addAll( Configuration.getWalrusConfigurations( ) );
-    for( ServiceConfiguration c : configs ) {
-      if( !c.isLocal( ) ) {
-        this.addRemoteComponent( c );
-        this.fireRemoteStartEvent( c );
-      }
-    }
     return true;
   }
 
@@ -240,22 +238,20 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   public void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       LifecycleEvent e = ( LifecycleEvent ) event;
-      if ( !Component.walrus.equals( e.getPeer( ) ) && !Component.storage.equals( e.getPeer( ) ) ) {
+      if ( !Walrus.class.equals( e.getIdentity( ).getClass( ) ) && !Storage.class.equals( e.getIdentity( ).getClass( ) ) ) {
         return;
       } else if ( e.getConfiguration( ).getPort( ) < 0 ) {
         return;
       } else {
         ServiceConfiguration config = e.getConfiguration( );
         if ( event instanceof StartComponentEvent ) {
-          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
-            this.addRemoteComponent( config );
-          }
-          this.fireRemoteStartEvent( config );
+          this.fireHeartbeat( );
         } else if ( event instanceof StopComponentEvent ) {
-          if( !NetworkUtil.testLocal( e.getConfiguration( ).getHostName( ) ) ) {
-            this.removeRemoteComponent( config );
-          }
-          this.fireRemoteStopEvent( config );
+          this.fireHeartbeat( );
+        } else if ( event instanceof EnableComponentEvent ) {
+          this.fireHeartbeat( );
+        } else if ( event instanceof DisableComponentEvent ) {
+          this.fireHeartbeat( );
         }
       }
     } else if ( event instanceof ClockTick ) {
@@ -266,62 +262,33 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   private void fireHeartbeat( ) {
-    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
-      Collection<ServiceConfiguration> services = this.componentMap.get( hb.getHostName( ) );
+    Multimap<String,ServiceConfiguration> services = Multimaps.newArrayListMultimap( );
+    for( Component c : Components.list( ) ) {
+      if( !c.getIdentity( ).isCloudLocal( ) && !c.getIdentity( ).isAlwaysLocal( ) ) {
+        for( Service s : c.getServices( ) ) {
+          if( s.isLocal( ) ) {
+            services.put( s.getHost( ), s.getServiceConfiguration( ) );
+          }
+        }
+      }
+    }
+    Set<String> currentHosts = services.keySet( );
+    for( String host : this.heartbeatMap.keySet( ) ) {
+      if( !currentHosts.contains( host ) ) {
+        HeartbeatClient staleHb = this.heartbeatMap.remove( host );
+        LOG.debug( "Removing stale heartbeat client for " + host );
+        staleHb.close( );
+      }
+    }
+    for( String host : services.keySet( ) ) {
+      if( !heartbeatMap.containsKey( host ) ) {
+        heartbeatMap.put( host, new HeartbeatClient( this.clientBootstrap, host, 8773 /** ASAP:GRZE:FIXME **/ ) );
+      }
+      HeartbeatClient hb = this.heartbeatMap.get( host );
+      Collection<ServiceConfiguration> currentServices = services.get( host );
       LOG.debug( "Sending heartbeat to: " + hb.getHostName( ) + " with " + services ); 
-      hb.send( services );
+      hb.send( currentServices );
     }
   }
-
-  private void fireRemoteStartEvent( ServiceConfiguration config ) {
-    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
-      if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
-        LOG.info( "--> Firing start event on target remote component: " + LogUtil.dumpObject( hb ) );
-        hb.send( this.componentMap.get( hb.getHostName( ) ) );
-      } else {
-        LOG.info( "--> Queueing start event on all other remote components: " + LogUtil.dumpObject( hb ) );
-        hb.addStarted( config );
-        this.fireHeartbeat( );
-      }
-    }
-  }
-
-  private void fireRemoteStopEvent( ServiceConfiguration config ) {
-    for ( HeartbeatClient hb : this.heartbeatMap.values( ) ) {
-      if ( hb.getHostName( ).equals( config.getHostName( ) ) ) {
-        LOG.info( "--> Firing stop event on target remote component: " + LogUtil.dumpObject( hb ) );
-        hb.send( this.componentMap.get( hb.getHostName( ) ) );
-      } else {
-        LOG.info( "--> Queueing start event for next clock tick on all other remote components: " + LogUtil.dumpObject( hb ) );
-        hb.addStopped( config );
-        this.fireHeartbeat( );
-      }
-    }
-  }
-
-  public void addRemoteComponent( ServiceConfiguration config ) {
-    if ( !this.heartbeatMap.containsKey( config.getHostName( ) ) ) {
-      LOG.debug( LogUtil.subheader( "-> Adding remote bootstrapper for host: " + config.getHostName( ) ) );
-      this.heartbeatMap.put( config.getHostName( ), new HeartbeatClient( this.clientBootstrap, config.getHostName( ), config.getPort( ) ) );
-    }
-    if ( !this.componentMap.containsEntry( config.getHostName(), config ) ) {
-      LOG.debug( "-> Adding remote component to the bootstrapper map: " + LogUtil.dumpObject( config ) );
-      this.componentMap.put( config.getHostName( ), config );
-    }
-  }
-
-  public void removeRemoteComponent( ServiceConfiguration config ) {
-    if ( this.componentMap.containsEntry( config.getHostName( ), config ) ) {
-      LOG.debug( "-> Removing remote component bootstrapper: " + LogUtil.dumpObject( config ) );
-      this.componentMap.remove( config.getHostName( ), config );
-      if ( this.componentMap.get( config.getHostName( ) ).isEmpty( ) ) {
-        HeartbeatClient hb = this.heartbeatMap.remove( config.getHostName( ) );
-        hb.send( this.componentMap.get( hb.getHostName( ) ) );
-        hb.close( );
-        LOG.debug( LogUtil.subheader( "-> Removing remote bootstrapper for host: " + config.getHostName( ) ) );
-      }
-    }
-  }
-
 
 }

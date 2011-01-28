@@ -64,34 +64,30 @@
   -->
 
 <binding name="eucalyptus_ucsb_edu" force-classes="true">
-    <namespace uri="http://eucalyptus.ucsb.edu/" default="elements"/>
-    <include path="cc-types.xml"/>
-    <include path="cc-network.xml"/>
-    <include path="cc-resources.xml"/>
-    <include path="cc-vms.xml"/>
-    <include path="cc-getlogs.xml"/>
-    <include path="vmware-broker-types.xml"/>
+  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
 
-    <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-      <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="remoteDev" field="remoteDevice" usage="required"/>
-        <value name="localDev" field="device" usage="required"/>
-    </mapping>
-    <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-    </mapping>
-    <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-      <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="remoteDev" field="remoteDevice" usage="required"/>
-        <value name="localDev" field="device" usage="required"/>
-        <value name="force" field="force" usage="required"/>
-    </mapping>
-    <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-    </mapping>
+  <include path="cc-network.xml" />
+  <include path="cc-volumes.xml" />
+  <include path="cc-resources.xml" />
+  <include path="cc-vms.xml" />
+  <include path="cc-getlogs.xml" />
+  <include path="cc-services.xml" />
+  <include path="vmware-broker-types.xml"/>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
+    <value name="correlationId" field="correlationId" usage="optional" />
+    <value name="userId" field="userId" usage="optional" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+    <value name="return" field="_return" usage="optional" />
+    <value name="epoch" field="epoch" usage="optional" />
+    <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceInfoType" />
+    </collection>
+  </mapping>
+
 </binding>
 

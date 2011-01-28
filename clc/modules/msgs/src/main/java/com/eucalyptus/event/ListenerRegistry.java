@@ -2,10 +2,9 @@ package com.eucalyptus.event;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.records.EventType;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.google.common.collect.Maps;
-import com.eucalyptus.records.EventRecord;
 
 public class ListenerRegistry {
   private static Logger                                     LOG       = Logger.getLogger( ListenerRegistry.class );
@@ -25,12 +24,13 @@ public class ListenerRegistry {
     super( );
     this.registryMap = Maps.newHashMap( );
     this.eventMap = new ReentrantListenerRegistry<Class<? extends Event>>( );
-    this.registryMap.put( Component.class, new ReentrantListenerRegistry<Component>( ) );
+    this.registryMap.put( ComponentId.class, new ReentrantListenerRegistry<ComponentId>( ) );
     this.registryMap.put( String.class, new ReentrantListenerRegistry<String>( ) );
   }
 
   @SuppressWarnings( "unchecked" )
   public void register( Object type, EventListener listener ) {
+    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class)type ) ) {
       this.eventMap.register( (Class) type , listener );
     } else {
@@ -43,6 +43,7 @@ public class ListenerRegistry {
 
   @SuppressWarnings( "unchecked" )
   public void deregister( Object type, EventListener listener ) {
+    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class)type ) ) {
       this.eventMap.deregister( (Class) type, listener );
     } else {
@@ -55,6 +56,7 @@ public class ListenerRegistry {
 
   @SuppressWarnings( "unchecked" )
   public void destroy( Object type ) {
+    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class) type ) ) {
       this.eventMap.destroy( (Class) type );
     } else {
@@ -70,6 +72,7 @@ public class ListenerRegistry {
   }
   @SuppressWarnings( "unchecked" )
   public void fireEvent( Object type, Event e ) throws EventFailedException {
+    type = ComponentIds.checkDeprecated( type );
     if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
       this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
     }

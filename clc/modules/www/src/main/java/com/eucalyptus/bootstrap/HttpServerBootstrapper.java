@@ -67,6 +67,8 @@ import org.apache.log4j.Logger;
 import org.mortbay.jetty.Server;
 import org.mortbay.xml.XmlConfiguration;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -75,9 +77,9 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 
-@Provides( Component.jetty )
+@Provides( HttpService.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-@DependsLocal( Component.eucalyptus )
+@DependsLocal( Eucalyptus.class )
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {  
   private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );

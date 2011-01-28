@@ -73,7 +73,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
@@ -191,7 +190,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -209,7 +208,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
+                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
               }
             }
           }
@@ -229,7 +228,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       VmInstances.cleanUpAttachedVolumes( vm );
 
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newClusterRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
@@ -243,8 +242,12 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       LOG.error( e, e );
     }
   }
-
-
+  
+  private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
+    public boolean apply( AttachedVolume arg0 ) {
+      return true;
+    }
+  };
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );

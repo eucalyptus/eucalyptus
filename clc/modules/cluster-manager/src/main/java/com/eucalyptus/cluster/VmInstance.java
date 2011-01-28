@@ -79,11 +79,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.EventFailedException;
@@ -155,6 +150,8 @@ public class VmInstance implements HasName<VmInstance> {
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
   private Boolean                                     privateNetwork;
+  private Long                                        blockBytes    = 0l;
+  private Long                                        networkBytes  = 0l;
   
   public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
                      final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final String platform, final List<Network> networks,
@@ -186,6 +183,14 @@ public class VmInstance implements HasName<VmInstance> {
     this.updateWatch.start( );
     this.updateDns( );
     this.store( );
+  }
+  
+  public void updateBlockBytes( long blkbytes ) {
+    this.blockBytes += blkbytes;
+  }
+  
+  public void updateNetworkBytes( long netbytes ) {
+    this.networkBytes += netbytes;
   }
   
   public void updateNetworkIndex( Integer newIndex ) {

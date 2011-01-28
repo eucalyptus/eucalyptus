@@ -69,7 +69,7 @@ import com.eucalyptus.component.ComponentId;
 public class HttpService extends ComponentId {
 
   public HttpService( ) {
-    super( "jetty" );
+    super( "Jetty" );
   }
 
   @Override
@@ -93,7 +93,13 @@ public class HttpService extends ComponentId {
   }
 
   @Override
-  public String getModelConfiguration( ) {
+  public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
   }
+  
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

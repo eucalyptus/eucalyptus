@@ -21,18 +21,18 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.Groups;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ComponentDiscovery;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DispatcherFactory;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -82,6 +82,7 @@ public class StandalonePersistence {
       StandalonePersistence.setupNewDatabase( );
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
+      System.exit(0);
     } catch ( Throwable e ) {
       e.printStackTrace( );
       System.exit( -1 );
@@ -162,7 +163,7 @@ public class StandalonePersistence {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
-    new SystemCredentialProvider( ).load( );
+    SystemCredentialProvider.initializeCredentials( );
     DispatcherFactory.setFactory( ( DispatcherFactory ) ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.ws.client.DefaultDispatcherFactory" ).newInstance( ) );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
@@ -195,37 +196,36 @@ public class StandalonePersistence {
   }
   
   private static void setupConfigurations( ) {
-      ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
-
-      //    Enumeration<URL> p1;
-      //    URI u = null;
-      //    try {
-      //      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
-      //      if ( !p1.hasMoreElements( ) ) return;
-      //      while ( p1.hasMoreElements( ) ) {
-      //        u = p1.nextElement( ).toURI( );
-      //        Properties props = new Properties( );
-      //        props.load( u.toURL( ).openStream( ) );
-      //        String name = props.getProperty( "name" );
-      //        if ( Components.contains( name ) /** make this not use a string? **/ ) {
-      //          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
-      //        } else {
-      //          try {
-      //            LOG.debug( "Loaded " + name + " from " + u );
-      //            Components.create( name, u );
-      //          } catch ( ServiceRegistrationException e ) {
-      //            LOG.debug( e, e );
-      //            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
-      //          }
-      //        }
-      //      }
-      //    } catch ( IOException e ) {
-      //      LOG.error( e, e );
-      //      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-      //    } catch ( URISyntaxException e ) {
-      //      LOG.error( e, e );
-      //      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-      //    }
+    ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
+//    Enumeration<URL> p1;
+//    URI u = null;
+//    try {
+//      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
+//      if ( !p1.hasMoreElements( ) ) return;
+//      while ( p1.hasMoreElements( ) ) {
+//        u = p1.nextElement( ).toURI( );
+//        Properties props = new Properties( );
+//        props.load( u.toURL( ).openStream( ) );
+//        String name = props.getProperty( "name" );
+//        if ( Components.contains( name ) ) {
+//          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
+//        } else {
+//          try {
+//            LOG.debug( "Loaded " + name + " from " + u );
+//            Components.create( name, u );
+//          } catch ( ServiceRegistrationException e ) {
+//            LOG.debug( e, e );
+//            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
+//          }
+//        }
+//      }
+//    } catch ( IOException e ) {
+//      LOG.error( e, e );
+//      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
+//    } catch ( URISyntaxException e ) {
+//      LOG.error( e, e );
+//      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
+//    }    
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {

@@ -63,15 +63,8 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.component.id.Eucalyptus;
 
 @Deprecated
 public enum Component {
@@ -90,8 +83,13 @@ public enum Component {
   any( false, true, false );
   private static Logger LOG = Logger.getLogger( Component.class );
 
+<<<<<<< TREE
 /**
    * @note is a sub-service of {@link Component.eucalyptus}
+=======
+  /**
+   * @note is a sub-service of {@link Eucalyptus}
+>>>>>>> MERGE-SOURCE
    */
   private final Boolean cloudLocal;
   /**
@@ -108,53 +106,5 @@ public enum Component {
     this.hasDispatcher = hasDispatcher;
     this.cloudLocal = cloudLocal;
   }
-  
-  public Boolean isLocal( ) {
-    try {
-      return Components.lookup( this ).isLocal( );
-    } catch ( NoSuchElementException ex ) {
-      return false;
-    }
-  }
-  
-  public URI getUri( ) {
-    com.eucalyptus.component.Component c = Components.lookup( this );
-    NavigableSet<Service> services = c.getServices( );
-    if( this.isCloudLocal( ) && services.size( ) != 1 && !db.equals( this ) ) {
-      throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
-    } else if( this.isCloudLocal( ) && services.size( ) != 1 && db.equals( this ) ) {
-      return this.getLocalUri( );
-    } else if( this.isCloudLocal( ) && services.size( ) == 1 ) {
-      return services.first( ).getUri( );
-    } else {
-      for( Service s : services ) {
-        if( s.isLocal( ) ) {
-          return s.getUri( );
-        }
-      }
-      throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
-    }
-  }
-
-  public URI getLocalUri( ) {
-    return Components.lookup( this ).getIdentity( ).getLocalEndpointUri( );
-  }
-  
-  public Boolean isCloudLocal( ) {
-    return this.cloudLocal;
-  }
-
-  public Boolean hasDispatcher( ) {
-    return this.hasDispatcher;
-  }
-
-  public Boolean isAlwaysLocal( ) {
-    return this.alwaysLocal;
-  }
-
-  public static List<Component> list( ) {
-    return Arrays.asList( Component.values( ) );
-  }
-
   
 }

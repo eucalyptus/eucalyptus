@@ -72,15 +72,18 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
@@ -91,7 +94,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
      * TODO: ultimately remove this: it is legacy and enforces a one-to-one
      * relationship between component impls
      **/
-    for ( ComponentId c : Components.listIds( ) ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
       if ( c.hasDispatcher( ) && c.isAlwaysLocal( ) ) {
         try {
           Component comp = Components.lookup( c );
@@ -108,7 +111,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
     LOG.trace( "Touching class: " + ServiceDispatcher.class );
     boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
+    Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
@@ -134,7 +137,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
+    Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {

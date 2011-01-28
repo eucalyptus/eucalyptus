@@ -84,7 +84,6 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;
@@ -337,7 +336,7 @@ public class SystemState {
           } catch ( EucalyptusCloudException e ) {
             LOG.error( e );
             ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -352,7 +351,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      Callbacks.newClusterRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+      Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }
@@ -363,7 +362,7 @@ public class SystemState {
   
   public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    boolean dns = Component.dns.isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
+    boolean dns = Components.lookup( "dns" ).isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {

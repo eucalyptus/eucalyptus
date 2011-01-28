@@ -65,52 +65,52 @@
 
 <binding force-classes="true">
 
-    <mapping name="CreateKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="keyName" field="keyName"/>
-        <value name="keyFingerprint" field="keyFingerprint"/>
-        <value name="keyMaterial" field="keyMaterial"/>
-    </mapping>
+  <mapping name="CreateKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="keyName" field="keyName" />
+    <value name="keyFingerprint" field="keyFingerprint" />
+    <value name="keyMaterial" field="keyMaterial" />
+  </mapping>
 
-    <mapping name="CreateKeyPair" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="keyName" field="keyName"/>
-    </mapping>
+  <mapping name="CreateKeyPair" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="keyName" field="keyName" />
+  </mapping>
 
-    <mapping name="DeleteKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
-    </mapping>
+  <mapping name="DeleteKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" />
+  </mapping>
 
-    <mapping name="DeleteKeyPair" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="keyName" field="keyName"/>
-    </mapping>
+  <mapping name="DeleteKeyPair" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="keyName" field="keyName" />
+  </mapping>
 
 
-    <mapping name="DescribeKeyPairsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure name="keySet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="keySet">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType"/>
-            </collection>
+  <mapping name="DescribeKeyPairsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="keySet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="keySet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeKeyPairs" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="keySet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="keySet" item-type="java.lang.String">
+        <structure name="item">
+          <value name="keyName" />
         </structure>
-    </mapping>
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DescribeKeyPairs" class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure name="keySet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="keySet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="keyName"/>
-                </structure>
-            </collection>
-        </structure>
-    </mapping>
-
-    <mapping class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType" abstract="true">
-        <value name="keyName" field="keyName"/>
-        <value name="keyFingerprint" field="keyFingerprint"/>
-    </mapping>
-
+  <mapping class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType" abstract="true">
+    <value name="keyName" field="keyName" />
+    <value name="keyFingerprint" field="keyFingerprint" />
+  </mapping>
 </binding>

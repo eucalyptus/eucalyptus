@@ -87,4 +87,9 @@ public class Walrus extends ComponentId {
   public Boolean isCloudLocal( ) {
     return false;
   }
+
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
 }

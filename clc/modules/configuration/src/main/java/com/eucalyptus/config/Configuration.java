@@ -87,18 +87,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeComponentsType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeNodesType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyComponentAttributeType;
-import edu.ucsb.eucalyptus.msgs.NodeComponentInfoType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
 
 public class Configuration {
   static Logger         LOG                 = Logger.getLogger( Configuration.class );
@@ -240,10 +228,10 @@ public class Configuration {
       for( Component c : Components.list( ) ) {
         for ( Service s : c.getServices( ) ) {
           ServiceConfiguration conf = s.getServiceConfiguration( );
-          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                   conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
           for( String d : s.getDetails( ) ) {
-            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponent( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
+            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null ?  conf.getPartition( ) : "-" ), 
                                                     conf.getName( ), "detail", d, "" ) );
           }
         }        

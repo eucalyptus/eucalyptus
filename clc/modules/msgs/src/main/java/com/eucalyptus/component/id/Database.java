@@ -68,7 +68,7 @@ import com.eucalyptus.component.ComponentId;
 public class Database extends ComponentId {
 
   public Database( ) {
-    super( "db" );
+    super( "Db" );
   }
 
   @Override
@@ -100,4 +100,10 @@ public class Database extends ComponentId {
   public Boolean isCloudLocal( ) {
     return true;
   }
+  
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

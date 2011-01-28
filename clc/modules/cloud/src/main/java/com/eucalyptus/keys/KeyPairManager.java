@@ -19,6 +19,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
@@ -100,4 +102,8 @@ public class KeyPairManager {
     throw new EucalyptusCloudException( "Creation failed.  Keypair already exists: " + request.getKeyName( ) );
   }
 
+  public ImportKeyPairResponseType importKeyPair(ImportKeyPairType request) {
+    ImportKeyPairResponseType reply = request.getReply( );
+    return reply;
+  }
 }

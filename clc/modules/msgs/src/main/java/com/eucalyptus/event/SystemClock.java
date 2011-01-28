@@ -68,10 +68,9 @@ import java.util.TimerTask;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.empyrean.Empyrean;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
@@ -135,7 +134,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
 //    System.exit( -2 );
   }
 
-  @Provides( Component.bootstrap )
+  @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.Final )
   public static class SystemClockBootstrapper extends Bootstrapper {
 

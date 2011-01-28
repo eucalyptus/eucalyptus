@@ -78,7 +78,8 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -297,7 +298,7 @@ public class SystemConfiguration {
   public static String getWalrusUrl() throws EucalyptusCloudException {
     String walrusHost;
     try {
-      walrusHost = Configuration.getWalrusConfiguration( Component.walrus.name( ) ).getHostName( );
+      walrusHost = Configuration.getWalrusConfiguration( ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
     } catch ( Exception e ) {
       walrusHost = Configuration.getWalrusConfiguration( "Walrus" ).getHostName( );
     }

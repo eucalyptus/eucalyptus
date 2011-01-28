@@ -66,7 +66,8 @@
  */
 package edu.ucsb.eucalyptus.util;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.WalrusProperties;
 
 
@@ -79,7 +80,7 @@ public class UserManagement {
    * boolean
    */
   public static boolean isAdministrator( String userId ) {
-    if ( Component.eucalyptus.name( ).equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
+    if ( ComponentIds.lookup(Eucalyptus.class).name( ).equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
     return false;
   }
 

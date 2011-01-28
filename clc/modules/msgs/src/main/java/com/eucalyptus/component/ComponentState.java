@@ -78,6 +78,10 @@ import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
+import com.eucalyptus.util.fsm.TransitionListener;
+import com.eucalyptus.util.fsm.Transitions;
+import com.eucalyptus.ws.util.PipelineRegistry;
+import com.google.common.base.Predicate;
 
 public class ComponentState {
   private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
@@ -235,14 +239,27 @@ public class ComponentState {
         }
       }
     };
+
+    final TransitionListener<Component> addPipelines = Transitions.createListener( new Predicate<Component>( ) {
+      @Override
+      public boolean apply( Component arg0 ) {
+        PipelineRegistry.getInstance( ).enable( arg0.getIdentity( ) );
+        return true;
+      }} );
+    final TransitionListener<Component> removePipelines = Transitions.createListener( new Predicate<Component>( ) {
+      @Override
+      public boolean apply( Component arg0 ) {
+        PipelineRegistry.getInstance( ).disable( arg0.getIdentity( ) );
+        return true;
+      }} );
     
     return new StateMachineBuilder<Component, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
         on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( loadTransition );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( startTransition );
-        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( enableTransition );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( disableTransition );
+        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines ).run( enableTransition );
+        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines ).run( disableTransition );
         on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( stopTransition );
         on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( destroyTransition );
         on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );

@@ -71,72 +71,82 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Deque;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class JsonDescriptorGenerator extends BindingGenerator {
-  private static Logger            LOG          = Logger.getLogger( JsonDescriptorGenerator.class );
-  private final String             ns           = "http://msgs.eucalyptus.com";
-  private static String            INDENT       = "";
-  private final File               outFile;
-  private PrintWriter              out;
-  private int                      indent       = 0;
-  private Map<String, TypeBinding> typeBindings = new HashMap<String, TypeBinding>( ) {
-                                                  {
-                                                    put( Integer.class.getCanonicalName( ), new IntegerTypeBinding( ) );
-                                                    put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
-                                                    put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
-                                                    put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
-                                                    put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) );
-                                                    put( Float.class.getCanonicalName( ), new FloatTypeBinding( ) );
-                                                    put( java.util.Date.class.getCanonicalName( ), new DateTimeTypeBinding( ) );
-                                                    put( "boolean", new BooleanTypeBinding( ) );
-                                                    put( "int", new IntegerTypeBinding( ) );
-                                                    put( "long", new LongTypeBinding( ) );
-                                                    put( "float", new FloatTypeBinding( ) );
-                                                    put( "double", new DoubleTypeBinding( ) );
-                                                  }
-                                                };
+  private static Logger                   LOG          = Logger.getLogger( JsonDescriptorGenerator.class );
+  private final String                    ns           = "http://msgs.eucalyptus.com";
+  private static String                   INDENT       = "";
+  private PrintWriter                     out;
+  private static int                      indent       = 0;
+  private static Map<String, TypeBinding> typeBindings = new HashMap<String, TypeBinding>( ) {
+                                                         {
+                                                           put( Integer.class.getCanonicalName( ), new IntegerTypeBinding( ) );
+                                                           put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
+                                                           put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
+                                                           put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
+                                                           put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) );
+                                                           put( Float.class.getCanonicalName( ), new FloatTypeBinding( ) );
+                                                           put( java.util.Date.class.getCanonicalName( ), new DateTimeTypeBinding( ) );
+                                                           put( "boolean", new BooleanTypeBinding( ) );
+                                                           put( "int", new IntegerTypeBinding( ) );
+                                                           put( "long", new LongTypeBinding( ) );
+                                                           put( "float", new FloatTypeBinding( ) );
+                                                           put( "double", new DoubleTypeBinding( ) );
+                                                         }
+                                                       };
   
-  private static List<String>      badClasses   = new ArrayList<String>( ) {
-                                                  {
-                                                    add( ".*HttpResponseStatus" );
-                                                    add( ".*Closure" );
-                                                    add( ".*Channel" );
-                                                    add( ".*\\.JiBX_*" );
-                                                  }
-                                                };
-  private static List<String>      badFields    = new ArrayList<String>( ) {
-                                                  {
-                                                    add( "__.*" );
-                                                    add( "\\w*\\$\\w*\\$*.*" );
-                                                    add( "class\\$.*" );
-                                                    add( "metaClass" );
-                                                    add( "JiBX_.*" );
-                                                  }
-                                                };
+  private static List<String>             badClasses   = new ArrayList<String>( ) {
+                                                         {
+                                                           add( ".*HttpResponseStatus" );
+                                                           add( ".*Closure" );
+                                                           add( ".*Channel" );
+                                                           add( ".*\\.JiBX_*" );
+                                                         }
+                                                       };
+  private static List<String>             badFields    = new ArrayList<String>( ) {
+                                                         {
+                                                           add( "__.*" );
+                                                           add( "\\w*\\$\\w*\\$*.*" );
+                                                           add( "class\\$.*" );
+                                                           add( "metaClass" );
+                                                           add( "JiBX_.*" );
+                                                         }
+                                                       };
   
-  public JsonDescriptorGenerator( ) {
-    this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.json" );
-    if ( outFile.exists( ) ) {
-      outFile.delete( );
+  private static Map<Class, PrintWriter>  outputMap    = new HashMap<Class, PrintWriter>( );
+  public static boolean request = false;
+  
+  public static PrintWriter getWriter( Class parentType ) {
+    LOG.info( "Preparing JSON descriptor file: " + parentType.getCanonicalName( ) );
+    if ( !outputMap.containsKey( parentType ) ) {
+      File outFile = new File( "modules/msgs/src/main/resources/json/" + parentType.getSimpleName( ).replaceAll("Type\\Z","") + ".json" );
+      if ( !outFile.getParentFile( ).exists( ) ) {
+        outFile.getParentFile( ).mkdirs( );
+      }
+      if ( outFile.exists( ) ) {
+        outFile.delete( );
+      }
+      PrintWriter out;
+      try {
+        out = new PrintWriter( outFile );
+        outputMap.put( parentType, out );
+      } catch ( FileNotFoundException ex ) {
+        LOG.error( ex, ex );
+        throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
+      }
     }
-    try {
-      this.out = new PrintWriter( outFile );
-    } catch ( FileNotFoundException e ) {
-      e.printStackTrace( System.err );
-      System.exit( -1 );
-    }
+    return outputMap.get( parentType );
   }
+  
+  public JsonDescriptorGenerator( ) {}
   
   @Override
   public void processClass( Class klass ) {
@@ -148,9 +158,22 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   
   @Override
   public void close( ) {
-    this.out.write( RequestInfo.getRequestInfoList( ).toString( ) );
-    this.out.flush( );
-    this.out.close( );
+    for ( RequestInfo req : RequestInfo.getRequestInfoList( ) ) {
+      String reqString = req.toString( );
+//      if ( req.getParent( ) != null ) {
+//        getWriter( req.getParent( ) ).write( reqString );
+//        getWriter( req.getParent( ) ).flush( );
+//      }
+      if ( req.getRequest( ) != null ) {
+        getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
+        getWriter( req.getRequest( ) ).flush( );
+      }
+    }
+    for ( PrintWriter p : outputMap.values( ) ) {
+      p.flush( );
+      p.close( );
+    }
+    outputMap.clear( );
     RequestInfo.flush( );
   }
   
@@ -271,6 +294,18 @@ public class JsonDescriptorGenerator extends BindingGenerator {
       this.response = response;
     }
     
+    private String processField( Field f ) {
+//      "    {\n" +
+//      "        \"optional\": true,\n" +
+//      "        \"type\": \"array\",\n" +
+//      "        \"member-type\": \"string\",\n" +
+//      "        \"name\": [\"GroupName\"],\n" +
+//      "    }\n" +
+      String fieldInfo = "{\n" +
+                         "}\n";
+      return fieldInfo;
+    }
+    
     @Override
     public String toString( ) {
       if ( this.parent == null ) {
@@ -280,61 +315,23 @@ public class JsonDescriptorGenerator extends BindingGenerator {
           this.setParent( this.response );
         }
       }
-      String out = "{\n" +
-                   "    \"name\": [\"" + this.name + "\"],\n" +
-                   "    \"params\": [\n" +
-                   /** do request fields here **/
-                   "    {\n" +
-                   "        \"optional\": true,\n" +
-                   "        \"type\": \"array\",\n" +
-                   "        \"member-type\": \"string\",\n" +
-                   "        \"name\": [\"GroupName\"],\n" +
-                   "    }\n" +
-                   "    ],\n" +
-                   /** do response here **/
-                   "    \"response-properties\": [\n" +
-                   "    {\n" +
-                   "        \"type\": \"string\",\n" +
-                   "        \"name\": [\"requestId\"],\n" +
-                   "    }\n" +
-                   "    ]\n" +
-                   "}\n";
-      /**
-       * {
-       * "params": [//<--- request.getFields()
-       * {
-       * "optional": true,
-       * "member-type": "string",
-       * "type": "array",
-       * "name": "GroupName",// <--- remember to caps for query args
-       * }
-       * ],
-       * "name": "DescribeSecurityGroups",
-       */
-      return String.format( "RequestInfo:name=%s:request=%s:response=%s:parent=%s", this.name,
-                            ( this.request != null
-                              ? this.request.getCanonicalName( )
-                              : "" ),
-                            ( this.response != null
-                              ? this.response.getCanonicalName( )
-                              : "" ),
-                            ( this.parent != null
-                              ? this.parent.getCanonicalName( )
-                              : ( this.request != null
-                                ? this.request.getSuperclass( )
-                                : ( this.response != null
-                                  ? this.response.getSuperclass( )
-                                  : "FAILED-REQUEST-PAIRING" ) ) ) ) + "\n" + out;
+      JsonDescriptorGenerator.indent = 0;
+      RootObjectTypeBinding binding = new RootObjectTypeBinding( this );
+      String out = binding.process( );
+      return out;
+    }
+    
+    /**
+     * @return the parent
+     */
+    public Class getParent( ) {
+      return this.parent;
     }
   }
   
-  public ElemItem peek( ) {
-    return this.elemStack.peek( );
-  }
-  
-  public TypeBinding getTypeBinding( Field field ) {
+  public static TypeBinding getTypeBinding( Field field ) {
     Class itsType = field.getType( );
-    if ( this.isIgnored( field ) ) {
+    if ( JsonDescriptorGenerator.isIgnored( field ) ) {
       return new NoopTypeBinding( field );
     } else if ( List.class.isAssignableFrom( itsType ) ) {
       Class listType = getTypeArgument( field );
@@ -367,55 +364,76 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
   }
   
-  class RootObjectTypeBinding extends TypeBinding {
-    private Class   type;
-    private boolean abs;
+  static class RootObjectTypeBinding extends TypeBinding {
+    private RequestInfo requestInfo;
     
-    public RootObjectTypeBinding( Class type ) {
+    public RootObjectTypeBinding( RequestInfo requestInfo ) {
       super( "object" );
-      JsonDescriptorGenerator.this.indent = 2;
-      this.type = type;
-      if ( Object.class.equals( type.getSuperclass( ) ) ) {
-        this.abs = true;
-      } else if ( type.getSuperclass( ).getSimpleName( ).equals( "EucalyptusData" ) ) {
-        this.abs = true;
-      } else {
-        this.abs = false;
-      }
+      this.requestInfo = requestInfo;
     }
     
     @Override
     public String getTypeName( ) {
-      return type.getCanonicalName( );
+      return this.requestInfo.getRequest( ).getCanonicalName( );
     }
     
     public String process( ) {
-      if ( this.type.getCanonicalName( ) == null ) {
-        new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
+      if ( this.requestInfo.getRequest( ) == null || this.requestInfo.getResponse( ) == null || this.requestInfo.getRequest( ).getCanonicalName( ) == null ) {
+        new RuntimeException( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) ).printStackTrace( );
       } else {
-        this.elem( Elem.mapping );
-        if ( this.abs ) {
-          this.attr( "abstract", "true" );
-        } else {
-          this.attr( "name", this.type.getSimpleName( ) ).attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
-        }
-        this.attr( "class", this.type.getCanonicalName( ) );
-        if ( BindingGenerator.MSG_TYPE.isAssignableFrom( this.type.getSuperclass( ) )
-             || BindingGenerator.DATA_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) ) {
-          this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass( ).getCanonicalName( ) ).end( );
-        }
-        for ( Field f : type.getDeclaredFields( ) ) {
+        JsonDescriptorGenerator.request = true;
+        this.beginElem( );
+        this.attr( "schema-version", "0.1" );
+        this.attr( "service-version", "\"http://msgs.eucalyptus.com/\"" );
+        this.attr( "name", makeJSONName( this.requestInfo.getRequest( ).getSimpleName( ).replaceAll("Type\\Z","") ) );
+        this.beginList( "parameters" );
+        for ( Field f : getRecursiveFields( this.requestInfo.getParent( ), this.requestInfo.getRequest( ) ) ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
                                f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
-        this.end( );
+        this.endList( );
+        JsonDescriptorGenerator.indent = 2;
+        JsonDescriptorGenerator.request = false;
+        this.beginList( "response" );
+        List<Field> responseFields = getRecursiveFields( this.requestInfo.getParent( ), this.requestInfo.getResponse( ) );
+        try {
+          responseFields.add( BindingGenerator.MSG_TYPE.getDeclaredField( "_return" ) );
+          responseFields.add( BindingGenerator.MSG_TYPE.getDeclaredField( "correlationId" ) );
+        } catch ( SecurityException ex ) {
+          LOG.error( ex, ex );
+        } catch ( NoSuchFieldException ex ) {
+          LOG.error( ex, ex );
+        }
+        for ( Field f : responseFields ) {
+          TypeBinding tb = getTypeBinding( f );
+          if ( !( tb instanceof NoopTypeBinding ) ) {
+            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+                               f.getType( ).getCanonicalName( ) );
+            this.append( tb.toString( ) );
+          }
+        }
+        this.endList( );
+        this.endFile( );
+        JsonDescriptorGenerator.request = true;
       }
       return this.toString( );
     }
+  }
+  
+  private static final Field[] EMPTYFIELDS = new Field[] {};
+  
+  public static List<Field> getRecursiveFields( Class parentType, Class type ) {
+    List<Field> fields = new ArrayList<Field>( );
+    Class me = type;
+    while ( parentType.isAssignableFrom( me ) ) {
+      fields.addAll( Arrays.asList( me.getDeclaredFields( ) ) );
+      me = me.getSuperclass( );
+    }
+    return fields;
   }
   
   @SuppressWarnings( "unchecked" )
@@ -430,7 +448,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     return null;
   }
   
-  abstract class TypeBinding {
+  static abstract class TypeBinding {
     private StringBuilder buf = new StringBuilder( );
     private final String  typeName;
     
@@ -447,21 +465,21 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     private TypeBinding reindent( int delta ) {
-      JsonDescriptorGenerator.this.indent += delta;
+      JsonDescriptorGenerator.indent += delta;
       INDENT = "";
       for ( int i = 0; i < indent; i++ ) {
-        INDENT += "  ";
+        INDENT += "    ";
       }
       return this;
     }
     
-    private TypeBinding indent( String addMe ) {
-      this.reindent( +1 ).append( INDENT ).append( addMe );
+    private TypeBinding indent( ) {
+      this.reindent( +1 ).append( INDENT );
       return this;
     }
     
-    private TypeBinding outdent( String addMe ) {
-      this.reindent( -1 ).append( INDENT ).append( addMe );
+    private TypeBinding outdent( ) {
+      this.reindent( -1 ).append( INDENT );
       return this;
     }
     
@@ -471,12 +489,12 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     protected TypeBinding eolIn( ) {
-      this.append( "\n" ).indent( INDENT );
+      this.append( "\n" ).indent( );
       return this;
     }
     
     protected TypeBinding eolOut( ) {
-      this.append( "\n" ).outdent( INDENT );
+      this.append( "\n" ).outdent( );
       return this;
     }
     
@@ -486,43 +504,40 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     protected TypeBinding value( String name ) {
-      this.elem( Elem.value ).attr( "name", name ).attr( "field", name ).attr( "usage", "optional" ).attr( "style", "element" ).end( );
+      this.beginElem( )
+          .attr( "name", makeJSONName( name.replaceFirst( "_", "" ) ) )
+          .attr( "type", "\"" + this.getTypeName( ) + "\"" )
+          .endElem( );
       return this;
     }
     
-    private TypeBinding begin( ) {
-      ElemItem top = JsonDescriptorGenerator.this.elemStack.peek( );
-      if ( top != null && top.children ) {
-        this.eol( );
-      } else if ( top != null && !top.children ) {
-        this.append( ">" ).eolIn( );
-        top.children = true;
-      } else {
-        this.eolIn( );
-      }
+    protected TypeBinding beginElem( ) {
+      this.append( "{" ).eolIn( );
       return this;
     }
     
-    protected TypeBinding elem( Elem name ) {
-      this.begin( ).append( "<" ).append( name.toString( ) ).append( " " );
-      JsonDescriptorGenerator.this.elemStack.push( new ElemItem( name, JsonDescriptorGenerator.this.indent, false ) );
+    protected TypeBinding endElem( ) {
+      this.outdent( ).eol( ).append( "}," );
       return this;
     }
     
-    protected TypeBinding end( ) {
-      ElemItem top = JsonDescriptorGenerator.this.elemStack.pop( );
-      if ( top != null && top.children ) {
-        this.eolOut( ).append( "</" ).append( top.name.toString( ) ).append( ">" );
-      } else if ( top != null && !top.children ) {
-        this.append( "/>" );
-      } else {
-        this.append( "/>" );
-      }
+    protected TypeBinding endFile( ) {
+      this.outdent( ).eolOut( ).append( "}" ).eol( );
+      return this;
+    }
+    
+    protected TypeBinding beginList( String listName ) {
+      this.eol( ).append( "\"" ).append( listName ).append( "\": [" ).eolIn( );
+      return this;
+    }
+    
+    protected TypeBinding endList( ) {
+      this.eolOut( ).append( "]," ).eol( );
       return this;
     }
     
     protected TypeBinding attr( String name, String value ) {
-      this.append( name ).append( "=\"" ).append( value ).append( "\" " );
+      this.eol( ).append( "\"" ).append( name ).append( "\": " ).append( value ).append( "," );
       return this;
     }
     
@@ -533,17 +548,21 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     protected TypeBinding collection( String name ) {
-      this.elem( Elem.structure ).attr( "name", name ).attr( "usage", "optional" );
-      this.elem( Elem.collection ).attr( "factory", "com.eucalyptus.binding.Binding.listFactory" ).attr( "field", name )
-          .attr( "item-type", this.getTypeName( ) ).attr( "usage", "required" );
-      this.elem( Elem.structure ).attr( "name", "item" );
-      this.elem( Elem.value ).attr( "name", "entry" ).end( ).end( ).end( ).end( );
+      this.beginElem( );
+      if ( JsonDescriptorGenerator.request  ) {
+        this.attr( "name", makeJSONName( name.substring( 0, 1 ).toUpperCase( ) + name.substring( 1 ) ) );
+      } else {
+        this.attr( "name", makeJSONName( name, "item" ) );
+      }
+      this.attr( "type", "\"array\"" )
+          .attr( "member-type", "\"" + this.getTypeName( ) + "\"" )
+          .attr( "optional", "true" );
+      this.endElem( );
       return this;
     }
-    
   }
   
-  public boolean isIgnored( final Field field ) {
+  public static boolean isIgnored( final Field field ) {
     final int mods = field.getModifiers( );
     final String name = field.getName( );
     final String type = field.getType( ).getSimpleName( );
@@ -580,38 +599,14 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     return ret;
   }
   
-  private class ElemItem {
-    Elem    name;
-    int     indent;
-    boolean children;
-    
-    public ElemItem( Elem name, int indent, boolean children ) {
-      this.name = name;
-      this.indent = indent;
-      this.children = children;
-    }
-    
-    @Override
-    public String toString( ) {
-      return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indent, Boolean.valueOf( children ) );
-    }
-    
-  }
-  
-  private Deque<ElemItem> elemStack = new LinkedList<ElemItem>( );
-  
-  enum Elem {
-    structure, collection, value, mapping, binding
-  }
-  
-  class IgnoredTypeBinding extends NoopTypeBinding {
+  static class IgnoredTypeBinding extends NoopTypeBinding {
     
     public IgnoredTypeBinding( Field field ) {
       super( field );
     }
   }
   
-  class NoopTypeBinding extends TypeBinding {
+  static class NoopTypeBinding extends TypeBinding {
     private String name;
     private Class  type;
     
@@ -633,7 +628,19 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
   }
   
-  class ObjectTypeBinding extends TypeBinding {
+  public static String makeJSONName( String... names ) {
+    String out = "[ ";
+    for ( String s : names ) {
+      if( JsonDescriptorGenerator.request ) {
+        out += "\"" + s.substring( 0, 1 ).toUpperCase( ) + s.substring( 1 ) + "\" ";
+      } else {
+        out += "\"" + s + "\" ";
+      }
+    }
+    return ( out + "]" ).replaceAll( "\"\\s*\"", "\", \"" );
+  }
+  
+  static class ObjectTypeBinding extends TypeBinding {
     private String name;
     private Class  type;
     
@@ -649,27 +656,50 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     @Override
     protected TypeBinding collection( String name ) {
-      this.elem( Elem.structure ).attr( "name", name ).attr( "usage", "optional" );
-      this.elem( Elem.collection ).attr( "factory", "com.eucalyptus.binding.Binding.listFactory" ).attr( "field", name ).attr( "usage", "required" );
-      this.elem( Elem.structure ).attr( "name", "item" ).attr( "map-as", type.getCanonicalName( ) );
-      this.end( ).end( ).end( );
+      this.beginElem( );
+      if ( JsonDescriptorGenerator.request ) {
+        this.attr( "name", makeJSONName( name.substring( 0, 1 ).toUpperCase( ) + name.substring( 1 ) ) );
+      } else {
+        this.attr( "name", makeJSONName( name, "item" ) );
+      }
+      this.attr( "type", "\"array\"" )
+          .attr( "member-type", "\"" + this.getTypeName( ) + "\"" )
+          .attr( "optional", "true" )
+          .beginList( "properties" );
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+        TypeBinding tb = getTypeBinding( f );
+        if ( !( tb instanceof NoopTypeBinding ) ) {
+          this.append( tb.toString( ) );
+        }
+      }
+      this.endList( );
+      this.endElem( );
       return this;
     }
     
     @Override
     public String getTypeName( ) {
-      return this.type.getCanonicalName( );
+      return "object";//this.type.getCanonicalName( );
     }
     
     public String toString( ) {
-      this.elem( Elem.structure ).attr( "name", this.name ).attr( "field", this.name ).attr( "map-as", this.type.getCanonicalName( ) ).attr( "usage",
-                                                                                                                                             "optional" ).end( );
+      this.beginElem( )
+          .attr( "name", makeJSONName( name ) )
+          .attr( "type", "\"object\"" )
+          .beginList( "properties" );
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+        TypeBinding tb = getTypeBinding( f );
+        if ( !( tb instanceof NoopTypeBinding ) ) {
+          this.append( tb.toString( ) );
+        }
+      }
+      this.endList( ).endElem( );
       return super.toString( );
     }
     
   }
   
-  class CollectionTypeBinding extends TypeBinding {
+  static class CollectionTypeBinding extends TypeBinding {
     private TypeBinding type;
     private String      name;
     
@@ -694,43 +724,43 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
   }
   
-  class IntegerTypeBinding extends TypeBinding {
+  static class IntegerTypeBinding extends TypeBinding {
     public IntegerTypeBinding( ) {
       super( "integer" );
     }
   }
   
-  class LongTypeBinding extends TypeBinding {
+  static class LongTypeBinding extends TypeBinding {
     public LongTypeBinding( ) {
       super( "long" );
     }
   }
   
-  class DoubleTypeBinding extends TypeBinding {
+  static class DoubleTypeBinding extends TypeBinding {
     public DoubleTypeBinding( ) {
       super( "double" );
     }
   }
   
-  class FloatTypeBinding extends TypeBinding {
+  static class FloatTypeBinding extends TypeBinding {
     public FloatTypeBinding( ) {
       super( "float" );
     }
   }
   
-  class StringTypeBinding extends TypeBinding {
+  static class StringTypeBinding extends TypeBinding {
     public StringTypeBinding( ) {
       super( "string" );
     }
   }
   
-  class BooleanTypeBinding extends TypeBinding {
+  static class BooleanTypeBinding extends TypeBinding {
     public BooleanTypeBinding( ) {
       super( "boolean" );
     }
   }
   
-  class DateTimeTypeBinding extends TypeBinding {
+  static class DateTimeTypeBinding extends TypeBinding {
     public DateTimeTypeBinding( ) {
       super( "datetime" );
     }

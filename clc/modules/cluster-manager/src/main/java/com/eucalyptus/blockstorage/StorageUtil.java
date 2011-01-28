@@ -70,7 +70,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;

@@ -31,7 +31,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
-      List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponent( ).name( ) );
+      List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
       for ( ConfigurableProperty prop : props ) {
         ConfigurableProperty addProp = null;
         if ( prop instanceof SingletonDatabasePropertyEntry ) {
@@ -52,7 +52,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = StartComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
@@ -68,14 +68,14 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = StopComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
     
     try {
-      List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponent( ).name( ) );
+      List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
       for ( ConfigurableProperty prop : props ) {
         if ( prop instanceof SingletonDatabasePropertyEntry ) {
           //noop
@@ -103,7 +103,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = EnableComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
@@ -124,7 +124,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = DisableComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );

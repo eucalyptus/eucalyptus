@@ -64,7 +64,6 @@ package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.security.Security;
 import java.util.Enumeration;
 import java.util.List;
@@ -72,11 +71,10 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.AppenderAttachable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-//import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -84,18 +82,19 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+<<<<<<< TREE
 import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+=======
+>>>>>>> MERGE-SOURCE
 
 /**
  * Java entry point from eucalyptus-bootstrap
  */
 public class SystemBootstrapper {
   private static final String SEP = " -- ";
-  static { System.setProperty( "euca.log.level", "TRACE" ); }
 
   
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
@@ -120,12 +119,14 @@ public class SystemBootstrapper {
 
   public boolean init( ) throws Exception {
     try {
-      boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
-      boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
+      LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.EXTREME;
+      LogLevels.DEBUG  = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
+      if( LogLevels.EXTREME ) {
+        System.setProperty( "euca.log.level", "TRACE" );        
+      }
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + LogUtil.dumpObject( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
-      LogLevels.DEBUG = doDebug;
-      LogLevels.TRACE = doDebug;
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
@@ -182,17 +183,17 @@ public class SystemBootstrapper {
       do {
         stage.start( );
       } while( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
+    } catch ( BootstrapException t ) {
+      t.printStackTrace( );
+      LOG.fatal( t, t );
+      throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
       System.exit( 1 );
       throw t;
     }
-    /** ASAP:FIXME:GRZE **/
     for( Component c : Components.list( ) ) {
-      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) || ( c.getPeer( ).isAlwaysLocal( ) ) ) ) {
+      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
         Component.Transition.STARTING.transit( c );
         Component.Transition.READY_CHECK.transit( c );
         Component.Transition.ENABLING.transit( c );
@@ -222,7 +223,7 @@ public class SystemBootstrapper {
     LOG.warn( "Shutting down Eucalyptus." );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     EventRecord.flush( );
-    ServiceContext.shutdown( );
+    ServiceContextManager.shutdown( );
     return true;
   }
   

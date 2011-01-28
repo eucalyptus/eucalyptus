@@ -541,4 +541,9 @@ public class ImageManager {
     }
     return reply;
   }
+  public CreateImageResponseType createImage(CreateImageType request) {
+    CreateImageResponseType reply = request.getReply( );
+    return reply;
+  }
+
 }

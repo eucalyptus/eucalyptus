@@ -217,7 +217,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isAssigned( ) ) {
-        Callbacks.newClusterRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+        Callbacks.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
           @Override
           public void fire( ) {
             try {

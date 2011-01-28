@@ -263,3 +263,15 @@ public class ResolveVmImageInfo extends VmImageMessage {
   String kernelId;
   String ramdiskId;
 }
+//TODO:ADDED
+public class CreateImageResponseType extends VmImageMessage {
+  String imageId;
+  public CreateImageResponseType() {  }
+}
+public class CreateImageType extends VmImageMessage {
+  String instanceId;
+  String name;
+  String description;
+  Boolean noReboot;
+  public CreateImageType() {  }
+}

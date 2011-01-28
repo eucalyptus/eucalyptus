@@ -92,8 +92,13 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Version;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.HasName;
@@ -137,10 +142,10 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
 	  return name;
   }
   
-  public abstract Component getComponent();
+  public abstract ComponentId getComponentId();
   //REMOVE: maybe?
-  public com.eucalyptus.component.Component lookup() {
-    return Components.lookup( this.getComponent() );
+  public Component lookup() {
+    return Components.lookup( this.getComponentId() );
   }
   
   public Boolean isLocal() {
@@ -187,7 +192,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   @Override
   public String toString( ) {
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
-                          this.getComponent( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
+                          this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
 }
 /**
@@ -195,13 +200,13 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
  */
 @Deprecated
 public class BogoConfig extends ComponentConfiguration {
-  Component c;
-  public BogoConfig( Component c, String name, String hostName, Integer port, String servicePath ) {
+  ComponentId c;
+  public BogoConfig( ComponentId c, String name, String hostName, Integer port, String servicePath ) {
     super( null /* ASAP: FIXME: GRZE */, name, hostName, port, servicePath );
     this.c = c;
   }
   @Override
-  public Component getComponent( ) {
+  public ComponentId getComponentId( ) {
     return c;
   }
 
@@ -212,30 +217,30 @@ public class BogoConfig extends ComponentConfiguration {
 }
 public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
-  Component c;
+  ComponentId c;
   
-  public EphemeralConfiguration( String partition, String name, Component c, URI uri ) {
+  public EphemeralConfiguration( String partition, String name, ComponentId c, URI uri ) {
     super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( String partition, Component c, URI uri ) {
+  public EphemeralConfiguration( String partition, ComponentId c, URI uri ) {
     super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }  
-  public Component getComponent() {
+  public ComponentId getComponentId() {
     return c;
   }
-  public com.eucalyptus.component.Component lookup() {
-    return Components.lookup(this.getName());
+  public Component lookup() {
+    return Components.lookup(this.getComponentId( ));
   }
   public String getUri() {
     return this.uri.toASCIIString( );
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( String partition, Component c, URI uri ) {
+  public LocalConfiguration( String partition, ComponentId c, URI uri ) {
     super( partition, c, uri );
   }
   public Boolean isLocal() {
@@ -243,7 +248,7 @@ public class LocalConfiguration extends EphemeralConfiguration {
   }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( String partition, Component c, URI uri ) {
+  public RemoteConfiguration( String partition, ComponentId c, URI uri ) {
     super( partition, c, uri );
   }
   public Boolean isLocal() {
@@ -291,8 +296,8 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     c.setHostName(hostName);
     return c;
   }
-  public Component getComponent() {
-    return Component.cluster;
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Cluster.class);
   }
   @Override
   public Boolean isLocal() {
@@ -311,8 +316,8 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public Component getComponent() {
-    return Component.storage;
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Storage.class);
   }
 }
 @Entity
@@ -327,8 +332,8 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public Component getComponent() {
-    return Component.walrus;
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Walrus.class);
   }
 }
 

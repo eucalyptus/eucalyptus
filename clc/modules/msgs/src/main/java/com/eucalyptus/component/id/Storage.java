@@ -83,4 +83,9 @@ public class Storage extends ComponentId {
     return false;
   }
 
+  @Override
+  public Boolean hasCredentials( ) {
+    return true;
+  }
+
 }

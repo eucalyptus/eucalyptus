@@ -70,8 +70,8 @@ import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public class LogClientPipeline extends NioClientPipeline {

@@ -20,37 +20,26 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ChannelPipelineCoverage( "one" )
-public class MetadataPipeline extends FilteredPipeline implements UnrollableStage, ChannelUpstreamHandler {
+@ComponentPart( Eucalyptus.class )
+public class MetadataPipeline extends FilteredPipeline implements ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MetadataPipeline.class );
-  @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( this );
-  }
 
   @Override
-  protected boolean checkAccepts( HttpRequest message ) {
+  public boolean checkAccepts( HttpRequest message ) {
     return message.getUri( ).matches("/latest(/.*)*") || message.getUri( ).matches("/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*");
   }
 
   @Override
-  public String getPipelineName( ) {
+  public String getName( ) {
     return "instance-metadata";
-  }
-
-  @Override
-  public String getStageName( ) {
-    return "instance-metadata";
-  }
-
-  @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "instance-metadata", this );
   }
 
   @Override
@@ -89,6 +78,12 @@ public class MetadataPipeline extends FilteredPipeline implements UnrollableStag
     } else {
       ctx.sendUpstream( e );
     }
+  }
+
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    pipeline.addLast( "instance-metadata", this );
+    return pipeline;
   }
 
 }

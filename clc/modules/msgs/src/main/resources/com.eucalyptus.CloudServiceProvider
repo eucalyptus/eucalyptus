@@ -1,5 +1,0 @@
-name=bootstrap
-euca.model.bootstrap=eucalyptus-bootstrap.xml
-euca.url.local=vm://BootstrapInternal
-euca.url.pattern=http://%s:%d/internal/BootstrapInternal
-euca.url.port=8773

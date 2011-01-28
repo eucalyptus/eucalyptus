@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /*
@@ -43,7 +44,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 // parent to all requests/replies used by VMwareBroker/NC,
 // which inherit correlationId and userId from BaseMessage
-
+@ComponentMessage(VMwareBroker.class)
 public class VMwareBrokerRequestType extends BaseMessage {
 	String nodeName;
 

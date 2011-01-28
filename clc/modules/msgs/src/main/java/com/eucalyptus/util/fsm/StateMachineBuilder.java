@@ -112,15 +112,16 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       this.commit( );
     }
     
-    public void add( TransitionListener<P> listener ) {
+    public TransitionBuilder add( TransitionListener<P> listener ) {
       if( this.listeners == null ) {
         this.transition.addListener( listener );
       } else {
         this.listeners.add( listener );
       }
+      return this;
     }
     
-    public void add( TransitionListener<P>... listeners ) {
+    public TransitionBuilder add( TransitionListener<P>... listeners ) {
       if( this.listeners == null ) {
         for ( TransitionListener<P> l : listeners ) {
           transition.addListener( l );
@@ -130,6 +131,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
           this.listeners.add( l );
         }
       }
+      return this;
     }
   }
   

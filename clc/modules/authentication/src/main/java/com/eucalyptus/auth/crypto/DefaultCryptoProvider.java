@@ -20,9 +20,11 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.records.EventType;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -114,7 +116,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus.name( ) );
+    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class );
 //    if( sys.getCertificate( ) != null ) {
 //      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
 //    } else {
@@ -180,12 +182,12 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
 
   @Override
   public String generateSystemSignature( ) {
-    return this.generateSystemToken( Component.eucalyptus.name( ).getBytes( ) );
+    return this.generateSystemToken( ComponentIds.lookup( Eucalyptus.class ).name( ).getBytes( ) );
   }
 
   @Override
   public String generateSystemToken( byte[] data ) {
-    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus.name( ) ).getPrivateKey( );
+    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( );
     return Signatures.SHA256withRSA.trySign( pk, data );    
   }
 
