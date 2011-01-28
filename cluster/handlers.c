@@ -3318,8 +3318,9 @@ int reconfigureNetworkFromCLC() {
 	  } else if (tok && !strcmp(tok, "-s")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "DNET: %s\n", tok);
-	      snprintf(snettok, 1024, "%s", tok);
+	      logprintfl(EUCADEBUG, "SNET: %s\n", tok);
+	      snet = malloc(sizeof(char *));
+	      snet[0] = strdup(tok);
 	      snetset=1;
 	    }
 	  }
@@ -3334,12 +3335,14 @@ int reconfigureNetworkFromCLC() {
 
 
 	if (snetset) {
+	  /*
 	  int a, b, c, d;
 	  sscanf(snettok, "%d.%d.%d.%d/%d", &a, &b, &c, &d, &slashnet);
 	  snet = malloc(sizeof(char *));
 	  snet[0] = malloc(sizeof(char) * 16);
 	  snprintf(snet[0], 16, "%d.%d.%d.%d", a, b, c, d);
-	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d snet=%s slashnet=%d\n", protocol, minport, maxport, snet[0], slashnet);
+	  */
+	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d snet=%s\n", protocol, minport, maxport, snet[0]);
 	  snetLen = 1;
 	} else {
 	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
