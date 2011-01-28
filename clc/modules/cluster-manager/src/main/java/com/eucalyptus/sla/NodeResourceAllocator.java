@@ -1,5 +1,6 @@
 package com.eucalyptus.sla;
 
+import java.util.List;
 import java.util.NavigableMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Authorization;
@@ -33,8 +34,6 @@ public class NodeResourceAllocator implements ResourceAllocator {
     String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
     Integer minAmount = vmInfo.getRequest( ).getMinCount( );
     Integer maxAmount = vmInfo.getRequest( ).getMaxCount( );
-    Cluster authorizedCluster = this.doPrivilegedLookup( clusterName, vmTypeName );
-    VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
     Context ctx = Contexts.lookup( );
     if ( ctx.getGroups( ).isEmpty( ) ) {
       throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );

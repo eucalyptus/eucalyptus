@@ -126,6 +126,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
+import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
@@ -354,8 +356,6 @@ public class VmControl {
     return reply;
   }
 
-}
-  
   public CancelBundleTaskResponseType cancelBundleTask( CancelBundleTaskType request ) throws EucalyptusCloudException {
     CancelBundleTaskResponseType reply = request.getReply( );
     reply.set_return( true );

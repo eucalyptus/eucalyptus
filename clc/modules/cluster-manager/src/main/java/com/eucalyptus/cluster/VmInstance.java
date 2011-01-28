@@ -79,6 +79,10 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Groups;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.AvailabilityZonePermission;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.EventFailedException;
@@ -254,8 +258,6 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private int           stateCounter        = 0;
-  private Long networkBytes;
-  private Long blockBytes;
   private static String SEND_USER_TERMINATE = "SIGTERM";
   
   private void addReasonDetail( String... extra ) {

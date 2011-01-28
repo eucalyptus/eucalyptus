@@ -180,8 +180,6 @@ public class NetworkGroupManager {
     ruleGroup.getNetworkRules( ).addAll( ruleList );
     db.merge( ruleGroup );
     db.commit( );
-    Network changedNetwork = ruleGroup.getVmNetwork( );
-    ServiceContext.dispatch( "ClusterSink", changedNetwork );
     reply.set_return( true );
     
     return reply;

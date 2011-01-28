@@ -65,8 +65,9 @@ package com.eucalyptus.config;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -75,8 +76,8 @@ public class ArbitratorListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( ArbitratorListener.class );
 
 	public static void register() {
-		ListenerRegistry.getInstance( ).register( Component.eucalyptus, new ArbitratorListener() );
-		ListenerRegistry.getInstance( ).register( Component.walrus, new ArbitratorListener() );
+		ListenerRegistry.getInstance( ).register( Eucalyptus.class, new ArbitratorListener() );
+		ListenerRegistry.getInstance( ).register( Walrus.class, new ArbitratorListener() );
 	}
 
 	@Override

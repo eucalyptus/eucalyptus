@@ -98,6 +98,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
@@ -368,8 +369,8 @@ public class VMwareBrokerConfiguration extends ComponentConfiguration implements
   public VMwareBrokerConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public Component getComponent() {
-    return Component.vmwarebroker;
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(VMwareBroker.class);
   }
 }
 
@@ -385,7 +386,7 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   public ArbitratorConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
-  public Component getComponent() {
-    return Component.bootstrap;
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Arbitrator.class);
   }
 }

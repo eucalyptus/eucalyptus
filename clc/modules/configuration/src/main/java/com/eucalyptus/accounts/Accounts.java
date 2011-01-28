@@ -16,33 +16,34 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.AddGroupMemberResponseType;
-import edu.ucsb.eucalyptus.msgs.AddGroupMemberType;
-import edu.ucsb.eucalyptus.msgs.AddGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.AddGroupType;
-import edu.ucsb.eucalyptus.msgs.AddUserResponseType;
-import edu.ucsb.eucalyptus.msgs.AddUserType;
-import edu.ucsb.eucalyptus.msgs.DeleteGroupResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteUserResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteUserType;
-import edu.ucsb.eucalyptus.msgs.DescribeGroupsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeGroupsType;
-import edu.ucsb.eucalyptus.msgs.DescribeUsersResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeUsersType;
-import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationResponseType;
-import edu.ucsb.eucalyptus.msgs.GrantGroupAuthorizationType;
-import edu.ucsb.eucalyptus.msgs.GroupInfoType;
-import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberResponseType;
-import edu.ucsb.eucalyptus.msgs.RemoveGroupMemberType;
-import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationResponseType;
-import edu.ucsb.eucalyptus.msgs.RevokeGroupAuthorizationType;
-import edu.ucsb.eucalyptus.msgs.UserInfoType;
+import com.eucalyptus.accounts.AddGroupMemberResponseType;
+import com.eucalyptus.accounts.AddGroupMemberType;
+import com.eucalyptus.accounts.AddGroupResponseType;
+import com.eucalyptus.accounts.AddGroupType;
+import com.eucalyptus.accounts.AddUserResponseType;
+import com.eucalyptus.accounts.AddUserType;
+import com.eucalyptus.accounts.DeleteGroupResponseType;
+import com.eucalyptus.accounts.DeleteGroupType;
+import com.eucalyptus.accounts.DeleteUserResponseType;
+import com.eucalyptus.accounts.DeleteUserType;
+import com.eucalyptus.accounts.DescribeGroupsResponseType;
+import com.eucalyptus.accounts.DescribeGroupsType;
+import com.eucalyptus.accounts.DescribeUsersResponseType;
+import com.eucalyptus.accounts.DescribeUsersType;
+import com.eucalyptus.accounts.GrantGroupAuthorizationResponseType;
+import com.eucalyptus.accounts.GrantGroupAuthorizationType;
+import com.eucalyptus.accounts.GroupInfoType;
+import com.eucalyptus.accounts.RemoveGroupMemberResponseType;
+import com.eucalyptus.accounts.RemoveGroupMemberType;
+import com.eucalyptus.accounts.RevokeGroupAuthorizationResponseType;
+import com.eucalyptus.accounts.RevokeGroupAuthorizationType;
+import com.eucalyptus.accounts.UserInfoType;
 
 public class Accounts {
   private static Logger LOG = Logger.getLogger( Accounts.class );
@@ -196,7 +197,7 @@ public class Accounts {
 
   public GrantGroupAuthorizationResponseType authorize( final GrantGroupAuthorizationType request ) throws EucalyptusCloudException {
     GrantGroupAuthorizationResponseType reply = request.getReply( );
-    if(!Iterables.any( Components.lookup( Components.delegate.cluster ).list( ), new Predicate<ServiceConfiguration>() {
+    if(!Iterables.any( Components.lookup( Cluster.class ).list( ), new Predicate<ServiceConfiguration>() {
       @Override
       public boolean apply( ServiceConfiguration arg0 ) {
         return arg0.getName( ).equals( request.getZoneName( ) );

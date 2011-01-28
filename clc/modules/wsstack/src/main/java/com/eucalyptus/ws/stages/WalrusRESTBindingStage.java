@@ -66,6 +66,7 @@ package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
+import com.eucalyptus.ws.handlers.WalrusRESTLoggerInbound;
 import com.eucalyptus.ws.handlers.WalrusRESTLoggerOutbound;
 
 public class WalrusRESTBindingStage implements UnrollableStage {

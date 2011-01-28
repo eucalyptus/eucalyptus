@@ -5,18 +5,17 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.system.Threads;
 import com.google.common.collect.Lists;
 
-@Provides( Component.any )
+@Provides( Any.class )
 @RunDuring( Bootstrap.Stage.DatabaseInit )
 public class RecordProcessor extends Bootstrapper implements Runnable, EventListener {
   private static final int RECORD_QUEUE_FLUSH_INTERVAL = 10000;
