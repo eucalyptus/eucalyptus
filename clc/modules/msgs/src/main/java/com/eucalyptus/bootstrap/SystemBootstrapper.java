@@ -64,15 +64,12 @@ package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-//import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -81,18 +78,14 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * Java entry point from eucalyptus-bootstrap
  */
 public class SystemBootstrapper {
   private static final String SEP = " -- ";
-  static { System.setProperty( "euca.log.level", "TRACE" ); }
-
 
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
