@@ -195,71 +195,8 @@ public class StandalonePersistence {
     newLibDir = getAndCheckLibDirectory( eucaHome );
   }
   
-<<<<<<< TREE
   private static void setupConfigurations( ) {
     ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
-//    Enumeration<URL> p1;
-//    URI u = null;
-//    try {
-//      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
-//      if ( !p1.hasMoreElements( ) ) return;
-//      while ( p1.hasMoreElements( ) ) {
-//        u = p1.nextElement( ).toURI( );
-//        Properties props = new Properties( );
-//        props.load( u.toURL( ).openStream( ) );
-//        String name = props.getProperty( "name" );
-//        if ( Components.contains( name ) ) {
-//          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
-//        } else {
-//          try {
-//            LOG.debug( "Loaded " + name + " from " + u );
-//            Components.create( name, u );
-//          } catch ( ServiceRegistrationException e ) {
-//            LOG.debug( e, e );
-//            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
-//          }
-//        }
-//      }
-//    } catch ( IOException e ) {
-//      LOG.error( e, e );
-//      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-//    } catch ( URISyntaxException e ) {
-//      LOG.error( e, e );
-//      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-//    }    
-=======
-  static void setupConfigurations( ) {
-    Enumeration<URL> p1;
-    URI u = null;
-    try {
-      p1 = Thread.currentThread( ).getContextClassLoader( ).getResources( "com.eucalyptus.CloudServiceProvider" );
-      if ( !p1.hasMoreElements( ) ) return;
-      while ( p1.hasMoreElements( ) ) {
-        u = p1.nextElement( ).toURI( );
-        Properties props = new Properties( );
-        props.load( u.toURL( ).openStream( ) );
-        String name = props.getProperty( "name" );
-        if ( Components.contains( name ) /** make this not use a string? **/ ) {
-          throw BootstrapException.throwFatal( "Duplicate component definition in: " + u.toASCIIString( ) );
-        } else {
-          try {
-            LOG.debug( "Loaded " + name + " from " + u );
-            Components.create( name, u );
-          } catch ( ServiceRegistrationException e ) {
-            LOG.debug( e, e );
-            throw BootstrapException.throwFatal( "Error in component bootstrap: " + e.getMessage( ), e );
-          }
-        }
-      }
-    } catch ( IOException e ) {
-      LOG.error( e, e );
-      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      throw BootstrapException.throwFatal( "Failed to load component resources from: " + u, e );
-    }
-    
->>>>>>> MERGE-SOURCE
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {
