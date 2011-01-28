@@ -41,14 +41,7 @@
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
   <euca:endpoint name="ConfigurationWS" connector-ref="eucaws"
     address="http://127.0.0.1:8773/services/Configuration" synchronous="true" />
-  <euca:endpoint name="PropertiesWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Properties"
-    synchronous="true" />
-  <euca:endpoint name="AccountsWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Accounts"
-    synchronous="true" />
   <endpoint name="ConfigurationVMEndpoint" address="vm://ConfigurationVM" synchronous="false" />
-  <endpoint name="EmpyreanVMEndpoint" address="vm://EmpyreanVM" synchronous="false" />
-  <endpoint name="PropertiesVMEndpoint" address="vm://PropertiesVM" synchronous="false" />
-  <endpoint name="ManagementVMEndpoint" address="vm://ManagementVM" synchronous="false" />
   
   <model name="eucalyptus-configuration">
     <default-service-exception-strategy>
