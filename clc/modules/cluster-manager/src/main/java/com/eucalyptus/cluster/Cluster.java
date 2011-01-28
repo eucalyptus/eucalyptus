@@ -603,7 +603,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     } catch ( IllegalStateException ex ) {
       Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
-      Exceptions.trace( ex );
+      LOG.debug( ex.getMessage( ) );
     }
   }
   

@@ -156,7 +156,14 @@ public class NetworkGroupManager {
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ) );
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
-      ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+      try {
+        ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+      } catch ( IllegalArgumentException ex ) {
+        LOG.error( ex.getMessage( ) );
+        reply.set_return( false );
+        db.rollback( );
+        return reply;
+      }
     }
     if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
