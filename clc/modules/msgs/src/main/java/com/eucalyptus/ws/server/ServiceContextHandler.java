@@ -150,7 +150,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       if( LogLevels.DEBUG ) {
         Long currTime = System.currentTimeMillis( );
         EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, 
-                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
+//                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
                           "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ).debug( );
       }
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
