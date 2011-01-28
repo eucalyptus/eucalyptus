@@ -105,6 +105,7 @@
     <value name="serviceTag" field="serviceTag" usage="optional" />
     <value name="userData" field="userData" usage="optional" />
     <value name="launchIndex" field="launchIndex" usage="optional" />
+    <value name="platform" field="platform" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
     <structure usage="optional">
