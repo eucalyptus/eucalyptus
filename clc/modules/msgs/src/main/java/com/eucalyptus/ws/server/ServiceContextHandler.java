@@ -64,11 +64,14 @@
 package com.eucalyptus.ws.server;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
+import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -91,17 +94,15 @@ import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
-public class ServiceContextHandler extends SimpleChannelHandler {
-  private static Logger      LOG       = Logger.getLogger( ServiceSinkHandler.class );
+public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+  private static Logger      LOG       = Logger.getLogger( ServiceContextHandler.class );
   private ChannelLocal<Long>         startTime = new ChannelLocal<Long>( );
   private ChannelLocal<Long>         openTime = new ChannelLocal<Long>( );
   
   private NioMessageReceiver msgReceiver;
   
-  @Override
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME:GRZE: handle exceptions cleanly. convert to msg type and write.
-    LOG.trace( ctx.getChannel( ), e.getCause( ) );
-    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
+    LOG.debug( ctx.getChannel( ), e.getCause( ) );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -114,6 +115,9 @@ public class ServiceContextHandler extends SimpleChannelHandler {
       this.sendDownstreamNewEvent( ctx, e, reply );
     } else if( reply instanceof BaseMessage ) {
       this.sendDownstreamNewEvent( ctx, e, reply );
+    } else if (e instanceof ExceptionEvent) {
+      exceptionCaught(ctx, (ExceptionEvent) e);
+      ctx.sendDownstream( e );
     } else {
       ctx.sendDownstream( e );
     }
@@ -165,25 +169,24 @@ public class ServiceContextHandler extends SimpleChannelHandler {
       this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
       EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
       ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
+    } else if( e instanceof ChannelStateEvent ) {
+      ChannelStateEvent evt = (ChannelStateEvent) e;
+      if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.TRUE.equals(evt.getValue())) {
+        this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
+      } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
+        try {
+          Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
+        } catch ( Throwable e1 ) {
+          LOG.warn( "Failed to remove the channel context on connection close.", e1 );
+        }
+      }
+      ctx.sendUpstream(e);
+    } else if (e instanceof ExceptionEvent) {
+      exceptionCaught(ctx, (ExceptionEvent) e);
+      ctx.sendUpstream( e );
     } else {
       ctx.sendUpstream( e );
     }
-  }
-  
-  @Override
-  public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    try {
-      Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-    } catch ( Throwable e1 ) {
-      LOG.warn( "Failed to remove the channel context on connection close.", e1 );
-    }
-    super.channelClosed( ctx, e );
-  }
-
-  @Override
-  public void channelConnected( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-    super.channelConnected( ctx, e );
-    this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
   }
   
 }

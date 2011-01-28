@@ -165,7 +165,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
 //        getWriter( req.getParent( ) ).flush( );
 //      }
       if ( req.getRequest( ) != null ) {
-        getWriter( req.getRequest( ) ).write( reqString );
+        getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",(\\s*\n\\s*})", "\"\1" ) );
         getWriter( req.getRequest( ) ).flush( );
       }
     }
