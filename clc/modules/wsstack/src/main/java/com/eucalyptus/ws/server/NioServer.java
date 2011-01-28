@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -71,17 +71,6 @@ public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
   private static Channel                       serverChannel;
 
-//  static {
-//    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
-//    PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
-//  }
-//  
   public NioServer( ) {}
 
   public static void start( ) {
