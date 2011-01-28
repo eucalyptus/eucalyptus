@@ -15,8 +15,8 @@ import com.eucalyptus.reporting.units.*;
 
 public class GenerateReport
 {
-	public static enum Format {
-		
+	public static enum Format
+	{	
 		PDF  (new JRPdfExporter(), "pdf", null, null),
 		CSV  (new JRCsvExporter(), "csv", null, null),
 		HTML (new JRHtmlExporter(), "html",
