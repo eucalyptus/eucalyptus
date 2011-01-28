@@ -42,7 +42,7 @@ public class KeyPairManager {
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
 //ASAP:FIXME:GRZE
-      if( "windows".equals( vmAllocInfo.getImageInfo( ).getPlatform( ) ) ) {
+      if( "windows".equals( vmAllocInfo.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest().getImageId() );
       } else {
         vmAllocInfo.setKeyInfo( new VmKeyInfo() );
