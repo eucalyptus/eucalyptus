@@ -103,7 +103,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger      LOG       = Logger.getLogger( ServiceContextHandler.class );
   private ChannelLocal<Long>         startTime = new ChannelLocal<Long>( );
-  private ChannelLocal<Long>         openTime = new ChannelLocal<Long>( );
+//  private ChannelLocal<Long>         openTime = new ChannelLocal<Long>( );
   
   private NioMessageReceiver msgReceiver;
   
@@ -199,7 +199,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
 
   private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
     if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.TRUE.equals(evt.getValue())) {
-      this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
+//      this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
       try {
         Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
