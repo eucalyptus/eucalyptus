@@ -80,7 +80,6 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.ws.util.ReplyQueue;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -222,7 +221,7 @@ public class VmControl {
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
         reply.setOutput( v.getConsoleOutputString( ) );
-        ReplyQueue.response( reply );
+        ServiceContext.response( reply );
       } catch ( NoSuchElementException ex ) {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
@@ -234,7 +233,7 @@ public class VmControl {
       reply.setInstanceId( request.getInstanceId( ) );
       reply.setTimestamp( new Date( ) );
       reply.setOutput( v.getConsoleOutputString( ) );
-      ReplyQueue.response( reply );
+      ServiceContext.response( reply );
     } else {
       Cluster cluster = null;
       try {
