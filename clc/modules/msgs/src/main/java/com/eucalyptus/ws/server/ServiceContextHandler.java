@@ -63,6 +63,7 @@
 
 package com.eucalyptus.ws.server;
 
+import javax.xml.ws.WebServiceException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -75,13 +76,18 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
+import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.context.ServiceInitializationException;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -112,9 +118,11 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     BaseMessage reply = BaseMessage.extractMessage( e );
     if ( reply instanceof HasSideEffect && reply.get_return( ) ) {
       ServiceContextManager.restart( );
-      this.sendDownstreamNewEvent( ctx, e, reply );
+      MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
+      ctx.sendDownstream( newEvent );
     } else if( reply instanceof BaseMessage ) {
-      this.sendDownstreamNewEvent( ctx, e, reply );
+      MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
+      ctx.sendDownstream( newEvent );
     } else if (e instanceof ExceptionEvent) {
       exceptionCaught(ctx, (ExceptionEvent) e);
       ctx.sendDownstream( e );
@@ -123,7 +131,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     }
   }
   
-  private void sendDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
+  private MessageEvent makeDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
     MappingHttpRequest request = null;
     Context reqCtx = null;
     try {
@@ -148,8 +156,14 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
-      ctx.sendDownstream( newEvent );
+      return newEvent;
 //      Contexts.clear( reqCtx );
+    } else {
+      final MappingHttpResponse response = new MappingHttpResponse( HttpVersion.HTTP_1_1 ) {{
+        setMessage( new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), "Received a NULL reply" ) );
+      }};
+      final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
+      return newEvent;
     }
   }
   
@@ -159,33 +173,39 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     final BaseMessage msg = BaseMessage.extractMessage( e );
     if ( LogLevels.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + (msg!=null?msg.getClass().getSimpleName( ):"")+ " "  + e );
 
-    if ( e instanceof ExceptionEvent ) {
-      this.exceptionCaught( ctx, ( ExceptionEvent ) e );
+    if( e instanceof ChannelStateEvent ) {
+      this.channelOpened( ctx, (ChannelStateEvent) e );
+      ctx.sendUpstream(e);
     } else if ( e instanceof IdleStateEvent ) {
       LOG.warn( "Closing idle connection: " + e );
       e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
       ctx.sendUpstream( e );
     } else if ( request != null && msg != null ) {      
-      this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-      EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
-      ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
-    } else if( e instanceof ChannelStateEvent ) {
-      ChannelStateEvent evt = (ChannelStateEvent) e;
-      if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.TRUE.equals(evt.getValue())) {
-        this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-      } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
-        try {
-          Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-        } catch ( Throwable e1 ) {
-          LOG.warn( "Failed to remove the channel context on connection close.", e1 );
-        }
-      }
-      ctx.sendUpstream(e);
+      this.messageReceived( ctx, msg );
+      ctx.sendUpstream( e );
     } else if (e instanceof ExceptionEvent) {
-      exceptionCaught(ctx, (ExceptionEvent) e);
+      this.exceptionCaught(ctx, (ExceptionEvent) e);
       ctx.sendUpstream( e );
     } else {
       ctx.sendUpstream( e );
+    }
+  }
+
+  private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
+    this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
+    EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
+    ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
+  }
+
+  private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
+    if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.TRUE.equals(evt.getValue())) {
+      this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
+    } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
+      try {
+        Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
+      } catch ( Throwable e1 ) {
+        LOG.warn( "Failed to remove the channel context on connection close.", e1 );
+      }
     }
   }
   
