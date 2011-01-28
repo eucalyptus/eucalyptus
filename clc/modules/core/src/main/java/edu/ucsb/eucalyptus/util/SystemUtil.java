@@ -91,7 +91,7 @@ public class SystemUtil {
 				throw new ExecutionException(commandString + " error: " + error.getReturnValue());
 			return output.getReturnValue();
 		} catch (Throwable t) {
-			LOG.error(t);
+			LOG.error(t, t);
 		}
 		return "";
 	}

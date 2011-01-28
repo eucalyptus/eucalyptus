@@ -90,6 +90,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
       try {
         Thread.sleep( 2000 );
       } catch ( Exception e ) {
+        Thread.currentThread( ).interrupted( );
       }
     }
     for ( ComponentId c : ComponentIds.list( )  ) {

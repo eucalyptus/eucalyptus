@@ -190,7 +190,9 @@ public class HttpServerBootstrapper extends Bootstrapper {
           for ( int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
             try {
               TimeUnit.MILLISECONDS.sleep( 500 );
-            } catch ( InterruptedException e ) {}
+            } catch ( InterruptedException e ) {
+              Thread.currentThread( ).interrupted( );
+            }
           }
           jettyServer.destroy( );
         } catch ( Exception e ) {

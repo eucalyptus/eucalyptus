@@ -50,6 +50,7 @@
   <appender name="exhaustive" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
+    <param name="Threshold" value="TRACE" />
     <param name="MaxBackupIndex" value="10" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
@@ -62,7 +63,16 @@
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    --></layout>
+    </layout>
+  </appender>
+  <appender name="extlogfile" class="org.apache.log4j.RollingFileAppender">
+    <param name="File" value="${euca.log.dir}/cloud-debug-ext.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="Threshold" value="TRACE" />
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
+    </layout>
   </appender>
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
@@ -105,6 +115,38 @@
   <category name="edu.ucsb.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
+  </category>
+  <category name="com.eucalyptus.util.ServiceProcess" additivity="true">
+    <priority value="INFO" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.mule.DefaultMuleContext" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="exhaustive" />
+  </category>
+  <category name="org.hibernate" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.jboss" additivity="true">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.mortbay" additivity="true">
+    <priority value="INFO" />
+    <appender-ref ref="extlogfile" />
+  </category>
+  <category name="org.hibernate" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="org.jboss" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="org.mortbay" additivity="true">
+    <priority value="FATAL" />
+    <appender-ref ref="${euca.log.appender}" />
   </category>
   <!--
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
@@ -198,7 +240,14 @@
     <priority value="INFO" />
     <appender-ref ref="sc-stats-log" />
   </category>
-
+  <category name="org.apache.commons.httpclient" additivity="true">
+    <priority value="ERROR"/>
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="httpclient.wire" additivity="true">
+    <priority value="ERROR"/>
+    <appender-ref ref="${euca.log.appender}" />
+  </category>
   <root>
     <appender-ref ref="${euca.log.appender}" />
     <appender-ref ref="errorlog" />

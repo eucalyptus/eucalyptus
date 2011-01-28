@@ -197,6 +197,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             .info( );
           }
         } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupted( );
           return;
         } catch ( final ExecutionException e ) {
           LOG.error( e.getCause( ), e.getCause( ) );

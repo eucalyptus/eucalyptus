@@ -87,4 +87,10 @@ public class NioServer {
     }
   }
 
+  public void stop( ) {
+    if( this.serverChannel != null && ( this.serverChannel.isConnected( ) || this.serverChannel.isOpen( ) || this.serverChannel.isBound( ) ) ) {
+      this.serverChannel.close( ).awaitUninterruptibly( );
+    }
+  }
+  
 }

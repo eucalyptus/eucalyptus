@@ -74,7 +74,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final Component            parent;
   private final String               name;
-  private final ServiceCredentials          keys;
+  private final ServiceCredentials   keys;
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
