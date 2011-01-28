@@ -66,6 +66,7 @@ package com.eucalyptus.empyrean
 import java.io.Serializable;
 import java.util.ArrayList;
 import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
@@ -82,9 +83,9 @@ public class StartServiceResponseType extends ServiceTransitionType {}
 public class StopServiceType extends ServiceTransitionType {}
 public class StopServiceResponseType extends ServiceTransitionType {}
 public class EnableServiceType extends ServiceTransitionType {}
-public class EnableServiceResponseType extends ServiceTransitionType {}
+public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
 public class DisableServiceType extends ServiceTransitionType {}
-public class DisableServiceResponseType extends ServiceTransitionType {}
+public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
 public class ServiceId extends EucalyptusData {
   String uuid;/** A UUID of the registration **/
   String partition;/** The resource partition name **/

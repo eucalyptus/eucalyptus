@@ -65,6 +65,7 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.util.HasSideEffect;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
@@ -122,12 +123,12 @@ public class RegisterComponentType extends ConfigurationMessage {
     this.port = port;
   }
 }
-public class RegisterComponentResponseType extends ConfigurationMessage {}
+public class RegisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
 public class DeregisterComponentType extends ConfigurationMessage {
   String name;
   String partition;
 }
-public class DeregisterComponentResponseType extends ConfigurationMessage {}
+public class DeregisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
 
 public class DescribeComponentsType extends ConfigurationMessage {}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
