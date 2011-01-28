@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -66,6 +66,12 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.bootstrap.DependsLocal;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
@@ -74,6 +80,8 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   
   private static SystemClock clock;
   private static Timer timer;
+  private static Timer hzTimer;
+  private static HzClock hertz;
   private int phase = 0;
   
   public SystemClock( ) {
@@ -88,15 +96,24 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     synchronized(SystemClock.class) {
       if( timer == null ) {
         timer = new Timer("SystemClockTimer");
+        hzTimer = new Timer("SystemHzTimer");
         clock = new SystemClock();
+        hertz = new HzClock( );
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy() );
-        timer.scheduleAtFixedRate( clock, 0, getRate( ) );//TODO: make configurable
-        final Timer ref = timer;
+        ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy() );
+        timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
+        hzTimer.scheduleAtFixedRate( hertz, 0, 1000 );
         Runtime.getRuntime( ).addShutdownHook( new Thread() {
 
           @Override
           public void run( ) {
             timer.cancel( );
+          }} );
+        Runtime.getRuntime( ).addShutdownHook( new Thread() {
+
+          @Override
+          public void run( ) {
+            hzTimer.cancel( );
           }} );
       }
     }
@@ -108,7 +125,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     try {
       long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
       ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( sign * System.currentTimeMillis( ) ) );
-    } catch ( EventVetoedException e ) {
+    } catch ( EventFailedException e ) {
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }    
@@ -116,15 +133,73 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
 
   public static class Dummy implements EventListener{
     @Override
-    public void advertiseEvent( Event event ) {}
-    @Override
     public void fireEvent( Event event ) {}
   }
 
   @Override
   public void uncaughtException( Thread t, Throwable e ) {
     LOG.fatal( e, e );
-    System.exit( -2 );
+//    System.exit( -2 );
+  }
+
+  @Provides( Component.bootstrap )
+  @RunDuring( Bootstrap.Stage.Final )
+  public static class SystemClockBootstrapper extends Bootstrapper {
+
+    @Override
+    public boolean load( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      setupTimer( );
+      return true;
+    }
+
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean stop( ) throws Exception {
+      //ASAP:FIXME:GRZE restarting the timer
+      return true;
+    }
+
+    @Override
+    public void destroy( ) throws Exception {}
+
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
   }
   
+  public static class HzClock extends TimerTask implements UncaughtExceptionHandler {
+    private int phase = 0;
+
+    @Override
+    public void uncaughtException( Thread thread, Throwable t ) {
+      LOG.error( t, t );
+    }
+
+    public void run( ) {
+      Thread.currentThread().setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
+      try {
+        ListenerRegistry.getInstance( ).fireEvent( new Hertz() );
+      } catch ( EventFailedException e ) {
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+      }    
+    }
+  }
+
 }

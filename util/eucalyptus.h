@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -158,6 +158,10 @@ typedef enum instance_states_t { // these must match instance_sate_names[] below
     BUNDLING_SHUTDOWN,
     BUNDLING_SHUTOFF,
 
+    /* createImage states */
+    CREATEIMAGE_SHUTDOWN,
+    CREATEIMAGE_SHUTOFF,
+
     /* the only three states reported to CLC */
     PENDING,  /* staging in data, starting to boot, failed to boot */ 
     EXTANT,   /* guest OS booting, running, shutting down, cleaning up state */
@@ -179,8 +183,10 @@ static char * instance_state_names[] = {
     "Booting",
     "Canceled",
 
-	"Bundling-Shutdown",
+    "Bundling-Shutdown",
     "Bundling-Shutoff",
+    "CreateImage-Shutdown",
+    "CreateImage-Shutoff",
 
     "Pending",
     "Extant",
@@ -201,6 +207,22 @@ static char * bundling_progress_names[] = {
 	"succeeded",
 	"failed",
         "cancelled"
+};
+
+typedef enum createImage_progress_t {
+  NOT_CREATEIMAGE = 0,
+  CREATEIMAGE_IN_PROGRESS,
+  CREATEIMAGE_SUCCESS,
+  CREATEIMAGE_FAILED,
+  CREATEIMAGE_CANCELLED
+} createImage_progress;
+
+static char * createImage_progress_names[] = {
+  "none",
+  "creating",
+  "succeeded",
+  "failed",
+  "cancelled"
 };
 
 #endif

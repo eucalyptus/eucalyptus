@@ -97,7 +97,7 @@ extern vnetConfig *vnetconfig;
 int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
   }
@@ -126,7 +126,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
 int doStartService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -147,7 +147,7 @@ int doStartService(ncMetadata *ccMeta) {
 int doStopService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
   
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -167,7 +167,7 @@ int doStopService(ncMetadata *ccMeta) {
 int doEnableService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -190,7 +190,7 @@ int doEnableService(ncMetadata *ccMeta) {
 int doDisableService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }

@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -84,14 +84,17 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
-  return doRunInstance (meta, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, groupNames, groupNamesSize, outInstPtr);
+  return doRunInstance (meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
 }
 
 int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
 {
     return doTerminateInstance (meta, instanceId, shutdownState, previousState);
+}
+int ncAssignAddressStub (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp){
+  return(0);
 }
 int ncPowerDownStub (ncStub *st, ncMetadata *meta){
   return(0);
@@ -126,4 +129,9 @@ int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+}
+
+int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+    return doCreateImage (meta, instanceId, volumeId, remoteDev);
 }

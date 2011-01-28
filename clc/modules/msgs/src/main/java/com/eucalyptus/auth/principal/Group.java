@@ -11,7 +11,7 @@ import com.eucalyptus.auth.PolicyParseException;
  *
  */
 public interface Group extends HasId, BasePrincipal, Serializable {
-  
+
   public void setName( String name ) throws AuthException;
   
   public String getPath( );

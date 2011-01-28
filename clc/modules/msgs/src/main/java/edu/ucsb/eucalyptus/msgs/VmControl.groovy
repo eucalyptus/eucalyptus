@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -151,14 +151,17 @@ public class RunInstancesType extends VmControlMessage {
   String ramdiskId; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.AvailabilityZone")
   String availabilityZone = "default"; //** added 2008-02-01  **/
+  @HttpParameterMapping (parameter = "Placement.GroupName")
+  String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
-  boolean monitoring = false;
+  Boolean monitoring = false;
   String subnetId;
-  String vpcId;
   Boolean disableTerminate;
-  String shutdownAction;
-
+  String shutdownAction = "stop"; //or "terminate"
+  /** InstanceLicenseRequest license; **/
+  String privateIpAddress = "";
+  String clientToken = "";
 
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
@@ -237,8 +240,16 @@ public class RunningInstancesItemType extends EucalyptusData {
   String placement;
   String kernel;
   String ramdisk;
-  boolean monitoring = false;
   String platform;
+  Boolean monitoring = false;
+  Boolean disableApiTermination = false;
+  Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
+}
+public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/
+  String snapshotId;
+  Integer volumeSize = -1;
+  Boolean noDevice = true;
+  Boolean deleteOnTermination = true;
 }
 
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
@@ -246,6 +257,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes
   String format; // optional, defaults to none (none, ext3, ntfs, swap)
+  EbsDeviceMapping ebsDev;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
     this.deviceName = deviceName;

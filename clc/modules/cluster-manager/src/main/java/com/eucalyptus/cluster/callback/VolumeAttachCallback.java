@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -71,6 +71,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -102,8 +103,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
     } else {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
-        LOG.debug( "Volumes marked as attached " + vm.getVolumes( ) + " to " + vm.getInstanceId( ) );
-        vm.updateVolumeState( this.getRequest( ).getVolumeId( ), "attached" );
+        vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
+//        LOG.debug( "Volumes marked as attached " + vm.collectVolumeAttachments( Predicates.alwaysTrue( ) ) + " to " + vm.getInstanceId( ) );
       } catch ( NoSuchElementException e1 ) {
       }
     }
@@ -116,26 +117,24 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
     try {
       VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
       AttachedVolume failVol = new AttachedVolume( this.getRequest().getVolumeId( ) );
-      NavigableSet<AttachedVolume> volList = vm.getVolumes( ).subSet( failVol, true, failVol, true );
-      if( !volList.isEmpty( ) ) {
-        AttachedVolume volume = volList.first( );
+      try {
+        AttachedVolume volume = vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
         LOG.debug( "Found volume attachment info in async error path: " + volume );
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
           StorageControllerConfiguration sc = Configuration.lookupSc( cluster.getName( ) );
-          Dispatcher dispatcher = ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) );
+          Dispatcher dispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
           dispatcher.send( new DetachStorageVolumeType( iqn, volume.getVolumeId( ) ) );
         } catch ( EucalyptusCloudException ex ) {
           LOG.error( ex , ex );
         }
-        vm.getVolumes( ).remove( failVol );
-      } else {
+      } catch ( Exception ex1 ) {
         LOG.error( "Failed to find volume attachment information for volume: " + failVol );
       }
       LOG.debug( "Removed failed attachment: " + failVol.getVolumeId( ) + " -> " + vm.getInstanceId( ) );
-      LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
+//      LOG.debug( "Final volume attachments for " + vm.getInstanceId( ) + " " + vm.getVolumes( ) );
     } catch ( NoSuchElementException e1 ) {
     }
   }

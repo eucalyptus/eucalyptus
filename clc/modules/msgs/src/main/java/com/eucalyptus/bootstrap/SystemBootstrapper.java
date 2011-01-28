@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -62,23 +62,42 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.security.Security;
+import java.util.Enumeration;
+import java.util.List;
+import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
+import org.apache.log4j.spi.AppenderAttachable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+//import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NetworkUtil;
+import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 
 /**
  * Java entry point from eucalyptus-bootstrap
  */
 public class SystemBootstrapper {
+  private static final String SEP = " -- ";
+  static { System.setProperty( "euca.log.level", "TRACE" ); }
+
+  
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper   singleton;
@@ -145,7 +164,14 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Iterables.all( Components.list( ), Component.Transition.LOAD.getCallback( ) );
+    /** ASAP:FIXME:GRZE **/
+    for( Component c : Components.list( ) ) {
+      try {
+        Component.Transition.LOADING.transit( c );
+      } catch ( Throwable ex ) {
+        LOG.error( ex );
+      }
+    }
     return true;
   }
     
@@ -164,7 +190,19 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    Iterables.all( Components.list( ), Component.Transition.START.getCallback( ) );
+    /** ASAP:FIXME:GRZE **/
+    for( Component c : Components.list( ) ) {
+      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getPeer( ).isCloudLocal( ) || ( c.getPeer( ).isAlwaysLocal( ) ) ) ) {
+        Component.Transition.STARTING.transit( c );
+        Component.Transition.READY_CHECK.transit( c );
+        Component.Transition.ENABLING.transit( c );
+      } 
+    }
+    try {
+      SystemBootstrapper.printBanner( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
     return true;
   }
   
@@ -184,7 +222,7 @@ public class SystemBootstrapper {
     LOG.warn( "Shutting down Eucalyptus." );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     EventRecord.flush( );
-    ServiceContext.stopContext( );
+    ServiceContext.shutdown( );
     return true;
   }
   
@@ -192,5 +230,91 @@ public class SystemBootstrapper {
   private static native void shutdown( boolean reload );
   
   public static native void hello( );
+
+  private static String printBanner( ) {
+//    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
+    String prefix = "\n\t";
+    String headerHeader = "\n[8m-----------------[0;10m[1m_________________________________________________________[0;10m\n[8m-----------------[0;10m[1m|";
+      String headerFormat = "  %-54.54s";
+      String headerFooter = "|[0;10m\n[8m-----------------[0;10m[1m|#######################################################|[0;10m\n";
+    String banner = "[8m-----------------[0;10m[1m._______________________________________________________.[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#######################################################|[0;10m\n" + 
+    		"[8m----------------.[0;10m[1m|#[0;10m[8m                                                  [0;10m[1m.____[0;10m,[8m+[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m  -------------------------------[0;10m_[1m.._.[0;10m_____[8m +--[0;10m[1m..[0;10mvH[1m~[0;10m[8mn[0;10m===[8m+[0;10m\n" + 
+    		"[8m-[0;10m_,[8m +------------[0;10m[1m|)[0;10m[8m|.-----------------------------[0;10m[1m._[0;10mggQgp;;;;;[1m.[0;10m[8mI[0;10m_[1m_[0;10mgI\"\"`[8m:[0;10m`[8m-[0;10m\n" + 
+    		"[8m [0;10m-!M08mQgggggggggwwg[1m_[0;10mgww[1m_[0;10mg[1m_[0;10mw[1m_[0;10mw[1m_________.[0;10m[8m |----[0;10m_[1m__vvvvn[0;10m0[1m+[0;10m([1m.[0;10mn|<[1m._[0;10mV[1m+[0;10m\"[8m|::=:-[0;10m[1m#|[0;10m\n" + 
+    		"[8m+iv[0;10m-\"\"![1m\"{{vnvvvvvvvvvvvvvvs%%iiiiii[0;10mQ[1mii[0;10mg[1mi,[0;10m[8mW---.[0;10mj[1mivvvvvl`:[0;10m<o^^wg2\"'[8m-:-----[0;10m[1m#|[0;10m\n" + 
+    		"[8m---:+ii:   [0;10m-\"\"[1m~~\"+[0;10mMMMMMMM[1m{IIvvnvvvvvnvnnnn[0;10mg[1m_[0;10mj[1mvvnvvl[0;10mHF|[8mQ[0;10m|s[1m.;~`[0;10m[8mI[0;10mL[8m|:-------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-------.  :+|+=-[0;10m-^\"\"\"\"\"\"![1m~~^\"\"[0;10mM[1m{Ivvvnvnvvnl[0;10mg[1mvvIvII[0;10mF\"'=[1m.[0;10mgwg\"[8mv:-[0;10mL[8m=--------[0;10m[1m#|[0;10m\n" + 
+    		"[8m----------------.[0;10m[1m|)[8m -+iI=. ..-    [0;10m-\"[1m~~~~[0;10mn[1m_unvvI[0;10mM!|[1m._[0;10m%<[1m~[0;10m\")|[8mi:--[0;10m<[8m+--------[0;10m[1m#|[0;10m\n" + 
+    		"[8m----------------.[0;10m[1m|#[0;10m[8m  ..-...---.   --    [0;10mg[1mvvvvl~[0;10m\"-:[1m=[0;10mT^\"[8m |[0;10m][8mn---.[0;10m-[8m#.-------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m   ..------------. [0;10m[1m_invv[0;10mME[8mI[0;10m_[8m|[0;10m_\"`[8m :=|:[0;10m[1m;[0;10m[8m|----[0;10m-m[1m_[0;10m[8m.------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|)[0;10m[8m-  ..-----[0;10m_[1m.[0;10m,[8m---- [0;10m[1m_vvnI[0;10mN\"'[1m.,[0;10m[8mi[0;10m-[8m+:----[0;10m[1m.[0;10mf[8m+----Q[0;10m[1mv[0;10mg[1m_[0;10m[8m:-----[0;10m[1m#|[0;10m\n" + 
+    		"[8m--[0;10m,______[1m...[0;10m____[1m..______[0;10mwg[1mi%vvvvi[0;10m6[1m_[0;10mq[1m%v%[0;10mME[8m.[0;10m_[1m.)[0;10mT`[8m+------[0;10m[1m.[0;10mH`[8m--- [0;10m[1m_vlnl[0;10mc[8m.----[0;10m[1m#|[0;10m\n" + 
+    		"[8m--[0;10m<qggggggggggwwg[1miii[0;10mg[1ms[0;10mQ[1mvvvvvvvvI+~[0;10mq[1minv[0;10mF\"'[1m.;[0;10mg[1m~[0;10m[8mi:----- [0;10m[1m_[0;10mp^[8m  --[0;10m][1mivvvv[0;10mL[8m=----[0;10m[1m#|[0;10m\n" + 
+    		"[8m--+=[0;10m\"\"[1m^[0;10mMM[1m*[0;10mM[1mI[0;10mM[1m*[0;10mHNMMMM[1m*[0;10mMMM[1mllIl[0;10mMN[1m`[0;10m[8mQ[0;10m[1m_[0;10mw[1m}[0;10mM[1m~`[0;10m[8mv[0;10m[1m.[0;10m]\"}[8mn[0;10m_[1m._[0;10m<v[1m=[0;10mqg[1m%I[0;10mF[8m-..-.[0;10m[1m)vvnvn[0;10mE[8m=----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----| [0;10m(\"\"\"!\"\"\"\"\"\"\"\"\"\"\"\"[1m~~~~[0;10m1w,j[1m>+~[0;10m{=`_a[1m;[0;10m[8mX[0;10m`[1m.[0;10mgI\"\"\"n[1minvv[0;10m[[8m:-.-.[0;10m[1mvvnvnv[0;10mF[8m|----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[8m---------:.[0;10m4C_[1m...._[0;10mW#==)[1m~[0;10m'[8m==+[0;10m[1m.vvnvv[0;10m`[8m.---.[0;10m[1mvvvnvv[0;10mf[8m+----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[8m ..--------[0;10m-^-|!{g[1mv[0;10mQ!^^^[8mn+:--[0;10mj[1mnvnv[0;10mM[8m .--..[0;10m[1mvvnvnv[0;10m[[8m-----[0;10m[1m#|[0;10m\n" + 
+    		"[8m----------------.[0;10m[1m|#[0;10m[8m   --------+|||[0;10m[1m_)nv}[0;10m[8mn=::--- [0;10mg[1mnnvv}[0;10m[8m+..--..[0;10m[1mvvnvvv[0;10m`[8m+----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m   .----------[0;10m_[1m%vvv[0;10mF[8m ------[0;10m][1mIvnvv[0;10mF[8m -----.[0;10m[1mvvnvnI[0;10m[8m i----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m    --------[0;10m_j[1m%nv}+[0;10mc[8m.-----[0;10m[1m.[0;10mQ[1mlnv}+[0;10m[8m  -----.[0;10m[1mvvnvv[0;10mT[8m=:----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m    .------ [0;10mj[1mvvvI[0;10m!>C[8m+----[0;10m_g[1mvIvn[0;10m@-[8m-.-----.[0;10m[1m{vnvv[0;10m+[8m=-----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m     -----[0;10m_q[1mvvI[0;10mN[1m'[0;10m[8m [0;10m\"[1m`[0;10m[8m:---.[0;10mj[1mIvvv+[0;10m`[8m -------.[0;10m[1mvnvv}[0;10m[8mQ:-----[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m     ----[0;10m[1m.[0;10mq[1mvn}[0;10mF^'[8mn+:----.[0;10mj[1mnvn}[0;10m^[8m  -------.[0;10m[1mvvvn%[0;10m[8m.------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m     . [0;10m[1m_[0;10mq[1mvn}+[0;10m'[8m=i+:----- [0;10mw[1mvnvI`[0;10m[8m  .-------.[0;10m[1mvvnv[0;10mf[8m=------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m     [0;10m_[1m_vvv}~[0;10m'[8mi---------[0;10m<[1mvvnv[0;10mT[8m =..-------.[0;10m[1mvvnv`[0;10m[8m-------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m   [0;10m_[1m_%v}[0;10mM[1m`[0;10m'[8m:::--------[0;10m[1m.)vnv[0;10m@[8m-=:---------.[0;10m[1mvvn[0;10mH[8m..------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m   [0;10mw[1m%vn~`[0;10m`[8mI:--------- [0;10mg[1mnnvv`[0;10m[8m ..---------.[0;10m[1mvvn[0;10m![8m.-------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m [0;10m_q[1mn}+~[0;10m[8m =+:----------[0;10mj[1mnnv}[0;10m[8mi  ..---------.[0;10m[1mvvv[0;10m=[8m -------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|)[0;10m[8m-[0;10mj[1mu}~[0;10m^[8m :-------------[0;10m[1m%vvv[0;10mF[8m=....---------.[0;10m[1mvvv[0;10m[8mQ--------[0;10m[1m#|[0;10m\n" + 
+    		"[8m----------------  [0;10m_q[1m}+[0;10m[8m --=:------------X[0;10m[1mnvn[0;10mM[1m`[0;10m[8m=-------------.[0;10m[1mvn[0;10mE[8m.--------[0;10m[1m#|[0;10m\n" + 
+    		"[8m--------------.. [0;10m/g[1m%`[0;10m'[8mi:---------------[0;10m[1m_nv}[0;10m\"[8m I-------------[0;10m[1m.nI`[0;10m[8m --------[0;10m[1m#|[0;10m\n" + 
+    		"[8m--------------.[0;10m/_)[1m`[0;10m`[8m=+:---------------Q[0;10m[1mvnv[0;10m[[8m+I=------------ [0;10m[1mi[0;10mN\"[8m----------[0;10m[1m#|[0;10m\n" + 
+    		"[8m---------------[0;10m-\"[8m X:------------------[0;10m<[1mvn[0;10mM`[8m---------------Q[0;10mT^[8m|----------[0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|)[8m-------------------[0;10mj[1mn}[0;10m[8m=.--------------- v::----------[0;10m[1m#|[0;10m\n" + 
+    		"[8m----------------.[0;10m[1m|#[0;10m[8m  .---------------.[0;10mj[1mv[0;10mF[8m[0;10m                               [1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#[0;10m[8m                   [0;10mj[1mn[0;10mf^[8m     [0;10m[1mStarted Eucalyptus       [0;10m[1m#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m|#___________________[0;10m [1mN[0;10m'[8m [0;10m[1m______________________________#|[0;10m\n" + 
+    		"[8m-----------------[0;10m[1m(####################[0;10m [1mv[0;10m'[8m [0;10m[1m###############################)[0;10m\n" + 
+    		"[8m----------------     .--------------:I [0;10m^[8m   . .. .. .. .. ..... .. .. ...=v[0;10m\n" + 
+    		"[8m---------------..     ------------------  ................................[0;10m\n"; 
+    		
+    		banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
+    		banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" ) + headerFooter;
+    		for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+          banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "(\\w*)\\w\n","\1\n" + prefix + stage.name() + SEP ).replaceAll( "^\\w* ", "" );
+        }
+    		banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration") + headerFooter;
+    		for( Component c : Components.list( ) ) {
+    		  if( c.isAvailableLocally( ) && c.isLocal( ) ) {
+    		    for( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
+    		      banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
+    		    }
+    		  }
+    		}
+    		banner += headerHeader + String.format( headerFormat, "Local Services") + headerFooter; 
+        for( Component c : Components.list( ) ) {
+          if( c.isAvailableLocally( ) ) {
+            banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
+            banner += prefix + c.getName( ) + SEP + c.getIdentity( ).toString( );
+            banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
+            for( Service s : c.getServices( ) ) {
+              if( s.isLocal( ) ) {
+                banner += prefix + c.getName( ) + SEP + s.toString( );
+              }
+            }
+          }
+        }
+        banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
+        for( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
+          banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING  );
+          for( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
+            banner += prefix + iface.getDisplayName( ) + SEP + addr;
+          }
+        }
+    LOG.info( banner );
+    return banner;
+  }
   
 }

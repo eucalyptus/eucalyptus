@@ -35,18 +35,18 @@ public class Resource implements ComponentInformation {
   
   private static String              KEY_MODEL_PREFIX = "euca.model.";
   private static Logger              LOG              = Logger.getLogger( Resource.class );
-  protected final Configuration      parent;
+  protected final ComponentConfiguration      parent;
   protected final URI                origin;
   private final Map<String, String>  properties       = Maps.newHashMap( );
   private final List<ConfigResource> configurations   = Lists.newArrayList( );
   
-  private Resource( Configuration parent ) {
+  private Resource( ComponentConfiguration parent ) {
     this.parent = parent;
     this.origin = URI.create( "file:///dev/null" );
   }
   
   @SuppressWarnings( "unchecked" )
-  public Resource( Configuration parent, URI origin ) {
+  public Resource( ComponentConfiguration parent, URI origin ) {
     this.parent = parent;
     if ( origin == null ) {
       this.origin = URI.create( "/dev/null" );
@@ -135,7 +135,7 @@ public class Resource implements ComponentInformation {
     return true;
   }
   
-  public final Configuration getParent( ) {
+  public final ComponentConfiguration getParent( ) {
     return this.parent;
   }
   

@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,7 +65,7 @@ package com.eucalyptus.ws.handlers.wssecurity;
 
 import java.util.Collection;
 import org.apache.ws.security.WSEncryptionPart;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;

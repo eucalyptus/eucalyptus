@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -74,11 +74,32 @@ public class BindingManager {
   
   private static Logger               LOG        = Logger.getLogger( BindingManager.class );
   private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
-  
+  public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
+  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
+  private static Binding DEFAULT = null;
+  public static Binding getDefaultBinding( ) {
+    if( DEFAULT != null ) {
+      return DEFAULT;
+    } else {
+      synchronized( BindingManager.class ) {
+        if( DEFAULT != null ) {
+          return DEFAULT;
+        } else {
+          try {
+            DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) );
+            return DEFAULT;
+          } catch ( BindingException ex ) {
+            LOG.error( ex , ex );
+            throw new RuntimeException( ex );
+          }
+        }
+      }
+    }
+  }
   public static String sanitizeNamespace( String namespace ) {
     return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
   }
-  
+
   public static boolean seedBinding( final String bindingName, final Class seedClass ) {
     if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
       try {

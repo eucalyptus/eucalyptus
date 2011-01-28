@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -151,10 +151,8 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  public String toString() {
-    return this.dump( );
-  }
-
+  
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -184,6 +182,12 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   public int compareTo(ComponentConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
     return (partition + name).compareTo( that.partition + that.name );
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
+                          this.getComponent( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
 }
 /**

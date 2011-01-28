@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -66,6 +66,12 @@ permission notice:
 #define SMALL_CHAR_BUFFER_SIZE 64
 #define CHAR_BUFFER_SIZE 512
 #define BIG_CHAR_BUFFER_SIZE 1024
+
+typedef struct publicAddressType_t {
+  char uuid[48];
+  char sourceAddress[32];
+  char destAddress[32];
+} publicAddressType;
 
 typedef struct serviceInfoType_t {
   char type[32];
@@ -181,7 +187,7 @@ typedef struct virtualMachine_t {
     virtualBootRecord * swap;
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
-    int virtualBootRecordLen; // TODO: dan ask dmitrii
+    int virtualBootRecordLen;
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);
@@ -201,6 +207,7 @@ typedef struct ncVolume_t {
 } ncVolume;
 
 typedef struct ncInstance_t {
+    char uuid[CHAR_BUFFER_SIZE];
     char instanceId[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
@@ -209,22 +216,29 @@ typedef struct ncInstance_t {
     char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
     int retries;
     
-    /* state as reported to CC & CLC */
-    char stateName[CHAR_BUFFER_SIZE];  /* as string */
+    // state as reported to CC & CLC
+    char stateName[CHAR_BUFFER_SIZE];  // as string
     char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+    char createImageTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+
     int stateCode; /* as int */
 
     // state as NC thinks of it
     instance_states state;
     bundling_progress bundleTaskState;
     int bundlePid, bundleBucketExists, bundleCanceled;
+  
+    createImage_progress createImageTaskState;
+    int createImagePid, createImageCanceled;
 
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
     char dnsName[CHAR_BUFFER_SIZE];
     int launchTime; // timestamp of RunInstances request arrival
+    int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
-	int bundlingTime; // timestamp of ->BUNDLING transition
+    int bundlingTime; // timestamp of ->BUNDLING transition
+    int createImageTime; // timestamp of ->CREATEIMAGE transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;
@@ -241,6 +255,8 @@ typedef struct ncInstance_t {
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
+  
+    long long blkbytes, netbytes;
 } ncInstance;
 
 typedef struct ncResource_t {
@@ -278,11 +294,12 @@ int total_instances (bunchOfInstances **head);
 ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
-ncInstance * allocate_instance(char *instanceId, char *reservationId, 
+ncInstance * allocate_instance(char *uuid,
+			       char *instanceId, char *reservationId, 
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 

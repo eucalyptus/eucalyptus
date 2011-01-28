@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -341,6 +341,12 @@ int main(int argc, char **argv) {
       rc = cc_bundleInstance(argv[3], argv[4], argv[5], argv[6], argv[7], env, stub);
       if (rc != 0) {
 	printf("cc_bundleInstance() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "createImage")) {
+      rc = cc_createImage(argv[3], argv[4], argv[5], env, stub);
+      if (rc != 0) {
+	printf("cc_createImage() failed\n");
 	exit(1);
       }
     } else if (!strcmp(argv[2], "describePublicAddresses")) {

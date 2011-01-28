@@ -53,15 +53,16 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 package edu.ucsb.eucalyptus.admin.client;
 import com.google.gwt.user.client.ui.*;
+import com.google.gwt.event.dom.client.*;
 
-public class EucalyptusKeyboardListener extends KeyboardListenerAdapter {
+public class EucalyptusKeyboardListener implements KeyUpHandler {
 	
 	private Button enterButton = null;
 	private Button escapeButton = null;
@@ -76,11 +77,14 @@ public class EucalyptusKeyboardListener extends KeyboardListenerAdapter {
 		this.enterButton = enterButton;
 		this.escapeButton = escapeButton;
 	}
-			
-	public void onKeyPress (Widget sender, char key, int mods) {
-		if (KeyboardListener.KEY_ENTER == key && enterButton != null)
+
+	@Override
+	public void onKeyUp (KeyUpEvent event) {
+		if (KeyCodes.KEY_ENTER == event.getNativeEvent().getKeyCode() && enterButton != null) {
 			enterButton.click();
-		if (KeyboardListener.KEY_ESCAPE == key && escapeButton != null)
+		}
+		if (KeyCodes.KEY_ESCAPE == event.getNativeEvent().getKeyCode() && escapeButton != null) {
 			escapeButton.click();
+		}
 	}
 }

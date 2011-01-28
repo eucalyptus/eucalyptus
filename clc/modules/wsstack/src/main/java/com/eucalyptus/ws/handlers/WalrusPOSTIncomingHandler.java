@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -104,8 +104,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.AbstractKeyStore;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.AbstractKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;

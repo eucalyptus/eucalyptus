@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,7 @@ package com.eucalyptus.address;
 
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -162,6 +163,8 @@ public class Address implements HasName<Address> {
   public static String                    PENDING_ASSIGNMENT      = "pending";
   @Transient
   private AtomicMarkableReference<State>  state;
+  @Transient
+  private String                          stateUuid;
   @Transient
   private transient final SplitTransition QUIESCENT               = new SplitTransition( Transition.quiescent ) {
                                                                     public void bottom( ) {}
@@ -270,6 +273,7 @@ public class Address implements HasName<Address> {
                                                                                                        Address.this.isSystemOwned( )
                                                                                                          ? "SYSTEM"
                                                                                                          : "USER" ).info( );
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.state.attemptMark( State.allocated, false );
       }
       
@@ -289,6 +293,7 @@ public class Address implements HasName<Address> {
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.userId = UNALLOCATED_USERID;
         Address.removeAddress( Address.this.name );
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.state.attemptMark( State.unallocated, false );
       }
       
@@ -339,6 +344,7 @@ public class Address implements HasName<Address> {
       }
       
       public void bottom( ) {
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       }
@@ -358,6 +364,7 @@ public class Address implements HasName<Address> {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
                          Address.this.userId = SYSTEM_ALLOCATED_USERID;
+                         Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
                          } catch ( NoSuchElementException e ) {
@@ -385,6 +392,7 @@ public class Address implements HasName<Address> {
                    .withDetails( "cluster", Address.this.getCluster( ) ).info( );
         Address.this.setInstanceId( vm.getInstanceId( ) );
         Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
+        Address.this.stateUuid = UUID.randomUUID( ).toString( );
       }
       
       public void bottom( ) {
@@ -396,7 +404,7 @@ public class Address implements HasName<Address> {
                      : "USER" ).info( );
       }
     };
-    if( State.impending.equals( this.state.getReference( ) ) ) { 
+    if ( State.impending.equals( this.state.getReference( ) ) ) {
       this.transition( State.impending, State.assigned, true, true, assign );
     } else {
       this.transition( State.allocated, State.assigned, false, true, assign );
@@ -497,6 +505,10 @@ public class Address implements HasName<Address> {
     this.userId = userId;
   }
   
+  public String getStateUuid( ) {
+    return this.stateUuid;
+  }
+  
   public Long getId( ) {
     return id;
   }
@@ -578,5 +590,5 @@ public class Address implements HasName<Address> {
                             Address.this.state.isMarked( ) );
     }
   }
-  
+
 }

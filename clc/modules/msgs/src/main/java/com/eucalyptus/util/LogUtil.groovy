@@ -35,21 +35,4 @@ public class LogUtil {
     LOG.info( LogUtil.subheader( message ) );
     return singleton;
   }
-  public static String rangedIntegerList( Collection<Integer> intList ) {
-    String shortList = "";
-    if( intList.size() < 5 ) {
-      shortList = intList.toString().replaceAll("\\s","");
-    } else {         
-      shortList = "[${intList.first( )}..";
-      Integer last = intList.first( )-1;
-      intList.subSet(intList.first(),intList.last()).each{ Integer it ->
-        if( !last.equals( it-1 ) ) {
-          shortList += "${last},${it}..";
-        }            
-        last = it;   
-      }              
-      shortList += (last+1 == intList.last())?"${intList.last()}]":"${last},${intList.last( )}]";
-    }
-    return shortList;
-  }
 }

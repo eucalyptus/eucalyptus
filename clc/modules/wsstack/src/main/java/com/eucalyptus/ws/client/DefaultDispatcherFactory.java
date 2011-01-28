@@ -19,9 +19,9 @@ public class DefaultDispatcherFactory extends DispatcherFactory {
   public Dispatcher buildChild( Component parent, Service service ) {
     Dispatcher d = null;
     if( service.getEndpoint( ).isLocal( ) ) {
-      d = new LocalDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
+      d = new LocalDispatcher( parent, service.getName( ), service.getUri( ) );
     } else {
-      d = new RemoteDispatcher( parent.getPeer( ), service.getName( ), service.getUri( ) );
+      d = new RemoteDispatcher( parent, service.getName( ), service.getUri( ) );
     }
     ServiceDispatcher.register( service.getName( ), d );
     return d;

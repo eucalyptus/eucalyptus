@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -98,7 +98,7 @@ public abstract class Bootstrapper {
   /**
    * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
    * NOTE: The only code which can execute with uid=0 runs during the
-   * {@link Bootstrap.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
+   * {@link Empyrean.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
    * 
    * @see SystemBootstrapper#load()
    * @return true on successful completion
@@ -300,7 +300,7 @@ public abstract class Bootstrapper {
    */
   @Override
   public String toString( ) {
-    return String.format( "Bootstrapper %s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.dependsLocal, this.dependsRemote );
+    return String.format( "Bootstrapper %s runDuring=%s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.getBootstrapStage( ), this.dependsLocal, this.dependsRemote );
   }
   
 }
