@@ -107,14 +107,19 @@ public class ClusterNodeState {
     this.redeemedTokens = new ConcurrentSkipListSet<ResourceToken>();
   }
 
-  public synchronized ResourceToken getResourceAllocation( String requestId, String userName, String vmTypeName, Integer quantity ) throws NotEnoughResourcesAvailable {
+  public synchronized ResourceToken getResourceAllocation( String requestId, String userName, String vmTypeName, Integer min, Integer max ) throws NotEnoughResourcesAvailable {
     VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
+    Integer available = vmType.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted();
-
     LOG.debug( LogUtil.header("BEFORE ALLOCATE") );
     LOG.debug( sorted );
     //:: if not enough, then bail out :://
-    if ( vmType.getAvailable() < quantity ) throw new NotEnoughResourcesAvailable("Not enough resources available: vm resources");
+    Integer quantity = min;
+    if ( vmType.getAvailable() < min ) {
+      throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " < " + min + ": vm instances." );
+    } else {
+      quantity = (max<available?max:available);
+    }
 
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmType );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmType );
