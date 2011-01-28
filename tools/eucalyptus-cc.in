@@ -112,7 +112,7 @@ create_httpd_config() {
 	IPS="all"
 	
 	# let's configure the common parts for both CC and NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf | sed -e "s|EUCALYPTUS|$EUCALYPTUS|" -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR" -e "s|AXIS2C_HOME|$AXIS2C_HOME|" -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" -e "s|EUCA_USER|$EUCA_USER|" > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# if we find authz load it (needed by ubuntu)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
