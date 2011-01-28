@@ -94,7 +94,7 @@ public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
   public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( clusterName );
+    StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
     Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
@@ -114,7 +114,7 @@ public class StorageUtil {
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for( String cluster : clusterVolumeMap.keySet( ) ) {
-      StorageControllerConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster );
+      StorageControllerConfiguration scConfig = Configuration.lookupSc( cluster );
       Iterator<String> volumeNames = Iterators.transform( clusterVolumeMap.get( cluster ).iterator( ), new Function<Volume,String>() {
         @Override
         public String apply( Volume arg0 ) {

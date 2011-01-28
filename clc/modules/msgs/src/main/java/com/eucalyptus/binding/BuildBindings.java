@@ -73,7 +73,6 @@ public class BuildBindings extends Task {
   }
   
   PrintStream oldOut = System.out, oldErr = System.err;
-  
   public void error( Throwable e ) {
     e.printStackTrace( System.err );
     System.setOut( oldOut );

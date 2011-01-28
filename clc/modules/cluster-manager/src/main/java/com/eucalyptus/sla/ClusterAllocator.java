@@ -226,7 +226,7 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, rsvId, keyInfo, vmInfo, vlan, networkNames, userData );
+        cb = makeRunRequest( request, childToken, rsvId, keyInfo, vmInfo, this.vmAllocInfo.getPlatform( ) , vlan, networkNames, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
@@ -236,7 +236,7 @@ public class ClusterAllocator extends Thread {
   }
   
   private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String rsvId, 
-                                  VmKeyInfo keyInfo, VmTypeInfo vmInfo, Integer vlan, List<String> networkNames, String userData ) {
+                                  VmKeyInfo keyInfo, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
@@ -245,7 +245,7 @@ public class ClusterAllocator extends Thread {
     } );
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
-                                   vmInfo, keyInfo, 
+                                   vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
                                    vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regardingUserRequest( request );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newRequest( new VmRunCallback( run, childToken ) );

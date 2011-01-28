@@ -78,7 +78,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
@@ -116,11 +115,13 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
     StorageControllerConfiguration sc;
     try {
-      sc = Configuration.getStorageControllerConfiguration( vol.getCluster( ) );
+      sc = Configuration.lookupSc( vol.getCluster( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException(
@@ -191,13 +192,15 @@ public class SnapshotManager {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     try {
       Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId( ) ) );
-      if ( !State.EXTANT.equals( snap.getState() ) ) {
-        db.rollback();
-    	reply.set_return( false );
-    	return reply;
+      if ( !State.EXTANT.equals( snap.getState( ) ) ) {
+        db.rollback( );
+        reply.set_return( false );
+        return reply;
       }
       db.delete( snap );
       db.getSession( ).flush( );
@@ -205,9 +208,10 @@ public class SnapshotManager {
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
-        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ) ).info( );
+        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ),
+                          "snapshot=" + snap.getDisplayName( ) ).info( );
       } else {
-    	db.rollback();
+        db.rollback( );
         throw new EucalyptusCloudException( "Unable to delete snapshot." );
       }
     } catch ( EucalyptusCloudException e ) {
@@ -221,7 +225,9 @@ public class SnapshotManager {
   
   public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
-    String userName = request.isAdministrator( ) ? null : request.getUserId( );
+    String userName = request.isAdministrator( )
+      ? null
+      : request.getUserId( );
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     try {
@@ -231,7 +237,7 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
-            StorageControllerConfiguration sc = Configuration.getStorageControllerConfiguration( v.getCluster( ) );
+            StorageControllerConfiguration sc = Configuration.lookupSc( v.getCluster( ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.send( sc.getName( ), scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               v.setMappedState( storageSnapshot.getStatus( ) );

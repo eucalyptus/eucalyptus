@@ -71,18 +71,15 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.entities.VmType;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.records.EventRecord;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

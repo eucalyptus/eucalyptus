@@ -79,7 +79,6 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;

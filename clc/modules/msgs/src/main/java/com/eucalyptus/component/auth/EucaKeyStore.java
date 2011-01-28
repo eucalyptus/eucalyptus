@@ -74,7 +74,7 @@ import com.eucalyptus.system.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";
-  private static String           KEY_STORE_PASS = ComponentIds.lookup(Eucalyptus.class).name();
+  private static String           KEY_STORE_PASS = "eucalyptus";
   private static String           FILENAME       = "euca.p12";
   private static Logger           LOG            = Logger.getLogger( EucaKeyStore.class );
 

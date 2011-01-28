@@ -269,7 +269,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     }
   }
-  
+
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )

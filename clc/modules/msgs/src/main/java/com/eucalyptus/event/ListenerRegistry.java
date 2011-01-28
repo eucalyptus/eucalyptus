@@ -30,7 +30,6 @@ public class ListenerRegistry {
 
   @SuppressWarnings( "unchecked" )
   public void register( Object type, EventListener listener ) {
-    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class)type ) ) {
       this.eventMap.register( (Class) type , listener );
     } else {
@@ -43,7 +42,6 @@ public class ListenerRegistry {
 
   @SuppressWarnings( "unchecked" )
   public void deregister( Object type, EventListener listener ) {
-    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class)type ) ) {
       this.eventMap.deregister( (Class) type, listener );
     } else {
@@ -56,7 +54,6 @@ public class ListenerRegistry {
 
   @SuppressWarnings( "unchecked" )
   public void destroy( Object type ) {
-    type = ComponentIds.checkDeprecated( type );
     if ( type instanceof Class && Event.class.isAssignableFrom( (Class) type ) ) {
       this.eventMap.destroy( (Class) type );
     } else {
@@ -72,7 +69,6 @@ public class ListenerRegistry {
   }
   @SuppressWarnings( "unchecked" )
   public void fireEvent( Object type, Event e ) throws EventFailedException {
-    type = ComponentIds.checkDeprecated( type );
     if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
       this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
     }

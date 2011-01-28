@@ -106,7 +106,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   String reservationId;
   VmKeyInfo keyInfo;
   VmTypeInfo vmTypeInfo;
-  
+  String platform;
   List<Network> networks = new ArrayList<Network>();
   
   List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
@@ -166,6 +166,8 @@ public class VmInfo extends EucalyptusData {
   ArrayList<String> groupNames = new ArrayList<String>();
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
   String placement;
+  String platform;
+  String bundleTaskStateName;  
     
   ArrayList<String> productCodes = new ArrayList<String>();
   
@@ -197,7 +199,7 @@ public class VmRunType extends EucalyptusMessage {
   }
   
   def VmRunType(final String reservationId, final String userData, final int amount,
-  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo,
+  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
   final List<String> instanceIds, final List<String> macAddresses,
   final int vlan, final List<String> networkNames, final List<String> networkIndexList, final List<String> uuids ) {
     this.reservationId = reservationId;
@@ -212,6 +214,7 @@ public class VmRunType extends EucalyptusMessage {
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
     this.uuids = uuids;
+    this.platform = platform;
   }
   
   def VmRunType(RunInstancesType request) {
@@ -238,6 +241,7 @@ public class VmRunType extends EucalyptusMessage {
     this.macAddresses = macAddresses;
     this.networkNames = networkNames;
     this.networkIndexList = networkIndexList;
+    this.platform = imageInfo.getPlatform();
   }
   
   @Override
@@ -601,6 +605,7 @@ public class NodeInfo implements Comparable {
 
     def NodeInfo(final NodeType nodeType) {
     this.serviceTag = nodeType.getServiceTag( );
+    this.iqn = nodeType.getIqn( );
     this.name = (new URI(this.serviceTag)).getHost();
     this.lastSeen = new Date();
     this.certs.setServiceTag(this.serviceTag);

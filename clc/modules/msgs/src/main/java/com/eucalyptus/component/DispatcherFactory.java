@@ -24,5 +24,4 @@ public abstract class DispatcherFactory {
   }
   
   public abstract void removeChild( Service service );
-  
 }

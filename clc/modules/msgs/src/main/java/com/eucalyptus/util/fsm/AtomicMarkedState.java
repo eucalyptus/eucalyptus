@@ -166,7 +166,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
                                                               + this.toString( ) ) );
       }
       this.currentTransition.set( null );
-      this.fireInListeners( tr.getToState( ) );
+      this.state.set( tr.getErrorState( ), false );
+      this.fireInListeners( tr.getErrorState( ) );
     }
   }
   
@@ -182,8 +183,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.state.set( tr.getErrorState( ), false );
+      this.state.set( tr.getFromState( ), false );
       this.currentTransition.set( null );
+      this.fireInListeners( tr.getFromState( ) );
     }
   }
   

@@ -90,11 +90,7 @@ import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -160,6 +156,24 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       }
     }
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+  }
+  
+  public VmInstance lookupByBundleId( String bundleId ) throws NoSuchElementException {
+    for ( VmInstance vm : this.listValues( ) ) {
+      if ( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    for ( VmInstance vm : this.listDisabledValues( ) ) {
+      if ( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
   }
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {

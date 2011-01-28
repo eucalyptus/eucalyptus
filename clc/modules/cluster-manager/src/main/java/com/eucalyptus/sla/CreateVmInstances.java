@@ -103,6 +103,7 @@ public class CreateVmInstances {
                                         vmAllocInfo.getUserData(),
                                         vmAllocInfo.getKeyInfo(),
                                         vmAllocInfo.getVmTypeInfo(),
+                                        vmAllocInfo.getPlatform( ),
                                         vmAllocInfo.getNetworks(),
                                         networkIndex.toString( ) );
     return vmInst;
