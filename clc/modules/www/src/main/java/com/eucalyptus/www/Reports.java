@@ -20,13 +20,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JRExporter;
-import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.JasperCompileManager;
-import net.sf.jasperreports.engine.JasperFillManager;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperReport;
+
+import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.design.JasperDesign;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
@@ -37,6 +32,7 @@ import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.xml.JRXmlLoader;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
@@ -45,6 +41,11 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.instance.InstanceDisplayBean;
+import com.eucalyptus.reporting.instance.InstanceDisplayDb;
+import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.system.SubDirectory;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
@@ -61,7 +62,9 @@ public class Reports extends HttpServlet {
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
   enum Param {
-    name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ), cluster( false ), host( false );
+    name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ),
+     cluster( false ), host( false ), criterionId( false ), groupById( false );
+
     private String  value    = null;
     private Boolean required = Boolean.TRUE;
     
@@ -199,19 +202,78 @@ public class Reports extends HttpServlet {
       Type reportType = Type.valueOf( Param.type.get( ) );
       try {
         Boolean doFlush = this.doFlush( );
-        
+
+
         /* Gets a JRExporter for PDF, html, etc, with the appropriate i/o streams
+         * This remains the same
          */
         final JRExporter exporter = reportType.setup( req, res, Param.name.get( req ) );
-        
+
         /* Gets design, and compiles report from design
          */
         ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
-        
+
         /* Calls prepareReport() which calls appropriate groovy script, generates data,
          * and generates report.
          */
-        JasperPrint jasperPrint = reportCache.getJasperPrint( req );
+        LOG.info("--> scriptName:" + Param.name.get( req ));
+        LOG.info("--> start:" + Param.start.get( req ));
+        LOG.info("--> end:" + Param.end.get( req ));
+
+        System.out.println("--> scriptName:" + Param.name.get(req));
+
+        JasperPrint jasperPrint = null;
+        if (Param.name.get(req).equals("user_vms")) {
+
+        	long start = Long.parseLong(Param.start.get(req));
+        	long end = Long.parseLong(Param.end.get(req));
+        	Period period = new Period(0, Long.MAX_VALUE);
+        	LOG.info("--> period:" + period.toString());
+        	int criterionId = Integer.parseInt(Param.criterionId.get(req));
+        	int groupById = Integer.parseInt(Param.groupById.get(req));
+        	LOG.info("--> criterionId:" + criterionId);
+        	GroupByCriterion criterion = GroupByCriterion.values()[criterionId+1]; //TODO: document magic num
+            LOG.info("--> criterion:" + criterion.toString());
+        	Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+ 
+        	Map<String,String> params = new HashMap<String,String>();
+    		params.put("criterion", criterion.toString());
+    		params.put("timeUnit", displayUnits.getTimeUnit().toString());
+    		params.put("sizeUnit", displayUnits.getSizeUnit().toString());
+    		params.put("sizeTimeTimeUnit", displayUnits.getSizeTimeTimeUnit().toString());
+    		params.put("sizeTimeSizeUnit", displayUnits.getSizeTimeSizeUnit().toString());
+        	
+        	InstanceDisplayDb dbInstance = InstanceDisplayDb.getInstance();
+        	if (groupById == 0) {
+        		List<InstanceDisplayBean> list =
+        			dbInstance.search(period, criterion, displayUnits);
+        		LOG.info("--> list size:" + list.size());
+        		JRDataSource dataSource = new JRBeanCollectionDataSource(list);
+        		File jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + "instance.jrxml");
+        		LOG.info("--> jrXmlFile:" + jrxmlFile.getAbsolutePath());
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
+        	} else {
+            	LOG.info("--> groupById:" + criterionId);
+            	GroupByCriterion groupByCriterion = GroupByCriterion.values()[groupById-1];
+                LOG.info("--> groupBy:" + groupByCriterion);
+    			params.put("groupByCriterion", groupByCriterion.toString());
+        		List<InstanceDisplayBean> list =
+        			dbInstance.searchGroupBy(period, groupByCriterion, criterion, displayUnits);
+        		LOG.info("--> list size:" + list.size());
+        		JRDataSource dataSource = new JRBeanCollectionDataSource(list);
+        		File jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + "nested_instance.jrxml");
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
+        	}
+
+        } else {
+        	jasperPrint = reportCache.getJasperPrint( req );
+        }
 
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
         //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
@@ -232,7 +294,7 @@ public class Reports extends HttpServlet {
       this.hasError( "Failed to generate report: " + e.getMessage( ), res );
     }
   }
-  
+
   private Date parseTime( Param p ) {
     Date time = new Date( );
     try {
@@ -412,8 +474,6 @@ public class Reports extends HttpServlet {
       }}, jdbcConnection );
 
     } else {
-      /* TODO: REPLACE THIS ENTIRE CODE BLOCK
-       */
       FileReader fileReader = null;
       try {
         final List results = new ArrayList( );
