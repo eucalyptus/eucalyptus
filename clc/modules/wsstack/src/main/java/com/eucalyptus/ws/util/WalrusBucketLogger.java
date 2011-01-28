@@ -200,7 +200,11 @@ public class WalrusBucketLogger {
 		try {
 			logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
 		} catch(InterruptedException ex) {
+<<<<<<< TREE
 		  Thread.currentThread( ).interrupted( );
+=======
+      Thread.currentThread( ).interrupted( );
+>>>>>>> MERGE-SOURCE
 		}
 	}
 
