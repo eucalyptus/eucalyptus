@@ -78,57 +78,6 @@
         </outbound-pass-through-router>
       </outbound>
     </service>
-
-
-    <service name="PropertiesRequestQueue">
-      <inbound>
-        <inbound-endpoint ref="PropertiesRequestQueueEndpoint" />
-      </inbound>
-      <bridge-component />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="PropertiesVMEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-    <service name="Properties">
-      <inbound>
-        <inbound-endpoint ref="PropertiesVMEndpoint" />
-        <inbound-endpoint ref="PropertiesWS" />
-      </inbound>
-      <component class="com.eucalyptus.config.Properties" />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-
-
-
-    <service name="ManagementRequestQueue">
-      <inbound>
-        <inbound-endpoint ref="ManagementRequestQueueEndpoint" />
-      </inbound>
-      <bridge-component />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ManagementVMEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-    <service name="Accounts">
-      <inbound>
-        <inbound-endpoint ref="ManagementVMEndpoint" />
-        <inbound-endpoint ref="AccountsWS" />
-      </inbound>
-      <component class="com.eucalyptus.accounts.Accounts" />
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
   </model>
 
 </mule>
