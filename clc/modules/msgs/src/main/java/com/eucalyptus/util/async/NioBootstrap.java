@@ -179,7 +179,9 @@ public class NioBootstrap extends Bootstrap {
     do {
       try {
         future = futureQueue.poll( 50, TimeUnit.MILLISECONDS );
-      } catch ( final InterruptedException e ) {}
+      } catch ( final InterruptedException e ) {
+        Thread.currentThread( ).interrupted( );
+      }
     } while ( future == null );
     pipeline.remove( "connector" );
 

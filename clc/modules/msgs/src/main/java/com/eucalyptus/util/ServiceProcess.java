@@ -66,6 +66,7 @@ public class ServiceProcess implements Runnable {
       try {
         this.returnCode = this.self.waitFor( );
       } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupted( );
         LOG.debug( e, e );
       }
     } catch ( Exception e ) {

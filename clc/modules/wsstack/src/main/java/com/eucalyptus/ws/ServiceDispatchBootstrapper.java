@@ -87,7 +87,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
-  
+
   @Override
   public boolean load( ) throws Exception {
     /**

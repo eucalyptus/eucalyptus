@@ -75,7 +75,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   @Override
 
   public boolean load( ) throws Exception {
-    LOG.trace( "Initializing SSL just in case: " + SslSetup.class );
+    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
     return true;
   }
 

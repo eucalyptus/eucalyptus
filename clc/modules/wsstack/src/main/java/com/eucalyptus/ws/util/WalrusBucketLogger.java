@@ -200,7 +200,7 @@ public class WalrusBucketLogger {
 		try {
 			logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
 		} catch(InterruptedException ex) {
-
+		  Thread.currentThread( ).interrupted( );
 		}
 	}
 

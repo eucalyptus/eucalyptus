@@ -82,7 +82,7 @@ public class LogClientPipeline extends NioClientPipeline {
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = Channels.pipeline( );
-    ChannelUtil.addPipelineMonitors( pipeline, 15 );
+    ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );

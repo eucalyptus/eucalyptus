@@ -176,6 +176,7 @@ public class Threads {
           LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
         }
       } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupted( );
         LOG.error( e , e );
       }
       return ret;

@@ -57,9 +57,8 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.ws.server;
 
@@ -81,15 +80,15 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
     super.registerSupportedProtocol( "http" );
     super.registerSupportedProtocol( "https" );
   }
-  
+
   public void doConnect( ) throws MuleException {
     this.server.compareAndSet( null, new NioServer( ) );
   }
-  
+
   public String getProtocol( ) {
     return PROTOCOL;
   }
-  
+
   @Override
   public void doDisconnect( ) throws MuleException {}
   
@@ -98,17 +97,17 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
     this.doConnect( );
     this.server.get( ).start( );
   }
-  
+
   @Override
   public void doStop( ) throws MuleException {
 //  server.get( ).stop( );
   }
-  
+
   @Override
   public void doDispose( ) {}
   
   @Override
   protected void doInitialise( ) throws InitialisationException {
-    LOG.info( "Setting up web services stack." );
+    LOG.info("Setting up web services stack.");
   }
 }

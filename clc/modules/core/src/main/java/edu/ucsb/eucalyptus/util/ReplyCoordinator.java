@@ -142,7 +142,9 @@ public class ReplyCoordinator {
         {
           corId.wait( MAP_GET_WAIT_MS );
         }
-        catch ( InterruptedException e ) {}
+        catch ( InterruptedException e ) {
+          Thread.currentThread( ).interrupted( );
+        }
       this.waitList.remove( corId );
       if( this.replyMap.containsKey( corId ) )
         reply = this.replyMap.remove( corId );

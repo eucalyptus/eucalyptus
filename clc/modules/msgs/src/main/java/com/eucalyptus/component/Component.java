@@ -620,5 +620,4 @@ public class Component implements ComponentInformation, HasName<Component> {
   public String getLocalEndpointName( ) {
     return this.identity.getLocalEndpointName( );
   }
-
 }

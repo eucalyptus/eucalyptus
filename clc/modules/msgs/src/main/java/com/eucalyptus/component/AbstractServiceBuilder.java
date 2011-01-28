@@ -17,7 +17,6 @@ import com.eucalyptus.util.NetworkUtil;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
-
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
@@ -27,7 +26,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       return false;
     }
   }
-  
+
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
@@ -58,7 +57,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
   }
-  
+
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     StopComponentEvent e = null;

@@ -63,15 +63,17 @@
  */
 package com.eucalyptus.vm;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.*;
-
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.List;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 
 public class VmReplyTransform {
 

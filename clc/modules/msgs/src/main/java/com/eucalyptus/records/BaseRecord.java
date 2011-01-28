@@ -69,8 +69,7 @@ public class BaseRecord implements Serializable, Record {
   @Transient
   private static final String ISNULL = "NULL";
   @Transient
-  protected
-  static final String NEXT   = "\n";
+  protected static final String NEXT   = "\n";
   @Transient
   private transient String    lead;
   @Transient

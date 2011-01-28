@@ -74,7 +74,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final Component            parent;
   private final String               name;
-  private final Credentials          keys;
+  private final ServiceCredentials   keys;
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
@@ -122,7 +122,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
       }
       this.endpoint = new ServiceEndpoint( this, local, uri );
     }
-    this.keys = new Credentials( this );//TODO: integration with JAAS
+    this.keys = new ServiceCredentials( this );//TODO: integration with JAAS
     this.dispatcher = DispatcherFactory.build( parent, this );
   }
   
@@ -130,7 +130,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     return this.endpoint.isLocal( );
   }
   
-  public Credentials getCredentials( ) {
+  public ServiceCredentials getCredentials( ) {
     return this.keys;
   }
   

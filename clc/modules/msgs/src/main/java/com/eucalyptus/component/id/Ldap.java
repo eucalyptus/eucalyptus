@@ -61,30 +61,25 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.component.id;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.system.Ats;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.component.ComponentId;
 
-public class ComponentMessages {
-  private static Logger                        LOG       = Logger.getLogger( ComponentMessages.class );
-  private static final Map<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = new HashMap<Class<? extends ComponentId>, Class<? extends BaseMessage>>( );
-  
-  public static Class<? extends BaseMessage> lookup( Class<? extends ComponentId> compIdClass ) {
-    if ( !compIdMap.containsKey( compIdClass ) ) {
-      throw new NoSuchElementException( "No ComponentMessage with name: " + compIdClass );
-    } else {
-      return compIdMap.get( compIdClass );
-    }
+public class Ldap extends ComponentId {
+
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
   }
-  
-  public static void register( Class<? extends BaseMessage> componentMsg ) {
-    Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
-    compIdMap.put( componentIdClass, componentMsg );
+
+  @Override
+  public Boolean hasDispatcher( ) {
+    return false;
+  }
+
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
   }
 
 }

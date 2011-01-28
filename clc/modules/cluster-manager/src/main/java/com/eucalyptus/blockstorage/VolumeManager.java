@@ -125,19 +125,6 @@ public class VolumeManager {
     StorageControllerConfiguration sc = Configuration.lookupSc( request.getAvailabilityZone( ) );
     try {
       User u = Users.lookupUser( request.getUserId( ) );
-//      List<Group> groups = Groups.lookupUserGroups( u );
-//      if( ! Iterables.any( groups, new Predicate<Group>() {
-//        @Override
-//        public boolean apply( Group arg0 ) {
-//          for( Authorization a : arg0.getAuthorizations( ) ) {
-//            if( a.getValue( ).equals( request.getAvailabilityZone( ) ) ) {
-//              return true;
-//            }
-//          }
-//          return false;
-//        }} ) ) {
-//        throw new EucalyptusCloudException( "Permission denied when trying to use resource: " + request.getAvailabilityZone( ) );
-//      }
     } catch ( NoSuchUserException e ) {
       throw new EucalyptusCloudException( "Failed to lookup your user information.", e );
     }

@@ -83,6 +83,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;

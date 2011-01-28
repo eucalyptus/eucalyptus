@@ -216,7 +216,7 @@ public class VmControl {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( admin || v.getOwnerId( ).equals( userId ) ) {
-              Callbacks.newClusterRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
+              Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
               return true;
             } else {
               return false;

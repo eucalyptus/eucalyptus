@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -130,22 +130,5 @@ public class ComponentIds {
     Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     map.put( componentId.getName( ), componentId );
     compIdMap.put( componentId.getClass( ), componentId );
-  }
-  
-  public static Object checkDeprecated( Object inst ) {
-    if ( com.eucalyptus.bootstrap.Component.class.equals( inst.getClass( ) ) ) {
-      RuntimeException e = new RuntimeException();
-      e.fillInStackTrace( );
-      LOG.error( "Deprecated usage of com.eucalyptus.bootstrap.Component for event dispatch.  Please use the corresponding ComponentId.class type." );
-      for( int i = 2; i < 5 && i < e.getStackTrace( ).length; i++ ) {
-        LOG.error( "--> " + e.getStackTrace( )[i] );
-      }
-      String old = ( ( com.eucalyptus.bootstrap.Component ) inst ).name( );
-      ComponentId compId = ComponentIds.lookup( old );
-      LOG.error( "For " + old + " it is " + compId.getClass( ).getCanonicalName( ) );
-      return compId;
-    } else {
-      return inst;
-    }
   }
 }

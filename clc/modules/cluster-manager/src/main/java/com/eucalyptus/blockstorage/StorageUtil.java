@@ -85,6 +85,7 @@ import com.google.common.collect.Multimaps;
 
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -93,14 +94,14 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
-  public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
+  public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
     StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
     Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
   }
   
-  public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
+  public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
     for( Dispatcher sc : ServiceDispatcher.lookupMany( Components.lookup("storage") ) ) {
       sc.dispatch( message );
     }

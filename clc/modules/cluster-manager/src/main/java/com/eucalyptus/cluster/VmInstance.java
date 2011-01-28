@@ -79,10 +79,6 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.EventFailedException;
@@ -306,7 +302,6 @@ public class VmInstance implements HasName<VmInstance> {
           this.state.set( newState, false );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
           this.state.set( newState, false );
-          Exceptions.eat( "Instance transitioned from PENDING -> TERMINATED" );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
@@ -335,10 +330,6 @@ public class VmInstance implements HasName<VmInstance> {
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
-//    EventRecord.here( VmInstance.class, EventClass.VM, EventType.VM_STATE )
-//               .withDetails( this.getOwnerId( ), this.getInstanceId( ), "type", this.getVmTypeInfo( ).getName( ) )
-//               .withDetails( "state", this.state.getReference( ).name( ) ).withDetails( "cluster", this.placement )
-//               /** ASAP: FIXME: GRZE .withDetails( "image", this.imageInfo.getImageId( ) ) **/
   }
   
   public String getByKey( String path ) {
@@ -578,19 +569,7 @@ public class VmInstance implements HasName<VmInstance> {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
-      @Override
-      public boolean apply( Group arg0 ) {
-        return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
-          @Override
-          public boolean apply( Authorization arg0 ) {
-            return arg0.check( new AvailabilityZonePermission( VmInstance.this.placement ) );
-          }
-        } );
-      }
-    } );
-
-    runningInstance.setPlacement( g != null ? g.getName( ) : this.placement );
+    runningInstance.setPlacement( this.placement );
     
     runningInstance.setLaunchTime( this.launchTime );
     
@@ -738,6 +717,7 @@ public class VmInstance implements HasName<VmInstance> {
   public AttachedVolume lookupVolumeAttachment( String volumeId ) throws NoSuchElementException {
     return this.resolveVolumeId( volumeId );
   }
+  
   public AttachedVolume lookupVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     AttachedVolume v = Iterables.find( this.volumes.values( ), pred );
     if ( v == null ) {
@@ -751,6 +731,7 @@ public class VmInstance implements HasName<VmInstance> {
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     return Iterables.all( this.volumes.values( ), pred );
   }
+  
   public void addVolumeAttachment( AttachedVolume volume ) {
     String volumeId = volume.getVolumeId( );
     volume.setStatus( "attaching" );

@@ -195,7 +195,6 @@ public class SystemState {
     }
     long splitTime = vm.getSplitTime( );
     VmState oldState = vm.getState( );
-    
     vm.setServiceTag( runVm.getServiceTag( ) );
     vm.setUuid( runVm.getUuid( ) );
     vm.setPlatform( runVm.getPlatform( ) );

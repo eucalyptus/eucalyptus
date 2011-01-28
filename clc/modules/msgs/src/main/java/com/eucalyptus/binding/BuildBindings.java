@@ -60,13 +60,13 @@ public class BuildBindings extends Task {
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String bindingFilePath = dirName + File.separator + b;
         log( "Found binding: " + bindingFilePath );
-        if( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
+        if ( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
           addMsgs = false;
         }
         bindings.add( bindingFilePath );
       }
     }
-    if( addMsgs ) {
+    if ( addMsgs ) {
       bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
     }
     return bindings.toArray( new String[] {} );

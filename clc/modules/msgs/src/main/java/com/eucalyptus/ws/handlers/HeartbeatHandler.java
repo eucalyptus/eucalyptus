@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -96,6 +96,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
@@ -170,7 +171,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       }
     }
     try {
-      if ( !initializedComponents.contains( Components.delegate.walrus.name( ) ) ) {
+      if ( !initializedComponents.contains( ComponentIds.lookup( Walrus.class ).name( ) ) ) {
         this.prepareComponent( "walrus", addr.getHostName( ) );
       }
       for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {

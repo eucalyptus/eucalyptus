@@ -72,7 +72,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;

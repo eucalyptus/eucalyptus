@@ -65,11 +65,7 @@ package com.eucalyptus.bootstrap;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
-import java.util.Enumeration;
-import java.util.List;
-import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
-import org.apache.log4j.spi.AppenderAttachable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -91,7 +87,6 @@ import com.google.common.collect.Lists;
 public class SystemBootstrapper {
   private static final String SEP = " -- ";
 
-  
   private static Logger               LOG          = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper   singleton;

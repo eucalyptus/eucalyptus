@@ -167,7 +167,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       }
       this.currentTransition.set( null );
       this.state.set( tr.getErrorState( ), false );
-      this.fireInListeners( tr.getToState( ) );
+      this.fireInListeners( tr.getErrorState( ) );
     }
   }
   
@@ -185,7 +185,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       }
       this.state.set( tr.getFromState( ), false );
       this.currentTransition.set( null );
-      this.fireInListeners( tr.getToState( ) );
+      this.fireInListeners( tr.getFromState( ) );
     }
   }
   
@@ -329,7 +329,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
     
     public void fireException( Throwable t ) {
-      LOG.error( "Error occurred during transition " + this.toString( ) + ": " + t.getMessage( ), t );
       AtomicMarkedState.this.error( );
     }
     

@@ -94,7 +94,6 @@ public class Components {
                                                                             put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                           }
                                                                         };
-  public static com.eucalyptus.bootstrap.Component delegate             = com.eucalyptus.bootstrap.Component.eucalyptus;
   
   public static List<Component> listEnabled( ) {
     List<Component> components = Lists.newArrayList( );
