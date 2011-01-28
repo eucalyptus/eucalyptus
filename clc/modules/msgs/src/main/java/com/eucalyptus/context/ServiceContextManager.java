@@ -242,6 +242,7 @@ public class ServiceContextManager {
         try {
           TimeUnit.MILLISECONDS.sleep( 500 );
           i += 500;
+          LOG.trace( "Waiting for service context to start." );
         } catch ( InterruptedException ex ) {
           LOG.error( ex, ex );
         }
@@ -251,8 +252,19 @@ public class ServiceContextManager {
       } else {
         return ref;
       }
-    } else if ( !bit[0] ) {
-      throw new ServiceStateException( "Attempt to reference service context before it is ready." );
+    } else if ( ref == null && !bit[0] ) {
+      try {
+        LOG.trace( "Waiting for service context to start." );
+        TimeUnit.MILLISECONDS.sleep( 10000 );
+        if( ( ref = context.getReference( ) ) == null ) {
+          throw new ServiceStateException( "Attempt to reference service context before it is ready." );
+        } else {
+          return ref;
+        }
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex , ex );
+        throw new ServiceStateException( "Attempt to reference service context before it is ready." );
+      }
     } else {
       return ref;
     }
