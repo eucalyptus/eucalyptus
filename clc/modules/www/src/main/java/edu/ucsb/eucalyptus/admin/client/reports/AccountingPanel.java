@@ -13,6 +13,7 @@ public class AccountingPanel extends DockPanel implements Observer {
   private final ReportDisplayPanel reportPanel;
 //  private HorizontalPanel          pagingPanel;
   private HorizontalPanel          exportPanel;
+  private CriteriaPickerPanel      criteriaPickerPanel;
   private DateRange                dateRange;
   
   public AccountingPanel( AccountingControl controller ) {
@@ -43,6 +44,14 @@ public class AccountingPanel extends DockPanel implements Observer {
         setStyleName( "acct-ReportControl" );
       }
     };
+    this.criteriaPickerPanel = new CriteriaPickerPanel( controller ) {
+        {
+          ensureDebugId( "dateRange" );
+          setHorizontalAlignment( HorizontalPanel.ALIGN_CENTER );
+          setVerticalAlignment( HorizontalPanel.ALIGN_MIDDLE );
+          setStyleName( "acct-ReportControl" );
+        }
+      };
     this.reportList = new ReportList( this.controller );
     this.reportPanel = new ReportDisplayPanel( this.controller );
   }
@@ -90,6 +99,10 @@ public class AccountingPanel extends DockPanel implements Observer {
           setStyleName( "acct-ReportControlHeader" );
         }} );
         add( AccountingPanel.this.dateRange );
+        add( new HTML( "Change Report Criteria" ) {{
+            setStyleName( "acct-ReportControlHeader" );
+          }} );
+        add( AccountingPanel.this.criteriaPickerPanel );
         add( AccountingPanel.this.reportList );
         setCellHeight( AccountingPanel.this.reportList, "100%" );
       }
@@ -102,6 +115,7 @@ public class AccountingPanel extends DockPanel implements Observer {
     this.setCellWidth( this.reportPanel, "85%" );
     this.reportList.redraw( );
     this.reportPanel.redraw( );
+    this.criteriaPickerPanel.redraw();
     this.update( );
   }
   
