@@ -10,8 +10,6 @@ import com.google.gwt.user.client.ui.*;
 /**
  * <P>CriteriaPickerPanel is a vertical panel that contains drop-downs for
  * selecting a report criterion and a "group by" criterion.
- * 
- * @author twerges
  */
 public class CriteriaPickerPanel
 	extends VerticalPanel
@@ -24,7 +22,7 @@ public class CriteriaPickerPanel
 	private final ListBox outerCriterionBox;
 	private final ListBox innerCriterionBox;
 	
-	public CriteriaPickerPanel( AccountingControl accountingControl )
+	public CriteriaPickerPanel( final AccountingControl accountingControl )
 	{
 		this.accountingControl = accountingControl;
 
@@ -88,7 +86,10 @@ public class CriteriaPickerPanel
 		 */
 		if ((outerInd-2) >= innerInd) {
 			this.innerCriterionBox.setSelectedIndex(outerInd - 1);
+			innerInd = outerInd - 1;
 		}
+		this.accountingControl.setCriterionInd(new Integer(innerInd));
+		this.accountingControl.setGroupByInd(new Integer(outerInd));
 		this.redraw();
 	}
 
