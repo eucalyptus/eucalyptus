@@ -85,6 +85,10 @@ Requires:      python
 Requires:      python-boto >= 1.9b
 %endif
 
+# Remove old, Eucalyptus-supplied dependency packages
+Obsoletes:     euca-axis2c
+Obsoletes:     euca-rampartc
+
 BuildRoot:     %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 Source0:       %{name}-%{version}.tar.gz
