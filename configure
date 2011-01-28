@@ -3557,6 +3557,7 @@ else
 fi
 
 # variables we'll need later on
+APACHE2_MODULE_DIR=""
 AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
