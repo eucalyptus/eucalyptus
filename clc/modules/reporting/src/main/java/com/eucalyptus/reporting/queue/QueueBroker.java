@@ -3,12 +3,24 @@ package com.eucalyptus.reporting.queue;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.log4j.*;
 
-class QueueBroker
+public class QueueBroker
 {
 	private static Logger log = Logger.getLogger( QueueBroker.class );
 
+	private static final String DEFAULT_NAME = "reportingBroker";
+	private static final String DEFAULT_DIR  = "/tmp";
+	private static final String DEFAULT_URL  = "tcp://localhost:61616";
+		
 	private static QueueBroker instance = null;
 
+	public static QueueBroker getInstance()
+	{
+		if (instance == null) {
+			instance = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
+		}
+		return instance;
+	}
+	
 	private boolean started = false;
 
 	private String brokerName;
@@ -68,7 +80,7 @@ class QueueBroker
 	public static void main(String[] args)
 		throws Exception
 	{
-		QueueBroker broker = new QueueBroker("reportingBroker", "/tmp", "tcp://localhost:61616");
+		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
 		broker.startup();
 	}
 
