@@ -66,63 +66,44 @@ package com.eucalyptus.ws.util;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.Channels;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import com.eucalyptus.records.EventRecord;
 
 public class ReplyQueue {
-  private static Logger                                 LOG                   = Logger.getLogger( ReplyQueue.class );
+  public static Logger                                 LOG                   = Logger.getLogger( ReplyQueue.class );
   
-  public static void handle( String service, MuleMessage responseMessage, BaseMessage request ) {
-    BaseMessage reply = null;
-    if ( responseMessage.getExceptionPayload( ) == null ) {
-      reply = ( BaseMessage ) responseMessage.getPayload( );
-    } else {
-      Throwable t = responseMessage.getExceptionPayload( ).getException( );
-      t = ( t.getCause() == null ) ? t : t.getCause( );
-      reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
-    }
-    String corrId = reply.getCorrelationId( );
-    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ).debug( );    
-    try {
-      Context context = Contexts.lookup( corrId );
-      Channel channel = context.getChannel( );
-      Channels.write( channel, reply );
-      Contexts.clear(context);
-    } catch ( NoSuchContextException e ) {
-      LOG.trace( e, e );
-    }
-  }
-  
+//  public static void handle( String service, MuleMessage responseMessage, BaseMessage request ) {
+//    BaseMessage reply = null;
+//    if ( responseMessage.getExceptionPayload( ) == null ) {
+//      reply = ( BaseMessage ) responseMessage.getPayload( );
+//    } else {
+//      Throwable t = responseMessage.getExceptionPayload( ).getException( );
+//      t = ( t.getCause() == null ) ? t : t.getCause( );
+//      reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
+//    }
+//    String corrId = reply.getCorrelationId( );
+//    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ).debug( );    
+//    try {
+//      Context context = Contexts.lookup( corrId );
+//      Channel channel = context.getChannel( );
+//      Channels.write( channel, reply );
+//      Contexts.clear(context);
+//    } catch ( NoSuchContextException e ) {
+//      LOG.trace( e, e );
+//    }
+//  }
+//  
   public void handle( BaseMessage responseMessage ) {
-    ReplyQueue.response( responseMessage );
-  }
-
-  @SuppressWarnings( "unchecked" )
-  public static void response( BaseMessage responseMessage ) {
-    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
-    String corrId = responseMessage.getCorrelationId( );
-    try {
-      Context context = Contexts.lookup( corrId );
-      Channel channel = context.getChannel( );
-      Channels.write( channel, responseMessage );
-      Contexts.clear(context);
-    } catch ( NoSuchContextException e ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      LOG.debug( responseMessage );
-    }
+    ServiceContext.response( responseMessage );
   }
 
   public void handle( ExceptionMessage exMsg ) {

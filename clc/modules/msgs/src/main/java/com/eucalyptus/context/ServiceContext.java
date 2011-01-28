@@ -2,6 +2,8 @@ package com.eucalyptus.context;
 
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.Channels;
 import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.DefaultMuleSession;
@@ -24,7 +26,11 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.util.ReplyQueue;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
@@ -117,6 +123,21 @@ public class ServiceContext {
                                                                   + " because of " + e.getMessage( ), e ) );
     } finally {
       RequestContext.setEvent( context );
+    }
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void response( BaseMessage responseMessage ) {
+    EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
+    String corrId = responseMessage.getCorrelationId( );
+    try {
+      Context context = Contexts.lookup( corrId );
+      Channel channel = context.getChannel( );
+      Channels.write( channel, responseMessage );
+      Contexts.clear(context);
+    } catch ( NoSuchContextException e ) {
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      LOG.debug( responseMessage );
     }
   }
   
