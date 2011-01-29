@@ -121,7 +121,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
                 }
               }
             } catch ( EucalyptusCloudException e ) {
-              LOG.error( e, e );
+              LOG.trace( "Topology info not available for unknown group: " + network.getName( ) + " because of " + e.getMessage( ), e );
             }
           }
           for ( String networkName : rules.keySet( ) ) {
