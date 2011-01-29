@@ -70,7 +70,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
@@ -110,6 +112,10 @@ public class SystemCredentialProvider extends Bootstrapper {
     return getCredentialProvider( ComponentIds.lookup( compId ) );
   }
   
+  public String getPem( ) {
+    return B64.url.encString( PEMFiles.getBytes( SystemCredentialProvider.certs.get( this.name ) ) );
+  }
+
   public X509Certificate getCertificate( ) {
     return SystemCredentialProvider.certs.get( this.name );
   }
