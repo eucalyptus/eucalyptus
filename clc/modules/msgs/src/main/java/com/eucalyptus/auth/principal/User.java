@@ -148,10 +148,10 @@ public interface User extends HasId, BasePrincipal, Serializable {
   public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
     
   public static final User SYSTEM = new User() {
-    @Override public String getId( ) { return 0;}
+    @Override public String getId( ) { return Account.SYSTEM_ACCOUNT;}
     @Override public String getName( ) { return Account.SYSTEM_ACCOUNT;}
-    @Override public BigInteger getNumber( ) { return 0;}
-    @Override public String getPath( ) { return /;}
+    @Override public BigInteger getNumber( ) { return BigInteger.ZERO;}
+    @Override public String getPath( ) { return "/";}
     @Override public RegistrationStatus getRegistrationStatus( ) { return null;}
     @Override public Boolean isEnabled( ) { return true;}
     @Override public String getToken( ) { return null;}
