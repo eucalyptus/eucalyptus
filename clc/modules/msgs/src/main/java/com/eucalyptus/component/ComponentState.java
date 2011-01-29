@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
@@ -123,19 +124,24 @@ public class ComponentState {
     
     final TransitionAction<Component> startTransition = new TransitionAction<Component>( ) {
       @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
-        try {
-          parent.getBootstrapper( ).start( );
-          if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
-            parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
-          }
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
+      public void leave( final Component parent, final Completion transitionCallback ) {
+        Threads.lookup( parent.toString() ).getExecutorService( ).submit(  new Runnable() {
+          @Override
+          public void run( ) {
+            ComponentState.this.details.clear( );
+            try {
+              parent.getBootstrapper( ).start( );
+              if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+                parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
+              }
+              transitionCallback.fire( );
+            } catch ( Throwable ex ) {
+              LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+              ComponentState.this.details.add( ex.toString( ) );
+              transitionCallback.fireException( ex );
+            }
+          }} 
+        );
       }
     };
     
