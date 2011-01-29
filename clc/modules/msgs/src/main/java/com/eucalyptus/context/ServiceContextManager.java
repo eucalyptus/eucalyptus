@@ -100,10 +100,14 @@ public class ServiceContextManager {
   private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class.toString( ) );
   private static final VelocityEngine ve = new VelocityEngine( );
   static {
-    ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-    "org.apache.velocity.runtime.log.Log4JLogChute" );
-    ve.setProperty("runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
-    ve.init();
+    try {
+      ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+      "org.apache.velocity.runtime.log.Log4JLogChute" );
+      ve.setProperty("runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
+      ve.init();
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
   }
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
   private static String                                       FAIL_MSG                       = "ESB client not ready because the service bus has not been started.";
