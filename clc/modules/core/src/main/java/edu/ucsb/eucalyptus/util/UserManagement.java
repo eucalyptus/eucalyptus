@@ -83,7 +83,7 @@ public class UserManagement {
    */
   public static boolean isAdministrator( String userId ) {
     try {
-      if( Contexts.lookup( ).getUser( ).isSystem( ) || ComponentIds.lookup(Eucalyptus.class).name( ).equals( userId ) || "admin".equals( userId ) ) {
+      if( Contexts.lookup( ).getUser( ).isSystemInternal( ) || ComponentIds.lookup(Eucalyptus.class).name( ).equals( userId ) || "admin".equals( userId ) ) {
         return true; 
       } else {
         return false;
