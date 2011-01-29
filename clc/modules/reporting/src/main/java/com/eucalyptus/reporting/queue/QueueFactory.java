@@ -1,8 +1,12 @@
 package com.eucalyptus.reporting.queue;
 
-import java.util.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.reporting.event.*;
 
 public class QueueFactory
 {
@@ -17,17 +21,17 @@ public class QueueFactory
 		}
 		return queueFactory;
 	}
+	
+	private static String clientUrl = "failover:(" + QueueBroker.DEFAULT_URL + ")?initialReconnectDelay=10000&maxReconnectAttempts=10";
 
 	private Map<QueueIdentifier,QueueSenderImpl>   senders;
 	private Map<QueueIdentifier,QueueReceiverImpl> receivers;
-	private QueueBroker broker;
 	private boolean started = false;
 	
 	private QueueFactory()
 	{
 		this.senders   = new HashMap<QueueIdentifier,QueueSenderImpl>();
 		this.receivers = new HashMap<QueueIdentifier,QueueReceiverImpl>();
-		this.broker    = QueueBroker.getInstance();
 	}
 
 	public enum QueueIdentifier
@@ -51,7 +55,6 @@ public class QueueFactory
 	public void startup()
 	{
 		if (!started) {
-			this.broker.startup();
 			started = true;
 			log.info("QueueFactory started");
 		} else {
@@ -68,7 +71,6 @@ public class QueueFactory
 			for (QueueIdentifier identifier : receivers.keySet()) {
 				receivers.get(identifier).shutdown();
 			}
-			this.broker.shutdown();
 			log.info("QueueFactory stopped");
 		} else {
 			log.warn("QueueFactory.shutdown called when not started");
@@ -77,38 +79,63 @@ public class QueueFactory
 	
 	public QueueSender getSender(QueueIdentifier identifier)
 	{
-		if (started) {
-			if (senders.containsKey(identifier)) {
-				return senders.get(identifier);
-			} else {
-				QueueSenderImpl sender = new QueueSenderImpl(broker, identifier);
-				sender.startup();
-				senders.put(identifier, sender);
-				log.info("Sender " + identifier + " started");
-				return sender;
-			}
+		if (senders.containsKey(identifier)) {
+			return senders.get(identifier);
 		} else {
-			throw new QueueRuntimeException("QueueFactory not started");
+			log.info("Client url:" + clientUrl);
+			QueueSenderImpl sender = new QueueSenderImpl(clientUrl, identifier);
+			sender.startup();
+			senders.put(identifier, sender);
+			log.info("Sender " + identifier + " started");
+			return sender;
 		}
 	}
 
 	public QueueReceiver getReceiver(QueueIdentifier identifier)
 	{
-		if (started) {
-			if (receivers.containsKey(identifier)) {
-				return receivers.get(identifier);
-			} else {
-				QueueReceiverImpl receiver = new QueueReceiverImpl(broker,
-						identifier);
-				receiver.startup();
-				receivers.put(identifier, receiver);
-				log.info("Receiver " + identifier + " started");
-				return receiver;
-			}
+		if (receivers.containsKey(identifier)) {
+			return receivers.get(identifier);
 		} else {
-			throw new QueueRuntimeException("QueueFactory not started");			
+			log.info("Client url:" + clientUrl);
+			QueueReceiverImpl receiver = new QueueReceiverImpl(clientUrl,
+					identifier);
+			receiver.startup();
+			receivers.put(identifier, receiver);
+			log.info("Receiver " + identifier + " started");
+			return receiver;
+		}		
+	}
+	
+	public static void main(String[] args)
+		throws Exception
+	{
+		QueueIdentifier identifier =
+			(args[0].equalsIgnoreCase("storage"))
+				? QueueIdentifier.STORAGE
+				: QueueIdentifier.INSTANCE;
+		boolean listener = (args[1].equalsIgnoreCase("nowait")) ? false : true;
+		System.out.println("Running listener for queue " + identifier + " as " + (listener ? "listener" : "noWait"));
+		QueueFactory queueFactory = QueueFactory.getInstance();
+		QueueReceiver receiver = queueFactory.getReceiver(identifier);
+		if (listener) {
+			receiver.addEventListener(new EventListener()
+			{
+				@Override
+				public void receiveEvent(Event e)
+				{
+					System.out.println("Event received:" + e);
+				}
+
+			});
+		} else {
+			for (Event event = receiver.receiveEventNoWait();
+					event != null;
+					event = receiver.receiveEventNoWait())
+			{
+				System.out.println("Event received:" + event);				
+			}
+
 		}
-		
 	}
 
 }
