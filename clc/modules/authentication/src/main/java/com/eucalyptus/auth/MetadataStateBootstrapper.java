@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,71 +61,74 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config;
+package com.eucalyptus.auth;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.ArbitratorConfiguration;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.gwt.dom.client.EventTarget;
+import com.eucalyptus.entities.Counters;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.VmType;
 
-public class ArbitratorControl {
-  private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
-  private static Map<String, Exception>   error             = Maps.newConcurrentHashMap( );
-  private static ScheduledExecutorService monitor;
-  private final static int                CHECK_PERIODICITY = 5;
+@Provides( Eucalyptus.class )
+@RunDuring( Bootstrap.Stage.UserCredentialsInit )
+public class MetadataStateBootstrapper extends Bootstrapper {
   
-  public ArbitratorControl( ) {}
+  @Override
+  public boolean load( ) throws Exception {
+    ensureCountersExist( );
+    ensureVmTypesExist( );
+    return true;
+  }
   
-  public static void start( ) {}
+  @Override
+  public boolean start( ) throws Exception {
+    return true;
+  }
   
-  public static void check( ) throws Exception {
-    if( Components.lookup( Walrus.class ).getLocalService( ) != null || Components.lookup( Eucalyptus.class ).getLocalService( ) != null ) {
-      List<ArbitratorConfiguration> configs = Configuration.getArbitratorConfigurations( );
-      for ( ArbitratorConfiguration config : configs ) {
-        final String hostName = config.getHostName( );
-        Threads.getThreadPool( ArbitratorControl.class.getSimpleName( ) ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              InetAddress addr = InetAddress.getByName( hostName );
-              if ( addr.isReachable( 2000 ) ) {
-                ArbitratorControl.error.remove( hostName );
-              }
-            } catch ( UnknownHostException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
-            } catch ( IOException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
-            }
-            EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
-          }
-        }
-               );
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+
+  private static void ensureCountersExist( ) {
+    Counters.getNextId( );
+  }
+
+  private static void ensureVmTypesExist( ) {
+    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
+    try {
+      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
+        db.add( new VmType( "m1.small", 1, 2, 128 ) );
+        db.add( new VmType( "c1.medium", 1, 5, 256 ) );
+        db.add( new VmType( "m1.large", 2, 10, 512 ) );
+        db.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
+        db.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
       }
-      Set<String> downArbitrators = Sets.newHashSet( error.keySet( ) );
-      if ( downArbitrators.size( ) > 0 ) {
-        String errorMessage = "Arbitrators not reachable: " + downArbitrators.toString( );
-        throw new EucalyptusCloudException( errorMessage );
-      }
+      db.commit( );
+    } catch ( Exception e ) {
+      db.rollback( );
     }
   }
+  
 }
