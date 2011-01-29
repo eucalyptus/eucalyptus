@@ -121,15 +121,19 @@ public class SystemBootstrapper {
       }
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
-          SystemBootstrapper.out.print( string );
-          LOG.info( string );
+          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+            SystemBootstrapper.out.print( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).info( );
+          }
         }
       }
             );
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
-          SystemBootstrapper.err.print( string );
-          LOG.error( string );
+          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+            SystemBootstrapper.err.print( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).error( );
+          }
         }
       }
             );
