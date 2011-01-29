@@ -191,7 +191,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
             try {
               TimeUnit.MILLISECONDS.sleep( 500 );
             } catch ( InterruptedException e ) {
-              Thread.currentThread( ).interrupted( );
+              Thread.currentThread( ).interrupt( );
             }
           }
           jettyServer.destroy( );
