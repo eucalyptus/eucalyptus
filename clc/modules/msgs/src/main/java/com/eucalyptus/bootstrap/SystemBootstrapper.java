@@ -71,7 +71,6 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.reporting.queue.QueueFactory;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
