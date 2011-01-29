@@ -282,7 +282,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     ActiveTransition t = this.currentTransition.get( );
     return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), (LogLevels.EXTREME ? (t != null 
       ? t.toString( )
-      : "idle" ) : "";
+      : "idle" ) : ""));
   }
   
   /**
