@@ -1,42 +1,53 @@
 package com.eucalyptus.reporting.queue;
 
+import java.util.*;
+
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.log4j.*;
 
 public class QueueBroker
 {
 	private static Logger log = Logger.getLogger( QueueBroker.class );
 
-	private static final String DEFAULT_NAME = "reportingBroker";
-	private static final String DEFAULT_DIR  = "/tmp";
-	private static final String DEFAULT_URL  = "tcp://localhost:61616";
+	public static final String DEFAULT_NAME = "reportingBroker";
+	public static final String DEFAULT_DIR  = "/tmp";
+	public static final String DEFAULT_URL  = "tcp://localhost:63636";
 		
-	private static QueueBroker instance = null;
-
-	public static QueueBroker getInstance()
-	{
-		if (instance == null) {
-			instance = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
-		}
-		return instance;
-	}
-	
-	private boolean started = false;
-
 	private String brokerName;
 	private String brokerDataDir;
 	private String brokerUrl;
+	
+	private List<ActiveMQDestination> destinations;
 
 	private BrokerService brokerService;
 	private JmsBrokerThread brokerThread;
 
-	QueueBroker(String brokerName, String brokerUrl, String brokerDataDir)
+	private QueueBroker(String brokerName, String brokerUrl, String brokerDataDir)
 	{
 		this.brokerName = brokerName;
 		this.brokerUrl = brokerUrl;
 		this.brokerDataDir = brokerDataDir;
+		this.destinations = new ArrayList<ActiveMQDestination>();
+	}
+	
+	private static QueueBroker instance;
+	
+	public static QueueBroker getInstance()
+	{
+		if (instance == null) {
+			return instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, DEFAULT_DIR);
+		}
+		return instance;
 	}
 
+	public void addDestination(String destName)
+	{
+		ActiveMQDestination dest =
+			ActiveMQDestination.createDestination(destName, ActiveMQDestination.QUEUE_TYPE);
+		this.destinations.add(dest);
+	}
+	
 	public void startup()
 	{
 		try {
@@ -44,6 +55,9 @@ public class QueueBroker
 			brokerService.setBrokerName(brokerName);
 			brokerService.setDataDirectory(brokerDataDir);
 			brokerService.addConnector(brokerUrl);
+			ActiveMQDestination[] dests = new ActiveMQDestination[destinations.size()];
+			destinations.toArray(dests);
+			brokerService.setDestinations(dests);
 			brokerThread = new JmsBrokerThread(brokerService);
 			brokerThread.start();
 			Thread.sleep(1000); // give the broker a moment to startup; TODO:
@@ -80,7 +94,7 @@ public class QueueBroker
 	public static void main(String[] args)
 		throws Exception
 	{
-		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
+		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, DEFAULT_DIR);
 		broker.startup();
 	}
 
@@ -120,4 +134,3 @@ public class QueueBroker
 	}
 
 }
-
