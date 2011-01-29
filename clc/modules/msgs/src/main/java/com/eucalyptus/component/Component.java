@@ -76,6 +76,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -573,17 +574,20 @@ public class Component implements ComponentInformation, HasName<Component> {
   public static class CheckEvent implements EventListener {
     public static void register( ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
+      ListenerRegistry.getInstance( ).register( Hertz.class, new CheckEvent( ) );
     }
     
     @Override
     public void fireEvent( Event event ) {
-      for ( final Component c : Components.list( ) ) {
-        Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            c.runChecks( );
+      if( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) ) {
+        for ( final Component c : Components.list( ) ) {
+          if( !Component.State.ENABLED.equals( c.getState( ) ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) ) {   
+            Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
           }
-        } );
+        }
+      }
+      for ( final Component c : Components.list( ) ) {
+        Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
       }
     }
   }
@@ -619,5 +623,15 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public String getLocalEndpointName( ) {
     return this.identity.getLocalEndpointName( );
+  }
+  public Runnable getCheckRunner( ) {
+    return new Runnable( ) {
+      @Override
+      public void run( ) {
+        if( !Component.this.stateMachine.isBusy( ) ) {
+          Component.this.runChecks( );
+        }
+      }
+    };
   }
 }

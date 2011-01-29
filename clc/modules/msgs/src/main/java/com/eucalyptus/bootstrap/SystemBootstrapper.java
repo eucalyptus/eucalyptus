@@ -80,6 +80,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
+import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -120,19 +121,23 @@ public class SystemBootstrapper {
       }
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
-          SystemBootstrapper.out.print( string );
-          LOG.info( string );
+          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+            SystemBootstrapper.out.print( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).info( );
+          }
         }
       }
             );
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
-          SystemBootstrapper.err.print( string );
-          LOG.error( string );
+          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+            SystemBootstrapper.err.print( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).error( );
+          }
         }
       }
             );
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + LogUtil.dumpObject( LogLevels.class.getDeclaredFields( ) ) ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {

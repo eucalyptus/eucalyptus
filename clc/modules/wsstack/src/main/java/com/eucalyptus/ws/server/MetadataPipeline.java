@@ -60,8 +60,9 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       Object reply = null;
       try {
         reply = ServiceContext.send( "VmMetadata", newUri );
-      } catch ( Exception e1 ) {
+      } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
+        reply = "".getBytes( );
       } finally {
         Contexts.clear( request.getCorrelationId( ) );
       }
