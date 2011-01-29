@@ -68,7 +68,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.cluster.event.NewClusterEvent;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;

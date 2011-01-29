@@ -82,7 +82,6 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.event.EventFailedException;

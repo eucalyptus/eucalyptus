@@ -57,6 +57,17 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
+  <euca:endpoint name="EuareControllerWS"
+                 connector-ref="eucaws"
+                 address="http://127.0.0.1:${euca.ws.port}/services/Euare"/>
+  <euca:endpoint name="EuareInternalWS"
+                 connector-ref="eucaws"
+                 address="http://127.0.0.1:${euca.ws.port}/internal/EuareInternal"
+                 synchronous="true"/>
+
+  <endpoint name="EuareWS" address="vm://Euare" synchronous="false"/>
+  <endpoint name="EuareInternalVM" address="vm://EuareInternal" synchronous="true"/>
+  <endpoint name="EuareReplyQueueWS" address="vm://EuareReplyQueue" synchronous="false"/>
 	<model name="euare">
 
 		<default-service-exception-strategy>

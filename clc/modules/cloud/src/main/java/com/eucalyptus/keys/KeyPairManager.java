@@ -23,6 +23,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
+import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class KeyPairManager {

@@ -33,7 +33,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
     RunInstancesType request = vmInfo.getRequest( );
     String clusterName = request.getAvailabilityZone( );
     String vmTypeName = request.getInstanceType( );
-    final int amount = request.getMinCount( );
+    final int minAmount = request.getMinCount( );
+    final int maxAmount = request.getMaxCount( );
     Context ctx = Contexts.lookup( );
     //if ( ctx.getGroups( ).isEmpty( ) ) {
     if ( false ) {
@@ -45,7 +46,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
       String action = PolicySpec.requestToAction( request );
       User requestUser = Permissions.getUserById( request.getUserId( ) );
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
-      int remaining = amount;
+      int remaining = maxAmount;
       int available = 0;
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
         @Override

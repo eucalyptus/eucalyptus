@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,97 +53,32 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
- * Author: Neil Soman neil@eucalyptus.com
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth.login;
 
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
-import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
+package com.eucalyptus.component.id;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.ComponentId;
 
-public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedComponentCredentials> {
-	private static Logger LOG = Logger.getLogger( WalrusComponentLoginModule.class );
-	public WalrusComponentLoginModule() {}
-
-	@Override
-	public boolean accepts( ) {
-		return super.getCallbackHandler( ) instanceof WalrusWrappedComponentCredentials;
-	}
-
-	@Override
-	public boolean authenticate( WalrusWrappedComponentCredentials credentials ) throws Exception {
-		Signature sig;
-		boolean valid = false;
-		String data = credentials.getLoginData();
-		String signature = credentials.getSignature();
-		try {
-			try {
-				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getCertificate().getPublicKey();
-				sig = Signature.getInstance("SHA1withRSA");
-				sig.initVerify(publicKey);
-				sig.update(data.getBytes());
-				valid = sig.verify(Base64.decode(signature));
-			} catch ( Exception e ) {
-				LOG.warn ("Authentication: certificate not found in keystore");
-			} finally {
-				if( !valid && credentials.getCertString() != null ) {
-					try {
-						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
-						if(nodeCert != null) {
-							PublicKey publicKey = nodeCert.getPublicKey( );
-							sig = Signature.getInstance( "SHA1withRSA" );
-							sig.initVerify( publicKey );
-							sig.update( data.getBytes( ) );
-							valid = sig.verify( Base64.decode( signature ) );
-						}
-					} catch ( Exception e2 ) {
-						LOG.error ("Authentication error: " + e2.getMessage());
-						return false;
-					}            
-				}
-			}
-		} catch (Exception ex) {
-			LOG.error ("Authentication error: " + ex.getMessage());
-			return false;
-		}
-
-		if(valid) {					
-			try {
-				User user;
-				String queryId = credentials.getQueryId();
-				if(queryId != null) {
-					user = Accounts.lookupUserByAccessKeyId(queryId);  
-				} else {
-					user = Accounts.lookupSystemAdmin( );	
-				}
-				super.setCredential(queryId);
-				super.setPrincipal(user);
-				return true;	
-			} catch (AuthException e) {
-				LOG.error(e);
-				return false;
-			}
-		}
-		return false;	
-	}
-
-	@Override
-	public void reset( ) {}
+public class Euare extends ComponentId {
+  
+  @Override
+  public Boolean isCloudLocal( ) {
+    return true;
+  }
+  
+  @Override
+  public Boolean hasDispatcher( ) {
+    return true;
+  }
+  @Override
+  public Boolean isAlwaysLocal( ) {
+    return false;
+  }
+  
 }

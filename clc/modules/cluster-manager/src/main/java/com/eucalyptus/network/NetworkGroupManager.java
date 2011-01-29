@@ -51,13 +51,13 @@ public class NetworkGroupManager {
       networkNames.add( "default" );
     }
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
-    for ( String networkName : networkNames ) {
-      NetworkRulesGroup networkGroup = NetworkGroupUtil.getUserNetworkRulesGroup( account.getId( ), networkName );
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, networkName, account, action, requestUser ) ) {
-        throw new EucalyptusCloudException( "Not authorized to use network group " + networkName + " for " + requestUser.getName( ) );
+    for ( String groupName : networkNames ) {
+      NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( account.getId( ), groupName );
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
+        throw new EucalyptusCloudException( "Not authorized to use network group " + groupName + " for " + requestUser.getName( ) );
       }
       networkRuleGroups.put( groupName, group );
-      vmAllocInfo.getNetworks( ).add( networkGroup.getVmNetwork( ) );
+      vmAllocInfo.getNetworks( ).add( group.getVmNetwork( ) );
     }
     ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet( ) );
     if ( !userNetworks.containsAll( networkNames ) ) {

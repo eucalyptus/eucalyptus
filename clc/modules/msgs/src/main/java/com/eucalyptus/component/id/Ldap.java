@@ -69,7 +69,7 @@ public class Ldap extends ComponentId {
 
   @Override
   public Boolean isCloudLocal( ) {
-    return true;
+    return false;
   }
 
   @Override
@@ -79,7 +79,7 @@ public class Ldap extends ComponentId {
 
   @Override
   public Boolean isAlwaysLocal( ) {
-    return false;
+    return true;
   }
 
 }

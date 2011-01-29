@@ -78,6 +78,7 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;

@@ -86,8 +86,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.auth.crypto.Digest;
@@ -146,11 +144,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
@@ -244,7 +239,7 @@ public class WalrusImageManager {
 								}
 							}
 							if(!verified) {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							}

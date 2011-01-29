@@ -79,14 +79,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -178,7 +176,7 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
       u.addCertificate( x509 );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      cloudCert = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;

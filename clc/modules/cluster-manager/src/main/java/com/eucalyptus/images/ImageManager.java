@@ -216,11 +216,6 @@ public class ImageManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, kernelId, resourceAccount, action, requestUser ) ) {
         throw new EucalyptusCloudException( "Not authorized to use kernel " + kernelId + " by " + requestUser.getName( ) );
       }
-      // Check ramdisk image
-      boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) )
-          || ( !ImageUtil.isSet( msg.getKernelId( ) ) && ImageUtil.isSet( diskInfo.getKernelId( ) )
-              && !ImageUtil.isSet( diskInfo.getRamdiskId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
-      final String ramdiskId = nord ? null : ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
       db = new EntityWrapper<ImageInfo>( );
       try {
         ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );

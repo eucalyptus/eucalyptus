@@ -1,5 +1,5 @@
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
+import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;

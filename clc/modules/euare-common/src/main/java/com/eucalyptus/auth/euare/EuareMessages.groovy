@@ -6,7 +6,10 @@ import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.Euare;
 
+@ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTGROUPPOLICY )
