@@ -79,7 +79,7 @@ import com.eucalyptus.auth.PolicyParseException;
 public interface User extends HasId, BasePrincipal, Serializable {
   
   public static final String USER_GROUP_PREFIX = "_";  
-  public static final String ACCOUNT_ADMIN = "eucaadmin";
+  public static final String ACCOUNT_ADMIN = "admin";
   
   public static enum RegistrationStatus {
     REGISTERED,
