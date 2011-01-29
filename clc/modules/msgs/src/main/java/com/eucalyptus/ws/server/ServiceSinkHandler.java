@@ -228,7 +228,6 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( this.msgReceiver == null ) {
           ServiceSinkHandler.dispatchRequest( msg );
         } else if ( ( user == null ) || ( ( user != null ) && user.isSystemAdmin( ) ) ) {
-          this.dispatchRequest( ctx, request, msg );
           ServiceSinkHandler.dispatchRequest( msg );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

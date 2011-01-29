@@ -663,4 +663,9 @@ public class DatabaseUserProxy implements User {
     }
   }
 
+  @Override
+  public boolean isSystemInternal( ) {
+    return false;
+  }
+
 }

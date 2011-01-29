@@ -136,6 +136,7 @@ public interface User extends HasId, BasePrincipal, Serializable {
   public Account getAccount( ) throws AuthException;
   
   public boolean isSystemAdmin( );
+  public boolean isSystemInternal( );
   
   public boolean isAccountAdmin( );
   
@@ -146,4 +147,50 @@ public interface User extends HasId, BasePrincipal, Serializable {
   public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
   public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
     
+  public static final User SYSTEM = new User() {
+    @Override public String getId( ) { return null;}
+    @Override public String getName( ) { return null;}
+    @Override public BigInteger getNumber( ) { return null;}
+    @Override public String getPath( ) { return null;}
+    @Override public RegistrationStatus getRegistrationStatus( ) { return null;}
+    @Override public Boolean isEnabled( ) { return null;}
+    @Override public String getToken( ) { return null;}
+    @Override public String getConfirmationCode( ) { return null;}
+    @Override public String getPassword( ) { return null;}
+    @Override public Long getPasswordExpires( ) { return null;}
+    @Override public String getInfo( String key ) throws AuthException { return null;}
+    @Override public Map<String, String> getInfo( ) throws AuthException { return null;}
+    @Override public List<AccessKey> getKeys( ) throws AuthException { return null;}
+    @Override public AccessKey getKey( String keyId ) throws AuthException { return null;}
+    @Override public AccessKey addKey( String key ) throws AuthException { return null;}
+    @Override public AccessKey createKey( ) throws AuthException { return null;}
+    @Override public List<Certificate> getCertificates( ) throws AuthException { return null;}
+    @Override public Certificate getCertificate( String certificateId ) throws AuthException { return null;}
+    @Override public Certificate addCertificate( X509Certificate certificate ) throws AuthException { return null;}
+    @Override public List<Group> getGroups( ) throws AuthException { return null;}
+    @Override public Account getAccount( ) throws AuthException { return null;}
+    @Override public boolean isSystemAdmin( ) { return false;}
+    @Override public boolean isSystemInternal( ) { return false;}
+    @Override public boolean isAccountAdmin( ) { return false;}
+    @Override public List<Policy> getPolicies( ) throws AuthException { return null;}
+    @Override public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException { return null;}
+    @Override public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException { return null;}
+    @Override public List<Authorization> lookupQuotas( String resourceType ) throws AuthException { return null;}
+    @Override public void setName( String name ) throws AuthException {}
+    @Override public void setPath( String path ) throws AuthException {}
+    @Override public void setRegistrationStatus( RegistrationStatus stat ) throws AuthException {}
+    @Override public void setEnabled( Boolean enabled ) throws AuthException {}
+    @Override public void setToken( String token ) throws AuthException {}
+    @Override public void createToken( ) throws AuthException {}
+    @Override public void setConfirmationCode( String code ) throws AuthException {}
+    @Override public void createConfirmationCode( ) throws AuthException {}
+    @Override public void setPassword( String password ) throws AuthException {}
+    @Override public void createPassword( ) throws AuthException {}
+    @Override public void setPasswordExpires( Long time ) throws AuthException {}
+    @Override public void setInfo( String key, String value ) throws AuthException {}
+    @Override public void setInfo( Map<String, String> newInfo ) throws AuthException {}
+    @Override public void removeKey( String keyId ) throws AuthException {}
+    @Override public void removeCertificate( String certficateId ) throws AuthException {}
+    @Override public void removePolicy( String name ) throws AuthException {};
+  };
 }

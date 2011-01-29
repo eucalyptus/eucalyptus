@@ -166,7 +166,7 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
       msg.setEffectiveUserId( msg.getUserId( ) );
     } else if ( ( user != null ) ) {//TODO:GRZE:WTH?!?!
       msg.setUserId( user.getName( ) );
-      msg.setEffectiveUserId( user.isAdministrator( ) ? "eucalyptus" : user.getName( ) );
+      msg.setEffectiveUserId( user.isSystemAdmin( ) ? "eucalyptus" : user.getName( ) );
     }
   }
   
