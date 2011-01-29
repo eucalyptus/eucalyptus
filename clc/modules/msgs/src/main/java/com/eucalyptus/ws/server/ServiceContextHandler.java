@@ -63,21 +63,19 @@
 
 package com.eucalyptus.ws.server;
 
-import javax.xml.ws.WebServiceException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import com.eucalyptus.context.Context;
@@ -100,6 +98,7 @@ import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
+@ChannelPipelineCoverage( "one" )
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger      LOG       = Logger.getLogger( ServiceContextHandler.class );
   private ChannelLocal<Long>         startTime = new ChannelLocal<Long>( );

@@ -50,7 +50,7 @@
 	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/btm-1.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/btm-1.3.2.jar" sourcepath="/bzr/third-party/btm-2.1.0"/>
 	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.0-BETA.jar"/>
 	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
@@ -124,7 +124,7 @@
 	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-3.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar" sourcepath="/bzr/jakarta-log4j-1.2.15"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
 	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
