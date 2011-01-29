@@ -220,7 +220,7 @@ public class ServiceContextManager {
     return configs;
   }
   
-  public static synchronized void shutdown( ) {
+  public static void shutdown( ) {
     MuleContext muleCtx = context.getReference( );
     if ( muleCtx != null ) {
       context.compareAndSet( muleCtx, null, false, true );
@@ -271,7 +271,7 @@ public class ServiceContextManager {
     }
   }
 
-  public static synchronized boolean startup( ) throws ServiceInitializationException {
+  public static boolean startup( ) throws ServiceInitializationException {
     try {
       LOG.info( "Loading system bus." );
       loadContext( );
