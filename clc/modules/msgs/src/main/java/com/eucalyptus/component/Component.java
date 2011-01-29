@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -107,6 +108,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
         try {
+          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ), c.getName( ) ).info( );
           c.stateMachine.transition( Transition.this );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
