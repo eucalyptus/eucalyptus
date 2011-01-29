@@ -66,6 +66,7 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
@@ -73,11 +74,13 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
@@ -205,11 +208,21 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    for ( Component c : Components.list( ) ) {
+    for ( final Component c : Components.list( ) ) {
       if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
-        Component.Transition.STARTING.transit( c );
-        Component.Transition.READY_CHECK.transit( c );
-        Component.Transition.ENABLING.transit( c );
+        Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
+          @Override
+          public void run( ) {
+            try {
+              for( ; !Bootstrap.isFinished( ); TimeUnit.MILLISECONDS.sleep( 100 ) ) {
+                Component.Transition.STARTING.transit( c );
+                Component.Transition.READY_CHECK.transit( c );
+                Component.Transition.ENABLING.transit( c );
+              }
+            } catch ( Throwable ex ) {
+              LOG.error( ex , ex );
+            }
+          }} );
       }
     }
     try {

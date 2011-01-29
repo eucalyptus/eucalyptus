@@ -110,8 +110,6 @@ public class Component implements ComponentInformation, HasName<Component> {
           c.stateMachine.transition( Transition.this );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
-          throw new IllegalStateException( "Error while applying transtition " + this.name( ) + " to " + c.getName( ) + " currently in state "
-                                           + c.stateMachine.toString( ), ex );
         }
       }
     }
