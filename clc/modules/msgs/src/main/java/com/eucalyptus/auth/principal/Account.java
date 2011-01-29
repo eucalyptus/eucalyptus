@@ -13,7 +13,7 @@ import com.eucalyptus.auth.AuthException;
  */
 public interface Account extends HasId, BasePrincipal, Serializable {
   
-  public static final String SYSTEM_ACCOUNT = "eucasystem";
+  public static final String SYSTEM_ACCOUNT = "eucalyptus";//NOTE: for now this has to be the name as it is has to be the same as Eucalyptus.name()
 
   public void setName( String name ) throws AuthException;
   

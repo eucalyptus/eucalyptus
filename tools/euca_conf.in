@@ -104,8 +104,8 @@ DISABLED=""
 TO_START=""
 VMWARE=""
 
-SYSTEM_ACCOUNT="eucasystem"
-ADMIN_USER="eucaadmin"
+SYSTEM_ACCOUNT="eucalyptus"
+ADMIN_USER="admin"
 
 usage () {
 	echo "$0 [options] [<file>]"
