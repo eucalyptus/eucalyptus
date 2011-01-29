@@ -6,7 +6,11 @@ import java.io.OutputStreamWriter;
 import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -19,8 +23,7 @@ import edu.ucsb.eucalyptus.msgs.DeleteKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
-import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
@@ -49,9 +52,17 @@ public class KeyPairManager {
         return vmAllocInfo;
       }
     }
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( vmAllocInfo.getRequest( ).getUserId( ), vmAllocInfo.getRequest( ).getKeyName( ) );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    String action = PolicySpec.requestToAction( request );
+    String keyName = request.getKeyName( );
+    User requestUser = Permissions.getUserById( request.getUserId( ) );
+    Account account = Permissions.getAccountByUserId( request.getUserId( ) );
+    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( account.getId( ), keyName );
     if ( keypair == null ) {
-      throw new EucalyptusCloudException( "Failed to find keypair: " + vmAllocInfo.getRequest().getKeyName() );
+      throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, requestUser ) ) {
+      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + requestUser.getName( ) );
     }
     vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey(), keypair.getFingerPrint() ) );
     return vmAllocInfo;

@@ -75,10 +75,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.ClusterLogMessageCallback;
@@ -449,8 +449,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
       return false;
     }
     
-    X509Certificate realClusterx509 = X509Cert.toCertificate( this.getCredentials( ).getClusterCertificate( ) );
-    X509Certificate realNodex509 = X509Cert.toCertificate( this.getCredentials( ).getNodeCertificate( ) );
+    X509Certificate realClusterx509 = X509CertHelper.toCertificate( this.getCredentials( ).getClusterCertificate( ) );
+    X509Certificate realNodex509 = X509CertHelper.toCertificate( this.getCredentials( ).getNodeCertificate( ) );
     X509Certificate clusterx509 = PEMFiles.getCert( B64.dec( certs.getCcCert( ) ) );
     X509Certificate nodex509 = PEMFiles.getCert( B64.dec( certs.getNcCert( ) ) );
     if ( "self".equals( certs.getServiceTag( ) ) || certs.getServiceTag( ) == null ) {

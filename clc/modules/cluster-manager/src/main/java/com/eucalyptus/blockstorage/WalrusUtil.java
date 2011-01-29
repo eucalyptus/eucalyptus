@@ -71,12 +71,13 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -182,19 +183,21 @@ public class WalrusUtil {
 		String machineConfiguration = parser.getXML( "machine_configuration" );
 		User user = null;
 		try {
-			user = Users.lookupUser( imgInfo.getImageOwnerId( ) );
-		} catch ( NoSuchUserException e ) {
+			user = Accounts.lookupUserById( imgInfo.getImageOwnerId( ) );
+		} catch ( AuthException e ) {
 			throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
 		}
 		boolean found = false;
 
-		List<X509Certificate> allX509Certificates = user.getAllX509Certificates( );
-		if ( allX509Certificates != null ) {
-		  for( X509Certificate x : allX509Certificates ) {
-		    if( ( found |= ImageUtil.verifyManifestSignature( signature, x, machineConfiguration + image ) ) ) {
-		      break;
-		    }
-		  }
+		try {
+  		for ( Certificate c : user.getCertificates( ) ) {
+  		  X509Certificate x = c.getX509Certificate( );
+        if( ( found |= ImageUtil.verifyManifestSignature( signature, x, machineConfiguration + image ) ) ) {
+          break;
+        }
+  		}
+		} catch ( AuthException e ) {
+		  throw new EucalyptusCloudException( "Can't get user certificates", e );
 		}
 		if ( !found ) throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature." );
 

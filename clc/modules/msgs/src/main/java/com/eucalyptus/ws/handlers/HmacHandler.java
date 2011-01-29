@@ -69,7 +69,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
@@ -99,7 +99,8 @@ public class HmacHandler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) && !internal ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
       } else if ( internal ) {
-        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Users.lookupUser( "admin" ).getQueryId( ) );
+        // YE TODO: can we just pick any active secret key of admin?
+        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Accounts.getFirstActiveAccessKeyId( Accounts.lookupSystemAdmin( ) ) );
       }
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );

@@ -63,6 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 
@@ -129,6 +131,8 @@ public class RunInstancesResponseType extends VmControlMessage {
 
   ReservationInfoType rsvInfo;
 }
+
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RUNINSTANCES )
 public class RunInstancesType extends VmControlMessage {
 
   String imageId;

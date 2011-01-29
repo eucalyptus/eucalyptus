@@ -2,8 +2,7 @@ package com.eucalyptus.config;
 
 import java.io.File;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.X509Cert;
+import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
 
@@ -14,8 +13,6 @@ public class ConfigurationUtil {
     EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
     try {
       ClusterCredentials clusterCredentials = credDb.getUnique( new ClusterCredentials( clusterName ) );
-      credDb.recast( X509Cert.class ).delete( clusterCredentials.getClusterCertificate( ) );
-      credDb.recast( X509Cert.class ).delete( clusterCredentials.getNodeCertificate( ) );
       credDb.delete( clusterCredentials );
       credDb.commit( );
     } catch ( Exception e ) {

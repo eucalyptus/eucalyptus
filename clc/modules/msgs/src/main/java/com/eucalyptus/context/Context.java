@@ -1,19 +1,17 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
@@ -28,6 +26,7 @@ public class Context {
   private WeakReference<MuleEvent> muleEvent = new WeakReference<MuleEvent>( null );
   private User                     user      = null;
   private Subject                  subject   = null;
+  private Map<String, Contract>    contracts = Maps.newHashMap( );
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
@@ -67,7 +66,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getId( ) ).debug( );
       this.user = user;
     }
   }
@@ -76,6 +75,7 @@ public class Context {
     return check( this.user );
   }
   
+  /*
   public List<Group> getGroups( ) {
     return Groups.lookupUserGroups( this.getUser( ) );
   }
@@ -87,6 +87,7 @@ public class Context {
     }
     return auths;
   }
+  */
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
@@ -128,6 +129,10 @@ public class Context {
       LOG.error( "Accessing context field when it is null: " + steMethod.getMethodName( ) + " from " + steCaller );
     }
     return obj;
+  }
+  
+  public Map<String, Contract> getContracts( ) {
+    return this.contracts;
   }
   
 }

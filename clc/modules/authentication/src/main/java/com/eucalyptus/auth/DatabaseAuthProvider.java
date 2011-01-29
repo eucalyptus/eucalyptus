@@ -62,362 +62,358 @@
  */
 package com.eucalyptus.auth;
 
-import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import com.eucalyptus.auth.api.GroupProvider;
-import com.eucalyptus.auth.api.NoSuchCertificateException;
-import com.eucalyptus.auth.api.UserInfoProvider;
-import com.eucalyptus.auth.api.UserProvider;
-import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.auth.crypto.Hmacs;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.api.AccountProvider;
+import com.eucalyptus.auth.entities.AccessKeyEntity;
+import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.entities.CertificateEntity;
+import com.eucalyptus.auth.entities.GroupEntity;
+import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.B64;
-import com.eucalyptus.auth.util.PEMFiles;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseAuthProvider implements UserProvider, GroupProvider, UserInfoProvider {
+/**
+ * The authorization provider based on database storage. This class includes all the APIs to
+ * create/delete/query Eucalyptus authorization entities.
+ * 
+ * @author wenye
+ *
+ */
+public class DatabaseAuthProvider implements AccountProvider {
+  
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
   
-  public DatabaseAuthProvider( ) {}
-  
+  public DatabaseAuthProvider( ) {
+  }
+
   @Override
-  public User addUser( String userName, Boolean isAdmin, Boolean isEnabled ) throws UserExistsException {
-    UserEntity newUser = new UserEntity( userName );
-    newUser.setQueryId( Hmacs.generateQueryId( userName ) );
-    newUser.setSecretKey( Hmacs.generateSecretKey( userName ) );
-    newUser.setAdministrator( isAdmin );
-    newUser.setEnabled( isEnabled );
-    newUser.setPassword( Crypto.generateHashedPassword( userName ) );
-    newUser.setToken( Crypto.generateSessionToken( userName ) );
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    try {
-      db.add( newUser );
-      db.commit( );
-    } catch ( Throwable t ) {
-      db.rollback( );
-      throw new UserExistsException( t );
+  public User lookupUserById( String userId ) throws AuthException {
+    if ( userId == null ) {
+      throw new AuthException( AuthException.EMPTY_USER_ID );
     }
-    EntityWrapper<UserInfo> dbU = EntityWrapper.get( UserInfo.class );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    EntityManager em = db.getEntityManager( );
     try {
-      String confirmCode = Crypto.generateSessionToken( userName );
-      UserInfo newUserInfo = new UserInfo( userName, confirmCode );
-      dbU.add( newUserInfo );
-      dbU.commit( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      dbU.rollback( );
-    }    
-    User proxy = new DatabaseWrappedUser( newUser );
-    Groups.DEFAULT.addMember( proxy );
-    return proxy;
+      UserEntity user = em.find( UserEntity.class, userId );
+      db.commit( );
+      return new DatabaseUserProxy( user );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user by ID " + userId );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
+    }
   }
   
+  /**
+   * Lookup enabled user by its access key ID. Only return the user if the key is active.
+   * 
+   * @param keyId
+   * @return
+   * @throws AuthException
+   */
   @Override
-  public void deleteUser( String userName ) throws NoSuchUserException {
-    UserEntity user = new UserEntity( userName );
-    EntityWrapper<UserInfo> dbU = EntityWrapper.get( UserInfo.class );
+  public User lookupUserByAccessKeyId( String keyId ) throws AuthException {
+    if ( keyId == null || "".equals( keyId) ) {
+      throw new AuthException( "Empty key ID" );
+    }
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    Session session = db.getSession( );
     try {
-      UserInfo newUserInfo = dbU.getUnique( new UserInfo( userName ) );
-      dbU.delete( newUserInfo );
-      dbU.commit( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      dbU.rollback( );
-    }    
-    EntityWrapper<User> db = Authentication.getEntityWrapper( );
-    try {
-      User foundUser = db.getUnique( user );
-      for( Group g : Groups.lookupUserGroups( foundUser ) ) {
-        g.removeMember( foundUser );
+      Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<UserEntity> users = ( List<UserEntity> ) session
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+          .createCriteria( "keys" ).setCacheable( true ).add( 
+              Restrictions.and( Restrictions.idEq( keyId ), Restrictions.eq( "active", true ) ) )
+          .list( );
+      if ( users.size( ) != 1 ) {
+        throw new AuthException( "Found " + users.size( ) + " user(s)" );
       }
-      db.delete( foundUser );
       db.commit( );
-    } catch ( Exception e ) {
+      return new DatabaseUserProxy( users.get( 0 ) );
+    } catch ( Throwable e ) {
       db.rollback( );
-      throw new NoSuchUserException( e );
+      Debugging.logError( LOG, e, "Failed to find user with access key ID : " + keyId );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
+    }
+  }
+  
+  /**
+   * Lookup enabled user by its certificate. Only return the user if the certificate is active and not revoked.
+   * 
+   * @param cert
+   * @return
+   * @throws AuthException
+   */
+  @Override
+  public User lookupUserByCertificate( X509Certificate cert ) throws AuthException {
+    if ( cert == null ) {
+      throw new AuthException( "Empty input cert" );
+    }
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    Session session = db.getSession( );
+    try {
+      Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
+      CertificateEntity searchCert = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
+      searchCert.setActive( true );
+      searchCert.setRevoked( false );
+      Example certExample = Example.create( searchCert ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<UserEntity> users = ( List<UserEntity> ) session
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+          .createCriteria( "certificates" ).setCacheable( true ).add( certExample )
+          .list( );
+      if ( users.size( ) != 1 ) {
+        throw new AuthException( "Found " + users.size( ) + " user(s)" );
+      }
+      db.commit( );
+      return new DatabaseUserProxy( users.get( 0 ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user with certificate : " + cert );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
   
   @Override
-  public List<Group> lookupUserGroups( User user ) {
-    List<Group> userGroups = Lists.newArrayList( );
-    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
+  public Group lookupGroupById( String groupId ) throws AuthException {
+    if ( groupId == null ) {
+      throw new AuthException( AuthException.EMPTY_GROUP_ID );
+    }
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity userInfo = db.recast( UserEntity.class ).getUnique( new UserEntity( user.getName( ) ) );
-      for ( GroupEntity g : db.query( new GroupEntity( ) ) ) {
-        if ( g.isMember( userInfo ) ) {
-          userGroups.add( DatabaseWrappedGroup.newInstance( g ) );
+      GroupEntity group = em.find( GroupEntity.class, groupId );
+      db.commit( );
+      return new DatabaseGroupProxy( group );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find group by ID " + groupId );
+      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
+    }
+  }
+  
+  /**
+   * Add account admin user separately.
+   * 
+   * @param accountName
+   * @return
+   * @throws AuthException
+   */
+  @Override
+  public Account addAccount( String accountName ) throws AuthException {
+    if ( accountName == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
+    }
+    if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
+      throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );
+    }
+    AccountEntity account = new AccountEntity( accountName );
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    try {
+      db.add( account );
+      db.commit( );
+      return new DatabaseAccountProxy( account );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to add account " + accountName );
+      throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
+    }
+  }
+  
+  @Override
+  @SuppressWarnings( "unchecked" )
+  public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
+    if ( accountName == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
+    }
+    if ( !forceDeleteSystem && DatabaseAuthUtils.isSystemAccount( accountName ) ) {
+      throw new AuthException( AuthException.DELETE_SYSTEM_ACCOUNT );
+    }
+    if ( !recursive && !DatabaseAuthUtils.isAccountEmpty( accountName ) ) {
+      throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
+    }
+    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
+    Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    Session session = db.getSession( );
+    try {
+      if ( recursive ) {
+        List<GroupEntity> groups = ( List<GroupEntity> ) session
+            .createCriteria( GroupEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .list( );
+        List<UserEntity> users = ( List<UserEntity> ) session
+            .createCriteria( UserEntity.class ).setCacheable( true )
+            .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
+            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .list( );
+        for ( GroupEntity g : groups ) {
+          db.recast( GroupEntity.class ).delete( g );
+        }
+        for ( UserEntity u : users ) {
+          db.recast( UserEntity.class ).delete( u );
         }
       }
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
-      db.rollback( );
-    }
-    return userGroups;
-  }
-  
-  @Override
-  public Group lookupGroup( String groupName ) throws NoSuchGroupException {
-    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
-    try {
-      GroupEntity group = db.getUnique( new GroupEntity( groupName ) );
-      db.commit( );
-      return DatabaseWrappedGroup.newInstance( group );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new NoSuchGroupException( e );
-    }
-  }
-  
-  @Override
-  public List<User> listAllUsers( ) {
-    List<User> users = Lists.newArrayList( );
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    UserEntity searchUser = new UserEntity( );
-    UserEntity user = null;
-    try {
-      for( UserEntity u : db.query( searchUser ) ) {
-        users.add( new DatabaseWrappedUser( u ) );
+      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
+          .list( );
+      if ( accounts.size( ) != 1 ) {
+        throw new AuthException( "Found " + accounts.size( ) + " account(s)" );
       }
+      db.delete( accounts.get( 0 ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
+      Debugging.logError( LOG, e, "Failed to delete account " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
     }
-    return users;
-  }
+  }  
   
   @Override
-  public List<User> listEnabledUsers( ) {
-    List<User> users = Lists.newArrayList( );
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    UserEntity searchUser = new UserEntity( );
-    searchUser.setEnabled( true );
-    UserEntity user = null;
+  public List<User> listAllUsers( ) throws AuthException {
+    List<User> results = Lists.newArrayList( );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      for( UserEntity u : db.query( searchUser ) ) {
-        users.add( new DatabaseWrappedUser( u ) );
-      }
+      List<UserEntity> users = db.query( new UserEntity( ) );
       db.commit( );
+      for ( UserEntity u : users ) {
+        results.add( new DatabaseUserProxy( u ) );
+      }
+      return results;
     } catch ( Throwable e ) {
       db.rollback( );
+      Debugging.logError( LOG, e, "Failed to get all users" );
+      throw new AuthException( "Failed to get all users", e );
     }
-    return users;
   }
   
   @Override
-  public User lookupCertificate( X509Certificate cert ) throws NoSuchUserException {
-    String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
-    UserEntity searchUser = new UserEntity( );
-    searchUser.setEnabled( true );
-    X509Cert searchCert = new X509Cert( );
-    searchCert.setPemCertificate( certPem );
-    searchCert.setRevoked( null );
-    EntityWrapper<UserEntity> db = EntityWrapper.get( searchUser );
-    Session session = db.getSession( );
+  public List<Account> listAllAccounts( ) throws AuthException {
+    List<Account> results = Lists.newArrayList( );
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
-      Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<UserEntity> users = ( List<UserEntity> ) session.createCriteria( UserEntity.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
-                                               .setCacheable( true ).add( qbeCert ).list( );
-      UserEntity ret = users.size( ) == 1 ? users.get( 0 ) : null;
-      int size = users.size( );
-      if ( ret != null ) {
-        return new DatabaseWrappedUser( ret );
-      } else {
-        throw new GeneralSecurityException( ( size == 0 ) ? "No user with the specified certificate." : "Multiple users with the same certificate." );
+      for ( AccountEntity account : db.query( new AccountEntity( ) ) ) {
+        results.add( new DatabaseAccountProxy( account ) );
       }
-    } catch ( Throwable t ) {
-      throw new NoSuchUserException( t );
-    } finally {
+      db.commit( );
+      return results;
+    } catch ( Throwable e ) {
       db.rollback( );
+      Debugging.logError( LOG, e, "Failed to get accounts" );
+      throw new AuthException( "Failed to accounts", e );
     }
   }
   
   @Override
-  public boolean checkRevokedCertificate( X509Certificate cert ) throws NoSuchCertificateException {
-    String certPem = B64.url.encString( PEMFiles.getBytes( cert ) );
-    UserEntity searchUser = new UserEntity( );
-    searchUser.setEnabled( true );
-    X509Cert searchCert = new X509Cert( );
-    searchCert.setPemCertificate( certPem );
-    searchCert.setRevoked( true );
-    EntityWrapper<UserEntity> db = EntityWrapper.get( searchUser );
-    Session session = db.getSession( );
+  public boolean shareSameAccount( String userId1, String userId2 ) {
+    if ( userId1 == userId2 ) {
+      return true;
+    }
+    if ( userId1 == null || userId2 == null ) {
+      return false;
+    }
     try {
-      Example qbeUser = Example.create( searchUser ).enableLike( MatchMode.EXACT );
-      Example qbeCert = Example.create( searchCert ).enableLike( MatchMode.EXACT );
-      List<User> users = ( List<User> ) session.createCriteria( User.class ).setCacheable( true ).add( qbeUser ).createCriteria( "certificates" )
-                                               .setCacheable( true ).add( qbeCert ).list( );
-      if( users.isEmpty( ) || users.size( ) > 1 ) {
-        throw new NoSuchCertificateException( "Failed to identify user (found " + users.size() + ") from certificate information: " + cert.getSubjectX500Principal( ).toString( ) );
-      } else {
+      User user1 = lookupUserById( userId1 );
+      User user2 = lookupUserById( userId2 );
+      if ( user1.getAccount( ).getId( ).equals( user2.getAccount( ).getId( ) ) ) {
         return true;
       }
-    } finally {
-      db.rollback( );
+    } catch ( AuthException e ) {
+      LOG.warn( "User(s) can not be found", e );
     }
+    return false;
   }
-  
-  
+
   @Override
-  public User lookupQueryId( String queryId ) throws NoSuchUserException {
-    String userName = null;
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    UserEntity searchUser = new UserEntity( );
-    searchUser.setQueryId( queryId );
-    UserEntity user = null;
+  public Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
+    if ( cert == null ) {
+      throw new AuthException( "Empty input cert" );
+    }
+    EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
     try {
-      user = db.getUnique( searchUser );
+      CertificateEntity certEntity = db.getUnique( new CertificateEntity( X509CertHelper.fromCertificate( cert ) ) );
       db.commit( );
-    } catch ( Throwable e ) {
+      return new DatabaseCertificateProxy( certEntity );
+    }  catch ( Throwable e ) {
       db.rollback( );
-      throw new NoSuchUserException( e );
+      Debugging.logError( LOG, e, "Failed to lookup cert " + cert );
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
     }
-    return new DatabaseWrappedUser( user );
   }
-  
+
   @Override
-  public User lookupUser( String userName ) throws NoSuchUserException {
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    UserEntity searchUser = new UserEntity( userName );
-    UserEntity user = null;
-    try {
-      user = db.getUnique( searchUser );
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      throw new NoSuchUserException( e );
+  public Account lookupAccountByName( String accountName ) throws AuthException {
+    if ( accountName == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
-    return new DatabaseWrappedUser( user );
-  }
-  
-  @Override
-  public Group addGroup( String groupName ) throws GroupExistsException {
-    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
-    GroupEntity newGroup = new GroupEntity( groupName );
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    Session session = db.getSession( );
     try {
-      db.add( newGroup );
-      db.commit( );
-    } catch ( Throwable t ) {
-      db.rollback( );
-      throw new GroupExistsException( t );
-    }
-    return DatabaseWrappedGroup.newInstance( newGroup );
-  }
-  
-  @Override
-  public List<Group> listAllGroups( ) {
-    List<Group> ret = Lists.newArrayList( );
-    GroupEntity search = new GroupEntity( );
-    EntityWrapper<GroupEntity> db = EntityWrapper.get( search );
-    try {
-      List<GroupEntity> groupList = db.query( search );
-      for ( GroupEntity g : groupList ) {
-        ret.add( DatabaseWrappedGroup.newInstance( g ) );
+      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
+          .list( );
+      if ( accounts.size( ) < 1 ) {
+        throw new AuthException( "No matching account by name " + accountName );
       }
-    } finally {
       db.commit( );
-    }
-    return ret;
-  }
-  @Override
-  public void deleteGroup( String groupName ) throws NoSuchGroupException {
-    Groups.checkNotRestricted( groupName );
-    EntityWrapper<GroupEntity> db = Authentication.getEntityWrapper( );
-    GroupEntity delGroup = new GroupEntity( groupName );
-    try {
-      GroupEntity g = db.getUnique( delGroup );
-      db.delete( g );
-      db.commit( );
-    } catch ( Throwable t ) {
-      db.rollback( );
-      throw new NoSuchGroupException( t );
-    }    
-  }
-
-  @Override
-  public void updateUser( String name, Tx<User> userTx ) throws NoSuchUserException {
-    UserEntity search = new UserEntity(name);
-    EntityWrapper<UserEntity> db = EntityWrapper.get( search );
-    try {
-      UserEntity entity = db.getUnique( search );
-      userTx.fire( entity );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new NoSuchUserException( e.getMessage( ), e );
+      return new DatabaseAccountProxy( accounts.get( 0 ) );
     } catch ( Throwable e ) {
       db.rollback( );
-      LOG.error( e, e );
-      throw new NoSuchUserException( e.getMessage( ), e );
-    }    
-  }
-
-  @Override
-  public void addUserInfo( UserInfo user ) throws UserExistsException {
-    EntityWrapper<UserInfo> dbWrapper = EntityWrapper.get( UserInfo.class );
-    try {
-      dbWrapper.add( user );
-      dbWrapper.commit();
-    } catch ( Exception e1 ) {
-      dbWrapper.rollback();
-      LOG.error( e1, e1 );
-      throw new UserExistsException( "User info exists", e1 );
-    }    
-  }
-
-  @Override
-  public void deleteUserInfo( String userName ) throws NoSuchUserException {
-    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-    try {
-      UserInfo userInfo = dbWrapper.getUnique( new UserInfo(userName) );
-      dbWrapper.delete( userInfo );
-      dbWrapper.commit( );
-    } catch ( EucalyptusCloudException e1 ) {
-      dbWrapper.rollback( );
-      LOG.error( e1, e1 );
-      throw new NoSuchUserException( "User info does not exist", e1 );  
-    }    
-  }
-
-  @Override
-  public UserInfo getUserInfo( UserInfo search ) throws NoSuchUserException {
-    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
-    try {
-      UserInfo userInfo = dbWrapper.getUnique( search );
-      dbWrapper.commit( );
-      return userInfo;
-    } catch ( EucalyptusCloudException e ) {
-      dbWrapper.rollback( );
-      throw new NoSuchUserException( "User info does not exist", e );
+      Debugging.logError( LOG, e, "Failed to find account " + accountName );
+      throw new AuthException( "Failed to find account", e );
     }
   }
 
   @Override
-  public void updateUserInfo( String name, Tx<UserInfo> infoTx ) throws NoSuchUserException {
-    EntityWrapper<UserInfo> dbWrapper = new EntityWrapper<UserInfo>( );
+  public Account lookupAccountById( String accountId ) throws AuthException {
+    if ( accountId == null ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
+    }
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    EntityManager em = db.getEntityManager( );
     try {
-      UserInfo userInfo = dbWrapper.getUnique( new UserInfo(name) );
-      infoTx.fire( userInfo );
-      dbWrapper.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      dbWrapper.rollback( );
-      LOG.error( e, e );
-      throw new NoSuchUserException( "User info does not exist", e );
-    } catch ( Throwable t ) {
-      dbWrapper.rollback( );
-      LOG.error( t, t );
-      throw new NoSuchUserException( "Error in updating user info", t );
+      AccountEntity account = em.find( AccountEntity.class, accountId );
+      db.commit( );
+      return new DatabaseAccountProxy( account );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find account " + accountId );
+      throw new AuthException( "Failed to find account", e );
     }
   }
+
+  @Override
+  public AccessKey lookupAccessKeyById( String keyId ) throws AuthException {
+    if ( keyId == null ) {
+      throw new AuthException( "Empty access key ID" );
+    }
+    EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
+    EntityManager em = db.getEntityManager( );
+    try {
+      AccessKeyEntity keyEntity = em.find( AccessKeyEntity.class, keyId );
+      db.commit( );
+      return new DatabaseAccessKeyProxy( keyEntity );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
+      throw new AuthException( "Failed to find access key", e );      
+    }
+  }
+  
 }

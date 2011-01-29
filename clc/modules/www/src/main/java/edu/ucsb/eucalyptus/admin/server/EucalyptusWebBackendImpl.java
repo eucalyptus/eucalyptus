@@ -87,9 +87,6 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
@@ -450,7 +447,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		if (verifyPasswordAge) {
 			if (isPasswordExpired(user) && 
-					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY))) { // first-time config will catch that
+					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase("n/a"))) { // first-time config will catch that
 				throw new SerializableException("Password expired");
 			}
 		}
@@ -734,15 +731,22 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new SerializableException ("Operation restricted to owner and administrator");
 		}
 
+		// set expiration for admin setting password for the first time
+		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("n/a")) {
+			long now = System.currentTimeMillis();
+			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+		}
+
+		/* TODO: Any checks? */
 		// only an admin should be able to change this settings                                                                    
 		if (callerRecord.isAdministrator()) {   
-
+//TODO:ASAP:REVIEW:YE
 			// set password and expiration for admin when logging in for the first time
-			if (oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
-				long now = System.currentTimeMillis();
-				oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
-				oldRecord.setPassword (newRecord.getPassword());
-			}
+//			if (oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
+//				long now = System.currentTimeMillis();
+//				oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+//				oldRecord.setPassword (newRecord.getPassword());
+//			}
 			
 			// admin can reset pwd of another user, but
 			// to reset his own password he has to use
@@ -987,7 +991,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		addUserRecord(sessionId, user);
 		boolean inDefaultGroup = false;
 		for (String groupName : groupNames) {
-		  if ( Groups.NAME_DEFAULT.equals( groupName ) ) {
+		  if ( "default".equals( groupName ) ) {
 		    inDefaultGroup = true;
 		  }
 			try {
@@ -998,7 +1002,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 		}
 		if ( !inDefaultGroup && groupNames.size( ) > 0 ) {
-		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
+		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), "default" );
 		}
 	}
 

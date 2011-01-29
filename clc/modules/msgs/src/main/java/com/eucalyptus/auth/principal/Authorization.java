@@ -1,43 +1,36 @@
 package com.eucalyptus.auth.principal;
 
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
+import com.eucalyptus.auth.AuthException;
+
 /**
  * @author decker
  *
- * @param <T>
  */
-public interface Authorization<T> {
-  /**
-   * TODO: DOCUMENT Authorization.java
-   * @return
-   */
-  public String getDisplayName( );
-  @Deprecated
-  public String getName( );
-  
-  /**
-   * TODO: DOCUMENT Authorization.java
-   * @return
-   */
-  public String getValue( );
-  
-  /**
-   * TODO: DOCUMENT Authorization.java
-   * @return
-   */
-  public String getDescription( );
+public interface Authorization extends Serializable {
 
-  /**
-   * TODO: DOCUMENT Authorization.java
-   * @param t
-   * @return
-   */
-  public boolean check( T t );
+  public static enum EffectType {
+    Deny,
+    Allow,
+    Limit, // extension to IAM for quota
+  }
   
-  /**
-   * TODO: DOCUMENT Authorization.java
-   * @param obj
-   * @return
-   */
-  public abstract boolean equals( Object obj );
+  public EffectType getEffect( );
+ 
+  public String getType( );
+  
+  public Boolean isNotAction( );
+  
+  public Set<String> getActions( ) throws AuthException;
+  
+  public Boolean isNotResource( );
+  
+  public Set<String> getResources( ) throws AuthException;
+  
+  public List<Condition> getConditions( ) throws AuthException;
+  
+  public Group getGroup( ) throws AuthException;
   
 }

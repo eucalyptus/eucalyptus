@@ -1,8 +1,10 @@
 package com.eucalyptus.images;
 
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.util.HasName;
 
-
+@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_IMAGE )
 public interface Image extends HasName<Image> {
   
   public abstract String getArchitecture( );

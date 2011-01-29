@@ -79,8 +79,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -160,12 +160,12 @@ public class WalrusBucketLogger {
 							request.setEtag(etag);
 							String ownerId = entry.getOwnerId();
 							try {
-								User userInfo = Users.lookupUser(ownerId);
+								User userInfo = Accounts.lookupUserById(ownerId);
 								ArrayList<Grant> grants = new ArrayList<Grant>();
-								grants.add(new Grant(new Grantee(new CanonicalUserType(userInfo.getQueryId(), ownerId)), 
+								grants.add(new Grant(new Grantee(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId(userInfo), ownerId)), 
 								"FULL_CONTROL"));
 								request.getAccessControlList().setGrants(grants);
-							} catch (NoSuchUserException e1) {
+							} catch (AuthException e1) {
 								LOG.error(e1);
 							}
 							try {

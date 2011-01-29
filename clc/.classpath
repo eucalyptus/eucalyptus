@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" ouptut="modules/euare/build" path="modules/euare/src/main/java"/>
+	<classpathentry kind="src" ouptut="modules/euare-common/build" path="modules/euare-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/main/java"/>
 	<classpathentry kind="src" path="modules/mysql/conf/scripts"/>
 	<classpathentry kind="src" output="modules/mysql/build" path="modules/mysql/src/main/java"/>
@@ -17,7 +19,6 @@
 	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
 	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
 	<classpathentry kind="src" path="modules/configuration/conf/scripts"/>
-	<classpathentry kind="src" output="modules/ldap/build" path="modules/ldap/src/main/java"/>
 	<classpathentry kind="src" path="modules/core/conf/upgrade"/>
 	<classpathentry kind="src" path="modules/core/conf/scripts"/>
 	<classpathentry kind="src" path="modules/www/conf/reports"/>

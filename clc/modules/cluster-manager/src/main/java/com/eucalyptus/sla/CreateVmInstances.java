@@ -63,16 +63,33 @@
  */
 package com.eucalyptus.sla;
 
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class CreateVmInstances {
   
-  public VmAllocationInfo allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+  public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    int quantity = getVmAllocationNumber( vmAllocInfo );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    User requestUser = Permissions.getUserById( request.getUserId( ) );
+    String action = PolicySpec.requestToAction( request );
+    String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
+    // Allocate VmType instances
+    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1 ) ) {
+      throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
+    }
+    // Allocate vm instances
+    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
+      throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
+    }
     String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
     int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
@@ -94,6 +111,18 @@ public class CreateVmInstances {
     return vmAllocInfo;
   }
 
+  private int getVmAllocationNumber( VmAllocationInfo vmAllocInfo ) {
+    int vmNum = 0;
+    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
+      if( Clusters.getInstance( ).hasNetworking( ) ) {
+        vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
+      } else {
+        vmNum += token.getAmount( );
+      }
+    }
+    return vmNum;
+  }
+  
   private VmInstance getVmInstance( VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
     VmInstance vmInst = new VmInstance( reservationId,
                                         index - 1,

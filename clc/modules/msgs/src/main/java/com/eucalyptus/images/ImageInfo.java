@@ -86,10 +86,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
@@ -378,6 +374,7 @@ public class ImageInfo implements Image {
   }
   
 
+  @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Principal prin ) {
     try {
       ImageInfo search = new ImageInfo( );
@@ -385,13 +382,15 @@ public class ImageInfo implements Image {
       Transactions.one( search, new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth = new ImageAuthorization( prin.getName( ) );
+          ImageAuthorization imgAuth = null;
           if( prin instanceof Group ) {
+            imgAuth = new ImageAuthorization( prin.getName( ) );
             if ( !t.getUserGroups( ).contains( imgAuth ) ) {
               db.recast( ImageAuthorization.class ).add( imgAuth );
               t.getUserGroups( ).add( imgAuth );
             }
           } else if( prin instanceof User ) {
+            imgAuth = new ImageAuthorization( ( ( User ) prin ).getId( ) );
             if ( !t.getPermissions( ).contains( imgAuth ) ) {
               db.recast( ImageAuthorization.class ).add( imgAuth );
               t.getPermissions( ).add( imgAuth );
@@ -419,7 +418,7 @@ public class ImageInfo implements Image {
           if( prin instanceof Group ) {
             result[0] = t.getUserGroups( ).contains( new ImageAuthorization( prin.getName( ) ) );
           } else if ( prin instanceof User ) {
-            result[0] = t.getPermissions( ).contains( new ImageAuthorization( prin.getName( ) ) );
+            result[0] = t.getPermissions( ).contains( new ImageAuthorization( ( ( User ) prin ).getId( ) ) );
           }
         }
       } );
@@ -436,10 +435,12 @@ public class ImageInfo implements Image {
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth = new ImageAuthorization( prin.getName( ) );
+          ImageAuthorization imgAuth;
           if( prin instanceof Group ) {
+            imgAuth = new ImageAuthorization( prin.getName( ) );
             t.getUserGroups( ).remove( imgAuth );
           } else if( prin instanceof User ) {
+            imgAuth = new ImageAuthorization( ( ( User ) prin ).getId( ) );
             t.getPermissions( ).remove( imgAuth );
           }
           if ( !t.getPermissions( ).contains( new ImageAuthorization( "all" ) ) ) {
@@ -519,12 +520,12 @@ public class ImageInfo implements Image {
    * @param user
    * @return
    */
-  public boolean isAllowed( UserInfo user ) {
-    try {
-      if ( Users.lookupUser( user.getUserName( ) ).isAdministrator( ) || user.getUserName( ).equals( this.getImageOwnerId( ) ) ) return true;
-    } catch ( NoSuchUserException e ) {
-      return false;
-    }
+  public boolean isAllowed( User user ) {
+    //try {
+    //  if ( Users.lookupUser( user.getUserName( ) ).isAdministrator( ) || user.getUserName( ).equals( this.getImageOwnerId( ) ) ) return true;
+    //} catch ( NoSuchUserException e ) {
+    //  return false;
+    //}
     //    for ( UserGroupEntity g : this.getUserGroups() )
     //      if ( "all".equals( g.getName() ) )
     return true;

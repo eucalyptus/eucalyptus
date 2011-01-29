@@ -104,6 +104,7 @@ public class BindingManager {
     if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
       try {
         BindingManager.getBinding( bindingName ).seed( seedClass );
+        LOG.debug( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
         EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).info( );
         return true;
       } catch ( BindingException e ) {

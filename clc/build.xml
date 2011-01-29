@@ -97,9 +97,10 @@
   </target>
   <target name="build-nogwt">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
+		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
-		<ant dir="modules/ldap" inheritall="false" target="builder" />
 		<ant dir="modules/authentication" inheritall="false" target="builder" />
+		<ant dir="modules/euare" inheritall="false" target="builder" />
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
@@ -131,9 +132,10 @@
   </target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
+		<ant dir="modules/euare-common" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
-		<ant dir="modules/ldap" inheritall="false" target="jar" />
 		<ant dir="modules/authentication" inheritall="false" target="jar" />
+		<ant dir="modules/euare" inheritall="false" target="jar" />
 		<ant dir="modules/cloud" inheritall="false" target="jar" />
 		<ant dir="modules/configuration" inheritall="false" target="jar" />
 		<ant dir="modules/component" inheritall="false" target="jar" />
@@ -190,10 +192,11 @@
 	<target name="clean">
 		<delete file="${bind.timestamp}"/>
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
+		<ant dir="modules/euare-common" inheritall="false" target="clean" />
 		<ant dir="modules/mysql" inheritall="false" target="clean" />
-		<ant dir="modules/ldap" inheritall="false" target="clean" />
 		<ant dir="modules/cloud" inheritall="false" target="clean" />
 		<ant dir="modules/authentication" inheritall="false" target="clean" />
+		<ant dir="modules/euare" inheritall="false" target="clean" />
 		<ant dir="modules/configuration" inheritall="false" target="clean" />
 		<ant dir="modules/component" inheritall="false" target="clean" />
 		<ant dir="modules/core" inheritall="false" target="clean" />
@@ -262,10 +265,11 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
 		<ant dir="modules/msgs" inheritall="false" target="install" />
+		<ant dir="modules/euare-common" inheritall="false" target="install" />
 		<ant dir="modules/mysql" inheritall="false" target="install" />
-		<ant dir="modules/ldap" inheritall="false" target="install" />
 		<ant dir="modules/cloud" inheritall="false" target="install" />
 		<ant dir="modules/authentication" inheritall="false" target="install" />
+		<ant dir="modules/euare" inheritall="false" target="install" />
 		<ant dir="modules/configuration" inheritall="false" target="install" />
 		<ant dir="modules/component" inheritall="false" target="install" />
 		<ant dir="modules/core" inheritall="false" target="install" />

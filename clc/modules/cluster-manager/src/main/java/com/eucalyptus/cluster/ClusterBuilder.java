@@ -19,6 +19,8 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
+import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -156,8 +158,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         credDb = Authentication.getEntityWrapper( );
         try {          
           ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
-          componentCredentials.setClusterCertificate( X509Cert.fromCertificate( clusterX509 ) );
-          componentCredentials.setNodeCertificate( X509Cert.fromCertificate( nodeX509 ) );
+          componentCredentials.setClusterCertificate( X509CertHelper.fromCertificate( clusterX509 ) );
+          componentCredentials.setNodeCertificate( X509CertHelper.fromCertificate( nodeX509 ) );
           credDb.add( componentCredentials );
           credDb.commit( );
         } catch ( Exception e ) {
@@ -176,7 +178,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );
     }
-    Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( config.getName( ) ) );
     return config;
   }
   
@@ -207,13 +208,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     Clusters.stop( cluster.getName( ) );
-    for( Group g : Groups.listAllGroups( ) ) {
-      for( Authorization auth : g.getAuthorizations( ) ) {
-        if( auth instanceof AvailabilityZonePermission && config.getName( ).equals( auth.getValue() ) ) {
-          g.removeAuthorization( auth );
-        }
-      }
-    }
     String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
     File keyDir = new File( directory );
     if ( keyDir.exists( ) ) {

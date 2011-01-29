@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -192,13 +193,74 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
 
   @Override public BigInteger getNumber( ) { throw new RuntimeException( "getNumber is not implemented for component principals." ); }
-  @Override public void revokeSecretKey( ) { throw new RuntimeException( "getQueryId is not implemented for component principals." ); }
-  @Override public final String getQueryId( ) { throw new RuntimeException( "getQueryId is not implemented for component principals." ); }  
-  @Override public final String getSecretKey( ) { throw new RuntimeException( "getSecretKey is not implemented for component principals." ); }
-  @Override public final void setQueryId( String queryId ) { throw new RuntimeException( "setQueryId is not implemented for component principals." ); }  
-  @Override public final void setSecretKey( String secretKey ) { throw new RuntimeException( "setSecretKey is not implemented for component principals." ); }  
-  @Override public final void setX509Certificate( X509Certificate cert ) { throw new RuntimeException( "setX509Certificate is not implemented for component principals." ); }
-  @Override public final void revokeX509Certificate( ) { throw new RuntimeException( "revokeX509Certificate is not implemented for component principals." ); }
+  @Override
+  public String getSecretKey( String id ) {
+    return null;
+  }
+
+  @Override
+  public void addSecretKey( String key ) throws AuthException {}
+
+  @Override
+  public void activateSecretKey( String id ) throws AuthException {}
+
+  @Override
+  public void deactivateSecretKey( String id ) throws AuthException {}
+
+  @Override
+  public void revokeSecretKey( String id ) throws AuthException {}
+
+  @Override
+  public String lookupSecretKeyId( String key ) {
+    return null;
+  }
+
+  @Override
+  public String getFirstActiveSecretKeyId( ) {
+    return null;
+  }
+
+  @Override
+  public List<String> getActiveSecretKeyIds( ) {
+    return null;
+  }
+
+  @Override
+  public List<String> getInactiveSecretKeyIds( ) {
+    return null;
+  }
+
+  @Override
+  public X509Certificate getX509Certificate( String id ) {
+    return null;
+  }
+
+  @Override
+  public void addX509Certificate( X509Certificate cert ) throws AuthException {}
+
+  @Override
+  public void activateX509Certificate( String id ) throws AuthException {}
+
+  @Override
+  public void deactivateX509Certificate( String id ) throws AuthException {}
+
+  @Override
+  public void revokeX509Certificate( String id ) throws AuthException {}
+
+  @Override
+  public String lookupX509Certificate( X509Certificate cert ) {
+    return null;
+  }
+
+  @Override
+  public List<String> getActiveX509CertificateIds( ) {
+    return null;
+  }
+
+  @Override
+  public List<String> getInactiveX509CertificateIds( ) {
+    return null;
+  }
 
   public ChannelPipelineFactory getClientPipeline( ) {
     return new ChannelPipelineFactory( ) {

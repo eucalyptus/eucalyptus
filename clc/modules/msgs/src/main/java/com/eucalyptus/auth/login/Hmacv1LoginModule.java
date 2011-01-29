@@ -12,10 +12,10 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.crypto.Hmac;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 
 public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
@@ -31,8 +31,9 @@ public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
     SecurityContext.enqueueSignature( sig );
-    User user = Users.lookupQueryId( credentials.getQueryId( ) );
-    String secretKey = user.getSecretKey( );
+    AccessKey accessKey = Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
+    User user = accessKey.getUser( );
+    String secretKey = accessKey.getKey( );
 
     String canonicalString = this.makeSubjectString( credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
@@ -42,7 +43,7 @@ public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
     }
     super.setCredential( credentials.getQueryId( ) );
     super.setPrincipal( user );
-    super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
+    //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
   }
 

@@ -122,7 +122,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
-      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
+      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getId( );
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
         httpRequest.setMessage( msg );

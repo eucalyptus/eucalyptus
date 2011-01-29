@@ -36,7 +36,7 @@ import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.xml.JRXmlLoader;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
@@ -254,11 +254,11 @@ public class Reports extends HttpServlet {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
       User user = null;
       try {
-        user = Users.lookupUser( session.getUserId( ) );
+        user = Accounts.lookupUserById( session.getUserId( ) );
       } catch ( Exception e ) {
         throw new RuntimeException( "User does not exist" );
       }
-      if ( !user.isAdministrator( ) ) {
+      if ( !user.isSystemAdmin( ) ) {
         throw new RuntimeException( "Only administrators can view reports." );
       }
     } catch ( SerializableException e1 ) {

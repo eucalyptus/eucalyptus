@@ -81,18 +81,22 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.NoSuchUserException;
+import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.util.WalrusProperties;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -230,8 +234,9 @@ public class WalrusImageManager {
 					if(isAdministrator) {
 						try {
 							boolean verified = false;
-							for(User user:Users.listAllUsers( )) {
-								for (X509Certificate cert : user.getAllX509Certificates()) {
+							for(User user:Accounts.listAllUsers( )) {
+								for (Certificate c : user.getCertificates()) {
+								  X509Certificate cert = c.getX509Certificate( );
 									if(cert != null)
 										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 									if(verified)
@@ -239,7 +244,7 @@ public class WalrusImageManager {
 								}
 							}
 							if(!verified) {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							}
@@ -255,12 +260,13 @@ public class WalrusImageManager {
 						boolean signatureVerified = false;
 						User user = null;
 						try {
-							user = Users.lookupUser( userId );
-						} catch ( NoSuchUserException e ) {
+							user = Accounts.lookupUserById( userId );
+						} catch ( AuthException e ) {
 							throw new AccessDeniedException(userId,e);            
 						}         
 						try {
-							for(X509Certificate cert : user.getAllX509Certificates()) {
+							for(Certificate c : user.getCertificates()) {
+							  X509Certificate cert = c.getX509Certificate( );
 								if(cert != null) {
 									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 								}
@@ -393,8 +399,8 @@ public class WalrusImageManager {
 
 					User user = null;
 					try {
-						user = Users.lookupUser( userId );
-					} catch ( NoSuchUserException e ) {
+						user = Accounts.lookupUserById( userId );
+					} catch ( AuthException e ) {
 						throw new AccessDeniedException(userId,e);            
 					}         
 					boolean signatureVerified = false;
@@ -408,11 +414,14 @@ public class WalrusImageManager {
 					}
 
 					try {
-						X509Certificate cert = user.getX509Certificate( );
-						PublicKey publicKey = cert.getPublicKey();
-						sigVerifier.initVerify(publicKey);
-						sigVerifier.update((machineConfiguration + image).getBytes());
-						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+						for ( Certificate c : user.getCertificates( ) ) {
+						  X509Certificate cert = c.getX509Certificate( );
+  						PublicKey publicKey = cert.getPublicKey();
+  						sigVerifier.initVerify(publicKey);
+  						sigVerifier.update((machineConfiguration + image).getBytes());
+  						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+  						if ( signatureVerified ) break;
+						}
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);

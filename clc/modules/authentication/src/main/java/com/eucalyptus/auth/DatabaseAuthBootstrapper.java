@@ -1,7 +1,10 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.AuthBootstrapHelper;
+import com.eucalyptus.auth.ldap.LdapSync;
+import com.eucalyptus.auth.policy.PolicyEngineImpl;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -11,34 +14,29 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
-import com.eucalyptus.ldap.LdapConfiguration;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
-  
-  public static boolean ENABLE = !LdapConfiguration.ENABLE_LDAP;
-  
+    
   public boolean load( ) throws Exception {
-    if (ENABLE) {
-      DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-      Users.setUserProvider( dbAuth );
-      Groups.setGroupProvider( dbAuth );
-      UserInfoStore.setUserInfoProvider( dbAuth );
-    }
+  	DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+  	Accounts.setAccountProvider( dbAuth );
+  	Permissions.setPolicyEngine( new PolicyEngineImpl( ) );
     return true;
   }
   
   public boolean start( ) throws Exception {
     if(Components.lookup( "eucalyptus" ).isAvailableLocally( )) {
-      if (ENABLE) {
-        this.checkUserEnabled( );
-        AuthBootstrapHelper.ensureStandardGroupsExists( );
-        AuthBootstrapHelper.ensureAdminExists( );
-      }
+      this.eusureSystemAdminExist( );
       this.ensureCountersExist( );
       this.ensureVmTypesExist( );
+      LdapSync.start( );
+    
+      // Remove once done.
+      //AuthTest.test( );
+    
     }
     return true;
   }
@@ -48,6 +46,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean enable( ) throws Exception {
+
+    
     return true;
   }
 
@@ -78,17 +78,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean check( ) throws Exception {
-    return true;
-  }
-
-  
-  private void checkUserEnabled( ) {
-    EntityWrapper<UserEntity> db = Authentication.getEntityWrapper( );
-    for ( UserEntity u : db.query( new UserEntity( ) ) ) {
-      if ( u.isEnabled( ) != Boolean.FALSE ) {
-        u.setEnabled( Boolean.TRUE );
-      }
-    }
+    return LdapSync.check( );
   }
   
   private void ensureVmTypesExist( ) {
@@ -110,4 +100,20 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private void ensureCountersExist( ) {
     Counters.getNextId( );
   }
+  
+  private void eusureSystemAdminExist( ) throws Exception {
+    try {
+      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      User user = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      if ( user != null ) {
+        return;
+      }
+    } catch ( AuthException e ) {
+      LOG.warn( "System admin does not exist. Adding it now.", e );
+    }
+    // Order matters.
+    Account system = Accounts.addSystemAccount( );
+    system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+  }
+
 }

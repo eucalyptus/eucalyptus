@@ -221,14 +221,14 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
           msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
-          msg.setUserId( user.getName( ) );
-          msg.setEffectiveUserId( user.isAdministrator( ) ? ComponentIds.lookup(Eucalyptus.class).name( ) : user.getName( ) );
+          msg.setUserId( user.getId( ) );
+          msg.setEffectiveUserId( user.isSystemAdmin( ) ? "eucalyptus" : user.getId( ) );
         }
         EventRecord.here( ServiceSinkHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
         if ( this.msgReceiver == null ) {
           ServiceSinkHandler.dispatchRequest( msg );
-        } else if ( ( user == null ) || ( ( user != null ) && user.isAdministrator( ) ) ) {
-//          this.dispatchRequest( ctx, request, msg );
+        } else if ( ( user == null ) || ( ( user != null ) && user.isSystemAdmin( ) ) ) {
+          this.dispatchRequest( ctx, request, msg );
           ServiceSinkHandler.dispatchRequest( msg );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

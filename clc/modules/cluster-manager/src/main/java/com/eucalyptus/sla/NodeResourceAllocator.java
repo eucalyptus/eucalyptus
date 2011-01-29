@@ -3,10 +3,9 @@ package com.eucalyptus.sla;
 import java.util.List;
 import java.util.NavigableMap;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.AvailabilityZonePermission;
-import com.eucalyptus.auth.principal.Group;
-import java.util.NoSuchElementException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
@@ -23,6 +22,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class NodeResourceAllocator implements ResourceAllocator {
   private static Logger LOG       = Logger.getLogger( NodeResourceAllocator.class );
@@ -30,19 +30,22 @@ public class NodeResourceAllocator implements ResourceAllocator {
   
   @Override
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
-    String clusterName = vmInfo.getRequest( ).getAvailabilityZone( );
-    String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
-    Integer minAmount = vmInfo.getRequest( ).getMinCount( );
-    Integer maxAmount = vmInfo.getRequest( ).getMaxCount( );
+    RunInstancesType request = vmInfo.getRequest( );
+    String clusterName = request.getAvailabilityZone( );
+    String vmTypeName = request.getInstanceType( );
+    final int amount = request.getMinCount( );
     Context ctx = Contexts.lookup( );
-    if ( ctx.getGroups( ).isEmpty( ) ) {
+    //if ( ctx.getGroups( ).isEmpty( ) ) {
+    if ( false ) {
       throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
     } else {
       String zoneName = ( clusterName != null )
         ? clusterName
         : "default";
-      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
-      int remaining = maxAmount;
+      String action = PolicySpec.requestToAction( request );
+      User requestUser = Permissions.getUserById( request.getUserId( ) );
+      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
+      int remaining = amount;
       int available = 0;
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
         @Override
@@ -94,18 +97,15 @@ public class NodeResourceAllocator implements ResourceAllocator {
     return available;
   }
   
-  private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName ) throws NotEnoughResourcesAvailable {
+  private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesAvailable {
     if ( "default".equals( clusterName ) ) {
-      Group group = Contexts.lookup( ).getGroups( ).get( 0 );
       Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
         @Override
         public boolean apply( final Cluster c ) {
-          return Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-            @Override
-            public boolean apply( Authorization arg0 ) {
-              return arg0.check( new AvailabilityZonePermission( c.getName( ) ) );
-            }
-          } );
+          try {
+            return Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
+          } catch ( Exception e ) {}
+          return false;
         }
       } );
       Multimap<VmTypeAvailability, Cluster> sorted = Multimaps.newTreeMultimap( );
@@ -118,21 +118,14 @@ public class NodeResourceAllocator implements ResourceAllocator {
         return Lists.newArrayList( sorted.values( ) );
       }
     } else {
-      final Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
-      if ( Iterables.any( Contexts.lookup( ).getAuthorizations( ), new Predicate<Authorization>( ) {
-        @Override
-        public boolean apply( Authorization arg0 ) {
-          return arg0.check( new AvailabilityZonePermission( cluster.getName( ) ) );
-        }
-      } ) ) {
-        return Lists.newArrayList( cluster );
-      } else {
-        if ( Clusters.getInstance( ).contains( clusterName ) ) {
-          throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
-        } else {
-          throw new NotEnoughResourcesAvailable( "Not enough resources: request cluster does not exist " + clusterName );
-        }
+      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+      if ( cluster == null ) {
+        throw new NotEnoughResourcesAvailable( "Can't find cluster " + clusterName );
       }
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, clusterName, null, action, requestUser ) ) {
+        throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + clusterName + " for " + requestUser.getName( ) );
+      }
+      return Lists.newArrayList( cluster );
     }
   }
   
