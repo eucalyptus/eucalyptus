@@ -7,10 +7,9 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.ldap.LdapConfiguration;
 
 @Provides( Empyrean.class )
@@ -31,14 +30,12 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    if(Components.lookup( "eucalyptus" ).isAvailableLocally( )) {
+    if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
       if (ENABLE) {
         this.checkUserEnabled( );
         AuthBootstrapHelper.ensureStandardGroupsExists( );
         AuthBootstrapHelper.ensureAdminExists( );
       }
-      this.ensureCountersExist( );
-      this.ensureVmTypesExist( );
     }
     return true;
   }
@@ -89,25 +86,5 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
         u.setEnabled( Boolean.TRUE );
       }
     }
-  }
-  
-  private void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
-    try {
-      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
-        db.add( new VmType( "m1.small", 1, 2, 128 ) );
-        db.add( new VmType( "c1.medium", 1, 5, 256 ) );
-        db.add( new VmType( "m1.large", 2, 10, 512 ) );
-        db.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
-        db.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
-      }
-      db.commit( );
-    } catch ( Exception e ) {
-      db.rollback( );
-    }
-  }
-
-  private void ensureCountersExist( ) {
-    Counters.getNextId( );
   }
 }

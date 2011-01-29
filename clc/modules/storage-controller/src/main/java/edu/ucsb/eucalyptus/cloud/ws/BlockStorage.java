@@ -887,7 +887,7 @@ public class BlockStorage {
 					blockManager.createVolume(volumeId, size);
 				} catch(Exception ex) {
 					success = false;
-					LOG.error(ex);
+					LOG.error(ex,ex);
 				}
 			}
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
