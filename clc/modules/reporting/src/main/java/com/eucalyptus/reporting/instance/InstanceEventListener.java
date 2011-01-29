@@ -13,7 +13,7 @@ public class InstanceEventListener
 {
 	private static Logger log = Logger.getLogger( InstanceEventListener.class );
 
-	private static long WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
+	private static long WRITE_INTERVAL_SECS = 10; //TODO: CHANGE!!!
 
 	private final Set<String> recentlySeenUuids;
 	private final List<InstanceUsageSnapshot> recentUsageSnapshots;
@@ -30,6 +30,7 @@ public class InstanceEventListener
 	{
 		final long receivedEventMs = this.getCurrentTimeMillis();
 		if (e instanceof InstanceEvent) {
+			log.info("Received instance event");
 			InstanceEvent event = (InstanceEvent) e;
 
 			final String uuid = event.getUuid();
@@ -51,8 +52,6 @@ public class InstanceEventListener
 				InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
 						receivedEventMs, event.getCumulativeNetworkIoMegs(),
 						event.getCumulativeDiskIoMegs());
-				System.out.printf("--Snapshot %s %d %d %d\n", uuid, receivedEventMs,
-						event.getCumulativeNetworkIoMegs(), event.getCumulativeDiskIoMegs());
 
 				/* Only write the instance attributes if we don't have them
 				 * already.
@@ -60,7 +59,7 @@ public class InstanceEventListener
 				if (! recentlySeenUuids.contains(uuid)) {
 					if (null == sess.get(InstanceAttributes.class, uuid)) {
 						sess.save(insAttrs);
-						log.debug("Wrote Reporting Instance:" + uuid);
+						log.info("Wrote Reporting Instance:" + uuid);
 					}
 					recentlySeenUuids.add(uuid);
 				}
@@ -73,7 +72,7 @@ public class InstanceEventListener
 				if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 					for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
 						sess.save(ius);
-						log.debug("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
+						log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
 					}
 					recentUsageSnapshots.clear();
 					lastWriteMs = receivedEventMs;
@@ -87,10 +86,24 @@ public class InstanceEventListener
 		}
 	}
 
-	//TODO: shutdown hook
 	public void flush()
 	{
-		//TODO: implement
+		EntityWrapper<InstanceAttributes> entityWrapper =
+			EntityWrapper.get(InstanceAttributes.class);
+		Session sess = null;
+		try {
+			sess = entityWrapper.getSession();
+			for (InstanceUsageSnapshot ius : recentUsageSnapshots) {
+				sess.save(ius);
+				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
+						+ ius.getId());
+			}
+			recentUsageSnapshots.clear();
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			entityWrapper.rollback();
+			log.error(ex);
+		}
 	}
 
 	/**
