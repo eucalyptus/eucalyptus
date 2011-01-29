@@ -68,6 +68,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.util.Exceptions;
@@ -140,6 +141,9 @@ public class ComponentState {
     final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
+        if( !Bootstrap.isFinished( ) ) {
+          transitionCallback.fireException( new Exception( "Bootstrap has not yet completed." ) );
+        }
         ComponentState.this.details.clear( );
         try {
           if( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
