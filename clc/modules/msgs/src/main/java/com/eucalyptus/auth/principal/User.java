@@ -85,7 +85,7 @@ public abstract interface User extends BasePrincipal, X509Principal, HmacPrincip
   public abstract void setPassword( String password );
   public static final User SYSTEM = new User() { //NOTE:GRZE: this is transitional.  needed for internal communication.
     @Override public String getName( ) {
-      return "admin";
+      return "eucalyptus";
     }
     @Override public X509Certificate getX509Certificate( ) { return null; }
     @Override public Boolean isSystem( ) { return true; }
