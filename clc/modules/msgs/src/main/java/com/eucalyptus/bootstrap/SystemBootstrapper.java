@@ -70,6 +70,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -183,7 +184,7 @@ public class SystemBootstrapper {
       throw t;
     }
     for( Component c : Components.list( ) ) {
-      if( ( Components.lookup( "eucalyptus" ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
+      if( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
         Component.Transition.STARTING.transit( c );
         Component.Transition.READY_CHECK.transit( c );
         Component.Transition.ENABLING.transit( c );
