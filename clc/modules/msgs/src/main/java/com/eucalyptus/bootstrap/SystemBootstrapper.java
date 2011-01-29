@@ -80,6 +80,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
+import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -132,7 +133,7 @@ public class SystemBootstrapper {
         }
       }
             );
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + LogUtil.dumpObject( LogLevels.class.getDeclaredFields( ) ) ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
