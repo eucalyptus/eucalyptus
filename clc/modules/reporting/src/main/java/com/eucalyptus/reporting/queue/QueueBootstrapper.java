@@ -15,19 +15,14 @@ public class QueueBootstrapper extends Bootstrapper
 	@Override
 	public boolean load() throws Exception
 	{
-		/* NOTE: a workaround was moved to SystemBootstrapper.init() because
-		 * log4j brain damage prevents ActiveMQ broker from starting.
-		 */
-		
-//		try {
-//	        QueueFactory.getInstance().startup();
-//	        log.info("broker started");
-//			return true;			
-//		} catch (Exception ex) {
-//			ex.printStackTrace();
-//			return false;
-//		}
-		return true;
+		try {
+	        QueueFactory.getInstance().startup();
+	        log.info("broker started");
+			return true;			
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return false;
+		}
 	}
 
 	@Override

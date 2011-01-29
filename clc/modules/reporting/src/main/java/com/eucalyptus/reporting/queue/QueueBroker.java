@@ -16,7 +16,7 @@ public class QueueBroker
 	public static QueueBroker getInstance()
 	{
 		if (instance == null) {
-			instance = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
+			instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, DEFAULT_DIR);
 		}
 		return instance;
 	}
