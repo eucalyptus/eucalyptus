@@ -214,11 +214,9 @@ public class SystemBootstrapper {
           @Override
           public void run( ) {
             try {
-              for( ; !Bootstrap.isFinished( ); TimeUnit.MILLISECONDS.sleep( 100 ) ) {
-                Component.Transition.STARTING.transit( c );
-                Component.Transition.READY_CHECK.transit( c );
-                Component.Transition.ENABLING.transit( c );
-              }
+              Component.Transition.STARTING.transit( c );
+              Component.Transition.READY_CHECK.transit( c );
+              Component.Transition.ENABLING.transit( c );
             } catch ( Throwable ex ) {
               LOG.error( ex , ex );
             }
