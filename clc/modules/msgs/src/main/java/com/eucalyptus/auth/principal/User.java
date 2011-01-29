@@ -74,7 +74,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.google.common.collect.Lists;

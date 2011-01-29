@@ -72,7 +72,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
