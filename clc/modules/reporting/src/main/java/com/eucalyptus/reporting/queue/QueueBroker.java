@@ -1,6 +1,9 @@
 package com.eucalyptus.reporting.queue;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.log4j.*;
 
 public class QueueBroker
@@ -40,16 +43,6 @@ public class QueueBroker
 		this.destinations = new ArrayList<ActiveMQDestination>();
 	}
 	
-	private static QueueBroker instance;
-	
-	public static QueueBroker getInstance()
-	{
-		if (instance == null) {
-			return instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, DEFAULT_DIR);
-		}
-		return instance;
-	}
-
 	public void addDestination(String destName)
 	{
 		ActiveMQDestination dest =

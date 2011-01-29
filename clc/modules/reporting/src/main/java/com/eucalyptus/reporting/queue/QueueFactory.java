@@ -121,7 +121,7 @@ public class QueueFactory
 			receiver.addEventListener(new EventListener()
 			{
 				@Override
-				public void receiveEvent(Event e)
+				public void fireEvent(Event e)
 				{
 					System.out.println("Event received:" + e);
 				}

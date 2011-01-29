@@ -1,7 +1,7 @@
 package com.eucalyptus.reporting.queue;
 
 import com.eucalyptus.reporting.event.Event;
-import com.eucalyptus.reporting.event.EventListener;
+import com.eucalyptus.event.EventListener;
 
 public interface QueueReceiver
 {
