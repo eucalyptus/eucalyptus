@@ -139,12 +139,6 @@
 		<ant dir="modules/www" inheritall="false" target="jar" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
-                <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-                <ant dir=".deprecated/image-manager" inheritall="false" target="jar" />
-                <ant dir=".deprecated/group-manager" inheritall="false" target="jar" />
-                <ant dir=".deprecated/interface" inheritall="false" target="jar" />
-                <ant dir=".deprecated/key-manager" inheritall="false" target="jar" />
-                <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -198,12 +192,6 @@
 		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
-                <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-                <ant dir=".deprecated/image-manager" inheritall="false" target="clean" />
-                <ant dir=".deprecated/group-manager" inheritall="false" target="clean" />
-                <ant dir=".deprecated/interface" inheritall="false" target="clean" />
-                <ant dir=".deprecated/key-manager" inheritall="false" target="clean" />
-                <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
@@ -271,12 +259,6 @@
 		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
 	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
-    <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir=".deprecated/image-manager" inheritall="false" target="install" />
-    <ant dir=".deprecated/group-manager" inheritall="false" target="install" />
-    <ant dir=".deprecated/interface" inheritall="false" target="install" />
-    <ant dir=".deprecated/key-manager" inheritall="false" target="install" />
-    <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">

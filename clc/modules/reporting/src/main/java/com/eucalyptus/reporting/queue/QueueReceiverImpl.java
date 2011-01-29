@@ -102,7 +102,7 @@ class QueueReceiverImpl
 			throw new QueueRuntimeException(jmse);
 		}
 		for (EventListener el: listeners) {
-			el.receiveEvent(event);
+			el.fireEvent(event);
 		}
 	}
 }

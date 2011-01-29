@@ -58,13 +58,9 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: chris grzegorczyk <grze@eucalyptus.com>
+    ~ Author: chris grzegorczyk <grze@eucalyptus.com>
   --> 
 <project name="eucalyptus-reporting" basedir=".">
-  <property name="builder.suffix" value="groovy" />
-  <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-    <srcfiles dir="${src.dir}" includes="**/*" />
-  </uptodate>
-  <import file="../module-inc.xml"/>
+    <import file="../module-inc.xml"/>
 </project>
 
