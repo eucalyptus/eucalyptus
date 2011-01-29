@@ -93,6 +93,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
@@ -336,34 +337,49 @@ public class ServiceContextManager {
       LOG.error( ex, ex );
     }
   }
-  
+  private static List<ComponentId> last = Lists.newArrayList( );
   private static MuleContext createContext( ) throws ServiceInitializationException {
     List<ComponentId> components = ComponentIds.listEnabled( );
-    LOG.info( "The following components have been identified as active: " );
-    for ( ComponentId c : components ) {
-      LOG.info( "-> " + c );
+    if( checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+      return context.getReference( );
+    } else {
+      last = components;
+      LOG.info( "The following components have been identified as active: " );
+      for ( ComponentId c : components ) {
+        LOG.info( "-> " + c );
+      }
+      Set<ConfigResource> configs = renderServiceConfigurations( components );
+      for ( ConfigResource cfg : configs ) {
+        LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
+      }
+      try {
+        builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+      } catch ( Throwable ex ) {
+        LOG.fatal( "Failed to bootstrap services.", ex );
+        throw new ServiceInitializationException( "Failed to bootstrap service context because of: " + ex.getMessage( ), ex );
+      }
+      MuleContext muleCtx;
+      try {
+        muleCtx = contextFactory.createMuleContext( builder );
+      } catch ( InitialisationException ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
+      } catch ( ConfigurationException ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
+      }
+      return muleCtx;
     }
-    Set<ConfigResource> configs = renderServiceConfigurations( components );
-    for ( ConfigResource cfg : configs ) {
-      LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
+  }
+
+  public static boolean check( ) {
+    if( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+      ServiceContextManager.restart( );
     }
-    try {
-      builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-    } catch ( Throwable ex ) {
-      LOG.fatal( "Failed to bootstrap services.", ex );
-      throw new ServiceInitializationException( "Failed to bootstrap service context because of: " + ex.getMessage( ), ex );
-    }
-    MuleContext muleCtx;
-    try {
-      muleCtx = contextFactory.createMuleContext( builder );
-    } catch ( InitialisationException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
-    } catch ( ConfigurationException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
-    }
-    return muleCtx;
+  }
+
+  private static boolean checkStateUnchanged( List<ComponentId> now ) {
+    return last.containsAll( now ) && last.size( ) == now.size( );
   }
   
 }
