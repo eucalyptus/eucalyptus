@@ -113,19 +113,9 @@
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
-<<<<<<< TREE
 		<ant dir="modules/www" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 		<ant dir="modules/reporting" inheritall="false" target="builder" />
-		<!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir=".deprecated/image-manager" inheritall="false" target="builder" />
-		<ant dir=".deprecated/group-manager" inheritall="false" target="builder" />
-		<ant dir=".deprecated/interface" inheritall="false" target="builder" />
-		<ant dir=".deprecated/key-manager" inheritall="false" target="builder" />
-		<!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-		<ant dir="." inheritall="false" target="jar" />
-=======
->>>>>>> MERGE-SOURCE
 	</target>
   <target name="build-gwt">
     <ant dir="modules/www" inheritall="false" target="builder" />
