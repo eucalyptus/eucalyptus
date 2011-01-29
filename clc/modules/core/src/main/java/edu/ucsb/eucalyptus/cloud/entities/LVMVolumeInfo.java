@@ -66,15 +66,12 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.io.Serializable;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.lob.SerializableBlob;
-
 import com.eucalyptus.util.StorageProperties;
-
-import javax.persistence.*;
 
 @MappedSuperclass
 public class LVMVolumeInfo implements Serializable {
