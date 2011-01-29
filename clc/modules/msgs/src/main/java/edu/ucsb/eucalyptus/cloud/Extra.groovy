@@ -168,7 +168,8 @@ public class VmInfo extends EucalyptusData {
   String placement;
   String platform;
   String bundleTaskStateName;  
-    
+  String createImageStateName;
+  
   ArrayList<String> productCodes = new ArrayList<String>();
   
   @Override

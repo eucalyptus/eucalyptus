@@ -106,6 +106,8 @@
     <value name="userData" field="userData" usage="optional" />
     <value name="launchIndex" field="launchIndex" usage="optional" />
     <value name="platform" field="platform" usage="optional" />
+    <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional" />
+    <value name="createImageStateName" field="createImageStateName" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
     <structure usage="optional">
