@@ -221,7 +221,7 @@ public class Reports extends HttpServlet {
 
         	long start = Long.parseLong(Param.start.get(req));
         	long end = Long.parseLong(Param.end.get(req));
-        	Period period = new Period(0, Long.MAX_VALUE);
+        	Period period = new Period(start, end);
         	int criterionId = Integer.parseInt(Param.criterionId.get(req));
         	int groupById = Integer.parseInt(Param.groupById.get(req));
         	GroupByCriterion criterion = GroupByCriterion.values()[criterionId+1]; //TODO: explain magic num
