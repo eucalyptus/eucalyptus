@@ -103,25 +103,25 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
             Network network = vm.getNetworks( ).get( 0 );
             try {
               network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );
-            } catch ( EucalyptusCloudException e ) {
-              LOG.error( e, e );
-            }
-            networks.put( network.getName( ), vm.getPrivateAddress( ) );
-            if ( !rules.containsKey( network.getName( ) ) ) {
-              
-              for ( PacketFilterRule pf : network.getRules( ) ) {
-                String rule = String.format( "-P %s -%s %d%s%d ", pf.getProtocol( ), ( "icmp".equals( pf.getProtocol( ) )
-                  ? "t"
-                  : "p" ), pf.getPortMin( ), ( "icmp".equals( pf.getProtocol( ) )
-                  ? ":"
-                  : "-" ), pf.getPortMax( ) );
-                for ( VmNetworkPeer peer : pf.getPeers( ) ) {
-                  rules.put( network.getName( ), String.format( "%s -o %s -u %s", rule, peer.getSourceNetworkName( ), peer.getUserName( ) ) );
-                }
-                for ( String cidr : pf.getSourceCidrs( ) ) {
-                  rules.put( network.getName( ), String.format( "%s -s %s", rule, cidr ) );
+              networks.put( network.getName( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( network.getName( ) ) ) {
+                
+                for ( PacketFilterRule pf : network.getRules( ) ) {
+                  String rule = String.format( "-P %s -%s %d%s%d ", pf.getProtocol( ), ( "icmp".equals( pf.getProtocol( ) )
+                    ? "t"
+                    : "p" ), pf.getPortMin( ), ( "icmp".equals( pf.getProtocol( ) )
+                    ? ":"
+                    : "-" ), pf.getPortMax( ) );
+                  for ( VmNetworkPeer peer : pf.getPeers( ) ) {
+                    rules.put( network.getName( ), String.format( "%s -o %s -u %s", rule, peer.getSourceNetworkName( ), peer.getUserName( ) ) );
+                  }
+                  for ( String cidr : pf.getSourceCidrs( ) ) {
+                    rules.put( network.getName( ), String.format( "%s -s %s", rule, cidr ) );
+                  }
                 }
               }
+            } catch ( EucalyptusCloudException e ) {
+              LOG.error( e, e );
             }
           }
           for ( String networkName : rules.keySet( ) ) {
