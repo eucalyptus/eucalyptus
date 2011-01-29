@@ -258,6 +258,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     return this.state.getReference( );
   }
   
+  public boolean isBusy( ) {
+    return this.state.isMarked( );
+  }
+  
   /**
    * @see com.eucalyptus.util.fsm.State#getStates()
    * @return
