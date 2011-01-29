@@ -71,6 +71,8 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.reporting.queue.QueueFactory;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
@@ -103,6 +105,19 @@ public class SystemBootstrapper {
     try {
       boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
       boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
+
+      
+      /* This is a workaround for log4j brain damage which prevented the
+       * ActiveMQ broker from working properly. 
+       */
+      try {
+    	  GroovyUtil.eval("com.eucalyptus.reporting.queue.QueueFactory.getInstance().startup()");
+    	  LOG.info("Groovy eval of queue factory startup succeeded.");
+      } catch (Exception ex) {
+    	  LOG.error("Groovy eval of queue factory startup failed.");
+    	  ex.printStackTrace();
+      }
+      
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + doDebug ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       LogLevels.DEBUG = doDebug;
