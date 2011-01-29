@@ -76,7 +76,7 @@ public class GroovyUtil {
 
   public static int exec( final String code ) throws ScriptExecutionFailedException {
     try {
-      return (Integer) getGroovyEngine().eval( "p=hi.execute();p.waitFor();System.out.println(p.in.text);System.err.println(p.err.text);p.exitValue()", new SimpleScriptContext() {{
+      return (Integer) getGroovyEngine().eval( "p=hi.execute();p.waitFor();System.out.print(p.in.text);System.err.print(p.err.text);p.exitValue()", new SimpleScriptContext() {{
         setAttribute( "hi", code, ENGINE_SCOPE );
       }});
     } catch ( Throwable e ) {

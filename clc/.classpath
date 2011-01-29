@@ -50,7 +50,7 @@
 	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/btm-1.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/btm-1.3.2.jar" sourcepath="/bzr/third-party/btm-2.1.0"/>
 	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.0-BETA.jar"/>
 	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
