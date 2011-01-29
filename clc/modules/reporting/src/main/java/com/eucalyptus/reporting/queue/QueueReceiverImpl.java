@@ -9,7 +9,7 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.event.Event;
-import com.eucalyptus.reporting.event.EventListener;
+import com.eucalyptus.event.EventListener;
 
 class QueueReceiverImpl
 	implements QueueReceiver, MessageListener
@@ -23,13 +23,13 @@ class QueueReceiverImpl
 	private Connection connection;
 	private Session session;
 	private MessageConsumer consumer;
-	private List<EventListener> listeners;
+	private List<EventListener<Event>> listeners;
 
 	QueueReceiverImpl(String brokerUrl, QueueFactory.QueueIdentifier identifier)
 	{
 		this.brokerUrl = brokerUrl;
 		this.identifier = identifier;
-		this.listeners = new ArrayList<EventListener>();
+		this.listeners = new ArrayList<EventListener<Event>>();
 	}
 
 	void startup()
@@ -60,7 +60,7 @@ class QueueReceiverImpl
 	}
 	
 	@Override
-	public void addEventListener(EventListener el)
+	public void addEventListener(EventListener<Event> el)
 	{
 		try {
 			if (this.listeners.size()==0) {
@@ -73,7 +73,7 @@ class QueueReceiverImpl
 	}
 
 	@Override
-	public void removeEventListener(EventListener el)
+	public void removeEventListener(EventListener<Event> el)
 	{
 		this.listeners.remove(el);
 	}
@@ -101,7 +101,7 @@ class QueueReceiverImpl
 		} catch (JMSException jmse) {
 			throw new QueueRuntimeException(jmse);
 		}
-		for (EventListener el: listeners) {
+		for (EventListener<Event> el: listeners) {
 			el.fireEvent(event);
 		}
 	}

@@ -5,9 +5,9 @@ import com.eucalyptus.event.EventListener;
 
 public interface QueueReceiver
 {
-	public void addEventListener(EventListener el);
+	public void addEventListener(EventListener<Event> el);
 
-	public void removeEventListener(EventListener el);
+	public void removeEventListener(EventListener<Event> el);
 	
 	/**
 	 * @return Null if no event is available
