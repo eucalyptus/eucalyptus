@@ -16,7 +16,7 @@ class QueueReceiverImpl
 {
 	private static Logger log = Logger.getLogger( QueueReceiverImpl.class );
 
-	private final QueueBroker broker;
+	private final String brokerUrl;
 	private final QueueFactory.QueueIdentifier identifier;
 	
 	private ActiveMQConnectionFactory connectionFactory;
@@ -25,9 +25,9 @@ class QueueReceiverImpl
 	private MessageConsumer consumer;
 	private List<EventListener> listeners;
 
-	QueueReceiverImpl(QueueBroker broker, QueueFactory.QueueIdentifier identifier)
+	QueueReceiverImpl(String brokerUrl, QueueFactory.QueueIdentifier identifier)
 	{
-		this.broker = broker;
+		this.brokerUrl = brokerUrl;
 		this.identifier = identifier;
 		this.listeners = new ArrayList<EventListener>();
 	}
@@ -35,7 +35,7 @@ class QueueReceiverImpl
 	void startup()
 	{
 		try {
-			connectionFactory = new ActiveMQConnectionFactory(broker.getBrokerUrl());
+			connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
 			connection = connectionFactory.createConnection();
 			connection.start();
 			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
