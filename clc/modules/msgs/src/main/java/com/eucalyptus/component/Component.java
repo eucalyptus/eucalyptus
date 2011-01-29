@@ -76,6 +76,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -573,10 +574,21 @@ public class Component implements ComponentInformation, HasName<Component> {
   public static class CheckEvent implements EventListener {
     public static void register( ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
+      ListenerRegistry.getInstance( ).register( Hertz.class, new CheckEvent( ) );
     }
     
     @Override
     public void fireEvent( Event event ) {
+      if( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) ) {
+        for ( final Component c : Components.list( ) ) {
+          Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
+            @Override
+            public void run( ) {
+              c.runChecks( );
+            }
+          } );
+        }
+      }
       for ( final Component c : Components.list( ) ) {
         Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
           @Override
