@@ -6,9 +6,13 @@ grep -A30 "friendlyName: eucalyptus" | \
 grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
 
 
-echo -n eucalyptus | \
+PASS=$(echo -n eucalyptus | \
 openssl dgst -sha256 \
 -sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
--hex
+-hex)
+
+echo export PASS="${PASS}"
+echo
+echo mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP
 
 
