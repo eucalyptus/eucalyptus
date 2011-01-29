@@ -10,9 +10,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import javax.script.SimpleScriptContext;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -69,6 +71,17 @@ public class GroovyUtil {
       } catch (IOException e) {
         LOG.error(e);
       }
+    }
+  }
+
+  public static int exec( final String code ) throws ScriptExecutionFailedException {
+    try {
+      return (Integer) getGroovyEngine().eval( "p=hi.execute();p.waitFor();System.out.println(p.in.text);System.err.println(p.err.text);p.exitValue()", new SimpleScriptContext() {{
+        setAttribute( "hi", code, ENGINE_SCOPE );
+      }});
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
   }
 

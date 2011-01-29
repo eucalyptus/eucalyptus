@@ -124,12 +124,12 @@ public enum SubDirectory {
   
   private void assertPermissions( ) {
     try {
-      GroovyUtil.eval( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
     try {
-      GroovyUtil.eval( "chmod -R +rwX " + this.toString( ) );
+      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
