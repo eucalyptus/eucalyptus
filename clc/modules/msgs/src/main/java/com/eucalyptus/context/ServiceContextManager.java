@@ -376,6 +376,7 @@ public class ServiceContextManager {
     if( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
       ServiceContextManager.restart( );
     }
+    return true;
   }
 
   private static boolean checkStateUnchanged( List<ComponentId> now ) {
