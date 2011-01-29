@@ -581,12 +581,9 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void fireEvent( Event event ) {
       if( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) ) {
         for ( final Component c : Components.list( ) ) {
-          Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
-            @Override
-            public void run( ) {
-              c.runChecks( );
-            }
-          } );
+          if( !Component.State.ENABLED.equals( c.getState( ) ) && Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) ) {   
+            Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
+          }
         }
       }
       for ( final Component c : Components.list( ) ) {
@@ -631,5 +628,15 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   public String getLocalEndpointName( ) {
     return this.identity.getLocalEndpointName( );
+  }
+  public Runnable getCheckRunner( ) {
+    return new Runnable( ) {
+      @Override
+      public void run( ) {
+        if( !Component.this.stateMachine.isBusy( ) ) {
+          Component.this.runChecks( );
+        }
+      }
+    };
   }
 }
