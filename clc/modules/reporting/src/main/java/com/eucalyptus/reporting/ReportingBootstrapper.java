@@ -5,12 +5,18 @@ import java.util.TimerTask;
 
 import org.apache.log4j.*;
 
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.reporting.instance.*;
 import com.eucalyptus.reporting.storage.*;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
+@Provides(Reporting.class)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
 public class ReportingBootstrapper
 	extends Bootstrapper
 {
