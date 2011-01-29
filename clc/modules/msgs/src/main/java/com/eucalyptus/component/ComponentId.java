@@ -30,7 +30,17 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements ComponentInformation, HasName<ComponentId>, X509Principal, HmacPrincipal {
   private static Logger LOG = Logger.getLogger( ComponentId.class );
-  
+  private static final String EMPTY_MODEL ="  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n" + 
+  "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" + 
+  "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n" + 
+  "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n" + 
+  "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n" + 
+  "      xsi:schemaLocation=\"\n" + 
+  "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n" + 
+  "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" + 
+  "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" + 
+  "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" + 
+  "</mule>\n";
   private final String name;
   private final String capitalizedName;
   private final String entryPoint;
@@ -64,15 +74,19 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     StringWriter out = new StringWriter( );
     try {
       InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream( this.getServiceModelFileName( ) );
-      IOUtils.copy( in, out );
-      in.close( );
-      out.flush( );
-      String outString = out.toString( );
-      if( LogLevels.EXTREME ) {
-        LOG.trace( "Loaded model for: " + this );
-        LOG.trace( outString );
+      if( in == null ) {
+        return EMPTY_MODEL;
+      } else {
+        IOUtils.copy( in, out );
+        in.close( );
+        out.flush( );
+        String outString = out.toString( );
+        if( LogLevels.EXTREME ) {
+          LOG.trace( "Loaded model for: " + this );
+          LOG.trace( outString );
+        }
+        return outString;
       }
-      return outString;
     } catch ( IOException ex ) {
       LOG.error( ex , ex );
       throw BootstrapException.throwError( "BUG! BUG! Failed to load configuration specified for Component: " + this.name, ex );
