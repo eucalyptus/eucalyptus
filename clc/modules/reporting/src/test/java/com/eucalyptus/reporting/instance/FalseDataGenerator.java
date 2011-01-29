@@ -5,6 +5,9 @@ import java.util.*;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.queue.QueueFactory;
+import com.eucalyptus.reporting.queue.QueueSender;
+import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.upgrade.TestDescription;
 
 /**
@@ -28,8 +31,9 @@ public class FalseDataGenerator
 {
 	private static final int NUM_USAGE = 32;
 	private static final int NUM_INSTANCE = 16;
+	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
 	private static final int TIME_USAGE_APART = 100000; //ms
-	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART);
+	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART) + START_TIME;
 
 	private static final int NUM_USER       = 32;
 	private static final int NUM_ACCOUNT    = 16;
@@ -41,14 +45,20 @@ public class FalseDataGenerator
 		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
 	}
 
-	public static void generateFalseData()
+	/**
+	 * @param remote Must equal "local" if this is to be run locally; any other
+	 *   value means it will run over the MQ and will search for a broker.
+	 */
+	public static void generateFalseData(String remote)
 	{
+		boolean isLocal = (remote != null && remote.equalsIgnoreCase("local"));
+		System.out.println(" ----> GENERATING FALSE DATA " + (isLocal ? "(local)" : "(remote)"));
+		
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
 		
-		System.out.println(" ----> GENERATING FALSE DATA");
-
 		for (int i = 0; i < NUM_INSTANCE; i++) {
+
 			String uuid = new Long(i).toString();
 			String instanceId = String.format("instance-%d", (i % NUM_INSTANCE));
 			String userId = String.format("user-%d", (i % NUM_USER));
@@ -64,21 +74,32 @@ public class FalseDataGenerator
 			fakeInstances.add(insAttrs);
 		}
 
-		TestEventListener listener = new TestEventListener();
+		QueueSender queueSender = null;
+		TestEventListener listener = null;
+		if (isLocal) {
+			listener = new TestEventListener();
+			listener.setCurrentTimeMillis(START_TIME);
+		} else {
+			queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
+		}
 		for (int i=0; i<NUM_USAGE; i++) {
-			listener.setCurrentTimeMillis(i * TIME_USAGE_APART);
+			if (isLocal) listener.setCurrentTimeMillis(START_TIME + (i * TIME_USAGE_APART));
 			for (InstanceAttributes insAttrs : fakeInstances) {
 				long instanceNum = Long.parseLong(insAttrs.getUuid());
-				long netIo = instanceNum + i;
-				long diskIo = instanceNum + i*2;
+				long netIoMegs = (instanceNum + i) * 1024;
+				long diskIoMegs = (instanceNum + i*2) * 1024;
 				InstanceEvent event = new InstanceEvent(insAttrs.getUuid(),
 						insAttrs.getInstanceId(), insAttrs.getInstanceType(),
 						insAttrs.getUserId(), insAttrs.getAccountId(),
 						insAttrs.getClusterName(),
-						insAttrs.getAvailabilityZone(), new Long(netIo),
-						new Long(diskIo));
+						insAttrs.getAvailabilityZone(), new Long(netIoMegs),
+						new Long(diskIoMegs));
 				System.out.println("Generating:" + i);
-				listener.receiveEvent(event);
+				if (isLocal) {
+					listener.receiveEvent(event);
+				} else {
+					queueSender.send(event);
+				}
 			}
 		}
 
@@ -190,5 +211,20 @@ public class FalseDataGenerator
 			return fakeCurrentTimeMillis;
 		}
 	}
-
+	
+	public static void main(String[] args) throws Exception
+	{
+		String methodName = args[0];
+		Object[] methodArgsArray = new Object[args.length - 1];
+		Class[] paramTypes = new Class[args.length - 1];
+		System.out.println("Executing " + methodName);
+		for (int i = 1; i < args.length; i++) {
+			paramTypes[i - 1] = String.class;
+			methodArgsArray[i - 1] = args[i];
+			System.out.println(" param:" + args[i - 1]);
+		}
+		FalseDataGenerator.class.getDeclaredMethod(methodName, paramTypes)
+				.invoke(null, methodArgsArray);
+	}
+	
 }

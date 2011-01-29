@@ -31,71 +31,84 @@ public class InstanceEventListener
 	  if( !( e instanceof Event ) ) {
 	    return;
 	  } else {
-	    Event reportingEvent = (Event) e;
-  		final long receivedEventMs = this.getCurrentTimeMillis();
-  		if (reportingEvent instanceof InstanceEvent) {
-  			InstanceEvent event = (InstanceEvent) e;
-  
-  			final String uuid = event.getUuid();
-  		
-  			EntityWrapper<InstanceAttributes> entityWrapper =
-  				EntityWrapper.get(InstanceAttributes.class);
-  			Session sess = null;
-  			try {
-  				sess = entityWrapper.getSession();
-  
-  				/* Convert InstanceEvents to internal types. Internal types are
-  				 * not exposed because the reporting.instance package won't be
-  				 * present in the open src version
-  				 */
-  				InstanceAttributes insAttrs = new InstanceAttributes(uuid,
-  						event.getInstanceId(), event.getInstanceType(), event.getUserId(),
-  						event.getAccountId(), event.getClusterName(),
-  						event.getAvailabilityZone());
-  				InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
-  						receivedEventMs, event.getCumulativeNetworkIoMegs(),
-  						event.getCumulativeDiskIoMegs());
-  				System.out.printf("--Snapshot %s %d %d %d\n", uuid, receivedEventMs,
-  						event.getCumulativeNetworkIoMegs(), event.getCumulativeDiskIoMegs());
-  
-  				/* Only write the instance attributes if we don't have them
-  				 * already.
-  				 */
-  				if (! recentlySeenUuids.contains(uuid)) {
-  					if (null == sess.get(InstanceAttributes.class, uuid)) {
-  						sess.save(insAttrs);
-  						log.debug("Wrote Reporting Instance:" + uuid);
-  					}
-  					recentlySeenUuids.add(uuid);
-  				}
-  
-  				/* Gather all usage snapshots, and write them all to the database
-  				 * at once every n secs.
-  				 */
-  				recentUsageSnapshots.add(insUsageSnapshot);
-  
-  				if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
-  					for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
-  						sess.save(ius);
-  						log.debug("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
-  					}
-  					recentUsageSnapshots.clear();
-  					lastWriteMs = receivedEventMs;
-  				}
-  
-  				entityWrapper.commit();
-  			} catch (Exception ex) {
-  				entityWrapper.rollback();
-  				log.error(ex);
-  			}
-  		}
-	  }
+		  final long receivedEventMs = this.getCurrentTimeMillis();
+		  if (e instanceof InstanceEvent) {
+			  log.info("Received instance event");
+			  InstanceEvent event = (InstanceEvent) e;
+
+			  final String uuid = event.getUuid();
+		
+			  EntityWrapper<InstanceAttributes> entityWrapper =
+				  EntityWrapper.get(InstanceAttributes.class);
+			  Session sess = null;
+			  try {
+				  sess = entityWrapper.getSession();
+
+				  /* Convert InstanceEvents to internal types. Internal types are
+				   * not exposed because the reporting.instance package won't be
+				   * present in the open src version
+				   */
+				  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
+						  event.getInstanceId(), event.getInstanceType(), event.getUserId(),
+						  event.getAccountId(), event.getClusterName(),
+						  event.getAvailabilityZone());
+				  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
+						  receivedEventMs, event.getCumulativeNetworkIoMegs(),
+						  event.getCumulativeDiskIoMegs());
+
+				  /* Only write the instance attributes if we don't have them
+				   * already.
+				   */
+				  if (! recentlySeenUuids.contains(uuid)) {
+					  if (null == sess.get(InstanceAttributes.class, uuid)) {
+						  sess.save(insAttrs);
+						  log.info("Wrote Reporting Instance:" + uuid);
+					  }
+					  recentlySeenUuids.add(uuid);
+				  }
+
+				  /* Gather all usage snapshots, and write them all to the database
+				   * at once every n secs.
+				   */
+				  recentUsageSnapshots.add(insUsageSnapshot);
+
+				  if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
+					  for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
+						  sess.save(ius);
+						  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
+					  }
+					  recentUsageSnapshots.clear();
+					  lastWriteMs = receivedEventMs;
+				  }
+
+				  entityWrapper.commit();
+			  } catch (Exception ex) {
+				  entityWrapper.rollback();
+				  log.error(ex);
+			  }
+		  }
+    }
 	}
 
 	//TODO: shutdown hook
 	public void flush()
 	{
-		//TODO: implement
+		EntityWrapper<InstanceAttributes> entityWrapper =
+			EntityWrapper.get(InstanceAttributes.class);
+		Session sess = null;
+		try {
+			sess = entityWrapper.getSession();
+			for (InstanceUsageSnapshot ius : recentUsageSnapshots) {
+				sess.save(ius);
+				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
+						+ ius.getId());
+			}
+			recentUsageSnapshots.clear();
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			entityWrapper.rollback();
+			log.error(ex);
+		}
 	}
 
 	/**

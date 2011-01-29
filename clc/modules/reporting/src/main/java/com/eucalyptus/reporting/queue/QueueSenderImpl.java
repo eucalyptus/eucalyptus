@@ -14,7 +14,7 @@ class QueueSenderImpl
 {
 	private static Logger log = Logger.getLogger( QueueSenderImpl.class );
 
-	private final QueueBroker broker;
+	private final String brokerUrl;
 	private final QueueFactory.QueueIdentifier queueIdentifier;
 	
 	private ActiveMQConnectionFactory connectionFactory;
@@ -24,9 +24,9 @@ class QueueSenderImpl
 	private MessageProducer producer;
 
 	
-	QueueSenderImpl(QueueBroker broker, QueueIdentifier queueIdentifier)
+	QueueSenderImpl(String brokerUrl, QueueIdentifier queueIdentifier)
 	{
-		this.broker = broker;
+		this.brokerUrl = brokerUrl;
 		this.queueIdentifier = queueIdentifier;
 	}
 
@@ -34,7 +34,7 @@ class QueueSenderImpl
 	{
 		try {
 			connectionFactory =
-				new ActiveMQConnectionFactory(broker.getBrokerUrl());
+				new ActiveMQConnectionFactory(brokerUrl);
 			connection = connectionFactory.createConnection();
 			connection.start();
 			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -64,7 +64,7 @@ class QueueSenderImpl
 		try {
 			final javax.jms.Message msg = session.createObjectMessage(e);
 			producer.send(msg);
-			log.debug("Message sent:" + queueIdentifier);
+			log.info("Message sent:" + queueIdentifier);
 		} catch (JMSException jmse) {
 			throw new QueueRuntimeException(jmse);
 		}

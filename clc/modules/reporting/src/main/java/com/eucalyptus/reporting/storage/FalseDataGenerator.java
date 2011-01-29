@@ -6,29 +6,44 @@ import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.event.EventListener;
-import com.eucalyptus.reporting.queue.QueueReceiver;
-import com.eucalyptus.reporting.queue.QueueSender;
+import com.eucalyptus.reporting.queue.*;
+import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
 public class FalseDataGenerator
 {
-	private static final int NUM_USERS    = 256;
+	private static final int NUM_USERS    = 128;
 	private static final int NUM_ACCOUNTS = 64;
 	private static final int NUM_CLUSTERS = 16;
 	private static final int NUM_ZONES    = 4;
 	private static final int SNAPSHOTS_PER_USER = 64;
+	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
 	private static final int TIME_USAGE_APART = 100000; //ms
 	private static final int WRITE_INTERVAL = 8;
-	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART);
+	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART) + START_TIME;
 
-	public static void generateFalseData()
+	
+	/**
+	 * @param remote Must equal "local" if this is to be run locally; any other
+	 *   value means it will run over the MQ and will search for a broker.
+	 */
+	public static void generateFalseData(String remote)
 	{
-		System.out.println(" ----> GENERATING FALSE DATA");
-
-		FakeQueue fakeQueue = new FakeQueue();
-		TestPoller poller = new TestPoller(fakeQueue);
+		boolean isLocal = (remote != null && remote.equalsIgnoreCase("local"));
+		System.out.println(" ----> GENERATING FALSE DATA " + (isLocal ? "(local)" : "(remote)"));
+		
+		QueueSender queueSender = null;
+		TestPoller testPoller = null;
+		if (isLocal) {
+			FakeQueue fakeQueue = new FakeQueue();
+			queueSender = fakeQueue;
+			testPoller = new TestPoller(fakeQueue);
+		} else {
+			QueueFactory queueFactory = QueueFactory.getInstance();
+			queueSender = queueFactory.getSender(QueueIdentifier.STORAGE);
+		}
 		long timestampMs = 0l;
 		for (int i = 0; i < SNAPSHOTS_PER_USER; i++) {
-			timestampMs = i * TIME_USAGE_APART;
+			timestampMs = (i * TIME_USAGE_APART) + START_TIME;
 
 			for (int j = 0; j < NUM_USERS; j++) {
 				String userId = String.format("user-%d", j);
@@ -36,20 +51,21 @@ public class FalseDataGenerator
 						(j % NUM_ACCOUNTS));
 				String clusterId = String.format("cluster-%d", (j % NUM_CLUSTERS));
 				String zoneId = String.format("account-%d", (j % NUM_ZONES));
-			
+
 				for (int k = 0; k < StorageEvent.EventType.values().length; k++) {
-					long sizeGb = 1 + (i * k);
+					long sizeMegs = 1024 + (i * k);
 					StorageEvent.EventType eventType =
 						StorageEvent.EventType.values()[k];
 					StorageEvent event = new StorageEvent(eventType, true,
-							sizeGb, userId, accountId, clusterId, zoneId);
-					fakeQueue.send(event);
+							sizeMegs, userId, accountId, clusterId, zoneId);
+					if (!isLocal) queueSender.send(event);
+					System.out.println("Sending event " + k + " for " + i + "," + j);
 				}
 				
 			}
-			if (i % WRITE_INTERVAL == 0) {
-				poller.setTimestampMs(timestampMs);
-				poller.writeEvents();
+			if (isLocal && (i % WRITE_INTERVAL == 0)) {
+				testPoller.setTimestampMs(timestampMs);
+				testPoller.writeEvents();
 			}
 		}
 
@@ -200,5 +216,22 @@ public class FalseDataGenerator
 		}
 
 	}
+	
+	public static void main(String[] args)
+		throws Exception
+	{
+		String methodName = args[0];
+		Object[] methodArgsArray = new Object[args.length - 1];
+		Class[] paramTypes = new Class[args.length - 1];
+		System.out.println("Executing " + methodName);
+		for (int i = 1; i < args.length; i++) {
+			paramTypes[i - 1] = String.class;
+			methodArgsArray[i - 1] = args[i];
+			System.out.println(" param:" + args[i-1]);
+		}
+		FalseDataGenerator.class.getDeclaredMethod(methodName, paramTypes)
+				.invoke(null, methodArgsArray);
+	}
+
 
 }

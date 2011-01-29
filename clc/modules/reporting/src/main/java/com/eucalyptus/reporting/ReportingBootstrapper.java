@@ -22,11 +22,11 @@ public class ReportingBootstrapper
 {
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
-	private static long POLLER_DELAY_MS = 1000l;
+	private static long POLLER_DELAY_MS = 10000l;
 	
 	private StorageEventPoller storagePoller;
 	private InstanceEventListener instanceListener;
-	private QueueBroker broker;
+	private QueueFactory queueFactory;
 	private Timer timer;
 	
 
@@ -34,31 +34,34 @@ public class ReportingBootstrapper
 	{
 	}
 
+	@Override
 	public boolean check()
 	{
 		return true;
 	}
 
+	@Override
 	public void destroy()
 	{
 		return;
 	}
 
+	@Override
 	public boolean enable()
 	{
 		return true;
 	}
 
+	@Override
 	public boolean disable()
 	{
 		return true;
 	}
 
+	@Override
 	public boolean load()
 	{
 		try {
-			broker = QueueBroker.getInstance();
-			timer = new Timer(true);
 			return true;
 		} catch (Exception ex) {
 			log.error("ReportingBootstrapper failed to load", ex);
@@ -66,32 +69,64 @@ public class ReportingBootstrapper
 		}
 	}
 
+	
+	
+	@Override
 	public boolean start()
 	{
 		try {
 			//TODO: brokers must FIND EACH OTHER here...
-			broker.startup();
-			log.info("Queue broker started");
-			QueueFactory queueFactory = QueueFactory.getInstance();
-			final StorageEventPoller poller = new StorageEventPoller(queueFactory.getReceiver(QueueIdentifier.STORAGE));
+
+			/* Start queue broker
+			 */
+			queueFactory = QueueFactory.getInstance();
+			//QueueFactory has been started in SystemBootstrapper.init()
+			
+			/* Start storage receiver and storage queue poller thread
+			 */
+			QueueReceiver storageReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
+			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+			timer = new Timer(true);
 			timer.schedule(new TimerTask() {
 				@Override
 				public void run()
 				{
 					poller.writeEvents();
 				}
-			}, POLLER_DELAY_MS);
+			}, 0, POLLER_DELAY_MS);
 			this.storagePoller = poller;
 			log.info("Storage queue poller started");
-			this.instanceListener = new InstanceEventListener();
+			
+			/* Start instance receiver and instance listener
+			 */
+			QueueReceiver instanceReceiver =
+				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
+			instanceListener = new InstanceEventListener();
+			instanceReceiver.addEventListener(instanceListener);
+			
 			log.info("ReportingBootstrapper started");
 			return true;
 		} catch (Exception ex) {
+			ex.printStackTrace();
 			log.error("ReportingBootstrapper failed to start", ex);
 			return false;
 		}
 	}
 
+	public static void startTest()
+	{
+		ReportingBootstrapper bootstrapper = new ReportingBootstrapper();
+		bootstrapper.load();
+		bootstrapper.start();
+		try {
+			System.out.println("Sleeping for 60 secs");
+			Thread.sleep(60000);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
+	@Override
 	public boolean stop()
 	{
 		try {
@@ -99,7 +134,7 @@ public class ReportingBootstrapper
 			instanceListener.flush();
 			timer.cancel();
 			storagePoller.writeEvents();
-			broker.shutdown();
+			queueFactory.shutdown();
 			return true;
 		} catch (Exception ex) {
 			log.error("ReportingBootstrapper failed to stop", ex);
