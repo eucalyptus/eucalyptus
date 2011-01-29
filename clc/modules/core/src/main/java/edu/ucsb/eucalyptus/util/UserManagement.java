@@ -66,13 +66,15 @@
  */
 package edu.ucsb.eucalyptus.util;
 
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 
 
 public class UserManagement {
-
+  private static Logger LOG = Logger.getLogger( UserManagement.class );
   /**
    * TODO: REMOVE THIS METHOD
    * @param userId
@@ -80,8 +82,16 @@ public class UserManagement {
    * boolean
    */
   public static boolean isAdministrator( String userId ) {
-    if ( ComponentIds.lookup(Eucalyptus.class).name( ).equals( userId ) || WalrusProperties.ADMIN.equals( userId ) ) return true;
-    return false;
+    try {
+      if( Contexts.lookup( ).getUser( ).isSystem( ) || ComponentIds.lookup(Eucalyptus.class).name( ).equals( userId ) || "admin".equals( userId ) ) {
+        return true; 
+      } else {
+        return false;
+      }
+    } catch ( IllegalContextAccessException ex ) {
+      LOG.trace( ex , ex );
+      return false;
+    }
   }
 
 }

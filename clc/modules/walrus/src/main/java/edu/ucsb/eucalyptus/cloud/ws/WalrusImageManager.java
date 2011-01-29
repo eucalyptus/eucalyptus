@@ -395,7 +395,7 @@ public class WalrusImageManager {
 					User user = null;
 					try {
 						user = Accounts.lookupUserById( userId );
-					} catch ( AuthException e ) {
+          } catch ( AuthException e ) {
 						throw new AccessDeniedException(userId,e);            
 					}         
 					boolean signatureVerified = false;
@@ -409,35 +409,45 @@ public class WalrusImageManager {
 					}
 
 					try {
-						for ( Certificate c : user.getCertificates( ) ) {
-						  X509Certificate cert = c.getX509Certificate( );
-  						PublicKey publicKey = cert.getPublicKey();
-  						sigVerifier.initVerify(publicKey);
-  						sigVerifier.update((machineConfiguration + image).getBytes());
-  						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-  						if ( signatureVerified ) break;
-						}
+	          for(User u:Accounts.listAllUsers( )) {
+	            for (Certificate cert : u.getCertificates()) {
+	              if(cert != null&&cert instanceof X509Certificate)
+	                signatureVerified = canVerifySignature(sigVerifier, ( X509Certificate ) cert, signature, (machineConfiguration + image));
+	              if(signatureVerified)
+	                break;
+	            }
+	          }
+	          if(!signatureVerified) {
+	            X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+	            if(cert != null)
+	              signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
+	          }
+//					  X509Certificate cert = user.getX509Certificate( );
+//						PublicKey publicKey = cert.getPublicKey();
+//						sigVerifier.initVerify(publicKey);
+//						sigVerifier.update((machineConfiguration + image).getBytes());
+//						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("signature verification");
 					}
 
-					//check if Eucalyptus signed it
-					if(!signatureVerified) {
-						try {
-							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
-							PublicKey publicKey = cert.getPublicKey();
-							sigVerifier.initVerify(publicKey);
-							sigVerifier.update((machineConfiguration + image).getBytes());
-							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-						} catch(Exception ex) {
-							db.rollback();
-							LOG.error(ex, ex);
-							throw new DecryptionFailedException("signature verification");
-						}
+//					//check if Eucalyptus signed it
+//					if(!signatureVerified) {
+//						try {
+//							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+//							PublicKey publicKey = cert.getPublicKey();
+//							sigVerifier.initVerify(publicKey);
+//							sigVerifier.update((machineConfiguration + image).getBytes());
+//							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+//						} catch(Exception ex) {
+//							db.rollback();
+//							LOG.error(ex, ex);
+//							throw new DecryptionFailedException("signature verification");
+//						}
 
-					}
+//					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}

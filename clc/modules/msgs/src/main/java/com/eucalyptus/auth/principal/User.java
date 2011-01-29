@@ -148,12 +148,12 @@ public interface User extends HasId, BasePrincipal, Serializable {
   public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
     
   public static final User SYSTEM = new User() {
-    @Override public String getId( ) { return null;}
-    @Override public String getName( ) { return null;}
-    @Override public BigInteger getNumber( ) { return null;}
-    @Override public String getPath( ) { return null;}
+    @Override public String getId( ) { return 0;}
+    @Override public String getName( ) { return Account.SYSTEM_ACCOUNT;}
+    @Override public BigInteger getNumber( ) { return 0;}
+    @Override public String getPath( ) { return /;}
     @Override public RegistrationStatus getRegistrationStatus( ) { return null;}
-    @Override public Boolean isEnabled( ) { return null;}
+    @Override public Boolean isEnabled( ) { return true;}
     @Override public String getToken( ) { return null;}
     @Override public String getConfirmationCode( ) { return null;}
     @Override public String getPassword( ) { return null;}
@@ -169,9 +169,9 @@ public interface User extends HasId, BasePrincipal, Serializable {
     @Override public Certificate addCertificate( X509Certificate certificate ) throws AuthException { return null;}
     @Override public List<Group> getGroups( ) throws AuthException { return null;}
     @Override public Account getAccount( ) throws AuthException { return null;}
-    @Override public boolean isSystemAdmin( ) { return false;}
-    @Override public boolean isSystemInternal( ) { return false;}
-    @Override public boolean isAccountAdmin( ) { return false;}
+    @Override public boolean isSystemAdmin( ) { return true;}
+    @Override public boolean isSystemInternal( ) { return true;}
+    @Override public boolean isAccountAdmin( ) { return true;}
     @Override public List<Policy> getPolicies( ) throws AuthException { return null;}
     @Override public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException { return null;}
     @Override public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException { return null;}
