@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
@@ -102,16 +103,27 @@ public class Component implements ComponentInformation, HasName<Component> {
   public enum State {
     BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
   }
+
+  public static int INIT_RETRIES = 5;
   
   public enum Transition {
     INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING;
     public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
-        try {
-          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, this.name(), c.getName( ) ).info( );
-          c.stateMachine.transition( Transition.this );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+        for( int i = 0; i < INIT_RETRIES ; i++ ) {
+          try {
+            EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, this.name(), c.getName( ) ).info( );
+            c.stateMachine.transition( Transition.this );
+            break;
+          } catch ( ExistingTransitionException ex ) {
+          } catch ( Throwable ex ) {
+            LOG.error( ex );
+          }
+          try {
+            TimeUnit.MILLISECONDS.sleep( 500 );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+          }
         }
       }
     }
