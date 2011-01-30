@@ -108,7 +108,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void transit( Component c ) {
       if ( c.isAvailableLocally( ) ) {
         try {
-          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ), c.getName( ) ).info( );
+          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, this.name(), c.getName( ) ).info( );
           c.stateMachine.transition( Transition.this );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
