@@ -340,7 +340,7 @@ public class ServiceContextManager {
   private static List<ComponentId> last = Lists.newArrayList( );
   private static MuleContext createContext( ) throws ServiceInitializationException {
     List<ComponentId> components = ComponentIds.listEnabled( );
-    if( checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+    if( checkStateUnchanged( ComponentIds.listEnabled( ) ) && context.getReference( ) != null ) {
       return context.getReference( );
     } else {
       last = components;
