@@ -167,7 +167,7 @@ typedef struct ccConfig_t {
   int idleThresh, wakeThresh;
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
-  int ccState, ccLastState, kick_network;
+  int ccState, ccLastState, kick_network, kick_enabled;
   serviceStatusType ccStatus;
   serviceInfoType services[16];
 } ccConfig;

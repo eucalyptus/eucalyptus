@@ -716,7 +716,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
   if (destVlan < 0) {
-    logprintfl(EUCAERROR,"vnetTableRule(): no vlans associated with network %s/%s\n", destUserName, destName);
+    logprintfl(EUCAERROR,"vnetTableRule(): no vlans associated with active network %s/%s\n", destUserName, destName);
     return(1);
   }
   
@@ -728,7 +728,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   if (sourceNetName) {
     srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
     if (srcVlan < 0) {
-      logprintfl(EUCAWARN,"vnetTableRule(): cannot locate source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
+      logprintfl(EUCAWARN,"vnetTableRule(): cannot locate active source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
       return(0);
     } else {
       tmp = hex2dot(vnetconfig->networks[srcVlan].nw);
@@ -758,7 +758,11 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   
   if (minPort && maxPort) {
     if (protocol && (!strcmp(protocol, "tcp") || !strcmp(protocol, "udp")) ) {
-      snprintf(newrule, 1024, "%s --dport %d:%d", rule, minPort, maxPort);
+      if (minPort != maxPort) {
+	snprintf(newrule, 1024, "%s -m %s --dport %d:%d", rule, protocol, minPort, maxPort);
+      } else {
+	snprintf(newrule, 1024, "%s -m %s --dport %d", rule, protocol, minPort);
+      }
       strcpy(rule, newrule);
     }
   }
@@ -798,6 +802,10 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   done=0;
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (!strcmp(vnetconfig->users[i].userName, user) && !strcmp(vnetconfig->users[i].netName, network)) {
+      if (!vnetconfig->networks[i].active) {
+	// network exists, but is inactive
+	return(-1 * i);
+      }
       return(i);
     }
   }

@@ -2467,7 +2467,7 @@ void *monitor_thread(void *in) {
       logprintfl(EUCADEBUG, "monitor_thread(): refreshing network cache\n");
       rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
       if (rc) {
-	logprintfl(EUCAERROR, "monitor_thread(): man_instanceCache() failed to reset networkparams from instanceCache\n");
+	logprintfl(EUCAERROR, "monitor_thread(): map_instanceCache() failed to reset networkparams from instanceCache\n");
       } else {
 	rc = restoreNetworkState();
 	if (rc) {
@@ -2492,6 +2492,10 @@ void *monitor_thread(void *in) {
       } else {
 	config->kick_dhcp = 0;
       }
+    }
+
+    if (config->kick_enabled) {
+      ccChangeState(ENABLED);
     }
 
     sem_mypost(CONFIG);
@@ -2740,13 +2744,6 @@ int init_config(void) {
   }
   
   if (config->initialized) {
-    // some other thread has already initialized the configuration
-    logprintfl(EUCAINFO, "init_config():  another thread has already set up config, skipping\n");
-    rc = restoreNetworkState();
-    if (rc) {
-      // failed to restore network state, continue 
-      logprintfl(EUCAWARN, "init_config(): restoreNetworkState returned false (may be already restored)\n");
-    }
     config_init = 1;
     return(0);
   }
@@ -3242,24 +3239,36 @@ int restoreNetworkState() {
 
 int reconfigureNetworkFromCLC() {
   FILE *FH;
-  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL;
+  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH];
   char **suser, **sgroup, **snet, *protocol=NULL;
   char snettok[1024], range[1024];
-  int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0;
+  int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0, fd=0;
 
   snettok[0] = '\0';
   range[0] = '\0';
 
   // TODO: grab CLC ip from serviceInfo / ccConfig
-  rc = http_get("http://localhost:8773/latest/network-topology", "/tmp/mehfoo");
+  snprintf(tmpfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+  
+  fd = mkstemp(tmpfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open tmpfile '%s'\n", tmpfile);
+    return(1);
+  }
+  chmod(tmpfile, 0644);
+  close(fd);
+
+  rc = http_get("http://localhost:8773/latest/network-topology", tmpfile);
   if (rc) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    unlink(tmpfile);
     return(1);
   }
 
-  FH = fopen("/tmp/mehfoo", "r");
+  FH = fopen(tmpfile, "r");
   if (!FH) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot open tmpfile /tmp/mehfoo\n");
+    unlink(tmpfile);
     return(1);
   }
 
@@ -3374,7 +3383,8 @@ int reconfigureNetworkFromCLC() {
     }
   }
   fclose(FH);
-  
+  unlink(tmpfile);
+
   return(0);
 }
 
