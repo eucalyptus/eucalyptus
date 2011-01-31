@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -190,6 +190,45 @@ int main(int argc, char **argv) {
 	printf("cc_describeInstances() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "describeServices")) {
+      rc = cc_describeServices(env, stub);
+      if (rc != 0) {
+	printf("cc_describeServices() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "startService")) {
+      rc = cc_startService(env, stub);
+      if (rc != 0) {
+	printf("cc_startService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "stopService")) {
+      rc = cc_stopService(env, stub);
+      if (rc != 0) {
+	printf("cc_stopService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "enableService")) {
+      rc = cc_enableService(env, stub);
+      if (rc != 0) {
+	printf("cc_enableService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "disableService")) {
+      rc = cc_disableService(env, stub);
+      if (rc != 0) {
+	printf("cc_disableService() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "describeBundleTasks")) {
+      char **meh;
+      meh = argv;
+      meh++; meh++; meh++;
+      rc = cc_describeBundleTasks(meh, 1, env, stub);
+      if (rc != 0) {
+	printf("cc_describeBundleTasks() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "getConsoleOutput")) {
       rc = cc_getConsoleOutput(argv[3], env, stub);
       if (rc != 0) {
@@ -296,6 +335,12 @@ int main(int argc, char **argv) {
       rc = cc_detachVolume(argv[3], argv[4], argv[5], argv[6], atoi(argv[7]), env, stub);
       if (rc != 0) {
 	printf("cc_unassignNetwork() failed\n");
+	exit(1);
+      }
+    } else if (!strcmp(argv[2], "bundleInstance")) {
+      rc = cc_bundleInstance(argv[3], argv[4], argv[5], argv[6], argv[7], env, stub);
+      if (rc != 0) {
+	printf("cc_bundleInstance() failed\n");
 	exit(1);
       }
     } else if (!strcmp(argv[2], "createImage")) {

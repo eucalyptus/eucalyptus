@@ -52,7 +52,7 @@
 #  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 #  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 #  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 #  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 #  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 #  ANY SUCH LICENSES OR RIGHTS.
@@ -74,56 +74,134 @@ $OUTPUT_AUTOFLUSH = 1; # no output buffering
 
 our $use_ramdisk = 0;
 our $use_ephemeral = 0;
+our $use_kernel = 0;
+our $plaindisk = 0;
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
-           'ephemeral'      => sub { $use_ephemeral = 1; }
+           'ephemeral'      => sub { $use_ephemeral = 1; },
+	   'kernel'         => sub { $use_kernel = 1; }
 		   ) or exit (1);
 
-print <<EOF;
-<domain type='xen' id='18'>
-    <name>NAME</name>
-    <os>
-    <type>linux</type>
-        <kernel>BASEPATH/kernel</kernel>
-EOF
-
-if ( $use_ramdisk ) {
-    print "        <initrd>BASEPATH/ramdisk</initrd>\n";
+if (!$use_ramdisk && !$use_kernel) {
+    $plaindisk = 1;
 }
 
 print <<EOF;
-        <root>/dev/sda1</root>
-        <cmdline> ro</cmdline>
+<domain type='xen'>
+    <name>NAME</name>
+    <os>
+EOF
+
+
+if (!$plaindisk) {
+    print "        <type>linux</type>\n";
+    if ($use_kernel) {
+	print "        <kernel>BASEPATH/kernel</kernel>\n";
+    }
+    if ( $use_ramdisk ) {
+	print "        <initrd>BASEPATH/ramdisk</initrd>\n";
+    }
+    print "        <root>/dev/sda1</root>\n";
+    print "        <cmdline> ro</cmdline>\n";
+} else {
+    print "            <type>hvm</type>\n";
+    print "            <loader>/usr/lib/xen/boot/hvmloader</loader>\n";
+}
+
+
+print <<EOF;
     </os>
+EOF
+
+if ($plaindisk) {
+print <<EOF;
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+EOF
+}
+
+print <<EOF;
     <memory>MEMORY</memory>
     <vcpu>VCPUS</vcpu>
     <devices>
+EOF
+
+if ($plaindisk) {
+    print "        <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>\n";
+}
+
+print <<EOF;
         <disk type='file'>
             <source file='BASEPATH/root'/>
-            <target dev='sda1'/>
+EOF
+
+if ($plaindisk) {
+    print "            <target dev='hda' bus='ide'/>\n";
+} else {
+    print "            <target dev='sda1'/>\n";
+}
+
+print <<EOF;
         </disk>
 EOF
 
-if ( $use_ephemeral ) {
-    print <<EOF;
+if (!$plaindisk) {
+    if ( $use_ephemeral ) {
+print <<EOF;
         <disk type='file'>
             <source file='BASEPATH/ephemeral'/>
             <target dev='sda2'/>
-        </disk>
+	</disk>
 EOF
+    }
 }
 
+if (!$plaindisk) {
 print <<EOF;
         <disk type='file'>
             <source file='SWAPPATH/swap'/>
             <target dev='sda3'/>
         </disk>
+EOF
+}
+
+if ($plaindisk) {
+print <<EOF;
+        <disk type='file' device='floppy'>
+          <source file='BASEPATH/floppy'/>
+          <target dev='fda'/>
+        </disk>
+EOF
+}
+
+print <<EOF;
         <interface type='bridge'>
             <source bridge='BRIDGEDEV'/>
             <mac address='PRIVMACADDR'/>
             <script path='/etc/xen/scripts/vif-bridge'/>
         </interface>
+EOF
+if ($plaindisk) {
+print <<EOF;
+        <serial type='pty'>
+           <source path='/dev/pts/3'/>
+           <target port='0'/>
+        </serial>
+        <input type='tablet' bus='usb'/>
+        <input type='mouse' bus='ps2'/>
+EOF
+}
+
+print <<EOF;
+        <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
     </devices>
 </domain>
 EOF

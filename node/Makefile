@@ -56,18 +56,21 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../net/*.o ../util/*.o
+../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h
+	make -C ../util
+
+$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o ../util/windows-bundle.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../net/*.o ../util/*.o
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
 $(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(AXIS2C_HOME)/lib/libaxutil.so $(CLIENT).c
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/walrus.o ../net/*.o $(CLIENT).c
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o $(CLIENT).c
 
 $(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
+	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
 
 test: test.c ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o

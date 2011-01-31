@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -221,7 +221,7 @@ typedef struct ncInstance_t {
     char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
     char createImageTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
 
-    int stateCode; // as int
+    int stateCode; /* as int */
 
     // state as NC thinks of it
     instance_states state;
@@ -248,6 +248,7 @@ typedef struct ncInstance_t {
     // passed into NC via runInstances for safekeeping
     char userData[CHAR_BUFFER_SIZE*10];
     char launchIndex[CHAR_BUFFER_SIZE];
+    char platform[CHAR_BUFFER_SIZE];
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
     int groupNamesSize;
 
@@ -260,6 +261,7 @@ typedef struct ncInstance_t {
 
 typedef struct ncResource_t {
     char nodeStatus[CHAR_BUFFER_SIZE];
+    char iqn[CHAR_BUFFER_SIZE];
     int memorySizeMax;
     int memorySizeAvailable;
     int diskSizeMax;
@@ -297,10 +299,11 @@ ncInstance * allocate_instance(char *uuid,
                                virtualMachine *params, 
                                char *stateName, int stateCode, char *userId, 
                                netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize);
+                               char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 
+			       char *iqn,
                                int memorySizeMax, int memorySizeAvailable, 
                                int diskSizeMax, int diskSizeAvailable,
                                int numberOfCoresMax, int numberOfCoresAvailable,

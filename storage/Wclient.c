@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -68,13 +68,14 @@ permission notice:
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
+#include "http.h"
 
 #define BUFSIZE 4096 /* should be big enough for CERT and the signature */
 #define STRSIZE 245 /* for short strings: files, hosts, URLs */
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define DEFAULT_COMMAND "GetObject"
-#define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject] -h [host:port] -m [manifest] -f [output file] [-z]\n"); exit (1); }
+#define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); exit (1); }
 char debug = 1;
 
 int main (int argc, char * argv[])
@@ -83,10 +84,13 @@ int main (int argc, char * argv[])
 	char * hostport = NULL;
 	char * manifest = NULL;
 	char * file_name = NULL;
+	char * url = NULL;
+	char * login = NULL;
+	char * password = NULL;
     int do_compress = 0;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "dh:m:f:z")) != -1) {
+	while ((ch = getopt(argc, argv, "dh:m:f:zu:l:p:")) != -1) {
 		switch (ch) {
 			case 'h':
 				hostport = optarg; 
@@ -100,6 +104,15 @@ int main (int argc, char * argv[])
 			case 'f':
 				file_name = optarg;
 				break;
+		case 'u':
+		  url = optarg;
+		  break;
+		case 'l':
+		  login = optarg;
+		  break;
+		case 'p':
+		  password = optarg;
+		  break;
             case 'z':
                 do_compress = 1;
                 break;
@@ -115,17 +128,26 @@ int main (int argc, char * argv[])
 		command = argv[0];
 	}
 
+	int do_get;
 	if ( strcmp (command, "GetDecryptedImage")==0 
          || strcmp (command, "GetObject")==0 ) {
 		if (manifest==NULL) {
 			fprintf (stderr, "Error: manifest must be specified\n"); 
 			USAGE;
 		}
+		do_get = 1;
+	} else if ( strcmp (command, "HttpPut")==0) {
+	  if (url==NULL || file_name==NULL) {
+	    fprintf (stderr, "Error: URL and input file must be specified\n");
+	    USAGE;
+	  }
+	  do_get = 0;
 	} else {
 		fprintf (stderr, "Error: unknown command [%s]\n", command);
 		USAGE;
 	}
 
+	if (do_get) {
     /* use a temporary file for network data */
     char * tmp_name = strdup ("walrus-download-XXXXXX");
     int tmp_fd = mkstemp (tmp_name);
@@ -168,6 +190,8 @@ int main (int argc, char * argv[])
     }
     
     free (tmp_name);		
-	
+	} else { // HttpPut
+	  int result = http_put (file_name, url, login, password);
+	}
 	return 0;
 }

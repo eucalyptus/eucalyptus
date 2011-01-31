@@ -84,6 +84,7 @@ permission notice:
 #include "data.h"
 #include "client-marshal.h"
 
+#include <storage-windows.h>
 #include <euca_auth.h>
 #include <handlers-state.h>
 

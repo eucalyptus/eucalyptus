@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -80,6 +80,7 @@ permission notice:
 #include <misc.h>
 #include <storage.h>
 #include <vnetwork.h>
+#include <storage-windows.h>
 
 #define BUFSIZE 512 /* random buffer size used all over the place */
 
@@ -821,7 +822,13 @@ retry:
     /* while still under lock, decide whether to cache */
     int should_cache = 0;
     if (action==STAGE) { 
-        e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
+        if (strstr(url, "services/Walrus")) {
+	  e = walrus_object_by_url (url, tmp_digest_path, 0); /* get the digest to see how big the file is */
+	} else {
+	  char manifestURL[1024];
+	  snprintf(manifestURL, 1024, "%s.manifest.xml", url);
+	  e = http_get(manifestURL, tmp_digest_path);
+	}
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size_b = (long long)mystat.st_size;
         }
@@ -863,7 +870,11 @@ retry:
     switch (action) {
     case STAGE:
         logprintfl (EUCAINFO, "downloading and preparing image into %s...\n", file_path);		
-        e = walrus_image_by_manifest_url (url, file_path, 1);
+        if (strstr(url, "services/Walrus")) {
+	  e = walrus_image_by_manifest_url (url, file_path, 1);
+	} else {
+	  e = http_get(url, file_path);
+	}
 
         /* for KVM, convert partition into disk */
         if (e==OK && convert_to_disk) { 
@@ -1097,7 +1108,7 @@ int free_work_path (
 	return OK;
 }
 
-int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
+int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *instanceId, char *keyName, char *platform, char **instance_path, sem * s, int convert_to_disk, long long total_disk_limit_mb) 
 {
     char image_path   [BUFSIZE]; long long image_size_b = 0L;
     char kernel_path  [BUFSIZE]; long long kernel_size_b = 0L;
@@ -1145,76 +1156,84 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
    
     logprintfl (EUCAINFO, "preparing images for instance %s...\n", instanceId);
     
-    /* embed the key, which is contained in keyName */
-    char *key_template = NULL;
-    if (keyName && strlen(keyName)) {
-      int key_len = strlen(keyName);
-      int fd = -1;
-      int ret;
+    if (strstr(platform, "windows")) {
+      e = makeWindowsFloppy(euca_home, rundir_path, keyName, instanceId);
+      if (e) {
+	logprintfl(EUCAERROR, "could not create windows bootup script floppy\n");
+      }
+    } else {
       
-      key_template = strdup("/tmp/sckey.XXXXXX");
+      /* embed the key, which is contained in keyName */
+      char *key_template = NULL;
+      if (keyName && strlen(keyName)) {
+        int key_len = strlen(keyName);
+        int fd = -1;
+        int ret;
+        
+        key_template = strdup("/tmp/sckey.XXXXXX");
+        
+        if (((fd = mkstemp(key_template)) < 0)) {
+	  logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
+        } else if ((ret = write (fd, keyName, key_len))<key_len) {
+	  logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
+        } else {
+	  close (fd);
+	  logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+        }
+      } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
+        key_template = "";
+        logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+      }
       
-      if (((fd = mkstemp(key_template)) < 0)) {
-	logprintfl (EUCAERROR, "failed to create a temporary key file\n"); 
-      } else if ((ret = write (fd, keyName, key_len))<key_len) {
-	logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);
-      } else {
-	close (fd);
-	logprintfl (EUCAINFO, "adding key%s to the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
+      /* do the key injection and/or tune2fs */
+      sem_p (s);
+      if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
+        logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
+        /* we proceed despite the failure since maybe user embedded the key
+         * into the image; also tune2fs may fail on uncrecognized but valid
+         * filesystems */
       }
-    } else { /* if no key was given, add_key just does tune2fs to up the filesystem mount date */
-      key_template = "";
-      logprintfl (EUCAINFO, "running tune2fs on the root file system at %s using (%s)\n", key_template, image_path, add_key_command_path);
-    }
-    
-    /* do the key injection and/or tune2fs */
-    sem_p (s);
-    if (vrun("%s %d %s %s", add_key_command_path, mount_offset, image_path, key_template)!=0) {
-      logprintfl (EUCAERROR, "ERROR: key injection / tune2fs command failed\n");
-      /* we proceed despite the failure since maybe user embedded the key
-       * into the image; also tune2fs may fail on uncrecognized but valid
-       * filesystems */
-    }
-    sem_v (s);
-    
-    if (strlen(key_template)) {
-      if (unlink(key_template) != 0) {
-	logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+      sem_v (s);
+      
+      if (strlen(key_template)) {
+        if (unlink(key_template) != 0) {
+	  logprintfl (EUCAWARN, "WARNING: failed to remove temporary key file %s\n", key_template);
+        }
+        free (key_template);
       }
-      free (key_template);
-    }
-    
-    /* if the image is a root partition... */
-    if (!convert_to_disk) {
-      /* create swap partition */
-      if (swap_size_mb>0) { 
-	sem_p (disk_sem);
-	if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
-	  logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
-	  sem_v (disk_sem);
-	  return e;
-	}
-	if ((e=vrun ("mkswap %s/swap >/dev/null", rundir_path)) != 0) {
-	  logprintfl (EUCAINFO, "initialization of swap (mkswap) at %s/swap failed\n", rundir_path);
-	  sem_v (disk_sem);
-	  return e;		
-	}
-	sem_v (disk_sem);
-      }
-      /* create ephemeral partition */
-      if (limit_mb>0) {
-	sem_p (disk_sem);
-	if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
-	  logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
-	  sem_v (disk_sem);
-	  return e;
-	}
-	if ((e=vrun ("mkfs.ext3 -F %s/ephemeral >/dev/null 2>&1", rundir_path)) != 0) {
-	  logprintfl (EUCAINFO, "initialization of ephemeral disk (mkfs.ext3) at %s/ephemeral failed\n", rundir_path);
-	  sem_v (disk_sem);
-	  return e;		
-	}
-	sem_v (disk_sem);
+
+      /* if the image is a root partition... */
+      if (!convert_to_disk) {
+        /* create swap partition */
+        if (swap_size_mb>0) { 
+	    sem_p (disk_sem);
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/swap 2>/dev/null", swap_size_mb, rundir_path)) != 0) { 
+                logprintfl (EUCAINFO, "creation of swap (dd) at %s/swap failed\n", rundir_path);
+	        sem_v (disk_sem);
+                return e;
+            }
+            if ((e=vrun ("mkswap %s/swap >/dev/null", rundir_path)) != 0) {
+                logprintfl (EUCAINFO, "initialization of swap (mkswap) at %s/swap failed\n", rundir_path);
+		sem_v (disk_sem);
+                return e;		
+            }
+	    sem_v (disk_sem);
+        }
+        /* create ephemeral partition */
+        if (limit_mb>0) {
+	    sem_p (disk_sem);
+            if ((e=vrun ("dd bs=1M count=%lld if=/dev/zero of=%s/ephemeral 2>/dev/null", limit_mb, rundir_path )) != 0) {
+                logprintfl (EUCAINFO, "creation of ephemeral disk (dd) at %s/ephemeral failed\n", rundir_path);
+		sem_v (disk_sem);
+                return e;
+            }
+            if ((e=vrun ("mkfs.ext3 -F %s/ephemeral >/dev/null 2>&1", rundir_path)) != 0) {
+                logprintfl (EUCAINFO, "initialization of ephemeral disk (mkfs.ext3) at %s/ephemeral failed\n", rundir_path);
+		sem_v (disk_sem);
+                return e;		
+            }
+	    sem_v (disk_sem);
+        }
       }
     }
     
