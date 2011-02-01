@@ -1526,7 +1526,8 @@ char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_
     char buf [MAX_PATH];
     char *retval;
     
-    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    //    snprintf (buf, MAX_PATH, "%s %s", storage_cmd_path, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
