@@ -606,6 +606,7 @@ LIBVIRT_HOME
 AXIS2_HOME
 AXIS2C_SERVICES
 AXIS2C_HOME
+APACHE2_MODULE_DIR
 JAVA_HOME
 TOP
 EUCA_VERSION
@@ -7135,6 +7136,7 @@ ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-
 cat >>confdefs.h <<_ACEOF
 #define EUCA_VERSION "$EUCA_VERSION"
 _ACEOF
+
 
 
 
