@@ -909,6 +909,11 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
 int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
   int rc;
 
+  rc = initialize(ccMeta);
+  if (rc || ccIsEnabled()) {
+    return(1);
+  }
+
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     return(0);
   }
