@@ -1042,7 +1042,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   logprintfl(EUCAINFO,"UnassignAddress(): called\n");
   logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));  
   
-  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+  if (!src || !dst || !strcmp(src, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
     return(1);
   }
