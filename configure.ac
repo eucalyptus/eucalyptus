@@ -122,13 +122,15 @@ if test -n "${LIBVIRT_HOME}" ; then
         fi
 fi
 if test -n "${VDDK_HOME}" ; then
-        AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
-              [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
-
         if test -d "${VDDK_HOME}"/include/ ; then
+                # Using tarball direct from VMware
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
+                AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
+                      [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
         elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+                # Using installed tarball
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+                LIBS="-L${VDDK_HOME}/lib %{LIBS}"
         fi
 fi
 
