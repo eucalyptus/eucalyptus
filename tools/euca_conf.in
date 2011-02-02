@@ -134,6 +134,7 @@ usage () {
 	echo "   --cc-port <port>                 			set CC port"
 	echo "   --nc-port <port>                 			set NC port"
 	echo "   --instances <path>               			set the INSTANCE path"
+#	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
 	echo "   --hypervisor <kvm|xen>           			set hypervisor to use"
 	echo "   --user <euca_user>               			set the user to use"
 	echo "   --dhcpd <dhcpd>                  			set the dhcpd binary to <name>"
@@ -144,6 +145,7 @@ usage () {
 	echo "   --enable {cloud|walrus|sc|vmwarebroker}  		enable service at next start"
 	echo "   --disable {cloud|walrus|sc|vmwarebroker}    		disable service at next start"
 	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}	pre-flight checks"
+#	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        			eucalyptus version"
 	echo
 }

@@ -216,15 +216,20 @@ typedef struct ncInstance_t {
     char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
     int retries;
     
-    /* state as reported to CC & CLC */
-    char stateName[CHAR_BUFFER_SIZE];  /* as string */
+    // state as reported to CC & CLC
+    char stateName[CHAR_BUFFER_SIZE];  // as string
     char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+    char createImageTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+
     int stateCode; /* as int */
 
     // state as NC thinks of it
     instance_states state;
     bundling_progress bundleTaskState;
     int bundlePid, bundleBucketExists, bundleCanceled;
+  
+    createImage_progress createImageTaskState;
+    int createImagePid, createImageCanceled;
 
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
@@ -232,7 +237,8 @@ typedef struct ncInstance_t {
     int launchTime; // timestamp of RunInstances request arrival
     int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
-	int bundlingTime; // timestamp of ->BUNDLING transition
+    int bundlingTime; // timestamp of ->BUNDLING transition
+    int createImageTime; // timestamp of ->CREATEIMAGE transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;

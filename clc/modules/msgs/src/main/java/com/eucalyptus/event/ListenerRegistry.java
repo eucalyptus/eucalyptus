@@ -65,11 +65,11 @@ public class ListenerRegistry {
     }
   }
 
-  public void fireEvent( Event e ) throws EventVetoedException {
+  public void fireEvent( Event e ) throws EventFailedException {
     this.eventMap.fireEvent( e.getClass( ), e );
   }
   @SuppressWarnings( "unchecked" )
-  public void fireEvent( Object type, Event e ) throws EventVetoedException {
+  public void fireEvent( Object type, Event e ) throws EventFailedException {
     if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
       this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
     }

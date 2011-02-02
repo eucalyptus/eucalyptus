@@ -204,7 +204,7 @@ int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule);
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet);
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig);
 
 char *host2ip(char *host);
 char *hex2dot(uint32_t in);

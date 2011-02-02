@@ -48,9 +48,6 @@ public class StateUpdateHandler implements EventListener {
       LOG.debug( "Ignoring addition of timed callback for cluster "+ this.cluster.getName( )+ " which is already configured: " + cb.getClass( ) );
     }
   }
-  
-  @Override
-  public void advertiseEvent( Event event ) {}
 
   @Override
   public void fireEvent( Event event ) {

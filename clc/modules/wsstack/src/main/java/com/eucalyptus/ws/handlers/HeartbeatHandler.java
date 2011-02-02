@@ -94,6 +94,8 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -104,7 +106,7 @@ import com.eucalyptus.config.BogoConfig;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -146,7 +148,7 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getConfiguration( ).getDefaultPort( ) ) ) );
+    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getIdentity( ).getPort( ) ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -358,12 +360,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
       }
     }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) && !com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.
@@ -373,7 +375,8 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     final Component c;
     if ( !Components.contains( componentName ) ) {
       try {
-        c = Components.create( componentName, null );
+        ComponentId compId = ComponentIds.lookup( componentName );
+        c = Components.create( compId );
       } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
         throw new RuntimeException( ex );
@@ -383,12 +386,12 @@ public class HeartbeatHandler extends SimpleChannelHandler implements Unrollable
     }
     return c;
   }
-
-  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventVetoedException {
+  
+  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
   }
   
-  private void fireStartComponent( ComponentConfiguration config ) throws EventVetoedException {
+  private void fireStartComponent( ComponentConfiguration config ) throws EventFailedException {
     ListenerRegistry.getInstance( ).fireEvent( StartComponentEvent.getLocal( config ) );
   }
   

@@ -9,6 +9,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
@@ -32,13 +33,15 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    if (ENABLE) {
-      this.checkUserEnabled( );
-      AuthBootstrapHelper.ensureStandardGroupsExists( );
-      AuthBootstrapHelper.ensureAdminExists( );
+    if(Components.lookup( "eucalyptus" ).isAvailableLocally( )) {
+      if (ENABLE) {
+        this.checkUserEnabled( );
+        AuthBootstrapHelper.ensureStandardGroupsExists( );
+        AuthBootstrapHelper.ensureAdminExists( );
+      }
+      this.ensureCountersExist( );
+      this.ensureVmTypesExist( );
     }
-    this.ensureCountersExist( );
-    this.ensureVmTypesExist( );
     return true;
   }
   

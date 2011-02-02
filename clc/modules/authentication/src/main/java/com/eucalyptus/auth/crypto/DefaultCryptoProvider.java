@@ -16,7 +16,7 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.api.CertificateProvider;
 import com.eucalyptus.auth.api.CryptoProvider;
 import com.eucalyptus.auth.api.HmacProvider;
@@ -114,7 +114,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus );
+    SystemCredentialProvider sys = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus.name( ) );
 //    if( sys.getCertificate( ) != null ) {
 //      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
 //    } else {
@@ -185,7 +185,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
 
   @Override
   public String generateSystemToken( byte[] data ) {
-    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getPrivateKey( );
+    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus.name( ) ).getPrivateKey( );
     return Signatures.SHA256withRSA.trySign( pk, data );    
   }
 

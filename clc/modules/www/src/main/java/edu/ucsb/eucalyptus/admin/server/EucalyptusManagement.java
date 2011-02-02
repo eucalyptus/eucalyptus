@@ -96,7 +96,7 @@ import com.eucalyptus.auth.WrappedUser;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.images.Image;
@@ -378,7 +378,7 @@ public class EucalyptusManagement {
 		}
     try {
       ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
-    } catch ( EventVetoedException e ) {
+    } catch ( EventFailedException e ) {
       LOG.debug( e, e );
     }
 	}

@@ -482,10 +482,11 @@ public class BlockStorage {
 		}
 		if(snapshotId != null) {
 			SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+			snapInfo.setScName(null);
 			snapInfo.setStatus(StorageProperties.Status.available.toString());
 			EntityWrapper<SnapshotInfo> dbSnap = db.recast(SnapshotInfo.class);			
 			List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
-			if(snapInfos.size() != 1) {
+			if(snapInfos.size() == 0) {
 				db.rollback();
 				throw new NoSuchEntityException("Snapshot " + snapshotId + " does not exist or is unavailable");
 			}
@@ -522,11 +523,6 @@ public class BlockStorage {
 		File file = new File(absoluteSnapshotPath);
 		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
 		snapshotGetter.run();
-		EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
-		SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-		snapshotInfo.setProgress("100");
-		snapshotInfo.setStartTime(new Date());
-		snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 		blockManager.addSnapshot(snapshotId);
 	}
 
@@ -857,7 +853,17 @@ public class BlockStorage {
 							sizeExpected = size;
 						}
 						String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
-						getSnapshot(snapshotId, snapDestination);
+						if(snapDestination != null) {
+							getSnapshot(snapshotId, snapDestination);
+						}
+						db = StorageProperties.getEntityWrapper();
+						snapshotInfo = new SnapshotInfo(snapshotId);
+						snapshotInfo.setVolumeId(volumeId);
+						snapshotInfo.setProgress("100");
+						snapshotInfo.setStartTime(new Date());
+						snapshotInfo.setStatus(StorageProperties.Status.available.toString());				
+						db.add(snapshotInfo);
+						db.commit();
 						size = blockManager.createVolume(volumeId, snapshotId, size);
 					} else {
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);

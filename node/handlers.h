@@ -297,5 +297,16 @@ struct bundling_params_t {
   	char * ncDeleteBundleCmd;
 };
 
+// bundling structure
+struct createImage_params_t {
+	ncInstance * instance;
+        char *volumeId;
+        char *remoteDev;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
+};
+
 #endif /* INCLUDE */
 

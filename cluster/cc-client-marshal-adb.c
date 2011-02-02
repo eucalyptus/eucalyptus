@@ -880,7 +880,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
   snrt = adb_DescribeNetworksResponse_get_DescribeNetworksResponse(output, env);
   printf("describenetworks returned status %d\n", adb_describeNetworksResponseType_get_return(snrt, env));
 
-  printf("mode: %d addrspernet: %d\n", adb_describeNetworksResponseType_get_mode(snrt, env), adb_describeNetworksResponseType_get_addrsPerNet(snrt, env));
+  printf("useVlans: %d mode: %s addrspernet: %d\n", adb_describeNetworksResponseType_get_useVlans(snrt, env), adb_describeNetworksResponseType_get_mode(snrt, env), adb_describeNetworksResponseType_get_addrsPerNet(snrt, env));
   {
     int i, numnets, numaddrs, j;
     numnets = adb_describeNetworksResponseType_sizeof_activeNetworks(snrt, env);

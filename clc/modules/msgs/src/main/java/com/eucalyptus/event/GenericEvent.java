@@ -1,6 +1,6 @@
 package com.eucalyptus.event;
 
-public class GenericEvent<T> extends Event {
+public class GenericEvent<T> implements Event {
   private T message;
   
   public GenericEvent( ) {

@@ -80,10 +80,6 @@ public class BlockStorageEventListener implements EventListener {
 	}
 
 	@Override
-	public void advertiseEvent(Event event) {
-	}
-
-	@Override
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {			
 			//TODO: This needs to be moved to a Bootstrapper

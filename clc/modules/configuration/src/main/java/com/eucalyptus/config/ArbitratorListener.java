@@ -80,10 +80,6 @@ public class ArbitratorListener implements EventListener {
 	}
 
 	@Override
-	public void advertiseEvent(Event event) {
-	}
-
-	@Override
 	public void fireEvent(Event event) {
 		if(event instanceof StartComponentEvent) {			
 			if(((StartComponentEvent) event).isLocal())

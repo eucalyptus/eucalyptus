@@ -97,7 +97,7 @@ extern vnetConfig *vnetconfig;
 int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
   }
@@ -126,7 +126,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
 int doStartService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -147,7 +147,7 @@ int doStartService(ncMetadata *ccMeta) {
 int doStopService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
   
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -156,6 +156,7 @@ int doStopService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
   
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(STOPPED);
   sem_mypost(CONFIG);
 
@@ -167,7 +168,7 @@ int doStopService(ncMetadata *ccMeta) {
 int doEnableService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -179,7 +180,8 @@ int doEnableService(ncMetadata *ccMeta) {
   // set state to ENABLED
   config->kick_network = 1;
   config->kick_dhcp = 1;
-  ccChangeState(ENABLED);
+  config->kick_enabled = 1;
+  //  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
@@ -190,7 +192,7 @@ int doEnableService(ncMetadata *ccMeta) {
 int doDisableService(ncMetadata *ccMeta) {
   int i, rc, ret=0;
 
-  rc = initialize();
+  rc = initialize(ccMeta);
   if (rc) {
     return(1);
   }
@@ -199,6 +201,7 @@ int doDisableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "DisableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
 

@@ -67,7 +67,7 @@ import java.net.URI;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;

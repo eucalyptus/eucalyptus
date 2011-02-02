@@ -65,6 +65,7 @@
 
 package com.eucalyptus.storage;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,6 +75,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
@@ -128,6 +130,12 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
+		}
+		if(!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
+			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
+		}
 		connectionManager.checkPreconditions();
 	}
 
@@ -247,6 +255,9 @@ public class SANManager implements LogicalStorageManager {
 			SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId));
 			db.commit();
 			snapSize = snapInfo.getSize();
+			if(size == 0) {
+				size = snapSize;
+			}
 		} catch(EucalyptusCloudException ex) {
 			LOG.error(ex);
 			db.rollback();
@@ -368,11 +379,27 @@ public class SANManager implements LogicalStorageManager {
 	@Override
 	public String prepareSnapshot(String snapshotId, int sizeExpected)
 	throws EucalyptusCloudException {
+		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
+		try {
+			SANVolumeInfo volInfo = new SANVolumeInfo(snapshotId);
+			volInfo.setScName(null);
+			SANVolumeInfo foundVolInfo = db.getUnique(volInfo);
+			SANVolumeInfo volumeInfo = new SANVolumeInfo(snapshotId, foundVolInfo.getIqn(), sizeExpected);
+			volumeInfo.setStatus(foundVolInfo.getStatus());
+			volumeInfo.setSnapshotOf(foundVolInfo.getSnapshotOf());
+			volumeInfo.setStoreUser(foundVolInfo.getStoreUser());			
+			db.add(volumeInfo);
+			return null;
+		} catch(EucalyptusCloudException e) {
+		} finally {
+			db.commit();
+		}
+		
 		String iqn = connectionManager.createVolume(snapshotId, sizeExpected);
 		if(iqn != null) {
 			String deviceName = connectionManager.connectTarget(iqn);
 			SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn, sizeExpected);
-			EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
+			db = StorageProperties.getEntityWrapper();
 			db.add(snapInfo);
 			db.commit();
 			return deviceName;

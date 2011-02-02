@@ -132,7 +132,7 @@ public class StorageProperties {
 
 	public static void updateName() {
 		try {
-			StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getName( );
+			StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getPartition();
 		} catch ( NoSuchElementException ex ) {
 			LOG.error( ex , ex );
 			LOG.error( "Failed to configure Storage Controller NAME." );
