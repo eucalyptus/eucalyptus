@@ -985,18 +985,17 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         };
 
-        Button submit_button = new Button ( "Recover Password", RecoverButtonListener );
-        Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
-        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+        Button submit_button = new Button ( "Update Password", RecoverButtonListener );
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);//, cancel_button);
 		username_box.addKeyUpHandler(sl);
 		email_box.addKeyUpHandler(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
         HorizontalPanel bpanel = new HorizontalPanel();
-        bpanel.add( submit_button );
+        bpanel.add( new HTML("<a href=\"" + GWT.getModuleBaseURL() + "\">Cancel</a>" ) );
         bpanel.add( new HTML( "&nbsp;&nbsp;or&nbsp;&nbsp;" ) );
-        bpanel.add( cancel_button );
+        bpanel.add( submit_button );
 
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
@@ -1101,17 +1100,16 @@ public class EucalyptusWebInterface implements EntryPoint {
         };
 
         Button submit_button = new Button ( "Change Password", RecoverButtonListener );
-        Button cancel_button = new Button ( "Cancel", DefaultPageButtonListener );
-        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button, cancel_button);
+        EucalyptusKeyboardListener sl = new EucalyptusKeyboardListener(submit_button);//, cancel_button);
         cleartextPassword1_box.addKeyUpHandler(sl);
         cleartextPassword2_box.addKeyUpHandler(sl);
         VerticalPanel mpanel = new VerticalPanel();
         mpanel.add( g1 );
 
         HorizontalPanel bpanel = new HorizontalPanel();
-        bpanel.add( submit_button );
+        bpanel.add( new HTML("<a href=\"" + GWT.getModuleBaseURL() + "\">Cancel</a>" ) );
         bpanel.add( new HTML( "&nbsp;&nbsp;or&nbsp;&nbsp;" ) );
-        bpanel.add( cancel_button );
+        bpanel.add( submit_button );
 
         VerticalPanel vpanel = new VerticalPanel();
         vpanel.setSpacing(15);
