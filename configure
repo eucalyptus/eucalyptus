@@ -675,10 +675,10 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_axis2c
-with_axis2c_services
 with_apache2_module_dir
 with_axis2
+with_axis2c
+with_axis2c_services
 with_libvirt
 with_wsdl2c_sh
 with_vddk
@@ -1314,10 +1314,10 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-apache2-module-dir=<dir>      where Apache modules are installed
+  --with-axis2=<dir>                   where axis2 is installed
   --with-axis2c=<dir>                  where axis2c is installed
   --with-axis2c-services=<dir>         where axis2c services are installed
-  --with-apache2-module-dir=<dir>      where Apache modules reside
-  --with-axis2=<dir>                   where axis2 is installed
   --with-libvirt=<dir>                 where libvirt is installed
   --with-wsdl2c-sh=<file>              where WSDL2C.sh is installed
   --with-vddk=<dir>                    where VMware's VDDK is installed
@@ -3583,18 +3583,6 @@ INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TO
 
 # Arguments checking
 
-# Check whether --with-axis2c was given.
-if test "${with_axis2c+set}" = set; then :
-  withval=$with_axis2c; AXIS2C_HOME="${withval}"
-fi
-
-
-# Check whether --with-axis2c-services was given.
-if test "${with_axis2c_services+set}" = set; then :
-  withval=$with_axis2c_services; AXIS2C_SERVICES="${withval}"
-fi
-
-
 # Check whether --with-apache2-module-dir was given.
 if test "${with_apache2_module_dir+set}" = set; then :
   withval=$with_apache2_module_dir; APACHE2_MODULE_DIR="${withval}"
@@ -3604,6 +3592,18 @@ fi
 # Check whether --with-axis2 was given.
 if test "${with_axis2+set}" = set; then :
   withval=$with_axis2; AXIS2_HOME="${withval}"
+fi
+
+
+# Check whether --with-axis2c was given.
+if test "${with_axis2c+set}" = set; then :
+  withval=$with_axis2c; AXIS2C_HOME="${withval}"
+fi
+
+
+# Check whether --with-axis2c-services was given.
+if test "${with_axis2c_services+set}" = set; then :
+  withval=$with_axis2c_services; AXIS2C_SERVICES="${withval}"
 fi
 
 
@@ -3690,7 +3690,7 @@ fi
         elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
                 # Using installed tarball
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LIBS="-L${VDDK_HOME}/lib %{LIBS}"
+                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
         fi
 fi
 

@@ -53,18 +53,18 @@ CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
 
 # Arguments checking
+AC_ARG_WITH(apache2-module-dir,
+        [  --with-apache2-module-dir=<dir>      where Apache modules are installed],
+        [APACHE2_MODULE_DIR="${withval}"])
+AC_ARG_WITH(axis2,
+        [  --with-axis2=<dir>                   where axis2 is installed],
+        [AXIS2_HOME="${withval}"])
 AC_ARG_WITH(axis2c,
         [  --with-axis2c=<dir>                  where axis2c is installed],
         [AXIS2C_HOME="${withval}"])
 AC_ARG_WITH(axis2c-services,
         [  --with-axis2c-services=<dir>         where axis2c services are installed],
         [AXIS2C_SERVICES="${withval}"])
-AC_ARG_WITH(apache2-module-dir,
-        [  --with-apache2-module-dir=<dir>      where Apache modules reside],
-        [APACHE2_MODULE_DIR="${withval}"])
-AC_ARG_WITH(axis2,
-        [  --with-axis2=<dir>                   where axis2 is installed],
-        [AXIS2_HOME="${withval}"])
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
@@ -130,7 +130,7 @@ if test -n "${VDDK_HOME}" ; then
         elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
                 # Using installed tarball
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LIBS="-L${VDDK_HOME}/lib %{LIBS}"
+                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
         fi
 fi
 
