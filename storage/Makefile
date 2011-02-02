@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = ${LIBS} -lcurl
+STORAGE_LIBS = ${LIBS} -lcurl -lssl -lcrypto
 
 all: storage.o walrus.o Wclient
 
@@ -19,7 +19,7 @@ walrus.o: walrus.c walrus.h
 test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
 
-.c.o: 
+.c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h

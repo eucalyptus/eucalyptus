@@ -11,7 +11,7 @@ SERVICE_NAME=EucalyptusGL
 CLIENT=GLclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 
-all: server client 
+all: server client
 
 build: all
 
@@ -34,13 +34,13 @@ generated/stubs: $(GLWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o $(AXIS2C_HOME)/lib/libaxutil.so 
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) -L$(AXIS2C_HOME)/lib $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
 
 client: $(CLIENT)
 
-$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o $(AXIS2C_HOME)/lib/libaxutil.so
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(LIBS) generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o $(CLIENT).c gl-client-marshal-adb.c -DMODE=1
+$(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o -DMODE=1 $(LIBS) -lssl -lcrypto
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
