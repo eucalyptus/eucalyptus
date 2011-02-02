@@ -175,7 +175,7 @@ typedef struct ccConfig_t {
   time_t configMtime, instanceTimeout, ncPollingFrequency;
   int threads[3];
   int ncFanout;
-  int ccState, ccLastState, kick_network;
+  int ccState, ccLastState, kick_network, kick_enabled;
   serviceStatusType ccStatus;
   serviceInfoType services[16];
 } ccConfig;
@@ -192,7 +192,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId);
-int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen);
+//int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen);
 
 int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst);
 int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst);
