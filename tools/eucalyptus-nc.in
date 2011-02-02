@@ -359,8 +359,8 @@ if [ -z "${APACHE2_MODULE_DIR}" ]; then
 fi
 
 if [ ! -d "$APACHE2_MODULE_DIR" ]; then
-	echo "Cannot find APACHE2_MODULE_DIR?"
-	exit 1
+        echo "Cannot find APACHE2_MODULE_DIR?"
+        exit 1
 fi
 
 # set the library path correctly
