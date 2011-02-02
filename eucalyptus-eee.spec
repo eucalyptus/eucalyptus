@@ -242,7 +242,7 @@ with existing clusters and server infrastructure to co-host an elastic
 computing service that is interface-compatible with Amazon AWS.
 
 This package contains the node controller part of eucalyptus. This
-components handles instances.
+component handles instances.
 
 %package gl
 Summary:      Elastic Utility Computing Architecture - log service
@@ -272,7 +272,7 @@ Requires:     libxslt
 Requires:     libxml2
 # The VMware broker links against the VMware disk library, so we have to
 # filter its DSOs from the package's Requires list.
-# Are we allowed to redistribute it?
+# Or are we allowed to redistribute it?
 AutoReq:      no
 Group:        Applications/System
 
@@ -310,7 +310,7 @@ popd
 
 %if %{is_centos}
 for x in clc/tools/src/euca-*; do
-    sed --in-place 's:#!/usr/bin/env python:#!%{_bindir}/python2.6:' $x
+    sed -i 's:#!/usr/bin/env python:#!%{_bindir}/python2.6:' $x
 done
 %endif
 
@@ -333,7 +333,8 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-add-group-membership
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
-/usr/sbin/euca_admin
+# This directory should go in %%python_sitelib
+/usr/sbin/euca_admin/
 /usr/sbin/euca_conf
 /usr/sbin/euca-convert-volumes
 /usr/sbin/euca-delete-user
@@ -347,6 +348,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-nodes
 /usr/sbin/euca-describe-properties
+/usr/sbin/euca-describe-services
 /usr/sbin/euca-describe-storage-controllers
 /usr/sbin/euca-describe-user-groups
 /usr/sbin/euca-describe-users
@@ -368,7 +370,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/add_key.pl
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
-/usr/share/eucalyptus/doc
+%doc /usr/share/eucalyptus/doc
 /usr/share/eucalyptus/euca_ipt
 /usr/share/eucalyptus/euca_upgrade
 /usr/share/eucalyptus/floppy
@@ -382,7 +384,6 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /var/lib/eucalyptus/keys
 /var/log/eucalyptus
 /var/run/eucalyptus
-
 
 %files common-java
 %defattr(-,root,root,-)
@@ -410,8 +411,8 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %files cc
 %defattr(-,root,root,-)
 %{_libdir}/axis2c/services/EucalyptusCC
-/etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
+/etc/init.d/eucalyptus-cc
 /usr/share/eucalyptus/dynserv.pl
 
 %files nc
