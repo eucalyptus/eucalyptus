@@ -115,9 +115,9 @@ create_httpd_config() {
         sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
             -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
             -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
-            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  \
+            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
-	    $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# if we find authz load it (needed by ubuntu)
@@ -133,12 +133,12 @@ create_httpd_config() {
             -e "s|\(StartServers\).*|\1 5|" \
             -e "s|\(MinSpareServers\).*|\1 5|" \
             -e "s|\(MaxSpareServers\).*|\1 10|" \
-            -e "s|\(MaxClients\).*|\1 8|"  \
+            -e "s|\(MaxClients\).*|\1 8|" \
             -e "s|\(MinSpareThreads\).*|\1 25|" \
             -e "s|\(MaxSpareThreads\).*|\1 75|" \
             -e "s|\(ThreadsPerChild\).*|\1 1|" \
             -e "s|\(ThreadLimit\).*|\1 64|" \
-	    $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
 }
@@ -362,8 +362,8 @@ if [ -z "${APACHE2_MODULE_DIR}" ]; then
 fi
 
 if [ ! -d "$APACHE2_MODULE_DIR" ]; then
-       echo "Cannot find APACHE2_MODULE_DIR?"
-       exit 1
+        echo "Cannot find APACHE2_MODULE_DIR?"
+        exit 1
 fi
 
 # set the library path correctly

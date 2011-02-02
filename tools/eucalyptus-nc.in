@@ -116,10 +116,11 @@ create_httpd_config() {
 
 	# let's configure the common parts for both CC and NC
         sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+            -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
             -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
-            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|"  \
+            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
-	    $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# load authz if we have it (ubuntu needs it)
@@ -132,7 +133,7 @@ create_httpd_config() {
             -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
             -e "s|\(Allow from\).*|\1 $IPS|" \
             -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
-	    $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 

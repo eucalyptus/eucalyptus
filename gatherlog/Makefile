@@ -40,7 +40,7 @@ $(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers
 client: $(CLIENT)
 
 $(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o ../util/euca_auth.o -DMODE=1 $(LIBS) -lssl -lcrypto
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../util/euca_auth.o -DMODE=1 $(LIBS) -lssl -lcrypto
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
