@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,8 @@ permission notice:
 
 #include "vnetwork.h"
 #include "data.h"
+
+#include <windows-bundle.h>
 
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
@@ -81,6 +83,7 @@ struct nc_state_t {
 	char admin_user_id[CHAR_BUFFER_SIZE];
 	int save_instance_files;
 	char uri[CHAR_BUFFER_SIZE];
+        char iqn[CHAR_BUFFER_SIZE];
 	virConnectPtr conn;
 	int convert_to_disk;
 	// defined max
@@ -107,6 +110,10 @@ struct nc_state_t {
 	int config_use_virtio_net;	// KVM: use virtio for network
 	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
 	int config_use_virtio_root;	// KVM: use virtio for root partition
+    // windows support
+	char ncBundleUploadCmd[MAX_PATH];
+  	char ncCheckBucketCmd[MAX_PATH];
+  	char ncDeleteBundleCmd[MAX_PATH];
 };
 
 
@@ -141,6 +148,7 @@ struct handlers {
 				netConfig *netparams,
 				char *userData,
 				char *launchIndex,
+				char *platform,
 				int expiryTime,
 				char **groupNames,
 				int groupNamesSize,
@@ -187,13 +195,31 @@ struct handlers {
 				char *instanceId,
 				char *volumeId,
 				char *remoteDev);
+    int (*doBundleInstance)	(struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId,
+				char *bucketName,
+				char *filePrefix,
+				char *walrusURL,
+				char *userPublicKey,
+				char *S3Policy,
+				char *S3PolicySig);
+    int (*doCancelBundleTask)   (struct nc_state_t *nc,
+		    		ncMetadata *meta,
+				char *instanceId);
+    int (*doDescribeBundleTasks)	(struct nc_state_t *nc,
+					 ncMetadata *meta,
+					 char **instIds,
+					 int instIdsLen,
+					 bundleTask ***outBundleTasks,
+					 int *outBundleTasksLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
 int doAssignAddress		(ncMetadata *meta, char *instanceId, char *publicIp);
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst);
+int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst);
 int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
@@ -201,8 +227,15 @@ int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outR
 int doStartNetwork		(ncMetadata *ccMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
+int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
+int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
+
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+
 #endif /* HANDLERS_FANOUT */
+
+int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 
 /* helper functions used by the low level handlers */
 int get_value(			char *s,
@@ -225,6 +258,7 @@ void adopt_instances();
 int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char *userId,
 				char *instanceId,
+				char *platform,
 				char *ramdiskId,
 				char *kernelId,
 				char *disk_path,
@@ -258,6 +292,9 @@ struct bundling_params_t {
 	char * diskPath; // disk file path
 	char * eucalyptusHomePath; 
 	long long sizeMb; // diskPath size
+	char * ncBundleUploadCmd;
+  	char * ncCheckBucketCmd;
+  	char * ncDeleteBundleCmd;
 };
 
 // bundling structure

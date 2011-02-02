@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -77,6 +77,9 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t *env, axis2_stub_t *stub);
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub);
 
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub);
+int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, axis2_stub_t *stub);
+
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub);
 
 int cc_describePublicAddresses(axutil_env_t *, axis2_stub_t *);
@@ -87,5 +90,11 @@ int cc_getConsoleOutput(char *instId, axutil_env_t *, axis2_stub_t *);
 int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
 int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
 int cc_killallInstances(axutil_env_t *, axis2_stub_t *);
+
+int cc_describeServices(axutil_env_t *, axis2_stub_t *);
+int cc_startService(axutil_env_t *, axis2_stub_t *);
+int cc_stopService(axutil_env_t *, axis2_stub_t *);
+int cc_enableService(axutil_env_t *, axis2_stub_t *);
+int cc_disableService(axutil_env_t *, axis2_stub_t *);
 
 #endif

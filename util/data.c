@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -123,7 +123,7 @@ ncInstance * allocate_instance (char *uuid,
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, int expiryTime, char **groupNames, int groupNamesSize)
+                                char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {
     ncInstance * inst;
 
@@ -138,6 +138,10 @@ ncInstance * allocate_instance (char *uuid,
 
     if (launchIndex) {
         strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+    }
+
+    if (platform) {
+        strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
     }
 
     inst->groupNamesSize = groupNamesSize;
@@ -179,6 +183,7 @@ ncInstance * allocate_instance (char *uuid,
       memcpy(&(inst->params), params, sizeof(virtualMachine));
     }
     inst->stateCode = stateCode;
+    strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
     inst->expiryTime = expiryTime;
     return inst;
 }
@@ -197,6 +202,7 @@ void free_instance (ncInstance ** instp)
 
 /* resource is used to return information about resources */
 ncResource * allocate_resource (char *nodeStatus,
+				char *iqn,
                                 int memorySizeMax, int memorySizeAvailable, 
                                 int diskSizeMax, int diskSizeAvailable,
                                 int numberOfCoresMax, int numberOfCoresAvailable,
@@ -206,7 +212,11 @@ ncResource * allocate_resource (char *nodeStatus,
     
     if (!nodeStatus) return NULL;
     if (!(res = malloc(sizeof(ncResource)))) return NULL;
+    bzero(res, sizeof(ncResource));
     strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
+    if (iqn) {
+      strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+    }
     if (publicSubnets) {
       strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }

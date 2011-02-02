@@ -52,7 +52,7 @@
 #  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 #  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 #  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 #  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 #  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 #  ANY SUCH LICENSES OR RIGHTS.
@@ -76,6 +76,8 @@ our $use_ramdisk = 0;
 our $local_kvm="";
 our $use_virtio_net = 0;
 our $use_virtio_root = 0;
+our $use_kernel = 0;
+our $plaindisk = 0;
 our $use_block_root = 0;
 
 if ( -x "/usr/bin/kvm" ) {
@@ -90,28 +92,37 @@ if ( -x "/usr/bin/kvm" ) {
 
 # deal with command-line parameters
 GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
+           'kernel'         => sub { $use_kernel = 1; },
            'ephemeral'      => sub { }, # option ignored 
            'blockroot'      => sub { $use_block_root = 1; },
            'virtionet'      => sub { $use_virtio_net = 1; },
            'virtioroot'      => sub { $use_virtio_root = 1; },
 		   ) or exit (1);
 
+if (!$use_ramdisk && !$use_kernel) {
+    $plaindisk = 1;
+}
+
 print <<EOF;
 <domain type='kvm'>
     <name>NAME</name>
     <os>
     <type>hvm</type>
-        <kernel>BASEPATH/kernel</kernel>
 EOF
 
-if ( $use_ramdisk ) {
-    print "        <initrd>BASEPATH/ramdisk</initrd>\n";
-}
+if (!$plaindisk) {
+    if ($use_kernel) {
+        print "        <kernel>BASEPATH/kernel</kernel>\n";
+    }
+    if ( $use_ramdisk ) {
+	print "        <initrd>BASEPATH/ramdisk</initrd>\n";
+    }
 
-if ( $use_virtio_root ) {
-    print "        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>\n"
-} else {
-    print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n"
+    if ( $use_virtio_root ) {
+	print "        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>\n";
+    } else {
+	print "        <cmdline>root=/dev/sda1 console=ttyS0</cmdline>\n";
+    }
 }
 
 print <<EOF;
@@ -126,45 +137,56 @@ print <<EOF;
 EOF
     
 if ( $use_block_root ) {
-    print "        <disk type='block'>";
+    print "        <disk type='block'>\n";
   #  print "            <driver name='phy'/>";
-    print "            <source dev='DEVNAME'/>";
+    print "            <source dev='DEVNAME'/>\n";
 } else {
-    print "        <disk type='file' device='disk'>"; # TODO: is 'device=disk' OK without virtio?
-    print "            <source file='BASEPATH/disk'/>";
+    print "        <disk type='file' device='disk'>\n"; # TODO: is 'device=disk' OK without virtio?
+    print "            <source file='BASEPATH/disk'/>\n";
 } 
 
 if ( $use_virtio_root ) {
-    print "            <target dev='vda' bus='virtio'/>";
-    print "        </disk>";
+    print "            <target dev='vda' bus='virtio'/>\n";
+    print "        </disk>\n";
 } else {
-    print "            <target dev='sda'/>";
-    print "        </disk>";
+    if ($plaindisk) {
+	print "            <target dev='hda'/>\n";
+    } else {
+	print "            <target dev='sda'/>\n";
+    }
+    print "        </disk>\n";
 }
 
-if ( $use_virtio_net ) {
-    print <<EOF;
-        <interface type='bridge'>
-            <source bridge='BRIDGEDEV'/>
-            <mac address='PRIVMACADDR'/>
-            <model type='virtio'/>
-        </interface>
-EOF
-} else {
-    print <<EOF;
-        <interface type='bridge'>
-            <source bridge='BRIDGEDEV'/>
-            <mac address='PRIVMACADDR'/>
-            <model type='e1000'/>
-        </interface>
-EOF
+if ($plaindisk) {
+    print "        <disk type='file' device='floppy'>\n";
+    print "          <source file='BASEPATH/floppy'/>\n";
+    print "          <target dev='fda'/>\n";
+    print "        </disk>\n";
 }
 
 print <<EOF;
+        <interface type='bridge'>
+            <source bridge='BRIDGEDEV'/>
+            <mac address='PRIVMACADDR'/>
+EOF
+
+if ( $use_virtio_net ) {
+    print "            <model type='virtio'/>\n";
+} else {
+    if ($plaindisk) {
+	print "            <model type='rtl8139'/>\n";
+    } else {
+	print "            <model type='e1000'/>\n";
+    }
+}
+
+print <<EOF;
+        </interface>
         <serial type="file">
             <source path='BASEPATH/console.log'/>
             <target port='1'/>
         </serial>
+        <!-- <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/> -->
     </devices>
 </domain>
 EOF

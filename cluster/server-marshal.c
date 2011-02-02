@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -170,6 +170,165 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
 
   return(ret);
 }
+
+adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundleInstance, const axutil_env_t *env) {
+  adb_BundleInstanceResponse_t *ret=NULL;
+  adb_bundleInstanceResponseType_t *birt=NULL;
+  
+  adb_bundleInstanceType_t *bit=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid, *S3Policy, *S3PolicySig;
+  ncMetadata ccMeta;
+  
+  bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
+  
+  ccMeta.correlationId = adb_bundleInstanceType_get_correlationId(bit, env);
+  ccMeta.userId = adb_bundleInstanceType_get_userId(bit, env);
+  
+  instanceId = adb_bundleInstanceType_get_instanceId(bit, env);
+  bucketName = adb_bundleInstanceType_get_bucketName(bit, env);
+  filePrefix = adb_bundleInstanceType_get_filePrefix(bit, env);
+  walrusURL = adb_bundleInstanceType_get_walrusURL(bit, env);
+  userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
+  S3Policy = adb_bundleInstanceType_get_S3Policy(bit, env);
+  S3PolicySig = adb_bundleInstanceType_get_S3PolicySig(bit, env);
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+    if (rc) {
+      logprintf("ERROR: doBundleInstance() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  birt = adb_bundleInstanceResponseType_create(env);
+  adb_bundleInstanceResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_bundleInstanceResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_bundleInstanceResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_bundleInstanceResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_BundleInstanceResponse_create(env);
+  adb_BundleInstanceResponse_set_BundleInstanceResponse(ret, env, birt);
+
+  return(ret);
+}
+
+adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleTask, const axutil_env_t *env) {
+  adb_CancelBundleTaskResponse_t *ret=NULL;
+  adb_cancelBundleTaskResponseType_t *birt=NULL;
+  
+  adb_cancelBundleTaskType_t *bit=NULL;
+  
+  int rc;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid;
+  ncMetadata ccMeta;
+  
+  bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
+  
+  ccMeta.correlationId = adb_cancelBundleTaskType_get_correlationId(bit, env);
+  ccMeta.userId = adb_cancelBundleTaskType_get_userId(bit, env);
+  
+  instanceId = adb_cancelBundleTaskType_get_instanceId(bit, env);
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doCancelBundleTask(&ccMeta, instanceId);
+    if (rc) {
+      logprintf("ERROR: doCancelBundleTask() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    }
+  }
+  
+  birt = adb_cancelBundleTaskResponseType_create(env);
+  adb_cancelBundleTaskResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_cancelBundleTaskResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_cancelBundleTaskResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_cancelBundleTaskResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_CancelBundleTaskResponse_create(env);
+  adb_CancelBundleTaskResponse_set_CancelBundleTaskResponse(ret, env, birt);
+
+  return(ret);
+}
+
+/*
+adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env) {
+  adb_DescribeBundleTasksResponse_t *ret=NULL;
+  adb_describeBundleTasksResponseType_t *birt=NULL;
+  
+  adb_describeBundleTasksType_t *bit=NULL;
+  
+  int rc, instIdsLen, i;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  char **instIds=NULL, *cid;
+  ncMetadata ccMeta;
+  bundleTask *outBundleTasks=NULL;
+  int outBundleTasksLen=0;
+
+  bit = adb_DescribeBundleTasks_get_DescribeBundleTasks(describeBundleTasks, env);
+  
+  ccMeta.correlationId = adb_describeBundleTasksType_get_correlationId(bit, env);
+  ccMeta.userId = adb_describeBundleTasksType_get_userId(bit, env);
+  
+  instIdsLen = adb_describeBundleTasksType_sizeof_instanceIds(bit, env);
+  instIds = malloc(sizeof(char *) * instIdsLen);
+  
+  for (i=0; i<instIdsLen; i++) {
+    instIds[i] = adb_describeBundleTasksType_get_instanceIds_at(bit, env, i);
+  }
+
+  birt = adb_describeBundleTasksResponseType_create(env);
+  
+  status = AXIS2_TRUE;
+  if (!DONOTHING) {
+    rc = doDescribeBundleTasks(&ccMeta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
+    if (instIds) free(instIds);
+    if (rc) {
+      logprintf("ERROR: doDescribeBundleTasks() returned FAIL\n");
+      status = AXIS2_FALSE;
+      snprintf(statusMessage, 255, "ERROR");
+    } else {
+      for (i=0; i<outBundleTasksLen; i++) {
+	adb_bundleTaskType_t *bundle;
+	bundle = adb_bundleTaskType_create(env);
+	adb_bundleTaskType_set_instanceId(bundle, env, outBundleTasks[i].instanceId);
+	adb_bundleTaskType_set_state(bundle, env, outBundleTasks[i].state);
+	
+	adb_describeBundleTasksResponseType_add_bundleTasks(birt, env, bundle);
+      }
+      if (outBundleTasks) free(outBundleTasks);
+    }
+  }
+  
+  adb_describeBundleTasksResponseType_set_return(birt, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_describeBundleTasksResponseType_set_statusMessage(birt, env, statusMessage);
+  }
+
+  adb_describeBundleTasksResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+  adb_describeBundleTasksResponseType_set_userId(birt, env, ccMeta.userId);
+  
+  ret = adb_DescribeBundleTasksResponse_create(env);
+  adb_DescribeBundleTasksResponse_set_DescribeBundleTasksResponse(ret, env, birt);
+
+  return(ret);
+}
+*/
 
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
@@ -504,7 +663,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **sourceNets, **userNames, **sourceNames, *cid, *protocol, *user, *destName, *type, *destNameLast, *destUserName;
+  char **sourceNets, **userNames, **sourceNames, *protocol,  *destName, *type, *destNameLast, *destUserName;
   int minPort, maxPort, namedLen, netLen;
   ncMetadata ccMeta;
   
@@ -512,10 +671,9 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   //  ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
   //  ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
   EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
-  
-  user = adb_configureNetworkType_get_userId(cnt, env);
-  cid = adb_configureNetworkType_get_correlationId(cnt, env);
-  
+
+  //  user = adb_configureNetworkType_get_userId(cnt, env);
+  //  cid = adb_configureNetworkType_get_correlationId(cnt, env);
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
@@ -525,7 +683,6 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     snprintf(statusMessage, 255, "ERROR");
     return ret;
   }
-  
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
     
@@ -606,8 +763,8 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     status = AXIS2_TRUE;
   }
   
-  adb_configureNetworkResponseType_set_correlationId(cnrt, env, cid);
-  adb_configureNetworkResponseType_set_userId(cnrt, env, user);
+  adb_configureNetworkResponseType_set_correlationId(cnrt, env, ccMeta.correlationId);
+  adb_configureNetworkResponseType_set_userId(cnrt, env, ccMeta.userId);
   adb_configureNetworkResponseType_set_return(cnrt, env, status);
   if (status == AXIS2_FALSE) {
     adb_configureNetworkResponseType_set_statusMessage(cnrt, env, statusMessage);
@@ -746,10 +903,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
 
   // working vars
   int i, rc, *outTypesMax=NULL, *outTypesAvail=NULL;
-  int vmLen=0, outTypesLen=0, outServiceTagsLen=0;
+  int vmLen=0, outTypesLen=0;
+  ccResource *outNodes=NULL;
+  int outNodesLen=0;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char **outServiceTags=NULL;
   virtualMachine *vms=NULL;
   adb_virtualMachineType_t *vm=NULL;
   ncMetadata ccMeta;
@@ -774,7 +932,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   
   rc=1;
   if (!DONOTHING) {
-    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outServiceTags, &outServiceTagsLen);
+    rc = doDescribeResources(&ccMeta, &vms, vmLen, &outTypesMax, &outTypesAvail, &outTypesLen, &outNodes, &outNodesLen);
   }
   
   if (rc) {
@@ -782,13 +940,17 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {
-    for (i=0; i<outServiceTagsLen; i++) {
-      if (outServiceTags[i]) {
-	adb_describeResourcesResponseType_add_serviceTags(drrt, env, outServiceTags[i]);
-	free(outServiceTags[i]);
-      }
+    for (i=0; i<outNodesLen; i++) {
+      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
+      adb_ccNodeType_t *nt=NULL;
+      
+      nt = adb_ccNodeType_create(env);
+      adb_ccNodeType_set_serviceTag(nt, env, outNodes[i].ncURL);
+      adb_ccNodeType_set_iqn(nt, env, outNodes[i].iqn);
+      //      adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
+      
     }
-    if (outServiceTags) free(outServiceTags);
+    if (outNodes) free(outNodes);
 
     for (i=0; i<outTypesLen; i++) {
       adb_ccResourceType_t *rt=NULL;
@@ -914,6 +1076,12 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_serviceTag(dst, env, src->serviceTag);
   adb_ccInstanceType_set_userData(dst, env, src->userData);
   adb_ccInstanceType_set_launchIndex(dst, env, src->launchIndex);
+  if (strlen(src->platform)) {
+    adb_ccInstanceType_set_platform(dst, env, src->platform);
+  }
+  if (strlen(src->bundleTaskStateName)) {
+    //    adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
+  }
 
   adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
   adb_ccInstanceType_set_netbytes(dst, env, src->netbytes);
@@ -966,7 +1134,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *tmp, **uuids=NULL;
+  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp, **uuids=NULL;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -1000,6 +1168,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   }
 
   launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
+  platform = adb_runInstancesType_get_platform(rit, env);
+
   dt = adb_runInstancesType_get_expiryTime(rit, env);
   expiryTime = datetime_to_unix(dt, env);
   
@@ -1018,6 +1188,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
 
   netNamesLen = adb_runInstancesType_sizeof_netNames(rit, env);
   netNames = malloc(sizeof(char *) * netNamesLen);  
+  if (netNamesLen > 1) {
+     netNamesLen = 1;
+  }
   for (i=0; i<netNamesLen; i++) {
     netNames[i] = adb_runInstancesType_get_netNames_at(rit, env, i);
   }
@@ -1044,10 +1217,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   }
   
   rirt = adb_runInstancesResponseType_create(env);
-
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, expiryTime, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {

@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -493,8 +493,6 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 }
 
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub) {
-  int i;
-  //  char meh[32];
   adb_CreateImage_t *input;
   adb_CreateImageResponse_t *output;
   adb_createImageType_t *sn;
@@ -516,9 +514,110 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
     printf("ERROR: createImage returned NULL\n");
     return(1);
   }
+
   snrt = adb_CreateImageResponse_get_CreateImageResponse(output, env);
   printf("createImage returned status %d\n", adb_createImageResponseType_get_return(snrt, env));
+
   return(0);
+}
+
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  //  char meh[32];
+  adb_BundleInstance_t *input;
+  adb_BundleInstanceResponse_t *output;
+  adb_bundleInstanceType_t *sn;
+  adb_bundleInstanceResponseType_t *snrt;
+
+  sn = adb_bundleInstanceType_create(env);
+  input = adb_BundleInstance_create(env);
+  
+  adb_bundleInstanceType_set_userId(sn, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_bundleInstanceType_set_correlationId(sn, env, cidstr);
+  }
+  adb_bundleInstanceType_set_instanceId(sn, env, instanceId);
+  adb_bundleInstanceType_set_bucketName(sn, env, bucketName);
+  adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
+  adb_bundleInstanceType_set_walrusURL(sn, env, walrusURL);
+  adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
+  
+  adb_BundleInstance_set_BundleInstance(input, env, sn);
+
+  output = axis2_stub_op_EucalyptusCC_BundleInstance(stub, env, input);
+  if (!output) {
+    printf("ERROR: bundleInstance returned NULL\n");
+    return(1);
+  }
+
+  snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
+  printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
+
+  snrt = adb_BundleInstanceResponse_get_BundleInstanceResponse(output, env);
+  printf("bundleInstance returned status %d\n", adb_bundleInstanceResponseType_get_return(snrt, env));
+
+  return(0);
+}
+
+int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, axis2_stub_t *stub) {
+  int i;
+  adb_DescribeBundleTasks_t *diIn;
+  adb_describeBundleTasksType_t *dit;
+
+  adb_DescribeBundleTasksResponse_t *diOut;
+  adb_describeBundleTasksResponseType_t *dirt;
+
+  dit = adb_describeBundleTasksType_create(env);
+  if (instIds == NULL || instIdsLen == 0) {
+  } else {
+    for (i=0; i<instIdsLen; i++) {
+      adb_describeBundleTasksType_add_instanceIds(dit, env, instIds[i]);
+    }
+  }
+  adb_describeBundleTasksType_set_userId(dit, env, "eucalyptus");
+  {
+    char cidstr[9];
+    bzero(cidstr, 9);
+    srand(time(NULL)+getpid());
+    for (i=0; i<8; i++) {
+      cidstr[i] = rand()%26+'a';
+    }
+    adb_describeBundleTasksType_set_correlationId(dit, env, cidstr);
+  }
+
+  diIn = adb_DescribeBundleTasks_create(env);
+  adb_DescribeBundleTasks_set_DescribeBundleTasks(diIn, env, dit);
+  
+  diOut = axis2_stub_op_EucalyptusCC_DescribeBundleTasks(stub, env, diIn);
+  if (!diOut) {
+    printf("ERROR: DI failed NULL\n");
+    return(1);
+  } else {
+    //    adb_reservationInfoType_t *resit;
+    axis2_char_t *instId=NULL;
+    int i;
+    axis2_bool_t status;
+
+    dirt = adb_DescribeBundleTasksResponse_get_DescribeBundleTasksResponse(diOut, env);
+    status = adb_describeBundleTasksResponseType_get_return(dirt, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_describeBundleTasksResponseType_get_statusMessage(dirt, env));
+    } else {
+      adb_bundleTaskType_t *bundle;
+      printf("operation success\n");
+      for (i=0; i<adb_describeBundleTasksResponseType_sizeof_bundleTasks(dirt, env); i++) {
+	bundle = adb_describeBundleTasksResponseType_get_bundleTasks_at(dirt, env, i);
+	printf("BUNDLE %d: %s %s\n", i, adb_bundleTaskType_get_instanceId(bundle, env), adb_bundleTaskType_get_state(bundle, env));
+      }
+    }
+  }
+  return 0;
 }
 
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
@@ -805,6 +904,7 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeResourcesResponse_t *drOut=NULL;
   adb_describeResourcesResponseType_t *drrt=NULL;
   adb_ccResourceType_t *rt=NULL;
+  adb_ccNodeType_t *nt=NULL;
 
   adb_DescribeResources_t *drIn=NULL;
   adb_describeResourcesType_t *drt=NULL;
@@ -877,11 +977,17 @@ int cc_describeResources(axutil_env_t *env, axis2_stub_t *stub) {
   if (status == AXIS2_FALSE) {
     printf("operation fault '%s'\n", adb_describeResourcesResponseType_get_statusMessage(drrt, env));
   } else {
-    
-    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
-      printf("%s ", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    for (i=0; i<adb_describeResourcesResponseType_sizeof_nodes(drrt, env); i++) {
+      nt = adb_describeResourcesResponseType_get_nodes_at(drrt, env, i);
+      printf(":%s,%s:", adb_ccNodeType_get_serviceTag(nt, env), adb_ccNodeType_get_iqn(nt, env));
     }
     printf("\n");
+
+    /*    for (i=0; i<adb_describeResourcesResponseType_sizeof_serviceTags(drrt, env); i++) {
+      printf(":%s:", adb_describeResourcesResponseType_get_serviceTags_at(drrt, env, i));
+    }
+    printf("\n");*/
+    
     for (i=0; i<adb_describeResourcesResponseType_sizeof_resources(drrt, env); i++) {
       rt = adb_describeResourcesResponseType_get_resources_at(drrt, env, i);
       printf("DescribeResources: %d %d\n", adb_ccResourceType_get_maxInstances(rt, env), adb_ccResourceType_get_availableInstances(rt, env));
@@ -1182,3 +1288,181 @@ int cc_registerImage(char *imageloc, axutil_env_t *env, axis2_stub_t *stub) {
   return 0;
 }
 */
+
+int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DescribeServices_t *adbrequest;
+  adb_describeServicesType_t *adbinput;
+
+  adb_DescribeServicesResponse_t *adbresponse;
+  adb_describeServicesResponseType_t *adboutput;
+
+  adb_serviceInfoType_t *sit=NULL;
+
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_describeServicesType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(describeServicesType, adbinput, (&mymeta));
+  
+  sit = adb_serviceInfoType_create(env);
+  
+  adb_serviceInfoType_set_type(sit, env, "cc");
+  adb_serviceInfoType_set_name(sit, env, "self");
+  adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
+  
+  adb_describeServicesType_add_serviceIds(adbinput, env, sit);
+
+  adbrequest = adb_DescribeServices_create(env);
+  adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DescribeServices(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DescribeServices failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DescribeServicesResponse_get_DescribeServicesResponse(adbresponse, env);
+    status = adb_describeServicesResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_describeServicesResponseType_get_statusMessage(adboutput, env));
+    } else {
+      for (i=0; i<adb_describeServicesResponseType_sizeof_serviceStatuses(adboutput, env); i++) {
+	adb_serviceStatusType_t *sst=NULL;
+	adb_serviceInfoType_t *sit=NULL;
+	sst = adb_describeServicesResponseType_get_serviceStatuses_at(adboutput, env, i);
+	printf("localState=%s localEpoch=%d details=%s\n", adb_serviceStatusType_get_localState(sst, env), adb_serviceStatusType_get_localEpoch(sst, env), adb_serviceStatusType_get_details_at(sst, env, 0));
+	sit = adb_serviceStatusType_get_serviceId(sst, env);
+	printf("\ttype=%s name=%s uris[0]=%s\n", adb_serviceInfoType_get_type(sit, env), adb_serviceInfoType_get_name(sit, env), adb_serviceInfoType_get_uris_at(sit, env, 0));
+      }
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_startService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StartService_t *adbrequest;
+  adb_startServiceType_t *adbinput;
+
+  adb_StartServiceResponse_t *adbresponse;
+  adb_startServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_startServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(startServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StartService_create(env);
+  adb_StartService_set_StartService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StartService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StartService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StartServiceResponse_get_StartServiceResponse(adbresponse, env);
+    status = adb_startServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_startServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_stopService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_StopService_t *adbrequest;
+  adb_stopServiceType_t *adbinput;
+
+  adb_StopServiceResponse_t *adbresponse;
+  adb_stopServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_stopServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(stopServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_StopService_create(env);
+  adb_StopService_set_StopService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_StopService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: StopService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_StopServiceResponse_get_StopServiceResponse(adbresponse, env);
+    status = adb_stopServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_stopServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_enableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_EnableService_t *adbrequest;
+  adb_enableServiceType_t *adbinput;
+
+  adb_EnableServiceResponse_t *adbresponse;
+  adb_enableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_enableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(enableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_EnableService_create(env);
+  adb_EnableService_set_EnableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_EnableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: EnableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_EnableServiceResponse_get_EnableServiceResponse(adbresponse, env);
+    status = adb_enableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_enableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+
+int cc_disableService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_DisableService_t *adbrequest;
+  adb_disableServiceType_t *adbinput;
+
+  adb_DisableServiceResponse_t *adbresponse;
+  adb_disableServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_disableServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(disableServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_DisableService_create(env);
+  adb_DisableService_set_DisableService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_DisableService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: DisableService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_DisableServiceResponse_get_DisableServiceResponse(adbresponse, env);
+    status = adb_disableServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_disableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}

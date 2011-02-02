@@ -50,6 +50,7 @@ install: deploy
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/CC
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/doc
 	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
 	@$(INSTALL) -d $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/bash_completion.d
