@@ -60,13 +60,13 @@ public class BuildBindings extends Task {
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String bindingFilePath = dirName + File.separator + b;
         log( "Found binding: " + bindingFilePath );
-        if( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
+        if ( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
           addMsgs = false;
         }
         bindings.add( bindingFilePath );
       }
     }
-    if( addMsgs ) {
+    if ( addMsgs ) {
       bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
     }
     return bindings.toArray( new String[] {} );
@@ -88,76 +88,128 @@ public class BuildBindings extends Task {
       buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
       System.setOut( buildLog );
       System.setErr( buildLog );
+      if ( this.classFileSets.isEmpty( ) ) {
+        throw new BuildException( "No classes were provided to bind." );
+      } else if ( this.bindingFileSets.isEmpty( ) ) {
+        throw new BuildException( "No bindings were provided to bind." );
+      } else {
+        try {
+          System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
+        } catch ( Exception e ) {
+          System.err.println( "Failed setting classpath from Ant task" );
+        }
+        Path path = new Path( getProject( ) );
+        for ( String p : paths( ) ) {
+          path.add( new Path( getProject( ), p ) );
+        }
+        for ( File f : new File( "lib" ).listFiles( new FilenameFilter( ) {
+          @Override
+          public boolean accept( File dir, String name ) {
+            return name.endsWith( ".jar" );
+          }
+        } ) ) {
+          path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
+        }
+        runPreBindingGenerators( path );
+        runBindingCompiler( );
+        runPostBindingGenerators( path );
+      }
     } catch ( FileNotFoundException e2 ) {
       System.setOut( oldOut );
-      System.setErr( oldErr );      
+      System.setErr( oldErr );
+    } finally {
+      System.setOut( oldOut );
+      System.setErr( oldErr );
     }
-    if ( this.classFileSets.isEmpty( ) ) {
-      throw new BuildException( "No classes were provided to bind." );
-    } else if ( this.bindingFileSets.isEmpty( ) ) {
-      throw new BuildException( "No bindings were provided to bind." );
-    } else {
-      try {
-        System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
-      } catch ( Exception e ) {
-        System.err.println( "Failed setting classpath from Ant task" );
-      }
-      Path path = new Path( getProject( ) );
-      for( String p : paths( ) ) {
-        path.add( new Path( getProject( ), p ) );
-      }
-      for( File f : new File( "lib" ).listFiles( new FilenameFilter() {
-        @Override
-        public boolean accept( File dir, String name ) {
-          return name.endsWith( ".jar" );
-        }} ) ) {
-        path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
-      }
-      ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
-      List<BindingGenerator> generators = BindingGenerator.getGenerators(); 
-      try {
-        AntClassLoader loader = this.getProject( ).createClassLoader( path );
-        Thread.currentThread( ).setContextClassLoader( loader );
-//        System.err.print( "class path: " + loader.getClasspath( ) );
-        BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
-        BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-        loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
-        for ( FileSet fs : this.classFileSets ) {
-          for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-            try {
-              if( !classFileName.endsWith( "class" ) ) continue;
-              Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-              if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
-                for( BindingGenerator gen : generators ) {
-                  gen.processClass( c );
-                }
+    
+  }
+  
+  private void runPostBindingGenerators( Path path ) {
+    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    AntClassLoader loader = this.getProject( ).createClassLoader( path );
+    try {
+      Thread.currentThread( ).setContextClassLoader( loader );
+      //        System.err.print( "class path: " + loader.getClasspath( ) );
+      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
+      for ( FileSet fs : this.classFileSets ) {
+        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+          try {
+            if ( !classFileName.endsWith( "class" ) ) continue;
+            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+            if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
+              for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
+                gen.processClass( c );
               }
-            } catch ( ClassNotFoundException e ) {
-              error( e );
             }
+          } catch ( ClassNotFoundException e ) {
+            error( e );
           }
         }
-      } catch ( ClassNotFoundException e1 ) {
-        error( e1 );
-      } finally {
-        try {
-          for( BindingGenerator gen : generators ) {
-            gen.close( );
-          }
-        } catch ( Throwable e ) {
-          error( e );
-        }
-        Thread.currentThread( ).setContextClassLoader( old );
       }
+    } catch ( ClassNotFoundException e1 ) {
+      error( e1 );
+    } finally {
       try {
-        Compile compiler = new Compile( true, true, false, false, false );
-        compiler.compile( paths( ), bindings() );
+        for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
+          gen.close( );
+        }
       } catch ( Throwable e ) {
         error( e );
-      } finally {
-        System.setOut( oldOut );
-        System.setErr( oldErr );
       }
+      loader.cleanup( );
+      System.gc( );
+      Thread.currentThread( ).setContextClassLoader( old );
+    }
+  }
+  
+  private void runBindingCompiler( ) {
+    try {
+      Compile compiler = new Compile( true, true, false, false, false );
+      compiler.compile( paths( ), bindings( ) );
+    } catch ( Throwable e ) {
+      error( e );
+    }
+  }
+  
+  private void runPreBindingGenerators( Path path ) {
+    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    AntClassLoader loader = this.getProject( ).createClassLoader( path );
+    try {
+      Thread.currentThread( ).setContextClassLoader( loader );
+      //        System.err.print( "class path: " + loader.getClasspath( ) );
+      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
+      for ( FileSet fs : this.classFileSets ) {
+        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+          try {
+            if ( !classFileName.endsWith( "class" ) ) continue;
+            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+            if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
+              for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
+                gen.processClass( c );
+              }
+            }
+          } catch ( ClassNotFoundException e ) {
+            error( e );
+          }
+        }
+      }
+    } catch ( ClassNotFoundException e1 ) {
+      error( e1 );
+    } finally {
+      try {
+        for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
+          gen.close( );
+        }
+      } catch ( Throwable e ) {
+        error( e );
+      }
+      loader.cleanup( );
+      System.gc( );
+      Thread.currentThread( ).setContextClassLoader( old );
     }
   }
   

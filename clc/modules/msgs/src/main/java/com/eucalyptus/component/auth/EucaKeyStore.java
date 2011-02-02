@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,12 +67,14 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.system.SubDirectory;
 
 public class EucaKeyStore extends AbstractKeyStore {
   public static String            FORMAT         = "pkcs12";
-  private static String           KEY_STORE_PASS = Component.eucalyptus.name();
+  private static String           KEY_STORE_PASS = "eucalyptus";
   private static String           FILENAME       = "euca.p12";
   private static Logger           LOG            = Logger.getLogger( EucaKeyStore.class );
 
@@ -105,6 +107,6 @@ public class EucaKeyStore extends AbstractKeyStore {
 
   @Override
   public boolean check( ) throws GeneralSecurityException {
-    return (this.getCertificate( Component.jetty.name() )!= null)&&(this.getCertificate( Component.eucalyptus.name() )!=null);
+    return (this.getCertificate( ComponentIds.lookup(HttpService.class).name() )!= null)&&(this.getCertificate( ComponentIds.lookup(Eucalyptus.class).name() )!=null);
   }
 }

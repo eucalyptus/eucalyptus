@@ -52,7 +52,7 @@
 #  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 #  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 #  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 #  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 #  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 #  ANY SUCH LICENSES OR RIGHTS.
@@ -221,6 +221,13 @@ do_start() {
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config
 
+	if [ -x $EUCALYPTUS/usr/sbin/eucanetd ]; then
+            if ! $EUCALYPTUS/usr/sbin/eucanetd ; then
+		echo
+		echo "Failed to start the eucanetd"
+            fi
+	fi
+
 	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
 		echo
 		echo "Failed to start the NC!"
@@ -241,6 +248,12 @@ do_status() {
 }
 
 do_stop() {
+	netpid="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+        if [ -f "$netpid" ]; then
+            kill `cat $netpid` >/dev/null 2>&1
+            rm -f $netpid
+        fi
+
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
 
 	# let's be sure we are killing the right process

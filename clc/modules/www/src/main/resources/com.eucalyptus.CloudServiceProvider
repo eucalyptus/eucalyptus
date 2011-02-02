@@ -1,5 +1,0 @@
-name=jetty
-euca.model.www=eucalyptus-www.xml
-euca.url.local=vm://HttpServer
-euca.url.pattern=http://%s:%d/internal/JettyInternal
-euca.url.port=8773

@@ -1,6 +1,0 @@
-name=storage
-euca.model.storage=storage-model.xml
-euca.model.storage.services=storage-services.xml
-euca.url.local=vm://StorageInternal
-euca.url.pattern=http://%s:%d/internal/StorageInternal
-euca.url.port=8773

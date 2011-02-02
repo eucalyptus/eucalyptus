@@ -51,7 +51,7 @@
  * PATENTED MATERIAL IN THIS SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED
  * THE PARTY DISCOVERING IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF
  * CALIFORNIA, SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE
- * REMEDY, WHICH IN THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ * REMEDY, WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
  * REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED,
  * OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH ANY
  * SUCH LICENSES OR RIGHTS.
@@ -88,10 +88,12 @@ import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Services;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
@@ -112,6 +114,7 @@ import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -124,7 +127,6 @@ import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
 
 public class Cluster implements HasName<Cluster>, EventListener {
   private static Logger                                       LOG            = Logger.getLogger( Cluster.class );
@@ -226,7 +228,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ServiceEndpoint getServiceEndpoint( ) {
-    return Services.lookupByHost( Components.delegate.cluster, this.getHostName( ) );
+    return Services.lookupByHost( com.eucalyptus.component.id.Cluster.class, this.getHostName( ) );
   }
   
   public ClusterCredentials getCredentials( ) {
@@ -267,7 +269,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     }
   }
-  
+
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )
@@ -391,7 +393,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
+        /** TODO:ASAP:GRZE: RESTORE 
+        Callbacks.newRequest( new LogDataCallback( this, null ) )
+        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+        .getResponse( ).get( );
         Callbacks.newLogRequest( new LogDataCallback( this, null ) ).dispatch( this.getServiceEndpoint( ) );
+        **/
       } catch ( Throwable t ) {
         LOG.error( t, t );
       } finally {
@@ -418,7 +425,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        Callbacks.newLogRequest( new LogDataCallback( this, nodeInfo ) ).dispatch( this.getServiceEndpoint( ) );
+        /** TODO:ASAP:GRZE: RESTORE 
+        Callbacks.newRequest( new LogDataCallback( this, null ) )
+        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+        .getResponse( ).get( );
+         **/
+//        Callbacks.newLogRequest( new LogDataCallback( this, nodeInfo ) ).dispatch( this.getServiceEndpoint( ) );
       } catch ( Throwable t ) {
         LOG.debug( t, t );
       } finally {
@@ -484,15 +496,25 @@ public class Cluster implements HasName<Cluster>, EventListener {
           
           @Override
           public void fireException( Throwable t ) {
-            transitionCallback.fireException( t );
+            if( t instanceof FailedRequestException ) {
+              if( Cluster.this.getState( ).hasPublicAddressing( ) && PublicAddressStateCallback.class.isAssignableFrom( msgClass ) ) {
+                transitionCallback.fire();
+              } else {
+                transitionCallback.fireException( t );
+              }
+            } else {
+              transitionCallback.fireException( t );
+            }
           }
         };
         //TODO: retry.
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
-            Callbacks.newLogRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( factory.newInstance( ) ).then( cb )
+            .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+            .getResponse( ).get( );
           } else {
-            Callbacks.newClusterRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           }
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {
@@ -508,68 +530,80 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     };
   }
-  
   @Override
   public void fireEvent( Event event ) {
     if( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 
-    } else if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5 ) ) {
-      try {
-        Callbacks.newClusterRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
-      } catch ( ExecutionException ex ) {
-        Exceptions.trace( ex );
-      } catch ( InterruptedException ex ) {
-        Exceptions.trace( ex );
-      } catch ( CancellationException ex ) {
-        /** operation self-cancelled **/
-      }
     } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
-      try {
-        switch ( this.stateMachine.getState( ) ) {
-          case DOWN:
-            this.stateMachine.startTransition( Transition.START );
-            break;
-          case AUTHENTICATING:
-            this.stateMachine.startTransition( Transition.INIT_CERTS );
-            break;
-          case STARTING:
-            this.stateMachine.startTransition( Transition.INIT_RESOURCES );
-            break;
-          case STARTING_RESOURCES: 
-            this.stateMachine.startTransition( Transition.INIT_NET );
-            break;
-          case STARTING_NET: 
-            this.stateMachine.startTransition( Transition.INIT_VMS );
-            break;
-          case STARTING_VMS: 
-            this.stateMachine.startTransition( Transition.INIT_ADDRS );
-            break;
-          case STARTING_ADDRS: 
-            this.stateMachine.startTransition( Transition.INIT_VMS2 );
-            break;
-          case STARTING_VMS2: 
-            this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
-            break;
-          case RUNNING_ADDRS:
-            this.stateMachine.startTransition( Transition.RUNNING_RSC );
-            break;
-          case RUNNING_RSC:
-            this.stateMachine.startTransition( Transition.RUNNING_NET );
-            break;
-          case RUNNING_NET:
-            this.stateMachine.startTransition( Transition.RUNNING_VMS );
-            break;
-          case RUNNING_VMS:
-            this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
-            break;
-          default:
-            break;
-        }
-      } catch ( IllegalStateException ex ) {
-        Exceptions.trace( ex );
-      } catch ( ExistingTransitionException ex ) {
-        Exceptions.trace( ex );
+      this.nextState( );
+    } else if ( event instanceof Hertz ) {
+      Hertz tick = ( Hertz ) event;
+      if( State.STARTING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 5 ) ) {
+        this.updateVolatiles( );
+      } else if( State.RUNNING_ADDRS.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
+        this.nextState( );
       }
+    }
+  }
+
+  private void updateVolatiles( ) {
+    try {
+      Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
+    } catch ( ExecutionException ex ) {
+      Exceptions.trace( ex );
+    } catch ( InterruptedException ex ) {
+      Exceptions.trace( ex );
+    } catch ( CancellationException ex ) {
+      /** operation self-cancelled **/
+    }
+  }
+
+  private void nextState( ) {
+    try {
+      switch ( this.stateMachine.getState( ) ) {
+        case DOWN:
+          this.stateMachine.startTransition( Transition.START );
+          break;
+        case AUTHENTICATING:
+          this.stateMachine.startTransition( Transition.INIT_CERTS );
+          break;
+        case STARTING:
+          this.stateMachine.startTransition( Transition.INIT_RESOURCES );
+          break;
+        case STARTING_RESOURCES: 
+          this.stateMachine.startTransition( Transition.INIT_NET );
+          break;
+        case STARTING_NET: 
+          this.stateMachine.startTransition( Transition.INIT_VMS );
+          break;
+        case STARTING_VMS: 
+          this.stateMachine.startTransition( Transition.INIT_ADDRS );
+          break;
+        case STARTING_ADDRS: 
+          this.stateMachine.startTransition( Transition.INIT_VMS2 );
+          break;
+        case STARTING_VMS2: 
+          this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
+          break;
+        case RUNNING_ADDRS:
+          this.stateMachine.startTransition( Transition.RUNNING_RSC );
+          break;
+        case RUNNING_RSC:
+          this.stateMachine.startTransition( Transition.RUNNING_NET );
+          break;
+        case RUNNING_NET:
+          this.stateMachine.startTransition( Transition.RUNNING_VMS );
+          break;
+        case RUNNING_VMS:
+          this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
+          break;
+        default:
+          break;
+      }
+    } catch ( IllegalStateException ex ) {
+      Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.debug( ex.getMessage( ) );
     }
   }
   

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -99,6 +99,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
           Multimap<String, String> networks = Multimaps.newArrayListMultimap( );
           Multimap<String, String> rules = Multimaps.newArrayListMultimap( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+            if( !VmState.RUNNING.equals( vm.getState( ) ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
               network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );

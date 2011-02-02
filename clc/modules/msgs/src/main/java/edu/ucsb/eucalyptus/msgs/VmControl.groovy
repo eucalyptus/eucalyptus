@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,6 +67,8 @@ import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmControlMessage extends EucalyptusMessage {}
+public class ResourceTagMessage extends EucalyptusMessage {}
+public class VmPlacementMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
 public class TerminateInstancesResponseType extends VmControlMessage {
   boolean terminated = false;
@@ -195,6 +197,15 @@ public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
+public class GetPasswordDataType extends VmControlMessage {
+  String instanceId;
+}
+public class GetPasswordDataResponseType extends VmControlMessage {
+  
+  String instanceId;
+  Date timestamp;
+  String output;
+}
 /** *******************************************************************************/
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;
@@ -227,6 +238,7 @@ public class RunningInstancesItemType extends EucalyptusData {
   String placement;
   String kernel;
   String ramdisk;
+  String platform;
   Boolean monitoring = false;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
@@ -237,6 +249,7 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   Boolean noDevice = true;
   Boolean deleteOnTermination = true;
 }
+
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap
   String deviceName;
@@ -274,3 +287,158 @@ public class TerminateInstancesItemType extends EucalyptusData {
   }
 }
 
+public class StopInstancesResponseType extends VmControlMessage{
+  ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
+  public StopInstancesResponseType() {  }
+}
+public class StopInstancesType extends VmControlMessage{
+  ArrayList<String> instancesSet = new ArrayList<String>();
+  Boolean force;
+  public StopInstancesType() {  }
+}
+public class StartInstancesResponseType extends VmControlMessage{
+  ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
+  public StartInstancesResponseType() {  }
+}
+public class StartInstancesType extends VmControlMessage{
+  ArrayList<String> instancesSet = new ArrayList<String>();
+  public StartInstancesType() {  }
+}
+
+public class ModifyInstanceAttributeType extends VmControlMessage {
+  String instanceId;
+  String element;
+  String value;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+  public ModifyInstanceAttributeType() {  }
+  public void instanceType() { this.element = "instanceType"; }
+  public void kernel() { this.element = "kernel"; }
+  public void ramdisk() { this.element = "ramdisk"; }
+  public void userData() { this.element = "userData"; }
+  public void disableApiTermination() { this.element = "disableApiTermination"; }
+  public void instanceInitiatedShutdownBehavior() { this.element = "instanceInitiatedShutdownBehavior"; }
+}
+public class ModifyInstanceAttributeResponseType extends VmControlMessage {
+  public ModifyInstanceAttributeResponseType() {  }
+}
+public class ResetInstanceAttributeType extends VmControlMessage {
+  String instanceId;
+  public ResetInstanceAttributeType() {  }
+}
+public class ResetInstanceAttributeResponseType extends VmControlMessage {
+  public ResetInstanceAttributeResponseType() {  }
+}
+public class DescribeInstanceAttributeType extends VmControlMessage {
+  String instanceId;
+  public DescribeInstanceAttributeType() {  }
+}
+public class DescribeInstanceAttributeResponseType extends VmControlMessage {
+  String requestId;
+  String instanceId;
+  String instanceType;
+  String kernel;
+  String ramdisk;
+  String userData;
+  String disableApiTermination;
+  String instanceInitiatedShutdownBehavior;
+  String rootDeviceName;
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+  public DescribeInstanceAttributeResponseType() {  }
+}
+public class MonitorInstanceState extends EucalyptusData {
+  String instanceId;
+  String monitoringState;
+  public MonitorInstanceState() {}
+}
+public class MonitorInstancesResponseType extends VmControlMessage {
+  ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
+  public MonitorInstancesResponseType() {  }
+}
+public class MonitorInstancesType extends VmControlMessage {
+  ArrayList<String> instancesSet = new ArrayList<String>();
+  public MonitorInstancesType() {  }
+}
+public class UnmonitorInstancesResponseType extends VmControlMessage {
+  ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
+  public UnmonitorInstancesResponseType() {  }
+}
+public class UnmonitorInstancesType extends VmControlMessage {
+  ArrayList<String> instancesSet = new ArrayList<String>();
+  public MonitorInstancesType() {  }
+}
+
+public class CreateTagsResponseType extends ResourceTagMessage  {
+  public CreateTagsResponseType() {  }
+}
+public class CreateTagsType extends ResourceTagMessage  {
+  ArrayList<String> resourcesSet = new ArrayList<String>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  public CreateTagsType() {  }
+}
+
+public class FilterType extends EucalyptusData {
+  String name;
+  ArrayList<String> valueSet = new ArrayList<String>();
+  public FilterType() {  }
+}
+public class ResourceTag extends EucalyptusData {
+  String key;
+  String value;
+  public ResourceTagSetItemType() {  }
+}
+public class DescribeTagsType extends ResourceTagMessage  {
+  ArrayList<FilterType> filterSet = new ArrayList<FilterType>();
+  public DescribeTagsType() {  }
+}
+public class DescribeTagsResponseType extends ResourceTagMessage  {
+  String requestId;
+  ArrayList<TagInfo> tagSet = new ArrayList<TagInfo>( );
+  public DescribeTagsResponseType() {  }
+}
+public class DeleteTagsResponseType extends ResourceTagMessage {
+  String requestId;
+  Boolean _return;
+  public DeleteTagsResponseType() {  }
+}
+public class DeleteTagsType extends ResourceTagMessage {
+  ArrayList<String> resourcesSet = new ArrayList<String>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  public DeleteTagsType() {  }
+}
+public class TagInfo extends EucalyptusData {
+  String resourceId;
+  String resourceType;
+  String key;
+  String value;
+  public TagSetItemType() {  }
+}
+public class CreatePlacementGroupType extends VmPlacementMessage {
+  String groupName;
+  String strategy;
+  public CreatePlacementGroupType() {  }
+}
+public class CreatePlacementGroupResponseType extends VmPlacementMessage {
+  public CreatePlacementGroupResponseType() {  }
+}
+public class DeletePlacementGroupType extends VmPlacementMessage {
+  String groupName;
+  public DeletePlacementGroupType() {  }
+}
+public class DeletePlacementGroupResponseType extends VmPlacementMessage {
+  public DeletePlacementGroupResponseType() {  }
+}
+public class PlacementGroupInfo extends EucalyptusData {
+  String groupName;
+  String strategy;
+  String state;
+  public PlacementGroupInfoType() {  }
+}
+public class DescribePlacementGroupsType extends VmPlacementMessage {
+  ArrayList<String> placementGroupSet = new ArrayList<String>();
+  ArrayList<FilterType> filterSet = new ArrayList<FilterType>();
+  public DescribePlacementGroupsType() {  }
+}
+public class DescribePlacementGroupsResponseType extends VmPlacementMessage {
+  ArrayList<PlacementGroupInfo> placementGroupSet = new ArrayList<PlacementGroupInfo>();
+  public DescribePlacementGroupsResponseType() {  }
+}

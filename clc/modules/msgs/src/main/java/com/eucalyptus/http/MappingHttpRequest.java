@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -69,6 +69,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -77,6 +78,7 @@ import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
+  private static Logger LOG = Logger.getLogger( MappingHttpRequest.class );
   
   private final HttpMethod          method;
   private final String              uri;
@@ -206,5 +208,16 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     String value = getHeader( key );
     removeHeader( key );
     return value;
+  }
+  
+  public void logMessage( ) {
+    LOG.trace( "============================================" );
+    LOG.trace( "HTTP" + this.getProtocolVersion( ) + " " + this.getMethod( ) + " " + this.getUri( ) );
+    for( String s : this.getHeaderNames( ) ) {
+      LOG.trace( s + ": " + this.getHeader( s ) ); 
+    }
+    LOG.trace( "============================================" );
+    LOG.trace( this.getContent( ).toString( "UTF-8" ) );
+    LOG.trace( "============================================" );
   }
 }

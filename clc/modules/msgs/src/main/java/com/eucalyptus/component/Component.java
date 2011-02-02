@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -72,7 +72,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.component.id.Empyrean;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -89,7 +89,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
 /**
  * TODO: DOCUMENT. yes pls.
@@ -116,20 +116,18 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
-  private final String                               name;
-  private final ComponentId                    identity;
-  private final com.eucalyptus.bootstrap.Component   component;
-  private final AtomicBoolean                        enabled      = new AtomicBoolean( false );
-  private final AtomicBoolean                        local        = new AtomicBoolean( false );
-  private final Map<String, Service>                 services     = Maps.newConcurrentHashMap( );
-  private final ComponentBootstrapper                bootstrapper;
-  private final ComponentState                       stateMachine;
-  private final AtomicReference<Service>             localService = new AtomicReference( null );
+  private final String                   name;
+  private final ComponentId              identity;
+  private final AtomicBoolean            enabled      = new AtomicBoolean( false );
+  private final AtomicBoolean            local        = new AtomicBoolean( false );
+  private final Map<String, Service>     services     = Maps.newConcurrentHashMap( );
+  private final ComponentBootstrapper    bootstrapper;
+  private final ComponentState           stateMachine;
+  private final AtomicReference<Service> localService = new AtomicReference( null );
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
     this.name = componentId.getName( );
     this.identity = componentId;
-    this.component = initComponent( );
     /** remove **/
     if ( System.getProperty( "euca.disable." + this.name ) == null ) {
       this.enabled.set( true );
@@ -339,8 +337,8 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public final List<ServiceInfoType> getServiceSnapshot( ) {
     List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
-    for( final Service s : this.services.values( ) ) {
-      if( State.ENABLED.equals( s.getState( ) ) ) {
+    for ( final Service s : this.services.values( ) ) {
+      if ( State.ENABLED.equals( s.getState( ) ) ) {
         serviceSnapshot.add( 0, new ServiceInfoType( ) {
           {
             setPartition( s.getServiceConfiguration( ).getPartition( ) );
@@ -362,6 +360,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
     return serviceSnapshot;
   }
+  
   public final Iterator<ServiceInfoType> getUnorderedIterator( ) {
     return Iterables.transform( this.services.values( ), new Function<Service, ServiceInfoType>( ) {
       
@@ -395,7 +394,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   }
   
   public String getRegistryKey( String hostName ) {
-    if( NetworkUtil.testLocal( hostName ) ) {
+    if ( NetworkUtil.testLocal( hostName ) ) {
       return this.getName( ) + "@localhost";
     } else {
       return this.getName( ) + "@" + hostName;
@@ -404,7 +403,9 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
     ServiceBuilder<ServiceConfiguration> ret = ServiceBuilderRegistry.get( this.identity );
-    return ret != null ? ret : new DummyServiceBuilder( this );
+    return ret != null
+      ? ret
+      : new DummyServiceBuilder( this );
   }
   
   /**
@@ -419,7 +420,8 @@ public class Component implements ComponentInformation, HasName<Component> {
   /**
    * True if the component has not been explicitly configured as running remotely. That is, even if
    * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for {@link com.eucalyptus.component.id.ComponentService.dns}).
+   * service endpoint is still configured (i.e. for
+   * {@link com.eucalyptus.component.id.ComponentService.dns}).
    * 
    * @return true if the component has not been explicitly marked as remote.
    */
@@ -450,23 +452,22 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public URI getUri( ) {
     NavigableSet<Service> services = this.getServices( );
-    if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.name ) ) {
-      throw new RuntimeException( "Cloud local component has "+services.size()+" registered services (Should be exactly 1): " + this + " " + services.toString( ) );
-    } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
+    if ( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.name ) ) {
+      throw new RuntimeException( "Cloud local component has " + services.size( ) + " registered services (Should be exactly 1): " + this + " "
+                                  + services.toString( ) );
+    } else if ( this.getIdentity( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.name ) ) {
       return this.getIdentity( ).getLocalEndpointUri( );
-    } else if( this.getIdentity( ).isCloudLocal( ) && services.size( ) == 1 ) {
+    } else if ( this.getIdentity( ).isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {
-      for( Service s : services ) {
-        if( s.isLocal( ) ) {
+      for ( Service s : services ) {
+        if ( s.isLocal( ) ) {
           return s.getUri( );
         }
       }
       throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
     }
   }
-
-
   
   /**
    * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
@@ -542,7 +543,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s name=%s enabled=%s local=%s state=%s builder=%s\n", this.component,
+    return String.format( "Component %s name=%s enabled=%s local=%s state=%s builder=%s\n", this.identity.name( ),
                           this.name, this.enabled, this.local, this.getState( ), this.getBuilder( ) );
   }
   
@@ -555,35 +556,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public int compareTo( Component that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
-  
-  /**
-   * REMOVE: promptly. Don't even think about using this.
-   * 
-   * @deprecated for sucking.
-   */
-  @Deprecated
-  public com.eucalyptus.bootstrap.Component getPeer( ) {
-    return this.component;
-  }
-  
-  /**
-   * REMOVE: promptly. Don't even think about using this.
-   * 
-   * @deprecated for sucking, too.
-   */
-  @Deprecated
-  private com.eucalyptus.bootstrap.Component initComponent( ) {
-    try {
-      com.eucalyptus.bootstrap.Component component = com.eucalyptus.bootstrap.Component.valueOf( name );
-      if ( component == null ) {
-        throw BootstrapException.throwError( "Error loading component.  Failed to find component named '" + name );
-      }
-      return component;
-    } catch ( Exception e ) {
-      throw BootstrapException.throwError( "Error loading component.  Failed to find component named '" + name, e );
-    }
-  }
-  
+    
   /**
    * @return the bootstrapper
    */
@@ -614,14 +587,14 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     }
   }
-
+  
   /**
    * @return the identity
    */
   public ComponentId getIdentity( ) {
     return this.identity;
   }
-
+  
   /**
    * @return
    * @see com.eucalyptus.component.ComponentId#name()
@@ -629,7 +602,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public String name( ) {
     return this.identity.name( );
   }
-
+  
   /**
    * @param hostName
    * @param port
@@ -639,7 +612,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public URI makeRemoteUri( String hostName, Integer port ) {
     return this.identity.makeRemoteUri( hostName, port );
   }
-
+  
   /**
    * @return
    * @see com.eucalyptus.component.ComponentId#getLocalEndpointName()

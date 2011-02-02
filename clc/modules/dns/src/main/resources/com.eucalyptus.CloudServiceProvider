@@ -1,6 +1,0 @@
-name=dns
-euca.model.dns=dns-model.xml
-euca.model.dns.services=dns-services.xml
-euca.url.local=vm://DNSControlInternal
-euca.url.pattern=http://%s:%d/internal/DnsInternal
-euca.url.port=8773

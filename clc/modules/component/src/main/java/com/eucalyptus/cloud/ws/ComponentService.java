@@ -35,17 +35,12 @@
 package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
 
 public class ComponentService {
 

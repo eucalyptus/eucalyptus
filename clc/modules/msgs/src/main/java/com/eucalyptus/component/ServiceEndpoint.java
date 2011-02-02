@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -75,7 +75,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -91,7 +95,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
@@ -155,13 +159,14 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   
   private List<ServiceInfoType> buildMessageServiceList( ) {
     return new ArrayList<ServiceInfoType>() {{
-      addAll( Components.lookup( Component.walrus ).getServiceSnapshot( ) );
-      for( ServiceInfoType s : Components.lookup( Component.storage ).getServiceSnapshot( ) ) {
+      addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( ) );
+      addAll( Components.lookup( Walrus.class ).getServiceSnapshot( ) );
+      for( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( ) ) {
         if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
           add( s );
         }
       }
-      for( ServiceInfoType s : Components.lookup( Component.cluster ).getServiceSnapshot( ) ) {
+      for( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( ) ) {
         if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
           add( s );
         }
@@ -192,6 +197,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             .info( );
           }
         } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupted( );
           return;
         } catch ( final ExecutionException e ) {
           LOG.error( e.getCause( ), e.getCause( ) );
@@ -315,5 +321,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       } );
     }
     return false;
+  }
+
+  public ChannelPipelineFactory getPipelineFactory( ) {
+    return this.getParent( ).getParent( ).getIdentity( ).getClientPipeline( );
   }
 }

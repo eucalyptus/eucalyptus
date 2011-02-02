@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -72,7 +72,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
@@ -91,11 +90,7 @@ import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -163,6 +158,24 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
   
+  public VmInstance lookupByBundleId( String bundleId ) throws NoSuchElementException {
+    for ( VmInstance vm : this.listValues( ) ) {
+      if ( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    for ( VmInstance vm : this.listDisabledValues( ) ) {
+      if ( vm.getBundleTask( ) == null ) {
+        continue;
+      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
+        return vm;
+      }
+    }
+    throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
+  }
+  
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void fire( ) {
@@ -173,7 +186,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -191,7 +204,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
+                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
               }
             }
           }
@@ -211,7 +224,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       VmInstances.cleanUpAttachedVolumes( vm );
 
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newClusterRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );

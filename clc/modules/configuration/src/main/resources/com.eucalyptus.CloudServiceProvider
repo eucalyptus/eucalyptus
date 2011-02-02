@@ -1,5 +1,0 @@
-name=configuration
-euca.model.configuration=eucalyptus-configuration.xml
-euca.url.local=vm://ConfigurationInternal
-euca.url.pattern=http://%s:%d/internal/%s
-euca.url.port=8773

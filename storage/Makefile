@@ -6,18 +6,21 @@ include ../Makedefs
 
 STORAGE_LIBS = ${LIBS} -lcurl -lssl -lcrypto
 
-all: storage.o walrus.o Wclient
+all: storage.o storage-windows.o walrus.o Wclient 
 
 build: all
 
-Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o $(STORAGE_LIBS)
+Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
+	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
 
 walrus.o: walrus.c walrus.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 
 
-test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
+	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+
+test_url: http.c
+	$(CC) -D_UNIT_TEST -o test_url http.c
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
@@ -38,7 +41,7 @@ test: test.c storage.h storage.o ../util/misc.o ../util/data.o ../util/ipc.o ../
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient
+	rm -rf *~ *.o Wclient test test_url
 
 distclean:
 

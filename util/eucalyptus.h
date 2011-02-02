@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -81,6 +81,9 @@ permission notice:
 #define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
+#define EUCALYPTUS_NC_CHECK_BUCKET "/usr/local/bin/euca-check-bucket" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/local/bin/euca-bundle-upload" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_DELETE_BUNDLE "/usr/local/bin/euca-delete-bundle" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -110,6 +113,9 @@ permission notice:
 #define CONFIG_USE_VIRTIO_NET "USE_VIRTIO_NET"
 #define CONFIG_USE_VIRTIO_DISK "USE_VIRTIO_DISK"
 #define CONFIG_USE_VIRTIO_ROOT "USE_VIRTIO_ROOT"
+#define CONFIG_NC_BUNDLE_UPLOAD "NC_BUNDLE_UPLOAD_PATH"
+#define CONFIG_NC_CHECK_BUCKET "NC_CHECK_BUCKET_PATH"
+#define CONFIG_NC_DELETE_BUNDLE "NC_DELETE_BUNDLE_PATH"
 
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"

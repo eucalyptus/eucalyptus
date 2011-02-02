@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -62,12 +62,13 @@ package com.eucalyptus.bootstrap;
 
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Walrus;
 
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-@Provides(Component.walrus)
+@Provides(Walrus.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Component.walrus)
+@DependsLocal(Walrus.class)
 public class WalrusBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
 	private static WalrusBootstrapper singleton;

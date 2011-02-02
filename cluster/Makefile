@@ -14,7 +14,7 @@ CLIENT=CCclient
 CLIENTKILLALL=euca_killall
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
-SCLIBS=../storage/storage.o ../storage/walrus.o
+SCLIBS=../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o
 VNLIBS=../net/vnetwork.o ../util/misc.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ${LIBS} -lcurl -lssl -lcrypto -lrampart
@@ -44,15 +44,15 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o
-	$(CC) -shared generated/*.o server-marshal.o server-marshal-state.o handlers.o handlers-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
-$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o
+$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
 	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
 
-$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o
+$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
 	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
 
 deploy:

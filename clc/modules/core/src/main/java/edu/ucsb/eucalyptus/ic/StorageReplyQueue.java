@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -96,9 +96,9 @@ public class StorageReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
+            BaseMessage msg = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
-            EucalyptusMessage errMsg;
+            StorageErrorMessageType errMsg = null;
 
             if ( ex instanceof NoSuchVolumeException )
             {
@@ -132,9 +132,11 @@ public class StorageReplyQueue {
             }
             else
             {
-                errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
+                replies.putMessage( new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage()) );
             }
-            replies.putMessage( errMsg );
+            if( errMsg != null ) {
+              replies.putMessage( errMsg );
+            }
         }
         catch ( Exception e )
         {

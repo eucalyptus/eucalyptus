@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -61,13 +61,20 @@ permission notice:
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
 #include "storage.h"
+#include "http.h"
 
 int main (int argc, char **argv) 
 {
-    printf ("=====> testing storage.c\n");
-    int err = test_cache ();
-    printf ("  error=%d\n", err);
-    return err;
+    printf ("argc=%d\n", argc);
+
+    if (argc==5) {
+        return http_put (argv[1], argv[2], argv[3], argv[4]);
+
+    } else {
+        printf ("=====> testing storage.c\n");
+        int err = test_cache ();
+        printf ("  error=%d\n", err);
+        return err;
+    }
 }

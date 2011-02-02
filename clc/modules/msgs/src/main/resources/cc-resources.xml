@@ -55,7 +55,7 @@
   ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
@@ -65,6 +65,15 @@
 
 <binding force-classes="true">
   <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
+  <mapping class="edu.ucsb.eucalyptus.msgs.ResourceType" abstract="true">
+    <structure name="instanceType" field="instanceType" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
+    <value name="maxInstances" field="maxInstances" usage="optional" />
+    <value name="availableInstances" field="availableInstances" usage="optional" />
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.NodeType" abstract="true">
+    <value name="serviceTag" field="serviceTag" usage="optional" />
+    <value name="iqn" field="iqn" usage="optional" />
+  </mapping>
   <mapping name="DescribeResources" class="edu.ucsb.eucalyptus.msgs.DescribeResourcesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection field="instanceTypes" factory="org.jibx.runtime.Utility.arrayListFactory">

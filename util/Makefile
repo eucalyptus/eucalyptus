@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-all: misc.o data.o euca_auth.o euca_axis.o ipc.o euca_rootwrap euca_mountwrap
+all: misc.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all 
 

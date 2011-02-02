@@ -46,5 +46,7 @@ public interface Image extends HasName<Image> {
   public abstract int hashCode( );
   
   public abstract String toString( );
+
+  public abstract String getPlatform( );
   
 }
