@@ -4,16 +4,16 @@
 
 # Usage:
 #   configure   [--with-axis2c=<dir>]
-#		[--with-axis2=<dir>]
-#		[--with-libvirt=<dir>]
-#		[--with-interface-theme=<name>]
-#		[--enable-appliance-store]
+#               [--with-axis2=<dir>]
+#               [--with-libvirt=<dir>]
+#               [--with-interface-theme=<name>]
+#               [--enable-appliance-store]
 #               [--enable-debug]
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
-	m4_esyscmd([cat VERSION| tr -d '\n']),
-	support@open.eucalyptus.com)
+        m4_esyscmd([cat VERSION| tr -d '\n']),
+        support@open.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
@@ -23,9 +23,9 @@ EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
-	TOP=`pwd`
+        TOP=`pwd`
 else
-	TOP=${srcdir}
+        TOP=${srcdir}
 fi
 
 # variables we'll need later on
@@ -158,7 +158,7 @@ fi
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
-	AC_MSG_ERROR([JAVA_HOME is not defined!])
+        AC_MSG_ERROR([JAVA_HOME is not defined!])
 fi
 
 AC_PATH_PROG([ANT], ant,,$ANT_HOME/bin:$PATH)
@@ -166,32 +166,32 @@ AC_PATH_PROG([JAVA], java,,$JAVA_HOME/bin)
 
 # Check the version of java and ant
 if test -z "$ANT" ; then
-	AC_MSG_ERROR([Cannot find ant!])
+        AC_MSG_ERROR([Cannot find ant!])
 fi
 if test -z "$JAVA" ; then
-	AC_MSG_ERROR([Cannot find java!])
+        AC_MSG_ERROR([Cannot find java!])
 fi
 java_version=`$JAVA -version 2>&1 | grep "java version" | \
-	sed -e 's/.*java version "\(.*\)".*/\1/'`
+        sed -e 's/.*java version "\(.*\)".*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
-	AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
+        AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
 fi
 
 # now let's test we have jni.h
 if test ! -e $JAVA_HOME/include/jni.h ; then
-	AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
+        AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
 fi
 
 ant_version=`$ANT -version 2>&1 | grep "Ant version" | \
-	sed -e 's/.*Ant version \([[0-9.]]*\).*/\1/'`
+        sed -e 's/.*Ant version \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $ant_version ">=" $ant_min_version`
 if test $goodversion -eq 0; then
-	AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
+        AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
 fi
 # some version of ant picks up the wrong java
 java_version=`$ANT -diagnostics 2>&1 | grep ^java.version | \
-	sed -e 's/java.* \([[0-9.]]*\).*/\1/'`
+        sed -e 's/java.* \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         AC_MSG_ERROR([ANT is using the wrong java (version less than $java_min_version)])
@@ -254,10 +254,10 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs 
-		tools/eucalyptus-cc:tools/eucalyptus-cc.in
-		tools/eucalyptus-nc:tools/eucalyptus-nc.in
-		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
+                tools/eucalyptus-cc:tools/eucalyptus-cc.in
+                tools/eucalyptus-nc:tools/eucalyptus-nc.in
+                tools/euca_conf:tools/euca_conf.in
+                tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
