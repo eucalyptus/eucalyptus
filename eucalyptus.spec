@@ -45,13 +45,13 @@ Version:       2.1.0
 Release:       0
 License:       GPLv3
 Group:         Applications/System
-# FIXME:  gcc and make are probably unnecessary
-BuildRequires: gcc
-BuildRequires: make
+
 BuildRequires: ant
 BuildRequires: ant-nodeps
 BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: libxml2-devel
+BuildRequires: libxslt-devel
 BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libvirt}-devel
@@ -59,8 +59,8 @@ BuildRequires: %{euca_libvirt}
 BuildRequires: %{euca_libcurl}
 BuildRequires: %{euca_java}
 Requires:      %{euca_build_req}
-Requires:      perl-Crypt-OpenSSL-RSA
-Requires:      perl-Crypt-OpenSSL-Random
+Requires:      perl(Crypt::OpenSSL::RSA)
+Requires:      perl(Crypt::OpenSSL::Random)
 
 Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
@@ -177,6 +177,8 @@ Requires:     %{name}-gl = %{version}-%{release}
 Requires:     euca-axis2c >= 1.6.0
 Requires:     euca-rampartc >= 1.3.0
 Requires:     bridge-utils
+Requires:     device-mapper
+Requires:     euca2ools
 Requires:     %{euca_curl}
 Requires:     %{euca_httpd}
 Requires:     %{euca_hypervisor}
