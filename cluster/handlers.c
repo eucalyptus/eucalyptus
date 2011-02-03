@@ -3594,10 +3594,12 @@ int maintainNetworkState() {
   uint32_t cloudIp;
 
 
-  rc = reconfigureNetworkFromCLC();
-  if (rc) {
+  /*
+    rc = reconfigureNetworkFromCLC();
+    if (rc) {
     logprintfl(EUCAWARN, "maintainNetworkState(): cannot get network ground truth from CLC\n");
-  }
+    }
+  */
 
   // find current CLC IP
   cloudIp = vnetconfig->cloudIp;
