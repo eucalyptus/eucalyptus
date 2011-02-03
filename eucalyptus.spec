@@ -237,6 +237,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %files
+%defattr(-,root,root,-)
 %doc LICENSE INSTALL README CHANGELOG
 /etc/eucalyptus/eucalyptus.conf
 /var/lib/eucalyptus/keys
@@ -255,8 +256,10 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+%doc /usr/share/doc/eucalyptus
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/floppy
 /usr/share/eucalyptus/get_iscsitarget.pl
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
@@ -293,6 +296,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 
 #%files common-java -f jar_list
 %files common-java
+%defattr(-,root,root,-)
 /etc/init.d/eucalyptus-cloud
 /etc/eucalyptus/cloud.d
 /var/lib/eucalyptus/db
@@ -304,17 +308,25 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/licenses
 
 %files cloud
+%defattr(-,root,root,-)
 
 %files walrus
+%defattr(-,root,root,-)
 
 %files sc
+%defattr(-,root,root,-)
+/usr/share/eucalyptus/connect_iscsitarget_sc.pl
+/usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
+%defattr(-,root,root,-)
 /opt/euca-axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
+/usr/share/eucalyptus/dynserv.pl
 
 %files nc
+%defattr(-,root,root,-)
 /usr/share/eucalyptus/gen_libvirt_xml
 /usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/partition2disk
@@ -322,10 +334,12 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
 /usr/sbin/euca_test_nc
+/usr/sbin/eucanetd
 /opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
 %files gl
+%defattr(-,root,root,-)
 /opt/euca-axis2c/services/EucalyptusGL
 
 %pre
