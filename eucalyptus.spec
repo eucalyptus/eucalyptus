@@ -284,7 +284,6 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca-deregister-cluster
 /usr/sbin/euca-deregister-storage-controller
 /usr/sbin/euca-deregister-walrus
-/usr/sbin/euca-describe-arbitrators
 /usr/sbin/euca-describe-clusters
 /usr/sbin/euca-describe-components
 /usr/sbin/euca-describe-properties
