@@ -79,7 +79,7 @@ Requires:      python26-boto
 %else
 Requires:      python
 Requires:      python-boto >= 1.9b
-%fi
+%endif
 
 # Remove old, Eucalyptus-supplied dependency packages
 Obsoletes:     euca-axis2c
