@@ -99,13 +99,14 @@ import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
   private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class.toString( ) );
-  private static final VelocityEngine ve = new VelocityEngine( );
+  private static final VelocityEngine                         ve                             = new VelocityEngine( );
   static {
     ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-    "org.apache.velocity.runtime.log.Log4JLogChute" );
-    ve.setProperty("runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
-    ve.init();
+                    "org.apache.velocity.runtime.log.Log4JLogChute" );
+    ve.setProperty( "runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
+    ve.init( );
   }
+  private static List<ComponentId>                            last                           = Lists.newArrayList( );
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
   private static String                                       FAIL_MSG                       = "ESB client not ready because the service bus has not been started.";
   private static final AtomicMarkableReference<MuleContext>   context                        = new AtomicMarkableReference<MuleContext>( null, false );
@@ -148,15 +149,16 @@ public class ServiceContextManager {
   static String mapEndpointToService( String endpoint ) throws ServiceDispatchException {
     String dest = endpoint;
     if ( ( endpoint.startsWith( "vm://" ) && !endpointToService.containsKey( endpoint ) ) || endpoint == null ) {
-      throw new ServiceDispatchException( "Failed to find destination: " + endpoint, new IllegalArgumentException( "No such endpoint: " + endpoint + " in endpoints="
-                                                                                                               + endpointToService.entrySet( ) ) );
+      throw new ServiceDispatchException( "Failed to find destination: " + endpoint, new IllegalArgumentException( "No such endpoint: " + endpoint
+                                                                                                                   + " in endpoints="
+                                                                                                                   + endpointToService.entrySet( ) ) );
     }
     if ( endpoint.startsWith( "vm://" ) ) {
       dest = endpointToService.get( endpoint );
     }
     return dest;
   }
-
+  
   static String mapServiceToEndpoint( String service ) {
     String dest = service;
     if ( ( !service.startsWith( "vm://" ) && !serviceToEndpoint.containsKey( service ) ) || service == null ) {
@@ -166,7 +168,7 @@ public class ServiceContextManager {
     }
     return dest;
   }
-
+  
   static boolean loadContext( ) {
     List<ComponentId> components = ComponentIds.listEnabled( );
     LOG.info( "The following components have been identified as active: " );
@@ -186,7 +188,7 @@ public class ServiceContextManager {
         return false;
       }
     } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       System.exit( 1 );
     }
     return true;
@@ -204,9 +206,9 @@ public class ServiceContextManager {
         ve.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
         out.flush( );
         out.close( );
-        String outString = out.toString( );        
-        ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ));
-        if( LogLevels.DEBUG ) {
+        String outString = out.toString( );
+        ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
+        if ( LogLevels.DEBUG ) {
           LOG.info( "===================================" );
           LOG.info( outString );
           LOG.info( "===================================" );
@@ -257,20 +259,20 @@ public class ServiceContextManager {
       try {
         LOG.trace( "Waiting for service context to start." );
         TimeUnit.MILLISECONDS.sleep( 10000 );
-        if( ( ref = context.getReference( ) ) == null ) {
+        if ( ( ref = context.getReference( ) ) == null ) {
           throw new ServiceStateException( "Attempt to reference service context before it is ready." );
         } else {
           return ref;
         }
       } catch ( InterruptedException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         throw new ServiceStateException( "Attempt to reference service context before it is ready." );
       }
     } else {
       return ref;
     }
   }
-
+  
   public static boolean startup( ) throws ServiceInitializationException {
     try {
       LOG.info( "Loading system bus." );
@@ -296,7 +298,7 @@ public class ServiceContextManager {
         }
       }
     } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return false;
     }
     return true;
@@ -328,7 +330,7 @@ public class ServiceContextManager {
       throw new ServiceInitializationException( "Failed to start service context.", e );
     }
   }
-
+  
   private static void shutdownContext( MuleContext ctx ) {
     try {
       ctx.stop( );
@@ -337,13 +339,12 @@ public class ServiceContextManager {
       LOG.error( ex, ex );
     }
   }
-  private static List<ComponentId> last = Lists.newArrayList( );
+  
   private static MuleContext createContext( ) throws ServiceInitializationException {
     List<ComponentId> components = ComponentIds.listEnabled( );
-    if( checkStateUnchanged( ComponentIds.listEnabled( ) ) && context.getReference( ) != null ) {
+    if ( checkStateUnchanged( ComponentIds.listEnabled( ) ) && context.getReference( ) != null ) {
       return context.getReference( );
     } else {
-      last = components;
       LOG.info( "The following components have been identified as active: " );
       for ( ComponentId c : components ) {
         LOG.info( "-> " + c );
@@ -361,6 +362,7 @@ public class ServiceContextManager {
       MuleContext muleCtx;
       try {
         muleCtx = contextFactory.createMuleContext( builder );
+        last = components;
       } catch ( InitialisationException ex ) {
         LOG.error( ex, ex );
         throw new ServiceInitializationException( "Failed to initialize service context because of: " + ex.getMessage( ), ex );
@@ -371,14 +373,14 @@ public class ServiceContextManager {
       return muleCtx;
     }
   }
-
+  
   public static boolean check( ) {
-    if( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+    if ( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
       ServiceContextManager.restart( );
     }
     return true;
   }
-
+  
   private static boolean checkStateUnchanged( List<ComponentId> now ) {
     return last.containsAll( now ) && last.size( ) == now.size( );
   }

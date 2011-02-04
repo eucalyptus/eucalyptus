@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,30 +61,25 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.event;
+package com.eucalyptus.util.concurrent;
 
-import java.util.concurrent.atomic.AtomicLong;
-import org.apache.log4j.Logger;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 
-public class Hertz extends GenericEvent<Long> {
-  private static AtomicLong counter = new AtomicLong( System.currentTimeMillis( ) );
-  public Hertz( ) {
-    super( counter.incrementAndGet( ) );
-  }
-
-  private static Logger LOG = Logger.getLogger( ClockTick.class );
+public class GenericFuture<V> extends AbstractListenableFuture<V> implements CheckedListenableFuture<V> {
 
   @Override
-  public Long getMessage( ) {
-    return Math.abs( super.getMessage( ) );
+  public boolean isCanceled( ) {
+    return false;
   }
 
-  public boolean isAsserted( long modulo ) {
-    return ( ( this.getMessage( ) % Long.valueOf( modulo ) ) == 0l );
+  @Override
+  public boolean set( V value ) {
+    return super.set( value );
   }
-  
-  
-  
-  
-  
+
+  @Override
+  public  boolean setException( Throwable throwable ) {
+    return super.setException( throwable );
+  }
+
 }

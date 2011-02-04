@@ -84,4 +84,5 @@ public interface ListenableFuture<V> extends Future<V> {
    * immediately but the executor rejected it.
    */
   void addListener(Runnable listener, Executor exec);
+  void addListener(Runnable listener);
 }

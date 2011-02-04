@@ -87,7 +87,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
-
+  
   @Override
   public boolean load( ) throws Exception {
     /**
@@ -101,7 +101,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         } catch ( NoSuchElementException e ) {
           throw BootstrapException.throwFatal( "Failed to lookup component which is alwaysLocal: " + c.name( ), e );
         }
-      } else if( c.hasDispatcher( ) ) {
+      } else if ( c.hasDispatcher( ) ) {
         try {
           Component comp = Components.lookup( c );
         } catch ( NoSuchElementException e ) {
@@ -122,13 +122,13 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             LOG.error( ex, ex );
             failed = true;
           } catch ( Throwable ex ) {
-            BootstrapException.throwFatal( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }
     }
     if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to load component services.  See the log files for more information." );
+      Exceptions.trace( "Failures occurred while attempting to load component services.  See the log files for more information." );
     }
     
     return true;
@@ -136,33 +136,31 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   
   @Override
   public boolean start( ) throws Exception {
-    boolean failed = false;
     Component euca = Components.lookup( Eucalyptus.class );
-    for ( Component comp : Components.list( ) ) {
+    for ( final Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.list( ) ) {
+      for ( final ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
           try {
-            comp.startService( s );
+            comp.startService( s ).addListener( new Runnable( ) {
+              @Override
+              public void run( ) {
+                try {
+                  comp.enableService( s );
+                } catch ( ServiceRegistrationException ex ) {
+                  LOG.error( ex , ex );
+                } catch ( Throwable ex ) {
+                  Exceptions.trace( "enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+                }
+              }
+            } );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
-            failed = true;
           } catch ( Throwable ex ) {
-            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
-          }
-          try {
-            comp.enableService( s );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
-            failed = true;
-          } catch ( Throwable ex ) {
-            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }
-    }
-    if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
     }
     return true;
   }
@@ -174,7 +172,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean enable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
@@ -182,13 +180,13 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean stop( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
   public void destroy( ) throws Exception {}
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
@@ -196,7 +194,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean disable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */

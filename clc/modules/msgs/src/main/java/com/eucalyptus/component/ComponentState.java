@@ -74,6 +74,7 @@ import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
@@ -89,7 +90,7 @@ public class ComponentState {
   private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
-  private final Component.State                                 goal = Component.State.ENABLED;
+  private Component.State                                 goal = Component.State.DISABLED;
   private final NavigableSet<String>                            details = new ConcurrentSkipListSet<String>( );
   
   public ComponentState( Component parent ) {
@@ -128,7 +129,6 @@ public class ComponentState {
         Threads.lookup( parent.toString() ).getExecutorService( ).submit(  new Runnable() {
           @Override
           public void run( ) {
-            ComponentState.this.details.clear( );
             try {
               parent.getBootstrapper( ).start( );
               if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
@@ -148,10 +148,6 @@ public class ComponentState {
     final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        if ( !Bootstrap.isFinished( ) ) {
-          transitionCallback.fireException( new Exception( "Bootstrap has not yet completed." ) );
-        }
-        ComponentState.this.details.clear( );
         try {
           if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             parent.getBootstrapper( ).check( );
@@ -175,7 +171,6 @@ public class ComponentState {
     final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
         try {
           parent.getBootstrapper( ).disable( );
           parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
@@ -191,7 +186,6 @@ public class ComponentState {
     final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
         try {
           parent.getBootstrapper( ).stop( );
           if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
@@ -209,7 +203,6 @@ public class ComponentState {
     final TransitionAction<Component> checkTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
         try {
           if ( State.LOADED.ordinal( ) < ComponentState.this.stateMachine.getState( ).ordinal( ) ) {
             parent.getBootstrapper( ).check( );
@@ -239,7 +232,6 @@ public class ComponentState {
     final TransitionAction<Component> destroyTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
         try {
           parent.getBootstrapper( ).destroy( );
           transitionCallback.fire( );
@@ -282,7 +274,7 @@ public class ComponentState {
     }.newAtomicState( );
   }
   
-  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<Component> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransition( transition );
     } catch ( IllegalStateException ex ) {
@@ -290,14 +282,14 @@ public class ComponentState {
     } catch ( NoSuchElementException ex ) {
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
-      throw Exceptions.trace( ex );
+      throw ex;
     } catch ( Throwable ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: "
                                                     + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
   }
   
-  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<Component> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransitionTo( state );
     } catch ( IllegalStateException ex ) {
@@ -305,7 +297,7 @@ public class ComponentState {
     } catch ( NoSuchElementException ex ) {
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
-      throw Exceptions.trace( ex );
+      throw ex;
     } catch ( Throwable ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( )
                                                     + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
@@ -314,9 +306,17 @@ public class ComponentState {
   
   public void transitionSelf( ) {
     try {
-      this.transition( this.getState( ) );
-    } catch ( Throwable ex ) {
-      LOG.trace( ex, ex );
+      if( State.NOTREADY.equals( this.getState( ) ) ) {//this is a special case of a transition which does not return to itself on a successful check
+        this.transition( State.DISABLED );
+      } else { 
+        this.transition( this.getState( ) );
+      }
+    } catch ( IllegalStateException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
     }
   }
 
@@ -325,6 +325,10 @@ public class ComponentState {
    */
   public Component.State getGoal( ) {
     return this.goal;
+  }
+
+  void setGoal( Component.State goal ) {
+    this.goal = goal;
   }
 
   public boolean isBusy( ) {
