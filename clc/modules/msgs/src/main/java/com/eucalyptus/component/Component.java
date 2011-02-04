@@ -187,11 +187,15 @@ public class Component implements ComponentInformation, HasName<Component> {
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this, config );
     this.setupService( service );
-    if ( service.isLocal( ) && State.INITIALIZED.equals( this.getState( ) ) ) {
-      try {
-        return this.stateMachine.transition( Transition.LOADING );
-      } catch ( Throwable ex ) {
-        throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
+    if ( service.isLocal( ) ) { 
+      if( State.INITIALIZED.equals( this.getState( ) ) ) {
+        try {
+          return this.stateMachine.transition( Transition.LOADING );
+        } catch ( Throwable ex ) {
+          throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
+        }
+      } else if( State.LOADED.equals( this.getState( ) ) ) {
+        return new TransitionFuture<Component>( this );
       }
     } else {
       //TODO:GRZE:ASAP handle loadService

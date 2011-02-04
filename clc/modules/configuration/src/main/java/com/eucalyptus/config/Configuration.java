@@ -120,7 +120,7 @@ public class Configuration {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       final GenericFuture<ServiceConfiguration> v = Futures.newGenericFuture( );
       try {
-        final Runnable startRunner = new Runnable( ) {
+        final Runnable enableRunner = new Runnable( ) {
           @Override
           public void run( ) {
             try {
@@ -131,17 +131,17 @@ public class Configuration {
             }
           }
         };
-        final Runnable loadRunner = new Runnable( ) {
+        final Runnable startRunner = new Runnable( ) {
           @Override
           public void run( ) {
             try {
-              builder.getComponent( ).startService( newComponent ).addListener( startRunner );
+              builder.getComponent( ).startService( newComponent ).addListener( enableRunner );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex, ex );
             }
           }
         };
-        builder.getComponent( ).loadService( newComponent ).addListener( loadRunner ); 
+        builder.getComponent( ).loadService( newComponent ).addListener( startRunner ); 
         v.get( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
