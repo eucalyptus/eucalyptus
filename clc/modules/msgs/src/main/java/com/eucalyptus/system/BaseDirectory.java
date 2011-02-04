@@ -99,9 +99,7 @@ public enum BaseDirectory {
   
   public void create( ) {
     final File dir = new File( this.toString( ) );
-    if ( dir.exists( ) ) { 
-      this.assertPermissions( );
-    } else {
+    if ( !dir.exists( ) ) { 
       EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
       if( dir.mkdirs( ) ) {
         this.assertPermissions( ); 
@@ -117,12 +115,12 @@ public enum BaseDirectory {
   }
   private void assertPermissions( ) {
     try {
-      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex , ex );
     }
     try {
-      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
+      GroovyUtil.exec( "chmod +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex , ex );
     }
