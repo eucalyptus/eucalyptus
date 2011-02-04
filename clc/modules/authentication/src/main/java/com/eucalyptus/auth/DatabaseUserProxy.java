@@ -385,7 +385,8 @@ public class DatabaseUserProxy implements User {
   public List<Certificate> getCertificates( ) throws AuthException {
     final List<Certificate> results = Lists.newArrayList( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      final UserEntity search = new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }};
+      Transactions.one( search, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           for ( CertificateEntity c : t.getCertificates( ) ) {
             results.add( new DatabaseCertificateProxy( c ) );

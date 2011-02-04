@@ -75,20 +75,6 @@ public class Context {
     return check( this.user );
   }
   
-  /*
-  public List<Group> getGroups( ) {
-    return Groups.lookupUserGroups( this.getUser( ) );
-  }
-  
-  public List<Authorization> getAuthorizations( ) {
-    List<Authorization> auths = Lists.newArrayList( );
-    for ( Group g : this.getGroups( ) ) {
-      auths.addAll( g.getAuthorizations( ) );
-    }
-    return auths;
-  }
-  */
-  
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
       EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getId( ) ).debug( );
