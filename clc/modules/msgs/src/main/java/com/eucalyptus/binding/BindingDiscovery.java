@@ -25,7 +25,7 @@ public class BindingDiscovery extends ServiceJarDiscovery {
     try {
       f = candidate.getDeclaredField( "JiBX_bindingList" );
       bindingList = ( String ) f.get( null );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       return false;
     }
     List<String> bindings = Lists.transform( Arrays.asList( bindingList.split( "\\|" ) ), new Function<String,String>() {
