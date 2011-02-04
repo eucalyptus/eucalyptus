@@ -272,6 +272,12 @@ public class Component implements ComponentInformation, HasName<Component> {
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex );
         }
+      } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
+        try {
+          Component.this.stateMachine.transition( State.ENABLED );
+        } catch ( Throwable ex ) {
+          throw  new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex );
+        }
       }
     } else {
       this.getBuilder( ).fireEnable( config );
@@ -302,7 +308,7 @@ public class Component implements ComponentInformation, HasName<Component> {
               try {
                 Component.this.stateMachine.transition( State.STOPPED );
               } catch ( Throwable ex ) {
-                LOG.error( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
+                Exceptions.trace( new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex ) );
               }
               DispatcherFactory.remove( Component.this.services.get( config ) );
             }
@@ -310,6 +316,13 @@ public class Component implements ComponentInformation, HasName<Component> {
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
         }
+      } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) || State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
+        try {
+          Component.this.stateMachine.transition( State.STOPPED );
+        } catch ( Throwable ex ) {
+          throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
+        }
+        DispatcherFactory.remove( Component.this.services.get( config ) );
       }
     } else {
       this.getBuilder( ).fireStop( config );
@@ -323,6 +336,9 @@ public class Component implements ComponentInformation, HasName<Component> {
     } else {
       Service service = this.services.remove( remove.getName( ) );
       if ( config.isLocal( ) ) {
+        if ( State.STOPPED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
+          this.stopService( config ); 
+        }
         this.localService.set( null );
         try {
           this.stateMachine.transition( Transition.DESTROYING );

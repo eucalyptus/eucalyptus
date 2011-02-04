@@ -90,7 +90,7 @@ public class ComponentState {
   private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
-  private final Component.State                                 goal = Component.State.ENABLED;
+  private Component.State                                 goal = Component.State.DISABLED;
   private final NavigableSet<String>                            details = new ConcurrentSkipListSet<String>( );
   
   public ComponentState( Component parent ) {
@@ -129,7 +129,6 @@ public class ComponentState {
         Threads.lookup( parent.toString() ).getExecutorService( ).submit(  new Runnable() {
           @Override
           public void run( ) {
-            ComponentState.this.details.clear( );
             try {
               parent.getBootstrapper( ).start( );
               if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
@@ -152,7 +151,7 @@ public class ComponentState {
         if ( !Bootstrap.isFinished( ) ) {
           transitionCallback.fireException( new Exception( "Bootstrap has not yet completed." ) );
         }
-        ComponentState.this.details.clear( );
+        ComponentState.this.setGoal( State.ENABLED );
         try {
           if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             parent.getBootstrapper( ).check( );
@@ -176,7 +175,7 @@ public class ComponentState {
     final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
+        ComponentState.this.setGoal( State.DISABLED );
         try {
           parent.getBootstrapper( ).disable( );
           parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
@@ -192,7 +191,7 @@ public class ComponentState {
     final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
+        ComponentState.this.setGoal( State.STOPPED );
         try {
           parent.getBootstrapper( ).stop( );
           if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
@@ -210,7 +209,6 @@ public class ComponentState {
     final TransitionAction<Component> checkTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
         try {
           if ( State.LOADED.ordinal( ) < ComponentState.this.stateMachine.getState( ).ordinal( ) ) {
             parent.getBootstrapper( ).check( );
@@ -240,7 +238,7 @@ public class ComponentState {
     final TransitionAction<Component> destroyTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
+        ComponentState.this.setGoal( State.LOADED );
         try {
           parent.getBootstrapper( ).destroy( );
           transitionCallback.fire( );
@@ -334,6 +332,10 @@ public class ComponentState {
    */
   public Component.State getGoal( ) {
     return this.goal;
+  }
+
+  private void setGoal( Component.State goal ) {
+    this.goal = goal;
   }
 
   public boolean isBusy( ) {
