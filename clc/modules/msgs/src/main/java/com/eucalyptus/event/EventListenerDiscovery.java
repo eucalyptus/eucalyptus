@@ -17,19 +17,21 @@ public class EventListenerDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
-    try {
-      this.getEventListener( candidate );
-    } catch ( Exception ex ) {
-      LOG.trace( ex.getMessage( ) );
+    if ( EventListener.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+      try {
+        this.getEventListener( candidate );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.trace( ex.getMessage( ) );
+        return false;
+      }
+    } else {
+      return false;
     }
-    return true;
   }
   
   @SuppressWarnings( "unchecked" )
   private Class getEventListener( Class candidate ) throws Exception {
-    if ( !EventListener.class.isAssignableFrom( candidate ) ) {
-      throw new InstantiationException( candidate + " does not conform to " + EventListener.class );
-    }
     LOG.trace( "Candidate event listener: " + candidate.getName( ) );
     Method factory;
     factory = candidate.getDeclaredMethod( "register", new Class[] {} );
