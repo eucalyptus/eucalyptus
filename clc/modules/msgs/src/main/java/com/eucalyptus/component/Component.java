@@ -630,7 +630,11 @@ public class Component implements ComponentInformation, HasName<Component> {
       @Override
       public void run( ) {
         if ( !Component.this.stateMachine.isBusy( ) ) {
-          Component.this.runChecks( );
+          try {
+            Component.this.runChecks( );
+          } catch ( Throwable ex ) {
+            LOG.debug( "CheckRunner caught an exception: " + ex );
+          }
         }
       }
     };
