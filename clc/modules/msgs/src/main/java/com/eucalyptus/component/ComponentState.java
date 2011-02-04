@@ -74,6 +74,7 @@ import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
@@ -282,7 +283,7 @@ public class ComponentState {
     }.newAtomicState( );
   }
   
-  public Callback.Completion transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<Component> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransition( transition );
     } catch ( IllegalStateException ex ) {
@@ -290,14 +291,14 @@ public class ComponentState {
     } catch ( NoSuchElementException ex ) {
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
-      throw Exceptions.trace( ex );
+      throw ex;
     } catch ( Throwable ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: "
                                                     + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
   }
   
-  public Callback.Completion transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<Component> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransitionTo( state );
     } catch ( IllegalStateException ex ) {
@@ -305,7 +306,7 @@ public class ComponentState {
     } catch ( NoSuchElementException ex ) {
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
-      throw Exceptions.trace( ex );
+      throw ex;
     } catch ( Throwable ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( )
                                                     + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
@@ -315,8 +316,12 @@ public class ComponentState {
   public void transitionSelf( ) {
     try {
       this.transition( this.getState( ) );
-    } catch ( Throwable ex ) {
-      LOG.trace( ex, ex );
+    } catch ( IllegalStateException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( Exceptions.filterStackTrace( ex ) );
     }
   }
 
