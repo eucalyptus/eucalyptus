@@ -586,9 +586,6 @@ public class Component implements ComponentInformation, HasName<Component> {
           }
         }
       }
-      for ( final Component c : Components.list( ) ) {
-        Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
-      }
     }
   }
   
