@@ -133,4 +133,6 @@ public interface StorageManager {
 	public void stop() throws EucalyptusCloudException;
 
 	public void check() throws EucalyptusCloudException;
+
+	public void start() throws EucalyptusCloudException;
 }

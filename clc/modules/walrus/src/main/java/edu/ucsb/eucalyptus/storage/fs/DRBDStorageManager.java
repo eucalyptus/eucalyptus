@@ -398,6 +398,15 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	@Override
+	public void start() throws EucalyptusCloudException {
+		try {
+			becomeSlave();
+		} catch (ExecutionException e) {
+			throw new EucalyptusCloudException(e);
+		}
+	}
+
+	@Override
 	public void stop() throws EucalyptusCloudException {
 		try {
 			if(isMounted()) {
