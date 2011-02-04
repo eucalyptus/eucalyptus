@@ -17,7 +17,11 @@ public class EventListenerDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
-    Class listener = this.getEventListener( candidate );
+    try {
+      this.getEventListener( candidate );
+    } catch ( Exception ex ) {
+      LOG.trace( ex.getMessage( ) );
+    }
     return true;
   }
   
