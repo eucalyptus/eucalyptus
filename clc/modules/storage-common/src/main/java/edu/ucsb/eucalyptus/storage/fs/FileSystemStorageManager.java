@@ -490,4 +490,10 @@ public class FileSystemStorageManager implements StorageManager {
 		
 	}
 
+	@Override
+	public void start() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

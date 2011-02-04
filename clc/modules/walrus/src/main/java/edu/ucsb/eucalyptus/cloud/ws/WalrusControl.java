@@ -199,6 +199,11 @@ public class WalrusControl {
 		if(System.getProperty("euca.virtualhosting.disable") != null) {
 			WalrusProperties.enableVirtualHosting = false;
 		}
+		try {
+			storageManager.start();
+		} catch(EucalyptusCloudException ex) {
+			LOG.error("Error starting storage backend: " + ex);			
+		}
 	}
 
 	public WalrusControl() {}
