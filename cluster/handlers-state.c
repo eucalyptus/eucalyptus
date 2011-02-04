@@ -156,6 +156,7 @@ int doStopService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
   
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(STOPPED);
   sem_mypost(CONFIG);
 
@@ -179,7 +180,8 @@ int doEnableService(ncMetadata *ccMeta) {
   // set state to ENABLED
   config->kick_network = 1;
   config->kick_dhcp = 1;
-  ccChangeState(ENABLED);
+  config->kick_enabled = 1;
+  //  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
@@ -199,6 +201,7 @@ int doDisableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "DisableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
 
