@@ -200,8 +200,8 @@ public class Component implements ComponentInformation, HasName<Component> {
         return new TransitionFuture<Component>( this );
       }
     } else {
+      return new TransitionFuture<Component>( this );
       //TODO:GRZE:ASAP handle loadService
-      throw Exceptions.trace( new ServiceRegistrationException( "Failed to load remote service: " + config ) );
     }
   }
   
