@@ -315,7 +315,11 @@ public class ComponentState {
   
   public void transitionSelf( ) {
     try {
-      this.transition( this.getState( ) );
+      if( State.NOTREADY.equals( this.getState( ) ) ) {//this is a special case of a transition which does not return to itself on a successful check
+        this.transition( State.DISABLED );
+      } else { 
+        this.transition( this.getState( ) );
+      }
     } catch ( IllegalStateException ex ) {
       LOG.error( Exceptions.filterStackTrace( ex ) );
     } catch ( NoSuchElementException ex ) {

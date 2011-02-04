@@ -182,7 +182,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       try {
         cb.fire( state );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), t );
+        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -192,7 +192,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       try {
         cb.fire( state );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), t );
+        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -225,7 +225,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     try {
       tid = this.request( transitionName );
     } catch ( ExistingTransitionException t ) {
-      throw Exceptions.trace( t );
+      throw t;
     } catch ( Throwable t ) {
       this.rollback( );
       throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
