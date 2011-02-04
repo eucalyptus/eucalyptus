@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,30 +61,69 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.event;
+package com.eucalyptus.util.fsm;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
-public class Hertz extends GenericEvent<Long> {
-  private static AtomicLong counter = new AtomicLong( System.currentTimeMillis( ) );
-  public Hertz( ) {
-    super( counter.incrementAndGet( ) );
+public class TransitionFuture<R> extends AbstractListenableFuture<R> implements CheckedListenableFuture<R> {
+    private static Logger LOG = Logger.getLogger( TransitionFuture.class );
+    
+    public TransitionFuture( ) {
+      super( );
+    }
+
+    public TransitionFuture( R value ) {
+      super( );
+      this.set( value );
+    }
+
+    @Override
+    public boolean setException( Throwable exception ) {
+      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
+      boolean r = false;
+      if ( exception == null ) {
+        exception = new IllegalArgumentException( "setException(Throwable) was called with a null argument" );
+      }
+      if ( !( r = super.setException( exception ) ) ) {
+        LOG.error( "Duplicate exception: " + exception.getMessage( ) );
+      }
+      return r;
+    }
+    
+    @Override
+    public R get( long timeout, TimeUnit unit ) throws InterruptedException, TimeoutException, ExecutionException {
+      return super.get( timeout, unit );
+    }
+    
+    @Override
+    public R get( ) throws InterruptedException, ExecutionException {
+      return super.get( );
+    }
+    
+    @Override
+    public boolean set( R result ) {
+      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + result.getClass( ).getCanonicalName( ) + ")" ).trace( );
+      boolean r = false;
+      if( !( r = super.set( result ) ) ) {
+        LOG.error( "Duplicate result: " + result );
+      }
+      return r;
+    }
+    
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      return super.cancel();
+    }
+
+    @Override
+    public boolean isCanceled( ) {
+      return super.isCancelled( );
+    }
   }
-
-  private static Logger LOG = Logger.getLogger( ClockTick.class );
-
-  @Override
-  public Long getMessage( ) {
-    return Math.abs( super.getMessage( ) );
-  }
-
-  public boolean isAsserted( long modulo ) {
-    return ( ( this.getMessage( ) % Long.valueOf( modulo ) ) == 0l );
-  }
-  
-  
-  
-  
-  
-}

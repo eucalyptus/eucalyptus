@@ -205,7 +205,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( e, e );
       credDb.rollback( );
     }
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     Clusters.stop( cluster.getName( ) );
     for( Group g : Groups.listAllGroups( ) ) {
       for( Authorization auth : g.getAuthorizations( ) ) {

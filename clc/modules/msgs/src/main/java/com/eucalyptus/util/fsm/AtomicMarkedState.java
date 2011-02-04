@@ -9,10 +9,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -59,7 +61,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.outStateListeners.putAll( outStateListeners );
   }
   
-  public Callback.Completion startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
+  public CheckedListenableFuture<P> startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
     } else if ( !this.transitions.containsKey( transitionName ) ) {
@@ -68,18 +70,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.checkTransition( transitionName );
       final ActiveTransition tid = this.beforeLeave( transitionName );
       this.afterLeave( transitionName, tid );
-      if( !( tid.transition.getAction( ) == TransitionAction.OUTOFBAND ) ) {
-        return tid;
-      } else {
-        return new Callback.Completion( ) {
-          public void fire( ) {}
-          public void fireException( Throwable t ) {}
-        };
-      }
+      return tid.getTransitionFuture( );
     }
   }
   
-  public Callback.Completion startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
+  public CheckedListenableFuture<P> startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
     } else if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
@@ -90,19 +85,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.checkTransition( transitionName );
       final ActiveTransition tid = this.beforeLeave( transitionName );
       this.afterLeave( transitionName, tid );
-      if( !( tid.transition.getAction( ) == TransitionAction.OUTOFBAND ) ) {
-        return tid;
-      } else {
-        return new Callback.Completion( ) {
-          public void fire( ) {}
-          public void fireException( Throwable t ) {}
-        };
-      }
+      return tid.getTransitionFuture( );
     }
-  }
-  
-  public void transitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
-    this.startTransitionTo( nextState ).fire( );
   }
   
   /**
@@ -198,7 +182,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       try {
         cb.fire( state );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), t );
+        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -208,7 +192,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       try {
         cb.fire( state );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), t );
+        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -241,7 +225,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     try {
       tid = this.request( transitionName );
     } catch ( ExistingTransitionException t ) {
-      throw Exceptions.trace( t );
+      throw t;
     } catch ( Throwable t ) {
       this.rollback( );
       throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
@@ -300,6 +284,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private final Transition<P, S, T> transition;
     private final Throwable           startStackTrace;
     private final Throwable           endStackTrace = new RuntimeException( );
+    private final TransitionFuture<P> transitionFuture = new TransitionFuture<P>( );
     
     public void fire( ) {
       try {
@@ -314,16 +299,19 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         LOG.error( t, t );
         this.teardown( );
         AtomicMarkedState.this.rollback( );
+        this.transitionFuture.setException( t );
       }
       try {
         this.transition.after( AtomicMarkedState.this.parent );
+        this.transitionFuture.set( AtomicMarkedState.this.parent );
       } catch ( Throwable t ) {
+        this.transitionFuture.setException( t );
         LOG.error( t, t );
       }
     }
 
     private void teardown( ) {
-      if ( LogLevels.DEBUG ) {
+      if ( LogLevels.TRACE ) {
         RuntimeException ex = new RuntimeException();
         if ( this.endTime != 0l ) {
           LOG.error( "Transition being committed for a second time!" );
@@ -332,11 +320,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         } else {
           this.endTime = System.nanoTime( );
           this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
+          LOG.trace( this );
         }
       }
     }
     
     public void fireException( Throwable t ) {
+      this.teardown( );
       AtomicMarkedState.this.error( );
     }
     
@@ -389,6 +379,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       return this.name;
     }
     
+    public TransitionFuture<P> getTransitionFuture( ) {
+      return this.transitionFuture;
+    }
+
     public int compareTo( ActiveTransition that ) {
       return this.id.compareTo( that.id );
     }

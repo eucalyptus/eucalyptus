@@ -7,6 +7,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback.Checked;
+import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.concurrent.MoreExecutors;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -20,6 +21,10 @@ public class Futures {
     Runnable r;
     future.addListener( r = new BasicCallbackProcessor( future, listener ), MoreExecutors.sameThreadExecutor( ) );
     return r;
+  }
+  
+  public static <T> GenericFuture<T> newGenericFuture( ){
+    return new GenericFuture<T>();
   }
 
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {
