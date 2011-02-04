@@ -72,6 +72,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -220,6 +221,11 @@ public class SystemBootstrapper {
               LOG.error( ex , ex );
             }
           }} );
+      } else {//GRZE:TODO:move this out to handle state setup in its final form.
+        for( ServiceConfiguration conf : c.list( ) ) {
+          c.startService( conf );
+          c.enableService( conf );
+        }
       }
     }
     try {
