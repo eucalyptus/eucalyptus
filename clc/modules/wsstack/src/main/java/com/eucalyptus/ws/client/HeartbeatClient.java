@@ -2,8 +2,6 @@ package com.eucalyptus.ws.client;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -11,15 +9,10 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.NioBootstrap;
-import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 
@@ -33,8 +26,6 @@ public class HeartbeatClient {
   private NioBootstrap      clientBootstrap;
   private String hostName;
   private int port;
-  private List<ComponentType> started = Lists.newArrayList( );
-  private List<ComponentType> stopped = Lists.newArrayList( );
   public HeartbeatClient( NioBootstrap clientBootstrap, String hostName, int port ) {
     this.remoteAddr = new InetSocketAddress( hostName, port );
     this.clientBootstrap = clientBootstrap;
@@ -99,19 +90,9 @@ public class HeartbeatClient {
   }
   private synchronized HeartbeatType getMessage( Collection<ServiceConfiguration> componentConfigurations ) {
     HeartbeatType hbmsg = new HeartbeatType( );
-    hbmsg.getStarted( ).addAll( started );
-    this.started.clear( );
-    hbmsg.getStopped( ).addAll( stopped );
-    this.stopped.clear( );
     for( ServiceConfiguration c : componentConfigurations ) {
-      hbmsg.getComponents( ).add( new HeartbeatComponentType( c.getComponent( ).name( ), c.getName( ) ) );
+      hbmsg.getComponents( ).add( new HeartbeatComponentType( c.getComponentId( ).name( ), c.getName( ) ) );
     }
     return hbmsg;
-  }
-  public synchronized boolean addStarted( ServiceConfiguration e ) {
-    return this.started.add( new ComponentType( e.getComponent( ).name( ), e.getName( ), e.getUri( ) ) );
-  }
-  public synchronized boolean addStopped( ServiceConfiguration e ) {
-    return this.stopped.add( new ComponentType( e.getComponent( ).name( ), e.getName( ), e.getUri( ) ) );
   }
 }

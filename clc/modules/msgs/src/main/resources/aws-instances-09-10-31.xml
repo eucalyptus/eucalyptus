@@ -63,193 +63,413 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
+
 <binding force-classes="true">
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" abstract="true">
-        <value name="virtualName" field="virtualName"/>
-        <value name="deviceName" field="deviceName"/>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" abstract="true">
+    <value name="virtualName" field="virtualName" />
+    <value name="deviceName" field="deviceName" />
+    <!-- TODO:UPDATE FOR EBS -->
+  </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.ReservationInfoType" abstract="true">
-        <value name="reservationId" field="reservationId" usage="required"/>
-        <value name="ownerId" field="ownerId" usage="required"/>
-        <collection name="groupSet" field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-            <structure name="item">
-                <value name="groupId"/>
-            </structure>
-        </collection>
-        <collection name="instancesSet" field="instancesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType"/>
-        </collection>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.ReservationInfoType" abstract="true">
+    <value name="reservationId" field="reservationId" usage="required" />
+    <value name="ownerId" field="ownerId" usage="required" />
+    <collection name="groupSet" field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="groupId" />
+      </structure>
+    </collection>
+    <collection name="instancesSet" field="instancesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" />
+    </collection>
+  </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <structure name="currentState">
-            <value name="code" field="shutdownStateCode" usage="required"/>
-            <value name="name" field="shutdownStateName" usage="required"/>
-        </structure>
-        <structure name="previousState">
-            <value name="code" field="previousStateCode" usage="required"/>
-            <value name="name" field="previousStateName" usage="required"/>
-        </structure>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure name="currentState">
+      <value name="code" field="shutdownStateCode" usage="required" />
+      <value name="name" field="shutdownStateName" usage="required" />
+    </structure>
+    <structure name="previousState">
+      <value name="code" field="previousStateCode" usage="required" />
+      <value name="name" field="previousStateName" usage="required" />
+    </structure>
+  </mapping>
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" abstract="true">
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="imageId" field="imageId" usage="required"/>
-        <structure name="instanceState">
-            <value name="code" field="stateCode" usage="required"/>
-            <value name="name" field="stateName" usage="required"/>
-        </structure>
-        <value name="privateDnsName" field="privateDnsName" usage="required"/>
-        <value name="dnsName" field="dnsName" usage="required"/>
-        <value name="reason" field="reason" usage="optional"/>
-        <value name="keyName" field="keyName" usage="optional"/>
-        <!--2006-10-01-->
-        <value name="amiLaunchIndex" field="amiLaunchIndex" usage="optional"/>
-        <!--2007-03-01-->
-        <collection name="productCodes" field="productCodes" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-            <structure name="item">
-                <value name="productCode"/>
-            </structure>
-        </collection>
-        <!--2007-08-29-->
-        <value name="instanceType" field="instanceType" usage="optional"/>
-        <value name="launchTime" field="launchTime" usage="optional"/>
-        <!--2008-02-01-->
-        <structure name="placement">
-            <value name="availabilityZone" field="placement"/>
-        </structure>
-        <value name="kernelId" field="kernel" usage="optional"/>
-        <value name="ramdiskId" field="ramdisk" usage="optional"/>
-        <value name="platform" field="platform" usage="optional"/>
-        <structure name="monitoring" usage="optional">
-            <value name="state" field="monitoring"/>
-        </structure>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.RunningInstancesItemType" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="imageId" field="imageId" usage="required" />
+    <structure name="instanceState">
+      <value name="code" field="stateCode" usage="required" />
+      <value name="name" field="stateName" usage="required" />
+    </structure>
+    <value name="privateDnsName" field="privateDnsName" usage="required" />
+    <value name="dnsName" field="dnsName" usage="required" />
+    <value name="reason" field="reason" usage="optional" />
+    <value name="keyName" field="keyName" usage="optional" />
+    <!--2006-10-01 -->
+    <value name="amiLaunchIndex" field="amiLaunchIndex" usage="optional" />
+    <!--2007-03-01 -->
+    <collection name="productCodes" field="productCodes" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="productCode" />
+      </structure>
+    </collection>
+    <!--2007-08-29 -->
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <value name="launchTime" field="launchTime" usage="optional" />
+    <!--2008-02-01 -->
+    <structure name="placement">
+      <value name="availabilityZone" field="placement" />
+    </structure>
+    <value name="kernelId" field="kernel" usage="optional" />
+    <value name="ramdiskId" field="ramdisk" usage="optional" />
+    <structure name="monitoring" usage="optional">
+      <value name="state" field="monitoring" />
+    </structure>
+  </mapping>
 
-    <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RunInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure field="rsvInfo" map-as="edu.ucsb.eucalyptus.msgs.ReservationInfoType"/>
-    </mapping>
+  <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RunInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure field="rsvInfo" map-as="edu.ucsb.eucalyptus.msgs.ReservationInfoType" />
+  </mapping>
 
-    <mapping name="RunInstances" class="edu.ucsb.eucalyptus.msgs.RunInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId" usage="required"/>
-        <value name="minCount" field="minCount" usage="required"/>
-        <value name="maxCount" field="maxCount" usage="required"/>
-        <value name="keyName" field="keyName" usage="optional"/>
-        <structure name="groupSet" usage="optional">
-            <collection field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="groupId"/>
-                </structure>
-            </collection>
+  <mapping name="RunInstances" class="edu.ucsb.eucalyptus.msgs.RunInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" usage="required" />
+    <value name="minCount" field="minCount" usage="required" />
+    <value name="maxCount" field="maxCount" usage="required" />
+    <value name="keyName" field="keyName" usage="optional" />
+    <structure name="groupSet" usage="optional">
+      <collection field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+        <structure name="item">
+          <value name="groupId" />
         </structure>
-        <!--2006-10-01-->
-        <structure name="userData" usage="optional">
-            <value name="data" field="userData"/>
-            <value name="version" field="version" usage="optional"/>
-            <value name="encoding" field="encoding" usage="optional"/>
-        </structure>
-        <!--2007-01-19-->
-        <value name="addressingType" field="addressingType" usage="optional"/>
-        <!--2007-08-29-->
-        <value name="instanceType" field="instanceType" usage="optional"/>
-        <!--2008-02-01-->
-        <structure name="placement" usage="optional">
-            <value name="availabilityZone" field="availabilityZone"/>
-        </structure>
-        <value name="kernelId" field="kernelId" usage="optional"/>
-        <value name="ramdiskId" field="ramdiskId" usage="optional"/>
-        <structure name="blockDeviceMapping" usage="optional">
-            <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
-            </collection>
-        </structure>
-        <!--2009-04-04-->
-        <structure name="monitoring" usage="optional">
-            <value name="enabled" field="monitoring"/>
-        </structure>
-        <!--2009-07-15-->
-        <value name="subnetId" field="subnetId" usage="optional"/>
-        <!--2009-10-31-->
-        <value name="disableApiTermination" field="disableTerminate" usage="optional"/>
-        <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional"/>
-    </mapping>
+      </collection>
+    </structure>
+    <!--2006-10-01 -->
+    <structure name="userData" usage="optional">
+      <value name="data" field="userData" />
+      <value name="version" field="version" usage="optional" />
+      <value name="encoding" field="encoding" usage="optional" />
+    </structure>
+    <!--2007-01-19 -->
+    <value name="addressingType" field="addressingType" usage="optional" />
+    <!--2007-08-29 -->
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <!--2008-02-01 -->
+    <structure name="placement" usage="optional">
+      <value name="availabilityZone" field="availabilityZone" />
+    </structure>
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+    <!--2009-04-04 -->
+    <structure name="monitoring" usage="optional">
+      <value name="enabled" field="monitoring" />
+    </structure>
+    <!--2009-07-15 -->
+    <value name="subnetId" field="subnetId" usage="optional" />
+    <!--2009-10-31 -->
+    <value name="disableApiTermination" field="disableTerminate" usage="optional" />
+    <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
+  </mapping>
 
 
-    <mapping name="DescribeInstancesResponse"
-             class="edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="reservationSet" field="reservationSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ReservationInfoType"/>
-        </collection>
-    </mapping>
+  <mapping name="DescribeInstancesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="reservationSet" field="reservationSet" usage="required"
+      factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ReservationInfoType" />
+    </collection>
+  </mapping>
 
-    <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType"   extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
-            <structure name="item">
-                <value name="instanceId"/>
-            </structure>
-        </collection>
-    </mapping>
+  <mapping name="DescribeInstances" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
 
-    <mapping name="TerminateInstancesResponse"
-             class="edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType"/>
-        </collection>
-    </mapping>
+  <mapping name="TerminateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" />
+    </collection>
+  </mapping>
 
-    <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
-            <structure name="item">
-                <value name="instanceId"/>
-            </structure>
-        </collection>
-    </mapping>
-    <!--2007-01-03-->
-    <mapping name="RebootInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
-    </mapping>
-    <!--2007-01-03-->
-    <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet" item-type="java.lang.String">
-            <structure name="item">
-                <value name="instanceId"/>
-            </structure>
-        </collection>
-    </mapping>
-    <!--2007-01-03-->
-    <mapping name="GetConsoleOutputResponse" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="instanceId" field="instanceId" usage="optional"/>
-        <value name="timestamp" field="timestamp" usage="optional"/>
-        <value name="output" field="output" usage="optional"/>
-    </mapping>
-    <!--2007-01-03-->
-    <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="instanceId" field="instanceId"/>
-    </mapping>
-    <mapping name="GetPasswordDataResponse" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="instanceId" field="instanceId" usage="optional"/>
-        <value name="timestamp" field="timestamp" usage="optional"/>
-        <value name="passwordData" field="output" usage="optional"/>
-    </mapping>
-    <mapping name="GetPasswordData" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="instanceId" field="instanceId"/>
-    </mapping>
+  <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="RebootInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" />
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="GetConsoleOutputResponse" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="timestamp" field="timestamp" usage="optional" />
+    <value name="output" field="output" usage="optional" />
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+  <!--2009-04-04 -->
+  <mapping name="MonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="MonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="instancesSet" usage="optional">
+      <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.MonitorInstanceState" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="UnmonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="UnmonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="instancesSet" usage="optional">
+      <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.MonitorInstanceState" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.MonitorInstanceState" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure name="monitoring">
+      <value name="state" field="monitoringState"/>
+    </structure>
+  </mapping>
+  <!-- TODO:ADDED -->
+  <mapping name="StopInstancesType" class="edu.ucsb.eucalyptus.msgs.StopInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+    <value name="force" field="force" usage="optional" />
+  </mapping>
+  <mapping name="StopInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.StopInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" />
+    </collection>
+  </mapping>
+  <mapping name="StartInstancesType" class="edu.ucsb.eucalyptus.msgs.StartInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="StartInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.StartInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" />
+    </collection>
+  </mapping>
+  <mapping name="ModifyInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure usage="optional" ordered="false">
+      <structure name="instanceType" usage="optional">
+        <value name="value" field="value" pre-set="instanceType" />
+      </structure>
+      <structure name="kernel" usage="optional">
+        <value name="value" field="value" pre-set="kernel" />
+      </structure>
+      <structure name="ramdisk" usage="optional">
+        <value name="value" field="value" pre-set="ramdisk" />
+      </structure>
+      <structure name="userData" usage="optional">
+        <value name="value" field="value" pre-set="userData" />
+      </structure>
+      <structure name="disableApiTermination" usage="optional">
+        <value name="value" field="value" pre-set="disableApiTermination" />
+      </structure>
+      <structure name="instanceInitiatedShutdownBehavior" usage="optional">
+        <value name="value" field="value" pre-set="instanceInitiatedShutdownBehavior" />
+      </structure>
+    </structure>
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="ModifyInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" usage="required" />
+  </mapping>
+  <mapping name="DescribeInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="required" />
+  </mapping>
+  <mapping name="DescribeInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <value name="kernel" field="kernel" usage="optional" />
+    <value name="ramdisk" field="ramdisk" usage="optional" />
+    <value name="userData" field="userData" usage="optional" />
+    <value name="disableApiTermination" field="disableApiTermination" usage="optional" />
+    <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="ResetInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType"
+      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="ResetInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
+      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" usage="required"/>
+  </mapping>
+
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.ResourceTag" abstract="true">
+    <value name="key" field="key" usage="required"/>
+    <value name="value" field="value" usage="required"/>
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.FilterType" abstract="true">
+    <value name="name" field="name" usage="required"/>
+    <collection name="valueSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="valueSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="value" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="CreateTagsType" class="edu.ucsb.eucalyptus.msgs.CreateTagsType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="resourceId" />
+      </structure>
+    </collection>
+    <structure name="tagSet" usage="optional">
+      <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="CreateTagsResponseType" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType"
+  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" usage="required"/>
+  </mapping>
+
+  <mapping name="CreatePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="groupName" field="groupName" usage="required"/>
+    <value name="strategy" field="strategy" usage="required"/>
+  </mapping>
+  <mapping name="CreatePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />  
+    <value name="return" field="_return" usage="required"/>
+  </mapping>
+  <mapping name="DeletePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="groupName" field="groupName" usage="required"/>
+  </mapping>
+  <mapping name="DeletePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType"    
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" field="_return" usage="required"/>
+  </mapping>
+  <mapping name="DescribePlacementGroupsType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="placementGroupSet" field="placementGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory"  item-type="java.lang.String">
+      <structure name="item">
+        <value name="groupName" />
+      </structure>
+    </collection>
+    <structure name="filterSet" usage="optional">
+      <collection field="filterSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.FilterType" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.PlacementGroupInfo" abstract="true">
+    <value name="groupName" field="groupName" usage="required"/>
+    <value name="strategy" field="strategy" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+  </mapping>
+  <mapping name="DescribePlacementGroupsResponseType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="placementGroupSet" usage="optional">
+      <collection field="placementGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.PlacementGroupInfo" />
+      </collection>
+    </structure>
+  </mapping>
 
 </binding>

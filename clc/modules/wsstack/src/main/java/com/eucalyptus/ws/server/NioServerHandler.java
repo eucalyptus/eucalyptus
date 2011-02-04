@@ -90,6 +90,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.ServiceNotReadyException;
@@ -130,8 +131,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( LogLevels.TRACE ) {
-        LOG.trace( request.getContent( ).toString( "UTF-8" ) );
+      if ( LogLevels.EXTREME && request instanceof MappingHttpMessage ) {
+        ((MappingHttpMessage)request).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
@@ -156,7 +157,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
     }
-    if ( cause instanceof ReadTimeoutException ) {
+    if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
       LOG.debug( cause, cause );
       this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );
     } else if ( cause instanceof WriteTimeoutException ) {

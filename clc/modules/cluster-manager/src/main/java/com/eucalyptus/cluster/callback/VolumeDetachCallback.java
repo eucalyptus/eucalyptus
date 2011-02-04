@@ -111,6 +111,8 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
       LOG.error( e, e );
     }
     LOG.trace( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) );
+    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+    vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
   }
   
 }

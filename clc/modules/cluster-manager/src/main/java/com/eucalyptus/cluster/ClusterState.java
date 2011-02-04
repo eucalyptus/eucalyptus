@@ -115,7 +115,7 @@ public class ClusterState {
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         if( addr.isAssigned( ) ) {
-          Callbacks.newClusterRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
+          Callbacks.newRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
         } else if ( addr.isSystemOwned( ) ) {
           addr.release( );
         }

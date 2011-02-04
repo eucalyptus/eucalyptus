@@ -46,12 +46,12 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
     try {
       
       if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( partition, this.component.getPeer( ), uri );      
+        return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
       } else {
-        return new RemoteConfiguration( partition, this.component.getPeer( ), uri );      
+        return new RemoteConfiguration( partition, this.component.getIdentity( ), uri );      
       }
     } catch ( Throwable t ) {
-      return new LocalConfiguration( partition, this.component.getPeer( ), uri );      
+      return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
     }
   }
 

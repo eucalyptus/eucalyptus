@@ -72,6 +72,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -165,7 +166,7 @@ public class Threads {
         return this.pool;
       }
     }
-    
+    private static final Runnable[] EMPTY = new Runnable[] {};
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
@@ -174,8 +175,15 @@ public class Threads {
       try {
         while( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
           LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
+          if( this.pool instanceof ThreadPoolExecutor ) {
+            ThreadPoolExecutor tpe = (ThreadPoolExecutor) this.pool;
+            for( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
+              LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ).getCanonicalName( ) );
+            }
+          }
         }
       } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupt( );
         LOG.error( e , e );
       }
       return ret;

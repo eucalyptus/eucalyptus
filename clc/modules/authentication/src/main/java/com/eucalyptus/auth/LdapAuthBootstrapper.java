@@ -1,25 +1,20 @@
 package com.eucalyptus.auth;
 
-import com.eucalyptus.auth.ldap.EntryExistsException;
-import com.eucalyptus.auth.EucaLdapHelper;
-import com.eucalyptus.auth.ldap.LdapAttributes;
-import com.eucalyptus.auth.ldap.LdapContextManager;
-import com.eucalyptus.auth.ldap.LdapException;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.ldap.LdapConfiguration;
-import org.apache.log4j.Logger;
 
-@Provides( Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
-@DependsLocal( Component.eucalyptus )
+@DependsLocal( Eucalyptus.class )
 public class LdapAuthBootstrapper extends Bootstrapper {
   private static Logger       LOG    = Logger.getLogger( LdapAuthBootstrapper.class );
   

@@ -96,9 +96,9 @@ public class StorageReplyQueue {
         {
             Object requestMsg = muleMsg.getPayload();
             String requestString = requestMsg.toString();
-            EucalyptusMessage msg = ( EucalyptusMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
+            BaseMessage msg = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( requestString );
             Throwable ex = muleMsg.getException().getCause();
-            EucalyptusMessage errMsg;
+            StorageErrorMessageType errMsg = null;
 
             if ( ex instanceof NoSuchVolumeException )
             {
@@ -132,9 +132,11 @@ public class StorageReplyQueue {
             }
             else
             {
-                errMsg = new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage());
+                replies.putMessage( new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage()) );
             }
-            replies.putMessage( errMsg );
+            if( errMsg != null ) {
+              replies.putMessage( errMsg );
+            }
         }
         catch ( Exception e )
         {

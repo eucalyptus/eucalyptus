@@ -65,8 +65,10 @@ package com.eucalyptus.system;
 
 import java.io.File;
 import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 
 public enum SubDirectory {
@@ -102,9 +104,14 @@ public enum SubDirectory {
   
   public void check( ) {
     final File dir = new File( this.toString( ) );
-    if ( dir.exists( ) ) { return; }
-    EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
-    dir.mkdirs( );
+    if ( dir.exists( ) ) { 
+      this.assertPermissions( );
+    } else {
+      EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
+      if( dir.mkdirs( ) ) {
+        this.assertPermissions( ); 
+      }
+    }
   }
   
   public String getChildPath( String... args ) {
@@ -113,5 +120,18 @@ public enum SubDirectory {
       ret += File.separator + s;
     }
     return ret;
+  }
+  
+  private void assertPermissions( ) {
+    try {
+      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( ex , ex );
+    }
+    try {
+      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( ex , ex );
+    }
   }
 }

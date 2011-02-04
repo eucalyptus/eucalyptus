@@ -63,29 +63,14 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.net.InetSocketAddress;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-
 import com.eucalyptus.ws.util.ChannelUtil;
-import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioServer {
   private static Logger                 LOG = Logger.getLogger( NioServer.class );
   private static Channel                       serverChannel;
 
-  static {
-    PipelineRegistry.getInstance( ).register( new HeartbeatPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new MetadataPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new EucalyptusSoapPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new ElasticFoxPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusRESTPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusRESTPostPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new EucalyptusQueryPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new WalrusSoapPipeline( ) );
-    PipelineRegistry.getInstance( ).register( new VMwareSoapPipeline( ) );
-  }
-  
   public NioServer( ) {}
 
   public static void start( ) {

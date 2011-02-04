@@ -62,12 +62,13 @@ package com.eucalyptus.bootstrap;
 
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Walrus;
 
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-@Provides(Component.walrus)
+@Provides(Walrus.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Component.walrus)
+@DependsLocal(Walrus.class)
 public class WalrusBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
 	private static WalrusBootstrapper singleton;

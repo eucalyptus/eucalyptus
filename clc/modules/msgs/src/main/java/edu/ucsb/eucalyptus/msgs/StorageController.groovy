@@ -65,15 +65,19 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-public class StorageResponseType extends EucalyptusMessage {
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.ComponentMessage;
+
+public class StorageResponseType extends BaseMessage {
 	def StorageResponseType() {}
 }
 
-public class StorageRequestType extends EucalyptusMessage {
+@ComponentMessage(Storage.class)
+public class StorageRequestType extends BaseMessage {
 	def StorageRequestType() {}
 }
 
-public class StorageErrorMessageType extends EucalyptusMessage {
+public class StorageErrorMessageType extends BaseMessage {
 	def StorageErrorMessageType() {
 	}
 	
@@ -274,7 +278,7 @@ public class ConvertVolumesType extends StorageComponentMessageType {
 
 public class ConvertVolumesResponseType extends StorageComponentMessageResponseType {
 	def ConvertVolumesResponseType() {		
-        }
+	}
 }
 
 public class AttachStorageVolumeType extends StorageRequestType {

@@ -76,9 +76,9 @@
 
     <euca:endpoint name="WalrusWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:${euca.ws.port}/services/Walrus"/>
+                   address="http://127.0.0.1:8773/services/Walrus"/>
     <euca:endpoint name="BukkitInternalWS" connector-ref="eucaws"
-                   address="http://127.0.0.1:${euca.ws.port}/internal/WalrusInternal" synchronous="true"/>
+                   address="http://127.0.0.1:8773/internal/WalrusInternal" synchronous="true"/>
 
     <endpoint name="BukkitWS" address="vm://Bukkit" synchronous="false"/>
     <endpoint name="BukkitInternalVM" address="vm://BukkitInternal" synchronous="true"/>

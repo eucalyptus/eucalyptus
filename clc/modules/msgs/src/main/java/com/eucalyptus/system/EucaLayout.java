@@ -135,6 +135,6 @@ String[] messages = renderedMessage.split( "\n" );
 
   @Override
   public boolean ignoresThrowable( ) {
-    return false;
+    return true;
   }
 }

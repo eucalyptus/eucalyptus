@@ -125,19 +125,6 @@ public class VolumeManager {
     StorageControllerConfiguration sc = Configuration.lookupSc( request.getAvailabilityZone( ) );
     try {
       User u = Users.lookupUser( request.getUserId( ) );
-//      List<Group> groups = Groups.lookupUserGroups( u );
-//      if( ! Iterables.any( groups, new Predicate<Group>() {
-//        @Override
-//        public boolean apply( Group arg0 ) {
-//          for( Authorization a : arg0.getAuthorizations( ) ) {
-//            if( a.getValue( ).equals( request.getAvailabilityZone( ) ) ) {
-//              return true;
-//            }
-//          }
-//          return false;
-//        }} ) ) {
-//        throw new EucalyptusCloudException( "Permission denied when trying to use resource: " + request.getAvailabilityZone( ) );
-//      }
     } catch ( NoSuchUserException e ) {
       throw new EucalyptusCloudException( "Failed to lookup your user information.", e );
     }
@@ -373,7 +360,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
-    Callbacks.newClusterRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
@@ -444,7 +431,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice( ) );
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     request.setInstanceId( vm.getInstanceId( ) );
-    Callbacks.newClusterRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+    Callbacks.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwnerId( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getPlacement( ) ).info( );
     volume.setStatus( "detaching" );

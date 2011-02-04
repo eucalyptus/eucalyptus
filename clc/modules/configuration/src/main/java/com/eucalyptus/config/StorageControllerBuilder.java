@@ -14,10 +14,6 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 
-import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageControllersType;
-import edu.ucsb.eucalyptus.msgs.ModifyStorageControllerAttributeType;
-import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
 
 @DiscoverableServiceBuilder( Storage.class )
 @Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, StorageControllerConfiguration.class, ModifyStorageControllerAttributeType.class } )
@@ -26,7 +22,7 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
 
   @Override
   public Component getComponent( ) {
-    return Components.lookup( com.eucalyptus.bootstrap.Component.storage );
+    return Components.lookup( Storage.class );
   }
   
   @Override

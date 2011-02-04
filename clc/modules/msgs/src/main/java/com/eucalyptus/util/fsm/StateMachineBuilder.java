@@ -112,15 +112,16 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       this.commit( );
     }
     
-    public void add( TransitionListener<P> listener ) {
+    public TransitionBuilder add( TransitionListener<P> listener ) {
       if( this.listeners == null ) {
         this.transition.addListener( listener );
       } else {
         this.listeners.add( listener );
       }
+      return this;
     }
     
-    public void add( TransitionListener<P>... listeners ) {
+    public TransitionBuilder add( TransitionListener<P>... listeners ) {
       if( this.listeners == null ) {
         for ( TransitionListener<P> l : listeners ) {
           transition.addListener( l );
@@ -130,6 +131,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
           this.listeners.add( l );
         }
       }
+      return this;
     }
   }
   
@@ -190,17 +192,17 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
     }
     LOG.debug( "Starting state machine: " + this.parent.getClass( ).getSimpleName( ) + " " + this.parent.getName( ) );
-    for ( S s : this.immutableStates ) {
-      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
-    }
+//    for ( S s : this.immutableStates ) {
+//      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
+//    }
     Multimap<T, Transition<P, S, T>> transNames = Multimaps.newArrayListMultimap( );
     for ( Transition<P, S, T> t : this.transitions ) {
       transNames.put( t.getName( ), t );
     }
     for ( T t : trans ) {
-      LOG.debug( "fsm " + this.parent.getName( ) + " transitions:" + ( transNames.containsKey( t )
-        ? transNames.get( t )
-        : t.name( ) + ":NONE" ) );
+//      LOG.debug( "fsm " + this.parent.getName( ) + " transitions:" + ( transNames.containsKey( t )
+//        ? transNames.get( t )
+//        : t.name( ) + ":NONE" ) );
       for ( Transition<P, S, T> tr : transNames.get( t ) ) {
         String trKey = String.format( "%s.%s->%s.%s", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ) );
         if ( alltransitions.get( trKey ) != null ) {

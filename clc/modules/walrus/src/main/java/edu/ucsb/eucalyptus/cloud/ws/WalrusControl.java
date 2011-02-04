@@ -69,7 +69,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -232,7 +233,7 @@ public class WalrusControl {
 
 	public UpdateWalrusConfigurationResponseType UpdateWalrusConfiguration(UpdateWalrusConfigurationType request) throws EucalyptusCloudException {
 		UpdateWalrusConfigurationResponseType reply = (UpdateWalrusConfigurationResponseType) request.getReply();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(request.getProperties() != null) {
 			for(ComponentProperty prop : request.getProperties()) {
@@ -253,7 +254,7 @@ public class WalrusControl {
 
 	public GetWalrusConfigurationResponseType GetWalrusConfiguration(GetWalrusConfigurationType request) throws EucalyptusCloudException {
 		GetWalrusConfigurationResponseType reply = (GetWalrusConfigurationResponseType) request.getReply();
-		if(Component.eucalyptus.name( ).equals(request.getEffectiveUserId()))
+		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		String name = request.getName();
 		if(WalrusProperties.NAME.equals(name)) {

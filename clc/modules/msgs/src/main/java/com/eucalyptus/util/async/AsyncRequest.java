@@ -17,13 +17,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   private final RequestHandler<Q, R>        handler;
   private final CallbackListenerSequence<R> callbackSequence;
   private Q                                 request;
-  private final ChannelPipelineFactory      pipelineFactory;
   
-  protected AsyncRequest( final TwiceChecked<Q, R> cb, ChannelPipelineFactory factory ) {
+  protected AsyncRequest( final TwiceChecked<Q, R> cb ) {
     super( );
     this.response = Futures.newAsyncMessageFuture( );
     this.handler = new AsyncRequestHandler<Q, R>( this.response );
-    this.pipelineFactory = factory;
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.callback = new TwiceChecked<Q, R>( ) {
 
@@ -67,8 +65,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( String cluster ) {
-    Services.lookupByName( Components.delegate.cluster, cluster ).enqueue( this );
+  public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
+    Services.lookupByName( com.eucalyptus.component.id.Cluster.class, cluster ).enqueue( this );
     return this.getResponse( );
   }
   
@@ -92,10 +90,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException {
-    return this.execute( endpoint ).getResponse( ).get( );
+    return this.execute( endpoint, endpoint.getPipelineFactory( ) ).getResponse( ).get( );
   }
   
-  private Request<Q, R> execute( ServiceEndpoint endpoint ) {
+  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory ) {
     Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + endpoint );
     try {
       this.callback.initialize( this.request );
@@ -108,7 +106,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       throw ex;
     }
     Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + endpoint );
-    if ( !this.handler.fire( endpoint, this.pipelineFactory, this.request ) ) {
+    if ( !this.handler.fire( endpoint, pipelineFactory, this.request ) ) {
       if ( this.response.isDone( ) ) {
         try {
           R r = this.response.get( 1, TimeUnit.MILLISECONDS );

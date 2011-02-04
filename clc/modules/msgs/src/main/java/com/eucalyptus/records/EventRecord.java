@@ -60,9 +60,4 @@ public class EventRecord extends EucalyptusMessage {
     return msg == null ? BOGUS : msg;
   }
 
-  public static void flush( ) {
-    RecordProcessor.flush( );
-  }
-
-  
 }

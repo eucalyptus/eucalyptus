@@ -65,17 +65,17 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
-import com.eucalyptus.ws.handlers.HmacHandler;
-import com.eucalyptus.ws.handlers.QueryTimestampHandler;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler;
 import com.eucalyptus.ws.handlers.WalrusOutboundHandler;
 
 public class WalrusOutboundStage implements UnrollableStage {
 
   @Override
-  public String getStageName( ) {
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
     return "walrus-outbound";
   }
 

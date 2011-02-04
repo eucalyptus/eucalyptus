@@ -67,10 +67,8 @@ package com.eucalyptus.auth.login;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
@@ -78,7 +76,7 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.id.Storage;
 
 public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedComponentCredentials> {
 	private static Logger LOG = Logger.getLogger( WalrusComponentLoginModule.class );
@@ -97,7 +95,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 		String signature = credentials.getSignature();
 		try {
 			try {
-				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Component.storage).getCertificate().getPublicKey();
+				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getCertificate().getPublicKey();
 				sig = Signature.getInstance("SHA1withRSA");
 				sig.initVerify(publicKey);
 				sig.update(data.getBytes());

@@ -1,8 +1,6 @@
 package com.eucalyptus.component.id;
 
-import java.math.BigInteger;
-import java.security.cert.X509Certificate;
-import java.util.List;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 
 public class Cluster extends ComponentId {
@@ -24,7 +22,7 @@ public class Cluster extends ComponentId {
 
   @Override
   public Boolean hasDispatcher( ) {
-    return false;
+    return true;
   }
 
   @Override
@@ -36,5 +34,20 @@ public class Cluster extends ComponentId {
   public Boolean isCloudLocal( ) {
     return false;
   }
-  
+
+  private static ChannelPipelineFactory clusterPipeline = helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" );
+  private static ChannelPipelineFactory logPipeline     = helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" );
+  @Override
+  public ChannelPipelineFactory getClientPipeline( ) {
+    return clusterPipeline;
+  }
+
+  /**
+   * This was born under a bad sign.  No touching.
+   * @return
+   */
+  public static ChannelPipelineFactory getLogClientPipeline( ) {
+    return logPipeline;
+  }
+
 }

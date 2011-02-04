@@ -88,21 +88,23 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.HeartbeatHandler;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-@Provides(com.eucalyptus.bootstrap.Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsRemote(com.eucalyptus.bootstrap.Component.eucalyptus)
+@DependsRemote(Eucalyptus.class)
 @ChannelPipelineCoverage( "all" )
 public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
   private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
@@ -207,9 +209,9 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
   }
 
   
-  @Provides(com.eucalyptus.bootstrap.Component.bootstrap)
+  @Provides(Empyrean.class)
   @RunDuring(Bootstrap.Stage.RemoteServicesInit)
-  @DependsRemote(com.eucalyptus.bootstrap.Component.eucalyptus)
+  @DependsRemote(Eucalyptus.class)
   public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
     @Override
     public boolean start( ) throws Exception {

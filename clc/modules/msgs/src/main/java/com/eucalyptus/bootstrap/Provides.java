@@ -70,11 +70,11 @@ import java.lang.annotation.Target;
 
 /**
  * Only used for logging at the moment.  Will be replaced with something more useful forthwith.
- * @deprecated cause it sucks.
+ * deprecated cause it sucks.
  */
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-@Deprecated
+//@Deprecated
 public @interface Provides {
-  Component value( );
+  Class value( );
 }

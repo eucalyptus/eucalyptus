@@ -65,9 +65,11 @@ package com.eucalyptus.ws.client.pipeline;
 
 import java.security.GeneralSecurityException;
 import org.jboss.netty.channel.ChannelPipeline;
+
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.ResponseHandler;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
 
 public class InternalClientPipeline extends NioClientPipeline {
   public InternalClientPipeline( final ResponseHandler handler ) throws GeneralSecurityException {

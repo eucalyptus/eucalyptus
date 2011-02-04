@@ -65,20 +65,22 @@ package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)
-@DependsRemote(Component.eucalyptus)
+@DependsRemote(Eucalyptus.class)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
 
@@ -89,12 +91,12 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
       try {
         Thread.sleep( 2000 );
       } catch ( Exception e ) {
-        Thread.currentThread( ).interrupted( );
+        Thread.currentThread( ).interrupt( );
       }
     }
-    for ( Component c : Component.values( ) ) {
+    for ( ComponentId c : ComponentIds.list( )  ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
-      SystemCredentialProvider.init( c.name( ) );
+      SystemCredentialProvider.init( c );
     }
     return true;
   }

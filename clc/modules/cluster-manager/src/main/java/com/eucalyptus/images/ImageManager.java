@@ -75,7 +75,6 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
@@ -86,19 +85,16 @@ import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ProductCode;
-import com.eucalyptus.ldap.LdapConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
+import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateImageType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
 import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
@@ -223,6 +219,7 @@ public class ImageManager {
       throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
+    
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     VirtualBootRecord ref = null;
@@ -333,6 +330,7 @@ public class ImageManager {
             throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
           }
         }
+        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
         imageInfo.setKernelId( kernelId );
         imageInfo.setRamdiskId( ramdiskId );
         imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
@@ -541,4 +539,9 @@ public class ImageManager {
     }
     return reply;
   }
+  public CreateImageResponseType createImage(CreateImageType request) {
+    CreateImageResponseType reply = request.getReply( );
+    return reply;
+  }
+
 }

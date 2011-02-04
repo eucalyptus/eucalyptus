@@ -154,6 +154,10 @@ public class UserEntity extends AbstractPersistent implements Serializable, User
   public UserEntity(){
   }
   
+  public Boolean isSystem( ) {
+    return false;
+  }
+  
   public User getDelegate( ) {
     return this;
   }

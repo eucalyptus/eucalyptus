@@ -72,15 +72,18 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-@Provides( com.eucalyptus.bootstrap.Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceDispatchBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
@@ -91,14 +94,14 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
      * TODO: ultimately remove this: it is legacy and enforces a one-to-one
      * relationship between component impls
      **/
-    for ( ComponentId c : Components.listIds( ) ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
       if ( c.hasDispatcher( ) && c.isAlwaysLocal( ) ) {
         try {
           Component comp = Components.lookup( c );
         } catch ( NoSuchElementException e ) {
           throw BootstrapException.throwFatal( "Failed to lookup component which is alwaysLocal: " + c.name( ), e );
         }
-      } else if( c.hasDispatcher( ) ) {
+      } else if ( c.hasDispatcher( ) ) {
         try {
           Component comp = Components.lookup( c );
         } catch ( NoSuchElementException e ) {
@@ -108,7 +111,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
     LOG.trace( "Touching class: " + ServiceDispatcher.class );
     boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
+    Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( ServiceConfiguration s : comp.list( ) ) {
@@ -119,13 +122,13 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             LOG.error( ex, ex );
             failed = true;
           } catch ( Throwable ex ) {
-            BootstrapException.throwFatal( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }
     }
     if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to load component services.  See the log files for more information." );
+      Exceptions.trace( "Failures occurred while attempting to load component services.  See the log files for more information." );
     }
     
     return true;
@@ -133,33 +136,31 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   
   @Override
   public boolean start( ) throws Exception {
-    boolean failed = false;
-    Component euca = Components.lookup( Components.delegate.eucalyptus );
-    for ( Component comp : Components.list( ) ) {
+    Component euca = Components.lookup( Eucalyptus.class );
+    for ( final Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.list( ) ) {
+      for ( final ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
           try {
-            comp.startService( s );
+            comp.startService( s ).addListener( new Runnable( ) {
+              @Override
+              public void run( ) {
+                try {
+                  comp.enableService( s );
+                } catch ( ServiceRegistrationException ex ) {
+                  LOG.error( ex , ex );
+                } catch ( Throwable ex ) {
+                  Exceptions.trace( "enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+                }
+              }
+            } );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
-            failed = true;
           } catch ( Throwable ex ) {
-            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
-          }
-          try {
-            comp.enableService( s );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
-            failed = true;
-          } catch ( Throwable ex ) {
-            Exceptions.eat( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }
-    }
-    if ( failed ) {
-      BootstrapException.throwFatal( "Failures occurred while attempting to start component services.  See the log files for more information." );
     }
     return true;
   }
@@ -171,7 +172,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean enable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
@@ -179,13 +180,13 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean stop( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
   public void destroy( ) throws Exception {}
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
@@ -193,7 +194,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean disable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */
