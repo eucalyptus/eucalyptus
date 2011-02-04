@@ -79,8 +79,8 @@ public class Hertz extends GenericEvent<Long> {
     return Math.abs( super.getMessage( ) );
   }
 
-  public boolean isAsserted( int modulo ) {
-    return ( super.getMessage( ) % modulo ) == 0;
+  public boolean isAsserted( long modulo ) {
+    return ( ( this.getMessage( ) % Long.valueOf( modulo ) ) == 0l );
   }
   
   
