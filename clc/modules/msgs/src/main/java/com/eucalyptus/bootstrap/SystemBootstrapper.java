@@ -221,11 +221,6 @@ public class SystemBootstrapper {
               LOG.error( ex , ex );
             }
           }} );
-      } else {//GRZE:TODO:move this out to handle state setup in its final form.
-        for( ServiceConfiguration conf : c.list( ) ) {
-          c.startService( conf );
-          c.enableService( conf );
-        }
       }
     }
     try {

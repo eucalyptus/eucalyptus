@@ -22,7 +22,7 @@ public class Cluster extends ComponentId {
 
   @Override
   public Boolean hasDispatcher( ) {
-    return false;
+    return true;
   }
 
   @Override
