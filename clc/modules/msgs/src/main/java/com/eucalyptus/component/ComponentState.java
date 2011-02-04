@@ -148,9 +148,6 @@ public class ComponentState {
     final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        if ( !Bootstrap.isFinished( ) ) {
-          transitionCallback.fireException( new Exception( "Bootstrap has not yet completed." ) );
-        }
         try {
           if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             parent.getBootstrapper( ).check( );
