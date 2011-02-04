@@ -1,6 +1,9 @@
 package com.eucalyptus.auth;
 
+import java.security.AuthProvider;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.api.CryptoProvider;
+import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
@@ -82,13 +85,19 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
       User user = account.lookupUserByName( User.ACCOUNT_ADMIN );
       if ( user != null ) {
+        user.createToken( );
+        user.createPassword( );
         return;
       }
     } catch ( AuthException e ) {
+      // Order matters.
+      Account system = Accounts.addSystemAccount( );
+      User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+      admin.createKey( );
+      admin.createToken( );
+      admin.createConfirmationCode( );
+      admin.setPassword( User.ACCOUNT_ADMIN );
       LOG.warn( "System admin does not exist. Adding it now.", e );
     }
-    // Order matters.
-    Account system = Accounts.addSystemAccount( );
-    system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
   }
 }
