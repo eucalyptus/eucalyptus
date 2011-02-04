@@ -75,8 +75,13 @@ import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 public class TransitionFuture<R> extends AbstractListenableFuture<R> implements CheckedListenableFuture<R> {
     private static Logger LOG = Logger.getLogger( TransitionFuture.class );
     
-    TransitionFuture( ) {
+    public TransitionFuture( ) {
       super( );
+    }
+
+    public TransitionFuture( R value ) {
+      super( );
+      this.set( value );
     }
 
     @Override

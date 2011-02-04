@@ -90,6 +90,7 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.concurrent.MoreExecutors;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -224,112 +225,136 @@ public class Component implements ComponentInformation, HasName<Component> {
     return queryState.equals( this.getState( ) );
   }
   
-  public void startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
+      this.stateMachine.setGoal( State.DISABLED );
       if ( this.inState( State.LOADED ) ) {
         try {
+          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
           this.stateMachine.transition( Transition.STARTING ).addListener( new Runnable( ) {
             @Override
             public void run( ) {
               try {
                 Component.this.stateMachine.transition( State.DISABLED );
+                future.set( Component.this );
               } catch ( Throwable ex ) {
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
+                future.setException( ex );
               }
             }
           } );
+          return future;
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to start service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else if ( this.inState( State.NOTREADY ) ) {
         try {
-          this.stateMachine.transition( State.DISABLED );
+          return this.stateMachine.transition( State.DISABLED );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex );
         }
+      } else {
+        return new TransitionFuture<Component>( this );
       }
     } else {
       this.getBuilder( ).fireStart( config );
+      return new TransitionFuture<Component>( this );
     }
   }
   
-  public void enableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<Component> enableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_ENABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
+      this.stateMachine.setGoal( State.ENABLED );
       if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
+          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( this );
           this.stateMachine.transition( Transition.READY_CHECK ).addListener( new Runnable( ) {
             @Override
             public void run( ) {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
+                future.set( Component.this );
               } catch ( Throwable ex ) {
+                future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
               }
             }
           } );
+          return future;
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
-          Component.this.stateMachine.transition( State.ENABLED );
+          return Component.this.stateMachine.transition( State.ENABLED );
         } catch ( Throwable ex ) {
           throw  new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex );
         }
+      } else {
+        return new TransitionFuture<Component>( this );
       }
     } else {
       this.getBuilder( ).fireEnable( config );
+      return new TransitionFuture<Component>( this );
     }
   }
   
-  public void disableService( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<Component> disableService( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DISABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
       try {
-        this.stateMachine.transition( State.DISABLED );
+        return this.stateMachine.transition( State.DISABLED );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
       }
     } else {
       this.getBuilder( ).fireDisable( config );
+      return new TransitionFuture<Component>( this );
     }
   }
   
-  public void stopService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<Component> stopService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOPPED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
       if ( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
+          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( this );
           this.stateMachine.transition( State.DISABLED ).addListener( new Runnable( ) {
             @Override
             public void run( ) {
               try {
+                DispatcherFactory.remove( Component.this.services.get( config ) );
                 Component.this.stateMachine.transition( State.STOPPED );
+                future.set( Component.this );
               } catch ( Throwable ex ) {
                 Exceptions.trace( new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex ) );
+                future.setException( ex );
               }
-              DispatcherFactory.remove( Component.this.services.get( config ) );
             }
           }, MoreExecutors.sameThreadExecutor( ) );
+          return future;
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) || State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
-          Component.this.stateMachine.transition( State.STOPPED );
+          DispatcherFactory.remove( Component.this.services.get( config ) );
+          return Component.this.stateMachine.transition( State.STOPPED );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
         }
-        DispatcherFactory.remove( Component.this.services.get( config ) );
+      } else {
+        return new TransitionFuture<Component>( this );
       }
     } else {
       this.getBuilder( ).fireStop( config );
+      return new TransitionFuture<Component>( this );
     }
   }
   
-  public void destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<Component> destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service remove = this.lookupServiceByHost( config.getHostName( ) );
     if ( remove == null ) {
       throw new ServiceRegistrationException( "Failed to find service corresponding to: " + config );
@@ -341,12 +366,14 @@ public class Component implements ComponentInformation, HasName<Component> {
         }
         this.localService.set( null );
         try {
-          this.stateMachine.transition( Transition.DESTROYING );
+          EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
+          return this.stateMachine.transition( Transition.DESTROYING );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
         }
+      } else {
+        return new TransitionFuture<Component>( this );
       }
-      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ), service.getUri( ).toString( ) ).info( );
     }
   }
   

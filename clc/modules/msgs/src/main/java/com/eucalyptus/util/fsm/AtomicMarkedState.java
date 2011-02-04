@@ -299,10 +299,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         LOG.error( t, t );
         this.teardown( );
         AtomicMarkedState.this.rollback( );
+        this.transitionFuture.setException( t );
       }
       try {
         this.transition.after( AtomicMarkedState.this.parent );
+        this.transitionFuture.set( AtomicMarkedState.this.parent );
       } catch ( Throwable t ) {
+        this.transitionFuture.setException( t );
         LOG.error( t, t );
       }
     }
@@ -317,6 +320,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         } else {
           this.endTime = System.nanoTime( );
           this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
+          LOG.trace( this );
         }
       }
     }

@@ -151,7 +151,6 @@ public class ComponentState {
         if ( !Bootstrap.isFinished( ) ) {
           transitionCallback.fireException( new Exception( "Bootstrap has not yet completed." ) );
         }
-        ComponentState.this.setGoal( State.ENABLED );
         try {
           if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             parent.getBootstrapper( ).check( );
@@ -175,7 +174,6 @@ public class ComponentState {
     final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.setGoal( State.DISABLED );
         try {
           parent.getBootstrapper( ).disable( );
           parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
@@ -191,7 +189,6 @@ public class ComponentState {
     final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.setGoal( State.STOPPED );
         try {
           parent.getBootstrapper( ).stop( );
           if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
@@ -238,7 +235,6 @@ public class ComponentState {
     final TransitionAction<Component> destroyTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.setGoal( State.LOADED );
         try {
           parent.getBootstrapper( ).destroy( );
           transitionCallback.fire( );
@@ -334,7 +330,7 @@ public class ComponentState {
     return this.goal;
   }
 
-  private void setGoal( Component.State goal ) {
+  void setGoal( Component.State goal ) {
     this.goal = goal;
   }
 
