@@ -579,9 +579,15 @@ public class Component implements ComponentInformation, HasName<Component> {
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) ) {
         for ( final Component c : Components.list( ) ) {
-          if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
-            if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && !Component.State.ENABLED.equals( c.getState( ) ) ) {
+          if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
+            if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
               Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
+            } else if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
+              try {
+                c.enableService( c.getLocalService( ).getServiceConfiguration( ) );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex );
+              }
             }//more checks here soon.
           }
         }
@@ -622,7 +628,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.identity.getLocalEndpointName( );
   }
   
-  public Runnable getCheckRunner( ) {
+  private Runnable getCheckRunner( ) {
     return new Runnable( ) {
       @Override
       public void run( ) {
