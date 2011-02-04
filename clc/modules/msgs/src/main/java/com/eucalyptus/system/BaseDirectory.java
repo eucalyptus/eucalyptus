@@ -117,12 +117,12 @@ public enum BaseDirectory {
   }
   private void assertPermissions( ) {
     try {
-      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex , ex );
     }
     try {
-      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
+      GroovyUtil.exec( "chmod +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex , ex );
     }
