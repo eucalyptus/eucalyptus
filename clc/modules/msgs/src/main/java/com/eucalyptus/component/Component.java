@@ -577,7 +577,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) ) {
+      if ( event instanceof Hertz ) {
         for ( final Component c : Components.list( ) ) {
           if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
             if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
