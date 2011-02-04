@@ -196,6 +196,8 @@ public class Component implements ComponentInformation, HasName<Component> {
         }
       } else if( State.LOADED.equals( this.getState( ) ) ) {
         return new TransitionFuture<Component>( this );
+      } else {
+        return new TransitionFuture<Component>( this );
       }
     } else {
       //TODO:GRZE:ASAP handle loadService
