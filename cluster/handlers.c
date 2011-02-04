@@ -230,6 +230,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   return(ret);
 }
 
+/*
 int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bundleTask **outBundleTasks, int *outBundleTasksLen) {
   int i, j, k, rc, start = 0, stop = 0, ret=0, count=0;
   ccInstance *myInstance;
@@ -285,6 +286,7 @@ int doDescribeBundleTasks(ncMetadata *ccMeta, char **instIds, int instIdsLen, bu
   
   return(ret);
 }
+*/
 
 int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *ncOp, ...) {
   va_list al;
@@ -907,6 +909,11 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
 int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
   int rc;
 
+  rc = initialize(ccMeta);
+  if (rc || ccIsEnabled()) {
+    return(1);
+  }
+
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     return(0);
   }
@@ -1040,7 +1047,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   logprintfl(EUCAINFO,"UnassignAddress(): called\n");
   logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));  
   
-  if (!src || !dst || !strcmp(src, "0.0.0.0") || !strcmp(dst, "0.0.0.0")) {
+  if (!src || !dst || !strcmp(src, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
     return(1);
   }
@@ -2204,8 +2211,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
             int clientpid;
 
-	    // if we're running windows, and are a VMware broker, create the pw/floppy locally
-	    if (strstr(platform, "windows") && strstr(res->ncURL, "VMwareBroker")) {
+	    // if we're running windows, and are an NC, create the pw/floppy locally
+	    if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
 	      //if (strstr(platform, "windows")) {
 	      char cdir[MAX_PATH];
 	      
@@ -2343,7 +2350,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
   for (j=start; j<stop && !done; j++) {
     if (*outConsoleOutput) free(*outConsoleOutput);
 
-    if (strstr(resourceCacheLocal.resources[j].ncURL, "VMwareBroker")) {
+    if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
       //if (1) {
       char pwfile[MAX_PATH];
       char *rawconsole=NULL;
@@ -2492,7 +2499,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     for (j=start; j<stop && !done; j++) {
       if (resourceCacheLocal.resources[j].state == RESUP) {
 
-	if (strstr(resourceCacheLocal.resources[j].ncURL, "VMwareBroker")) {
+	if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
 	  char cdir[MAX_PATH];
 	  char cfile[MAX_PATH];
 	  snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/", config->eucahome, instId);
@@ -2868,6 +2875,11 @@ void *monitor_thread(void *in) {
 	  config->kick_dhcp = 0;
 	}
       }
+
+      if (config->kick_enabled) {
+	ccChangeState(ENABLED);
+      }
+
       sem_mypost(CONFIG);
       
       if (config->use_proxy) {
@@ -3166,15 +3178,6 @@ int init_config(void) {
   }
   
   if (config->initialized) {
-    /*
-    // some other thread has already initialized the configuration
-    logprintfl(EUCAINFO, "init_config():  another thread has already set up config, skipping\n");
-    rc = restoreNetworkState();
-    if (rc) {
-      // failed to restore network state, continue 
-      logprintfl(EUCAWARN, "init_config(): restoreNetworkState returned false (may be already restored)\n");
-    }
-    */
     config_init = 1;
     return(0);
   }
@@ -3731,24 +3734,36 @@ int restoreNetworkState() {
 
 int reconfigureNetworkFromCLC() {
   FILE *FH;
-  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL;
+  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH];
   char **suser, **sgroup, **snet, *protocol=NULL;
   char snettok[1024], range[1024];
-  int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0;
+  int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0, fd=0;
 
   snettok[0] = '\0';
   range[0] = '\0';
 
   // TODO: grab CLC ip from serviceInfo / ccConfig
-  rc = http_get("http://localhost:8773/latest/network-topology", "/tmp/mehfoo");
+  snprintf(tmpfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+  
+  fd = mkstemp(tmpfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open tmpfile '%s'\n", tmpfile);
+    return(1);
+  }
+  chmod(tmpfile, 0644);
+  close(fd);
+
+  rc = http_get("http://localhost:8773/latest/network-topology", tmpfile);
   if (rc) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    unlink(tmpfile);
     return(1);
   }
 
-  FH = fopen("/tmp/mehfoo", "r");
+  FH = fopen(tmpfile, "r");
   if (!FH) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot open tmpfile /tmp/mehfoo\n");
+    unlink(tmpfile);
     return(1);
   }
 
@@ -3810,7 +3825,6 @@ int reconfigureNetworkFromCLC() {
 	      logprintfl(EUCADEBUG, "SNET: %s\n", tok);
 	      snet = malloc(sizeof(char *));
 	      snet[0] = strdup(tok);
-	      //	      snprintf(snettok, 1024, "%s", tok);
 	      snetset=1;
 	    }
 	  }
@@ -3864,7 +3878,8 @@ int reconfigureNetworkFromCLC() {
     }
   }
   fclose(FH);
-  
+  unlink(tmpfile);
+
   return(0);
 }
 

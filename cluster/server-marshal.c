@@ -265,6 +265,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   return(ret);
 }
 
+/*
 adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env) {
   adb_DescribeBundleTasksResponse_t *ret=NULL;
   adb_describeBundleTasksResponseType_t *birt=NULL;
@@ -327,6 +328,7 @@ adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundle
 
   return(ret);
 }
+*/
 
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
@@ -661,7 +663,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **sourceNets, **userNames, **sourceNames, *cid, *protocol, *user, *destName, *type, *destNameLast, *destUserName;
+  char **sourceNets, **userNames, **sourceNames, *protocol,  *destName, *type, *destNameLast, *destUserName;
   int minPort, maxPort, namedLen, netLen;
   ncMetadata ccMeta;
   
@@ -669,10 +671,9 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   //  ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
   //  ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
   EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
-  
-  user = adb_configureNetworkType_get_userId(cnt, env);
-  cid = adb_configureNetworkType_get_correlationId(cnt, env);
-  
+
+  //  user = adb_configureNetworkType_get_userId(cnt, env);
+  //  cid = adb_configureNetworkType_get_correlationId(cnt, env);
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
@@ -682,7 +683,6 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     snprintf(statusMessage, 255, "ERROR");
     return ret;
   }
-  
   for (j=0; j<ruleLen && !done; j++) {
     nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
     
@@ -763,8 +763,8 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     status = AXIS2_TRUE;
   }
   
-  adb_configureNetworkResponseType_set_correlationId(cnrt, env, cid);
-  adb_configureNetworkResponseType_set_userId(cnrt, env, user);
+  adb_configureNetworkResponseType_set_correlationId(cnrt, env, ccMeta.correlationId);
+  adb_configureNetworkResponseType_set_userId(cnrt, env, ccMeta.userId);
   adb_configureNetworkResponseType_set_return(cnrt, env, status);
   if (status == AXIS2_FALSE) {
     adb_configureNetworkResponseType_set_statusMessage(cnrt, env, statusMessage);
@@ -1217,7 +1217,6 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   }
   
   rirt = adb_runInstancesResponseType_create(env);
-
   rc=1;
   if (!DONOTHING) {
     rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
