@@ -6,7 +6,7 @@ package com.eucalyptus.reporting.storage;
  * usage.
  * 
  * <p>StorageUsageSummary is not a bean. StorageUsageSummary <i>accumulates</i>
- * data through the <pre>update</pre> method and then returns results of
+ * data through the <pre>update</pre> method and then returns resulting
  * statistics using the various <pre>get</pre> methods.
  * 
  * @author tom.werges
