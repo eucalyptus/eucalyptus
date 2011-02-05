@@ -1,0 +1,33 @@
+
+<p>The reporting.storage package contains classes for the storage and retrieval
+of historical usage information for Walrus/S3. It could be used to generate
+timely visual reports, of S3/Walrus usage over some past time period (like a
+month), in order to monitor usage trends or to conduct billing.
+
+<p>The reporting.storage package stores its accounting information as a series
+of <i>snapshots</i>, each of which contains the total resource usage for
+a given (owner,account,cluster,availability_zone) combination over some time
+period.
+
+<p>The reporting.storage package receives events from S3/Walrus indicating
+ allocation and deallocation of Walrus/S3 objects. Then the reporting.storage
+package uses those events to generate snapshots, every <i>n</i> seconds, of
+total resource utilization for each (owner,account,cluster,zone) combination.
+
+<p>Events are transmitted to the reporting.storage package over a reliable
+message queue. Events are transmitted using the reporting.queue package.
+
+<p>Reporting data stored by the reporting.storage package can be accessed
+using the <pre>StorageUsageLog</pre> class. This class will allow you to scan
+through the usage logs and gather usage information. This is the main class
+for accessing reporting.storage information.
+
+<p>In addition, there is a <pre>StorageDisplayDb</pre> class which is built
+atop the <pre>StorageUsageLog</pre> class. The <pre>StorageDisplayDb</pre>
+class adds logic for displayable Strings, unit conversions, and so on. It
+emits displayable bean classes which can be used by jasper or other report
+generation engines.
+
+<p>The reporting.storage package is used by <pre>Reports</pre> class in the
+<pre>www</pre> module, which generates visual reports based on user
+selections.
