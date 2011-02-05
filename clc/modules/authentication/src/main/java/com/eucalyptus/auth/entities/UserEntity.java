@@ -73,12 +73,12 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   Long passwordExpires;
   
   // List of secret keys
-  @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<AccessKeyEntity> keys;
   
   // List of certificates
-  @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   List<CertificateEntity> certificates;
   
   // Customizable user info in key-value pairs
