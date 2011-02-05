@@ -66,11 +66,13 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import java.io.File;
+import java.util.NavigableSet;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
@@ -347,28 +349,60 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	@Override
 	public void check() throws EucalyptusCloudException {
 		try {
+			boolean notConnected = false;
 			if(!isConnected()) {
 				connectResource();
 				if(!isConnected()) {
-					throw new EucalyptusCloudException("Resource is not connected to peer.");
+					LOG.warn("Unable to connect resource");
+					notConnected = true;
 				}
 			}
+			boolean notUpToDate = false;
 			if(!isUpToDate()) {
-				throw new EucalyptusCloudException("Resource is not up to date");
+				LOG.warn("Resource is not up to date");
+				notUpToDate = true;
 			}
 			if (Component.State.ENABLED.equals(Components.lookup("walrus").getState())) {
 				if(!isPrimary()) {
 					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Aborting!");
 				}
+				return;
 			} else {
-				if (Component.State.DISABLED.equals(Components.lookup("walrus").getState())) {				
+				if (Component.State.DISABLED.equals(Components.lookup("walrus").getState())) {
 					if(!isSecondary()) {
-						throw new EucalyptusCloudException("I am the slave, but not DRBD secondary. Aborting!");
+						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
+						makeSecondary();
+						if(!isSecondary()) {
+							throw new EucalyptusCloudException("Attempt to set secondary failed. Unable to proceed!");
+						}
 					}
+					NavigableSet<Service> hii = Components.lookup("walrus").getServices();
+					boolean isOtherPrimary = false;
+					for (Service ii : hii) {
+						isOtherPrimary |= Component.State.ENABLED.equals(ii.getState()) && !ii.isLocal() ? true : false;
+					}
+					if(!isOtherPrimary) {
+						return;
+					}
+				}
+				if(!notConnected) {
+					throw new EucalyptusCloudException("Resource not connected and not primary or cannot become one!");
+				}
+				if(!notUpToDate) {
+					throw new EucalyptusCloudException("Resource not up to date and not primary or cannot become one!");
 				}
 			}
 		} catch(ExecutionException ex) {
 			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	@Override
+	public void start() throws EucalyptusCloudException {
+		try {
+			becomeSlave();
+		} catch (ExecutionException e) {
+			throw new EucalyptusCloudException(e);
 		}
 	}
 
