@@ -36,7 +36,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      Transactions.one( new AccessKeyEntity(){{ setId( DatabaseAccessKeyProxy.this.delegate.getId() ); }}, new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           t.setActive( active );
         }
@@ -55,7 +55,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public void setKey( final String key ) throws AuthException {
     try {
-      Transactions.one( new AccessKeyEntity(){{ setId( DatabaseAccessKeyProxy.this.delegate.getId() ); }}, new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           t.setKey( key );
         }
@@ -74,7 +74,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
-      Transactions.one( new AccessKeyEntity(){{ setId( DatabaseAccessKeyProxy.this.delegate.getId() ); }}, new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           t.setCreateDate( createDate );
         }
@@ -89,7 +89,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   public User getUser( ) throws AuthException {
     final List<User> results = Lists.newArrayList( );
     try {
-      Transactions.one( new AccessKeyEntity(){{ setId( DatabaseAccessKeyProxy.this.delegate.getId() ); }}, new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }

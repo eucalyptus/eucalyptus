@@ -58,6 +58,13 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
     this.pem = pem;
   }
   
+  public static CertificateEntity newInstanceWithId( final String id ) {
+    CertificateEntity c = new CertificateEntity() {{
+      this.setId( id );
+    }};
+    return c;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

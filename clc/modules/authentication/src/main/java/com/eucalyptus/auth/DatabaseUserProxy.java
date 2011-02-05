@@ -327,7 +327,7 @@ public class DatabaseUserProxy implements User {
   public AccessKey getKey( final String keyId ) throws AuthException {
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
     try {
-      AccessKeyEntity key = db.getUnique( new AccessKeyEntity() {{ setId( keyId ); }} );
+      AccessKeyEntity key = db.getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
     } catch ( Throwable e ) {
@@ -360,7 +360,7 @@ public class DatabaseUserProxy implements User {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
       UserEntity user = db.getUnique( UserEntity.newInstanceWithId( this.delegate.getId( ) ) );
-      AccessKeyEntity keyEntity = db.recast(AccessKeyEntity.class).getUnique( new AccessKeyEntity() {{ setId( keyId ); }} );
+      AccessKeyEntity keyEntity = db.recast(AccessKeyEntity.class).getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
       user.getKeys( ).remove( keyEntity );
       db.recast( AccessKeyEntity.class ).delete( keyEntity );
       db.commit( );
@@ -400,7 +400,7 @@ public class DatabaseUserProxy implements User {
   public Certificate getCertificate( final String certificateId ) throws AuthException {
     EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
     try {
-      CertificateEntity cert = db.getUnique( new CertificateEntity( ) {{ setId( certificateId ); }} );
+      CertificateEntity cert = db.getUnique( CertificateEntity.newInstanceWithId( certificateId ) );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
     } catch ( Throwable e ) {
@@ -434,7 +434,7 @@ public class DatabaseUserProxy implements User {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
       UserEntity user = db.getUnique( UserEntity.newInstanceWithId( this.delegate.getId( ) ) );
-      CertificateEntity certificateEntity = db.recast(CertificateEntity.class).getUnique( new CertificateEntity( ) {{ setId( certficateId ); }} );
+      CertificateEntity certificateEntity = db.recast(CertificateEntity.class).getUnique( CertificateEntity.newInstanceWithId( certficateId ) );
       user.getCertificates( ).remove( certificateEntity );
       db.recast( CertificateEntity.class ).delete( certificateEntity );
       db.commit( );

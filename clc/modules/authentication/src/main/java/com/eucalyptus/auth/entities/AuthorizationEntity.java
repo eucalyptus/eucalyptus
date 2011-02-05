@@ -82,7 +82,14 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   public AuthorizationEntity( String type ) {
     this.type = type;
   }
-  
+
+  public static AuthorizationEntity newInstanceWithId( final String id ) {
+    AuthorizationEntity a = new AuthorizationEntity() {{
+      this.setId( id );
+    }};
+    return a;
+  }
+
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );

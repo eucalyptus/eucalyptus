@@ -76,7 +76,14 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this( );
     this.userGroup = userGroup;
   }
-  
+
+  public static GroupEntity newInstanceWithId( final String id ) {
+    GroupEntity g = new GroupEntity() {{
+      this.setId( id );
+    }};
+    return g;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

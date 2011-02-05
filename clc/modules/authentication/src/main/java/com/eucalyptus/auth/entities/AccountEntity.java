@@ -38,6 +38,13 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
     this.name = name;
   }
 
+  public static AccountEntity newInstanceWithId( final String id ) {
+    AccountEntity a = new AccountEntity() {{
+      this.setId( id );
+    }};
+    return a;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

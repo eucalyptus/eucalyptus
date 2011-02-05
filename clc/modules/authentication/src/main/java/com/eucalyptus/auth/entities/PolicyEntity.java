@@ -66,6 +66,13 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     this.statements = statements;
   }
 
+  public static PolicyEntity newInstanceWithId( final String id ) {
+    PolicyEntity p = new PolicyEntity() {{
+      this.setId( id );
+    }};
+    return p;
+  }
+
   public String getText( ) {
     return this.text;
   }

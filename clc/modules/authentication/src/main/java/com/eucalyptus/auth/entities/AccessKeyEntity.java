@@ -52,7 +52,14 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     this.key = key;
     this.createDate = new Date( );
   }
-  
+
+  public static AccessKeyEntity newInstanceWithId( final String id ) {
+    AccessKeyEntity k = new AccessKeyEntity() {{
+      this.setId( id );
+    }};
+    return k;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

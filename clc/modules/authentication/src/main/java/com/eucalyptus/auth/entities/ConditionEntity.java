@@ -62,6 +62,14 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
     this.values = values;
   }
   
+  public static ConditionEntity newInstanceWithId( final String id ) {
+    ConditionEntity c = new ConditionEntity() {{
+      this.values = null;
+      this.setId( id );
+    }};
+    return c;
+  }
+
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
@@ -101,5 +109,5 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
   public void setStatement( StatementEntity statement ) {
     this.statement = statement;
   }
-  
+
 }

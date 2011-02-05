@@ -54,7 +54,7 @@ public class DatabaseAccountProxy implements Account {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( new AccountEntity() {{ setId( DatabaseAccountProxy.this.delegate.getId( ) ); }}, new Tx<AccountEntity>( ) {
+      Transactions.one( AccountEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<AccountEntity>( ) {
         public void fire( AccountEntity t ) throws Throwable {
           t.setName( name );
         }
