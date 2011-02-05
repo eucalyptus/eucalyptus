@@ -95,8 +95,8 @@ public class EntityWrapper<TYPE> {
   
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
-      if( type.isAnnotationPresent( PersistenceContext.class ) ) {
-        return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+      if( c.isAnnotationPresent( PersistenceContext.class ) ) {
+        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ) );    
       }
     }
     throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
