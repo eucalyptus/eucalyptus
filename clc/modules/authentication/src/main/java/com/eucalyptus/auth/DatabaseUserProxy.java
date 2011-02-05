@@ -4,7 +4,6 @@ import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
-import javax.persistence.EntityManager;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
@@ -51,7 +50,7 @@ public class DatabaseUserProxy implements User {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
@@ -80,9 +79,8 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setName( String name ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       user.setName( name );
       for ( GroupEntity g : user.getGroups( ) ) {
         if ( g.isUserGroup( ) ) {
@@ -106,7 +104,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setPath( final String path ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setPath( path );
         }
@@ -125,7 +123,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setRegistrationStatus( final RegistrationStatus stat ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setRegistrationStatus( stat );
         }
@@ -144,7 +142,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setEnabled( final Boolean enabled ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setEnabled( enabled );
         }
@@ -163,7 +161,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setToken( final String token ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setToken( token );
         }
@@ -187,7 +185,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setConfirmationCode( final String code ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setConfirmationCode( code );
         }
@@ -211,7 +209,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setPassword( final String password ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setPassword( password );
         }
@@ -235,7 +233,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setPasswordExpires( final Long time ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setPasswordExpires( time );
         }
@@ -250,7 +248,7 @@ public class DatabaseUserProxy implements User {
   public String getInfo( final String key ) throws AuthException {
     final List<String> results = Lists.newArrayList( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           results.add( t.getInfo( ).get( key ) );
         }
@@ -266,7 +264,7 @@ public class DatabaseUserProxy implements User {
   public Map<String, String> getInfo( ) throws AuthException {
     final Map<String, String> results = Maps.newHashMap( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           results.putAll( t.getInfo( ) );
         }
@@ -281,7 +279,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setInfo( final String key, final String value ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.getInfo( ).put( key, value );
         }
@@ -295,7 +293,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setInfo( final Map<String, String> newInfo ) throws AuthException {
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.getInfo( ).clear( );
           t.getInfo( ).putAll( newInfo );
@@ -311,7 +309,7 @@ public class DatabaseUserProxy implements User {
   public List<AccessKey> getKeys( ) throws AuthException {
     final List<AccessKey> results = Lists.newArrayList( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           for ( AccessKeyEntity k : t.getKeys( ) ) {
             results.add( new DatabaseAccessKeyProxy( k ) );
@@ -326,11 +324,10 @@ public class DatabaseUserProxy implements User {
   }
   
   @Override
-  public AccessKey getKey( String keyId ) throws AuthException {
+  public AccessKey getKey( final String keyId ) throws AuthException {
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      AccessKeyEntity key = em.find( AccessKeyEntity.class, keyId );
+      AccessKeyEntity key = db.getUnique( new AccessKeyEntity() {{ setId( keyId ); }} );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
     } catch ( Throwable e ) {
@@ -343,9 +340,8 @@ public class DatabaseUserProxy implements User {
   @Override
   public AccessKey addKey( String key ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       AccessKeyEntity keyEntity = new AccessKeyEntity( key );
       keyEntity.setActive( true );
       db.recast( AccessKeyEntity.class ).add( keyEntity );
@@ -360,12 +356,11 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public void removeKey( String keyId ) throws AuthException {
+  public void removeKey( final String keyId ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
-      AccessKeyEntity keyEntity = em.find( AccessKeyEntity.class, keyId );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
+      AccessKeyEntity keyEntity = db.recast(AccessKeyEntity.class).getUnique( new AccessKeyEntity() {{ setId( keyId ); }} );
       user.getKeys( ).remove( keyEntity );
       db.recast( AccessKeyEntity.class ).delete( keyEntity );
       db.commit( );
@@ -402,11 +397,10 @@ public class DatabaseUserProxy implements User {
   
 
   @Override
-  public Certificate getCertificate( String certificateId ) throws AuthException {
+  public Certificate getCertificate( final String certificateId ) throws AuthException {
     EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      CertificateEntity cert = em.find( CertificateEntity.class, certificateId );
+      CertificateEntity cert = db.getUnique( new CertificateEntity( ) {{ setId( certificateId ); }} );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
     } catch ( Throwable e ) {
@@ -419,9 +413,8 @@ public class DatabaseUserProxy implements User {
   @Override
   public Certificate addCertificate( X509Certificate cert ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       CertificateEntity certEntity = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
       certEntity.setActive( true );
       certEntity.setRevoked( false );
@@ -437,12 +430,11 @@ public class DatabaseUserProxy implements User {
   }
   
   @Override
-  public void removeCertificate( String certficateId ) throws AuthException {
+  public void removeCertificate( final String certficateId ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
-      CertificateEntity certificateEntity = em.find( CertificateEntity.class, certficateId );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
+      CertificateEntity certificateEntity = db.recast(CertificateEntity.class).getUnique( new CertificateEntity( ) {{ setId( certficateId ); }} );
       user.getCertificates( ).remove( certificateEntity );
       db.recast( CertificateEntity.class ).delete( certificateEntity );
       db.commit( );
@@ -457,7 +449,7 @@ public class DatabaseUserProxy implements User {
   public List<Group> getGroups( ) throws AuthException {
     final List<Group> results = Lists.newArrayList( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           for ( GroupEntity g : t.getGroups( ) ) {
             results.add( new DatabaseGroupProxy( g ) );
@@ -475,7 +467,7 @@ public class DatabaseUserProxy implements User {
   public Account getAccount( ) throws AuthException {
     final List<Account> results = Lists.newArrayList( );
     try {
-      Transactions.one( UserEntity.class, this.delegate.getId( ), new Tx<UserEntity>( ) {
+      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           if ( t.getGroups( ).size( ) < 1 ) {
             throw new RuntimeException( "Unexpected group number of the user" );
@@ -520,9 +512,8 @@ public class DatabaseUserProxy implements User {
   public List<Policy> getPolicies( ) throws AuthException {
     List<Policy> results = Lists.newArrayList( );
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       GroupEntity group = getUserGroupEntity( user );
       if ( group == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -544,9 +535,8 @@ public class DatabaseUserProxy implements User {
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity userEntity = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity userEntity = db.recast(UserEntity.class).getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       GroupEntity groupEntity = getUserGroupEntity( userEntity );
       if ( groupEntity == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -580,9 +570,8 @@ public class DatabaseUserProxy implements User {
       throw new AuthException( "Empty policy ID" );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, this.delegate.getId( ) );
+      UserEntity user = db.getUnique( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }} );
       GroupEntity group = getUserGroupEntity( user );
       if ( group == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -606,10 +595,9 @@ public class DatabaseUserProxy implements User {
       throw new AuthException( "Empty resource type" );
     }
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
-    Session session = db.getSession( );
     try {
       @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) db
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
                   Restrictions.eq( "type", resourceType ),
@@ -638,10 +626,9 @@ public class DatabaseUserProxy implements User {
   public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
     String userId = this.delegate.getId( );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
-    Session session = db.getSession( );
     try {
       @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) db
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
                   Restrictions.eq( "type", resourceType ),

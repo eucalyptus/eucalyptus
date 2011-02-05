@@ -203,7 +203,7 @@ public class SnapshotManager {
         return reply;
       }
       db.delete( snap );
-      db.getSession( ).flush( );
+//      db.getSession( ).flush( );
       DeleteStorageSnapshotResponseType scReply = StorageUtil.send( snap.getCluster( ), new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );

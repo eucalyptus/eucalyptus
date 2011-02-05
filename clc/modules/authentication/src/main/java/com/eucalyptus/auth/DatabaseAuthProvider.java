@@ -100,14 +100,13 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public User lookupUserById( String userId ) throws AuthException {
+  public User lookupUserById( final String userId ) throws AuthException {
     if ( userId == null ) {
       throw new AuthException( AuthException.EMPTY_USER_ID );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      UserEntity user = em.find( UserEntity.class, userId );
+      UserEntity user = db.getUnique( new UserEntity( ) {{ setId( userId ); }} );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Throwable e ) {
@@ -130,11 +129,10 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Empty key ID" );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    Session session = db.getSession( );
     try {
       Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) session
+      List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
           .createCriteria( "keys" ).setCacheable( true ).add( 
               Restrictions.and( Restrictions.idEq( keyId ), Restrictions.eq( "active", true ) ) )
@@ -164,7 +162,6 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Empty input cert" );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    Session session = db.getSession( );
     try {
       Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
       CertificateEntity searchCert = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
@@ -172,7 +169,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       searchCert.setRevoked( false );
       Example certExample = Example.create( searchCert ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) session
+      List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
           .createCriteria( "certificates" ).setCacheable( true ).add( certExample )
           .list( );
@@ -189,14 +186,13 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
   
   @Override
-  public Group lookupGroupById( String groupId ) throws AuthException {
+  public Group lookupGroupById( final String groupId ) throws AuthException {
     if ( groupId == null ) {
       throw new AuthException( AuthException.EMPTY_GROUP_ID );
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      GroupEntity group = em.find( GroupEntity.class, groupId );
+      GroupEntity group = db.getUnique( new GroupEntity( ) {{ setId( groupId ); }} );
       db.commit( );
       return new DatabaseGroupProxy( group );
     } catch ( Throwable e ) {
@@ -249,14 +245,13 @@ public class DatabaseAuthProvider implements AccountProvider {
     Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
     Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
-    Session session = db.getSession( );
     try {
       if ( recursive ) {
-        List<GroupEntity> groups = ( List<GroupEntity> ) session
+        List<GroupEntity> groups = ( List<GroupEntity> ) db
             .createCriteria( GroupEntity.class ).setCacheable( true )
             .createCriteria( "account" ).setCacheable( true ).add( accountExample )
             .list( );
-        List<UserEntity> users = ( List<UserEntity> ) session
+        List<UserEntity> users = ( List<UserEntity> ) db
             .createCriteria( UserEntity.class ).setCacheable( true )
             .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
             .createCriteria( "account" ).setCacheable( true ).add( accountExample )
@@ -268,7 +263,7 @@ public class DatabaseAuthProvider implements AccountProvider {
           db.recast( UserEntity.class ).delete( u );
         }
       }
-      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+      List<AccountEntity> accounts = ( List<AccountEntity> ) db
           .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
           .list( );
       if ( accounts.size( ) != 1 ) {
@@ -361,11 +356,10 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+      List<AccountEntity> accounts = ( List<AccountEntity> ) db
           .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
           .list( );
       if ( accounts.size( ) < 1 ) {
@@ -381,14 +375,13 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Account lookupAccountById( String accountId ) throws AuthException {
+  public Account lookupAccountById( final String accountId ) throws AuthException {
     if ( accountId == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      AccountEntity account = em.find( AccountEntity.class, accountId );
+      AccountEntity account = db.getUnique( new AccountEntity() {{ setId( accountId ); }} );
       db.commit( );
       return new DatabaseAccountProxy( account );
     } catch ( Throwable e ) {
@@ -399,14 +392,13 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public AccessKey lookupAccessKeyById( String keyId ) throws AuthException {
+  public AccessKey lookupAccessKeyById( final String keyId ) throws AuthException {
     if ( keyId == null ) {
       throw new AuthException( "Empty access key ID" );
     }
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
-    EntityManager em = db.getEntityManager( );
     try {
-      AccessKeyEntity keyEntity = em.find( AccessKeyEntity.class, keyId );
+      AccessKeyEntity keyEntity = db.getUnique( new AccessKeyEntity() {{ setId( keyId ); }} );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Throwable e ) {

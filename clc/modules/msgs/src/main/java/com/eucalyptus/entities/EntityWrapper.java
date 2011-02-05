@@ -70,17 +70,19 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.exception.JDBCConnectionException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 
 public class EntityWrapper<TYPE> {
 
@@ -148,10 +150,52 @@ public class EntityWrapper<TYPE> {
     }
   }
 
-  public void add( TYPE newObject ) {
+  /**
+   * Invokes underlying persist implementation per jsr-220
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param newObject
+   */
+  public void persist( TYPE newObject ) {
     this.getEntityManager( ).persist( newObject );
   }
 
+  /**
+   * Performs a save directly on the session with the distinguishing feature that generated IDs are not forcibly generated (e.g., INSERTS are not performed)
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param e
+   */
+  public void save( TYPE e ) {
+    this.getSession( ).save( e );
+  }
+
+  /**
+   * Calls {@link #persist(Object)}; here for legacy, and is deprecated in favor of persist
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param newObject
+   */
+  public void add( TYPE newObject ) {
+    this.add( newObject );
+  }
+
+  /**
+   * TODO: not use this please.
+   * @param string
+   * @return
+   */
+  public Query createQuery( String string ) {
+    return this.getSession( ).createQuery( string );
+  }
+
+  /**
+   * TODO: not use this.
+   * @param class1
+   * @param uuid
+   * @return
+   */
+  public Object get( Class<TYPE> class1, String uuid ) {
+    return this.getSession( ).get( class1, uuid );
+  }
+  
   public void merge( TYPE newObject ) {
     this.getEntityManager( ).merge( newObject );
   }
@@ -161,7 +205,7 @@ public class EntityWrapper<TYPE> {
     this.commit( );
   }
 
-  public void delete( TYPE deleteObject ) {
+  public void delete( Object deleteObject ) {
     this.getEntityManager( ).remove( deleteObject );
   }
 
@@ -188,13 +232,18 @@ public class EntityWrapper<TYPE> {
     if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
   }
 
-  public Session getSession( ) {
+  public Criteria createCriteria( Class class1 ) {
+    return this.getSession( ).createCriteria( class1 );
+  }
+
+  /** package default on purpose **/ EntityManager getEntityManager( ) {
+    return tx.getEntityManager( );
+  }
+
+  /** :| should also be package default **/ Session getSession( ) {
     return tx.getSession( );
   }
 
-  public EntityManager getEntityManager( ) {
-    return tx.getEntityManager( );
-  }
 
   @SuppressWarnings( "unchecked" )
   public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {

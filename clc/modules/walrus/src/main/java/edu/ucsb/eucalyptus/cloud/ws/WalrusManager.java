@@ -1289,7 +1289,7 @@ public class WalrusManager {
 								String objectName = nullObject.getObjectName();
 								for (GrantInfo grantInfo : nullObject
 										.getGrants()) {
-									db.getEntityManager().remove(grantInfo);
+								  db.delete(grantInfo);
 								}
 								Long size = nullObject.getSize();
 								bucketInfo.setBucketSize(bucketInfo
@@ -2922,7 +2922,7 @@ public class WalrusManager {
 							if(!foundObject.getDeleted()) {
 								String objectName = foundObject.getObjectName();							 
 								for (GrantInfo grantInfo : foundObject.getGrants()) {
-									db.getEntityManager().remove(grantInfo);
+									db.delete(grantInfo);
 								}
 								Long size = foundObject.getSize();
 								bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);

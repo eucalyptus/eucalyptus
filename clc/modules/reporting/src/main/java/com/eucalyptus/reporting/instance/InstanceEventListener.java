@@ -35,9 +35,7 @@ public class InstanceEventListener
 			final String uuid = event.getUuid();
 					
 			EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
-			Session sess = null;
 			try {
-				sess = entityWrapper.getSession();
 
 				/* Convert InstanceEvents to internal types. Internal types are
 				 * not exposed because the reporting.instance package won't be
@@ -56,8 +54,8 @@ public class InstanceEventListener
 				 * already.
 				 */
 				if (! recentlySeenUuids.contains(uuid)) {
-					if (null != sess.get(InstanceAttributes.class, uuid)) {
-						sess.save(insAttrs);
+					if (null != entityWrapper.get(InstanceAttributes.class, uuid)) {
+					  entityWrapper.save(insAttrs);
 						log.debug("Wrote Reporting Instance:" + uuid);
 					}
 					recentlySeenUuids.add(uuid);
@@ -70,7 +68,7 @@ public class InstanceEventListener
 				
 				if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 					for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
-						sess.save(ius);
+					  entityWrapper.save(ius);
 						log.debug("Wrote Instance Usage:" + uuid);
 					}
 					recentUsageSnapshots.clear();

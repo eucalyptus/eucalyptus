@@ -95,4 +95,8 @@ public class InstanceAttributes
 		return true;
 	}
 
+  protected void setUuid( String uuid ) {
+    this.uuid = uuid;
+  }
+
 }

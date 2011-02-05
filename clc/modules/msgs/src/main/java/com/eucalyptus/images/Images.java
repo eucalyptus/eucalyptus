@@ -27,7 +27,8 @@ public class Images {
     List<Image> images = Lists.newArrayList( );
     EntityWrapper<ImageInfo> db = Images.getEntityWrapper( );
     try {
-      images.addAll( db.query( new ImageInfo( ) ) );
+      List<ImageInfo> found = db.query( new ImageInfo( ) );
+      images.addAll( found );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );

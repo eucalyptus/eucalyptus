@@ -65,11 +65,9 @@ public class InstanceUsageLog
 				period.getBeginningMs(), period.getEndingMs()));
 
 		EntityWrapper entityWrapper = EntityWrapper.get(InstanceAttributes.class);
-		Session sess = null;
 		try {
-			sess = entityWrapper.getSession();
 			
-			Iterator iter = sess.createQuery(
+			Iterator iter = entityWrapper.createQuery(
 				"from ReportingInstance, InstanceUsageSnapshot"
 				+ " where ReportingInstance.uuid = InstanceUsageSnapshot.uuid"
 				+ " and InstanceUsageSnapshot.timestampMs > ?"

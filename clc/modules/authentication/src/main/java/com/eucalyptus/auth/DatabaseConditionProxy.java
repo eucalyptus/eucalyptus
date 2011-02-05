@@ -35,7 +35,7 @@ public class DatabaseConditionProxy implements Condition {
   public Set<String> getValues( ) throws AuthException {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( ConditionEntity.class, this.delegate.getId( ), new Tx<ConditionEntity>( ) {
+      Transactions.one( new ConditionEntity() {{ setId( DatabaseConditionProxy.this.delegate.getId( ) ); }}, new Tx<ConditionEntity>( ) {
         public void fire( ConditionEntity t ) throws Throwable {
           results.addAll( t.getValues( ) );
         }
@@ -51,7 +51,7 @@ public class DatabaseConditionProxy implements Condition {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( ConditionEntity.class, this.delegate.getId( ), new Tx<ConditionEntity>( ) {
+      Transactions.one( new ConditionEntity() {{ setId( DatabaseConditionProxy.this.delegate.getId( ) ); }}, new Tx<ConditionEntity>( ) {
         public void fire( ConditionEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }

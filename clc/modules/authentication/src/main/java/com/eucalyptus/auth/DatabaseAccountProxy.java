@@ -54,7 +54,7 @@ public class DatabaseAccountProxy implements Account {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( AccountEntity.class, this.delegate.getId( ), new Tx<AccountEntity>( ) {
+      Transactions.one( new AccountEntity() {{ setId( DatabaseAccountProxy.this.delegate.getId( ) ); }}, new Tx<AccountEntity>( ) {
         public void fire( AccountEntity t ) throws Throwable {
           t.setName( name );
         }
@@ -69,12 +69,11 @@ public class DatabaseAccountProxy implements Account {
   public List<User> getUsers( ) throws AuthException {
     List<User> results = Lists.newArrayList( );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( this.delegate.getName( ) ) ).enableLike( MatchMode.EXACT );
       Example groupExample = Example.create( new GroupEntity( true/* userGroup */ ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) session
+      List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true )
           .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
           .createCriteria( "account" ).setCacheable( true ).add( accountExample )
@@ -95,12 +94,11 @@ public class DatabaseAccountProxy implements Account {
   public List<Group> getGroups( ) throws AuthException {
     List<Group> results = Lists.newArrayList( );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( this.delegate.getName( ) ) );
       Example groupExample = Example.create( new GroupEntity( false/* userGroup */ ) );
       @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) session
+      List<GroupEntity> groups = ( List<GroupEntity> ) db
           .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )
           .createCriteria( "account" ).setCacheable( true ).add( accountExample )
           .list( );
@@ -158,8 +156,8 @@ public class DatabaseAccountProxy implements Account {
   private boolean userHasResourceAttached( String userName, String accountName ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, accountName );
-      GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup( db.getSession( ), DatabaseAuthUtils.getUserGroupName( userName ), accountName );
+      UserEntity user = DatabaseAuthUtils.getUniqueUser( db, userName, accountName );
+      GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup( db, DatabaseAuthUtils.getUserGroupName( userName ), accountName );
       boolean result = ( user.getGroups( ).size( ) > 1
           || user.getKeys( ).size( ) > 0
           || user.getCertificates( ).size( ) > 0
@@ -187,7 +185,7 @@ public class DatabaseAccountProxy implements Account {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, accountName );
+      UserEntity user = DatabaseAuthUtils.getUniqueUser( db, userName, accountName );
       for ( GroupEntity ge : user.getGroups( ) ) {
         if ( ge.isUserGroup( ) ) {
           db.recast( GroupEntity.class ).delete( ge );
@@ -233,7 +231,7 @@ public class DatabaseAccountProxy implements Account {
   private boolean groupHasResourceAttached( String groupName, String accountName ) throws AuthException {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db.getSession( ), groupName, accountName );
+      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
       db.commit( );
       return ( group.getUsers( ).size( ) > 0 || group.getPolicies( ).size( ) > 0 );
     } catch ( Throwable e ) {
@@ -258,7 +256,7 @@ public class DatabaseAccountProxy implements Account {
     
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db.getSession( ), groupName, accountName );
+      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
       db.delete( group );
       db.commit( );
     } catch ( Throwable e ) {
@@ -275,9 +273,8 @@ public class DatabaseAccountProxy implements Account {
       throw new AuthException( AuthException.EMPTY_GROUP_NAME );
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    Session session = db.getSession( );
     try {
-      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( session, groupName, accountName );
+      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
       db.commit( );
       return new DatabaseGroupProxy( group );
     } catch ( Throwable e ) {
@@ -295,7 +292,7 @@ public class DatabaseAccountProxy implements Account {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = DatabaseAuthUtils.getUniqueUser( db.getSession( ), userName, accountName );
+      UserEntity user = DatabaseAuthUtils.getUniqueUser( db, userName, accountName );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Throwable e ) {
@@ -313,11 +310,10 @@ public class DatabaseAccountProxy implements Account {
     }
     GroupEntity searchGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( User.ACCOUNT_ADMIN ) );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
-    Session session = db.getSession( );
     try {
       Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) db
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
                   Restrictions.eq( "type", resourceType ),
@@ -350,11 +346,10 @@ public class DatabaseAccountProxy implements Account {
     }
     GroupEntity searchGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( User.ACCOUNT_ADMIN ) );
     EntityWrapper<AuthorizationEntity> db = EntityWrapper.get( AuthorizationEntity.class );
-    Session session = db.getSession( );
     try {
       Example groupExample = Example.create( searchGroup ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) session
+      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) db
           .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
               Restrictions.and(
                   Restrictions.eq( "type", resourceType ),

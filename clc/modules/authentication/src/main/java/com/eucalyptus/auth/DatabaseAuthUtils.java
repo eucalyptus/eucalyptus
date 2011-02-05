@@ -40,12 +40,12 @@ public class DatabaseAuthUtils {
    * @param accountName
    * @return
    */
-  public static UserEntity getUniqueUser( Session session, String userName, String accountName ) throws Exception {
+  public static UserEntity getUniqueUser( EntityWrapper db, String userName, String accountName ) throws Exception {
     Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
     Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
     Example userExample = Example.create( new UserEntity( userName ) ).enableLike( MatchMode.EXACT );
     @SuppressWarnings( "unchecked" )
-    List<UserEntity> users = ( List<UserEntity> ) session
+    List<UserEntity> users = ( List<UserEntity> ) db
         .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
         .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
         .createCriteria( "account" ).setCacheable( true ).add( accountExample )
@@ -65,11 +65,11 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static GroupEntity getUniqueGroup( Session session, String groupName, String accountName ) throws Exception {
+  public static GroupEntity getUniqueGroup( EntityWrapper db, String groupName, String accountName ) throws Exception {
     Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
     Example groupExample = Example.create( new GroupEntity( groupName ) ).enableLike( MatchMode.EXACT );
     @SuppressWarnings( "unchecked" )
-    List<GroupEntity> groups = ( List<GroupEntity> ) session
+    List<GroupEntity> groups = ( List<GroupEntity> ) db
         .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )
         .createCriteria( "account" ).setCacheable( true ).add( accountExample )
         .list( );
@@ -87,10 +87,10 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static AccountEntity getUniqueAccount( Session session, String accountName ) throws Exception {
+  public static AccountEntity getUniqueAccount( EntityWrapper db, String accountName ) throws Exception {
     Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
     @SuppressWarnings( "unchecked" )
-    List<AccountEntity> accounts = ( List<AccountEntity> ) session
+    List<AccountEntity> accounts = ( List<AccountEntity> ) db
         .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
         .list( );
     if ( accounts.size( ) != 1 ) {
@@ -107,10 +107,10 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static PolicyEntity getUniquePolicy( Session session, String policyName, String groupId ) throws Exception {
+  public static PolicyEntity getUniquePolicy( EntityWrapper db, String policyName, String groupId ) throws Exception {
     Example example = Example.create( new PolicyEntity( policyName ) ).enableLike( MatchMode.EXACT );
     @SuppressWarnings( "unchecked" )
-    List<PolicyEntity> policies = ( List<PolicyEntity> ) session
+    List<PolicyEntity> policies = ( List<PolicyEntity> ) db
         .createCriteria( PolicyEntity.class ).setCacheable( true ).add( example )
         .createCriteria( "group" ).setCacheable( true ).add( Restrictions.idEq( groupId ) )
         .list( );
@@ -179,13 +179,12 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Empty user name or account name" );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
       Example userExample = Example.create( new UserEntity( userName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) session
+      List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
           .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
           .createCriteria( "account" ).setCacheable( true ).add( accountExample )
@@ -210,11 +209,10 @@ public class DatabaseAuthUtils {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AccountEntity> accounts = ( List<AccountEntity> ) session
+      List<AccountEntity> accounts = ( List<AccountEntity> ) db
           .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
           .list( );
       db.commit( );
@@ -241,12 +239,11 @@ public class DatabaseAuthUtils {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       Example groupExample = Example.create( new GroupEntity( groupName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) session
+      List<GroupEntity> groups = ( List<GroupEntity> ) db
           .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )
           .createCriteria( "account" ).setCacheable( true ).add( accountExample )
           .list( );
@@ -267,11 +264,10 @@ public class DatabaseAuthUtils {
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
-    Session session = db.getSession( );
     try {
       Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) session
+      List<GroupEntity> groups = ( List<GroupEntity> ) db
           .createCriteria( GroupEntity.class ).setCacheable( true )
           .createCriteria( "account" ).setCacheable( true ).add( accountExample )
           .list( );
