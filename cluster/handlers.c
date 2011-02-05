@@ -79,6 +79,7 @@ permission notice:
 #include <misc.h>
 #include <ipc.h>
 #include <walrus.h>
+#include <http.h>
 
 #include <euca_axis.h>
 #include "data.h"
@@ -1583,6 +1584,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 		if (rc) {
 		  logprintfl(EUCAERROR, "refresh_instance(): could not update publicIP (%s) of instance (%s) at NC (%s)\n", myInstance->ccnet.publicIp, myInstance->instanceId, resourceCacheStage->resources[i].ncURL);
+		} else {
+		  config->kick_network = 1;
 		}
 	      }
 	      
@@ -2843,24 +2846,25 @@ void *monitor_thread(void *in) {
 	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
       }
 
-      sem_mywait(CONFIG);
-
       if (config->kick_network) {
 	logprintfl(EUCADEBUG, "monitor_thread(): refreshing network cache\n");
 	rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
 	if (rc) {
-	  logprintfl(EUCAERROR, "monitor_thread(): man_instanceCache() failed to reset networkparams from instanceCache\n");
+	  logprintfl(EUCAERROR, "monitor_thread(): map_instanceCache() failed to reset networkparams from instanceCache\n");
 	} else {
 	  rc = restoreNetworkState();
 	  if (rc) {
 	  // failed to restore network state, continue 
 	  logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
 	  } else {
+	    sem_mywait(CONFIG);
 	    config->kick_network = 0;
+	    sem_mypost(CONFIG);
 	  }
 	}
       }
     
+      sem_mywait(CONFIG);
       snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
       if (!check_file(pidfile)) {
 	pidstr = file2str(pidfile);
@@ -3593,7 +3597,6 @@ int maintainNetworkState() {
   time_t startTime, startTimeA;
   uint32_t cloudIp;
 
-
   /*
     rc = reconfigureNetworkFromCLC();
     if (rc) {
@@ -3714,6 +3717,13 @@ int restoreNetworkState() {
       if (brname) free(brname);
     }
   }
+  
+  //  ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
+  rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
+  if (rc) {
+    
+  }
+
   // get DHCPD back up and running
   logprintfl(EUCADEBUG, "restoreNetworkState(): restarting DHCPD\n");
   rc = vnetKickDHCP(vnetconfig);
@@ -3724,10 +3734,11 @@ int restoreNetworkState() {
 
   sem_mypost(VNET);
 
-  //  rc = reconfigureNetworkFromCLC();
-  //  if (rc) {
-  //    logprintfl(EUCAWARN, "restoreNetworkState(): cannot get network ground truth from CLC\n");
-  //  }
+  // get current rules from CLC
+  rc = reconfigureNetworkFromCLC();
+  if (rc) {
+    logprintfl(EUCAWARN, "restoreNetworkState(): cannot get network ground truth from CLC\n");
+  }
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
 
@@ -3736,8 +3747,8 @@ int restoreNetworkState() {
 
 int reconfigureNetworkFromCLC() {
   FILE *FH;
-  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH];
-  char **suser, **sgroup, **snet, *protocol=NULL;
+  char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH], url[MAX_PATH];
+  char **suser, **sgroup, **snet, *protocol=NULL, *cloudIp=NULL;
   char snettok[1024], range[1024];
   int minport=0, maxport=0, slashnet=0, snetset=0, rc, snetLen=0, susergroupLen=0, fd=0;
 
@@ -3755,7 +3766,14 @@ int reconfigureNetworkFromCLC() {
   chmod(tmpfile, 0644);
   close(fd);
 
-  rc = http_get("http://localhost:8773/latest/network-topology", tmpfile);
+  if (vnetconfig->cloudIp) {
+    cloudIp = hex2dot(vnetconfig->cloudIp);
+  } else {
+    cloudIp = strdup("localhost");
+  }
+  snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
+  rc = http_get_timeout(url, tmpfile, 0, 0);
+  if (cloudIp) free(cloudIp);
   if (rc) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
     unlink(tmpfile);

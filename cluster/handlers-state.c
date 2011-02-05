@@ -229,6 +229,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     return(1);
   }
 
+  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
   sem_mywait(VNET);
   if (inst->ccnet.vlan >= 0) {
     // activate network
@@ -248,6 +249,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 
   if (!ret) {
     // so far so good
+    logprintfl(EUCADEBUG, "instNetParamsSet(): (re)generating public/private network params\n");
     rc = vnetGenerateNetworkParams(vnetconfig, inst->instanceId, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ccnet.privateMac, inst->ccnet.publicIp, inst->ccnet.privateIp);
     if (rc) {
       print_ccInstance("instNetParamsSet(): failed to (re)generate network parameters: ", inst);
@@ -255,6 +257,23 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     }
   }
   sem_mypost(VNET);
+
+  return(0);
+}
+
+int instNetReassignAddrs(ccInstance *inst, void *in) {
+  int rc, ret=0, i;
+
+  if (!inst) {
+    return(1);
+  }
+
+  logprintfl(EUCADEBUG, "instNetReassignAddrs(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+  rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
+  if (rc) {
+    logprintfl(EUCAERROR, "instNetReassignAddrs(): cannot reassign address\n");
+    ret = 1;
+  }
 
   return(0);
 }
