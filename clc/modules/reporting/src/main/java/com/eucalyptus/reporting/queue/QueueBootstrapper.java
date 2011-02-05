@@ -17,7 +17,6 @@ public class QueueBootstrapper extends Bootstrapper
 		/* NOTE: a workaround was moved to SystemBootstrapper.init() because
 		 * log4j brain damage prevents ActiveMQ broker from starting.
 		 */
-		
 //		try {
 //	        QueueFactory.getInstance().startup();
 //	        log.info("broker started");
