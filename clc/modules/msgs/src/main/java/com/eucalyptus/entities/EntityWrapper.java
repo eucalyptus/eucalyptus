@@ -94,10 +94,12 @@ public class EntityWrapper<TYPE> {
   }
   
   public static <T> EntityWrapper<T> get( Class<T> type ) {
-    if( !type.isAnnotationPresent( PersistenceContext.class ) ) {
-      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
+    for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      if( type.isAnnotationPresent( PersistenceContext.class ) ) {
+        return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+      }
     }
-    return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+    throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
   }
   public static <T> EntityWrapper<T> get( T obj ) {
     return get( (Class<T>) obj.getClass( ) );
