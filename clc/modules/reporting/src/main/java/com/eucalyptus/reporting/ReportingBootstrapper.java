@@ -3,14 +3,13 @@ package com.eucalyptus.reporting;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.*;
-import com.eucalyptus.reporting.instance.*;
-import com.eucalyptus.reporting.storage.*;
+import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.system.Threads;
+import com.eucalyptus.reporting.storage.StorageEventPoller;
 
 @Provides(Component.reporting)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
@@ -19,6 +18,12 @@ public class ReportingBootstrapper
 {
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
+	/**
+	 * Sets up listeners etc in test mode whereby they generate fake times for
+	 * incoming data.
+	 */
+	private static final boolean TEST = true;  //TODO: CHANGE!!!
+	
 	private static long POLLER_DELAY_MS = 10000l;
 	
 	private StorageEventPoller storagePoller;
@@ -82,7 +87,15 @@ public class ReportingBootstrapper
 			/* Start storage receiver and storage queue poller thread
 			 */
 			QueueReceiver storageReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
-			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+			final StorageEventPoller poller;
+			//Start fake pollers and listeners if this is a test
+			if (TEST) {
+				poller = new TestStorageEventPoller(storageReceiver);
+				instanceListener = new TestInstanceEventListener();
+			} else {
+				poller = new StorageEventPoller(storageReceiver);
+				instanceListener = new InstanceEventListener();
+			}
 			timer = new Timer(true);
 			timer.schedule(new TimerTask() {
 				@Override
@@ -98,7 +111,6 @@ public class ReportingBootstrapper
 			 */
 			QueueReceiver instanceReceiver =
 				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
-			instanceListener = new InstanceEventListener();
 			instanceReceiver.addEventListener(instanceListener);
 			
 			log.info("ReportingBootstrapper started");
@@ -128,8 +140,8 @@ public class ReportingBootstrapper
 	{
 		try {
 			log.info("ReportingBootstrapper stopped");
-			instanceListener.flush();
 			timer.cancel();
+			instanceListener.flush();
 			storagePoller.writeEvents();
 			queueFactory.shutdown();
 			return true;
@@ -138,5 +150,41 @@ public class ReportingBootstrapper
 			return false;
 		}
 	}
+	
+	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
+	private static final int TIME_USAGE_APART = 100000; //ms
 
+	private class TestInstanceEventListener
+		extends InstanceEventListener
+	{
+		private long timeMs = START_TIME;
+		
+		@Override
+		protected long getCurrentTimeMillis()
+		{
+			long oldTimeMs = timeMs;
+			timeMs += TIME_USAGE_APART;
+			return oldTimeMs;
+		}
+	}
+	
+	private class TestStorageEventPoller
+		extends StorageEventPoller
+	{
+		private long timeMs = START_TIME;
+		
+		public TestStorageEventPoller(QueueReceiver receiver)
+		{
+			super(receiver);
+		}
+
+		@Override
+		protected long getTimestampMs()
+		{
+			long oldTimeMs = timeMs;
+			timeMs += TIME_USAGE_APART;
+			return oldTimeMs;
+		}		
+	}
+	
 }
