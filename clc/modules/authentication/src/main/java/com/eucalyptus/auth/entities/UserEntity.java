@@ -145,7 +145,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) ).append( ", " );
     sb.append( "token=" ).append( this.getToken( ) ).append( ", " );
     sb.append( "confirmationCode=" ).append( this.getConfirmationCode( ) ).append( ", " );
-    sb.append( "info=" ).append( this.getInfo( ) ).append( ", " );
+//    sb.append( "info=" ).append( this.getInfo( ) ).append( ", " );
     sb.append( "keys=" ).append( this.keys ).append( ", " ).append( ", " );
     sb.append( "certificates=" ).append( this.certificates ).append( ", " );
     sb.append( "groups=[" );
