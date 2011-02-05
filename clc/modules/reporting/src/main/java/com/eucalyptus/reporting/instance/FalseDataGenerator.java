@@ -211,7 +211,7 @@ public class FalseDataGenerator
 			return fakeCurrentTimeMillis;
 		}
 	}
-	
+
 	public static void main(String[] args) throws Exception
 	{
 		String methodName = args[0];
@@ -226,5 +226,5 @@ public class FalseDataGenerator
 		FalseDataGenerator.class.getDeclaredMethod(methodName, paramTypes)
 				.invoke(null, methodArgsArray);
 	}
-	
+
 }
