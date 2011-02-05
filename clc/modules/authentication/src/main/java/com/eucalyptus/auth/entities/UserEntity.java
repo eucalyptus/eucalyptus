@@ -110,6 +110,17 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     this.enabled = enabled;
   }
   
+  public static UserEntity newInstanceWithId( final String id ) {
+    UserEntity u = new UserEntity() {{
+      this.keys = null;
+      this.certificates = null;
+      this.info = null;
+      this.groups = null;
+      this.setId( id );
+    }};
+    return u;
+  }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

@@ -161,7 +161,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setToken( final String token ) throws AuthException {
     try {
-      Transactions.one( new UserEntity() {{ setId( DatabaseUserProxy.this.delegate.getId( ) ); }}, new Tx<UserEntity>( ) {
+      Transactions.one( UserEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
           t.setToken( token );
         }
