@@ -6,7 +6,7 @@ import javax.persistence.*;
  * <p>StorageUsageSnapshot is a snapshot of disk data usage at some point in
  * time.
  * 
- * @author twerges
+ * @author tom.werges
  */
 @Entity
 @PersistenceContext(name="reporting")
@@ -22,7 +22,7 @@ class StorageUsageSnapshot
 	{
 		
 	}
-	
+
 	public StorageUsageSnapshot(SnapshotKey key, StorageUsageData usageData)
 	{
 		this.key = key;
@@ -43,4 +43,5 @@ class StorageUsageSnapshot
 	{
 		return String.format("[key:%s,usageData:%s]", this.key, this.usageData);
 	}
+
 }
