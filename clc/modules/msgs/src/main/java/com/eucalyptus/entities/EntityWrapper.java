@@ -176,7 +176,7 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    */
   public void add( TYPE newObject ) {
-    this.add( newObject );
+    this.persist( newObject );
   }
 
   /**
