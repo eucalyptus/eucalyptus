@@ -29,20 +29,35 @@ public class QueueBroker
 	private String brokerName;
 	private String brokerDataDir;
 	private String brokerUrl;
+	//static:(tcp://remoteServer:63636)
+	private String remoteBrokerUrl;
 	
 	private List<ActiveMQDestination> destinations;
 
 	private BrokerService brokerService;
 	private JmsBrokerThread brokerThread;
 
-	private QueueBroker(String brokerName, String brokerUrl, String brokerDataDir)
+	private QueueBroker(String brokerName, String brokerUrl, String remoteBrokerUrl,
+			String brokerDataDir)
 	{
 		this.brokerName = brokerName;
 		this.brokerUrl = brokerUrl;
 		this.brokerDataDir = brokerDataDir;
 		this.destinations = new ArrayList<ActiveMQDestination>();
+		this.remoteBrokerUrl = remoteBrokerUrl;
 	}
 	
+	private static QueueBroker instance;
+	
+	public static QueueBroker getInstance()
+	{
+		if (instance == null) {
+			return instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, null,
+					DEFAULT_DIR);
+		}
+		return instance;
+	}
+
 	public void addDestination(String destName)
 	{
 		ActiveMQDestination dest =
@@ -52,14 +67,19 @@ public class QueueBroker
 	
 	public void startup()
 	{
+		/* TODO: Determine our current location.
+		 *   Determine where the main reporting component lives.
+		 *   Establish a network connector.
+		 */
 		try {
 			brokerService = new BrokerService();
 			brokerService.setBrokerName(brokerName);
 			brokerService.setDataDirectory(brokerDataDir);
 			brokerService.addConnector(brokerUrl);
-			ActiveMQDestination[] dests = new ActiveMQDestination[destinations.size()];
-			destinations.toArray(dests);
-			brokerService.setDestinations(dests);
+			if (remoteBrokerUrl != null) {
+				brokerService.addNetworkConnector(remoteBrokerUrl);
+			}
+			brokerService.setUseJmx(true);
 			brokerThread = new JmsBrokerThread(brokerService);
 			brokerThread.start();
 			Thread.sleep(1000); // give the broker a moment to startup; TODO:
@@ -96,7 +116,12 @@ public class QueueBroker
 	public static void main(String[] args)
 		throws Exception
 	{
-		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_DIR, DEFAULT_URL);
+		String remoteBrokerUrl = null;
+		if (args.length > 0) {
+			remoteBrokerUrl = args[0];
+		}
+		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_URL,
+				remoteBrokerUrl, DEFAULT_DIR);
 		broker.startup();
 	}
 
