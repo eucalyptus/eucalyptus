@@ -112,11 +112,12 @@
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
-    <ant dir="modules/vmware-broker" inheritall="false" target="builder" />
+		<ant dir="modules/www" inheritall="false" target="builder" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
+		<ant dir="modules/reporting" inheritall="false" target="builder" />
 	</target>
   <target name="build-gwt">
     <ant dir="modules/www" inheritall="false" target="builder" />
-    <ant dir="modules/reporting" inheritall="false" target="builder" />
   </target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
@@ -257,7 +258,7 @@
 		<ant dir="modules/www" inheritall="false" target="install" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-	  <ant dir="modules/vmware-broker" inheritall="false" target="install" />
+	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">

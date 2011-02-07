@@ -43,7 +43,7 @@ import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
-  private static Logger                     LOG;
+  private static Logger                     LOG = Logger.getLogger( StandalonePersistence.class );
   private static ConcurrentMap<String, Sql> sqlConnections = new ConcurrentHashMap<String, Sql>( );
   private static List<UpgradeScript> upgradeScripts = Lists.newArrayList( );
   static {
@@ -119,7 +119,7 @@ public class StandalonePersistence {
     return conn;
   }
   
-  private static void setupProviders( ) {
+  static void setupProviders( ) {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Users.setUserProvider( dbAuth );
     Groups.setGroupProvider( dbAuth );
@@ -148,7 +148,7 @@ public class StandalonePersistence {
     }
   }
   
-  private static void setupNewDatabase( ) throws Exception {
+  static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
     dest.initialize( );    
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
@@ -159,7 +159,7 @@ public class StandalonePersistence {
     } );
   }
   
-  private static void setupInitProviders( ) throws Exception {
+  static void setupInitProviders( ) throws Exception {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
@@ -169,7 +169,7 @@ public class StandalonePersistence {
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
   
-  private static void setupSystemProperties( ) {
+  static void setupSystemProperties( ) {
     /** Pre-flight configuration for system **/
     System.setProperty( "euca.home", eucaHome );
     System.setProperty( "euca.log.level", "TRACE" );
@@ -186,7 +186,7 @@ public class StandalonePersistence {
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
     LogLevels.DEBUG = doDebug;
     LogLevels.TRACE = doDebug;
-    StandalonePersistence.LOG = Logger.getLogger( StandalonePersistence.class );
+
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
     LOG.info( String.format( "%-20.20s %s", "Upgrade data source:", eucaSource ) );
