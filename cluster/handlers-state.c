@@ -227,6 +227,8 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 
   if (!inst) {
     return(1);
+  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+    return(0);
   }
 
   logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
@@ -266,6 +268,8 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
 
   if (!inst) {
     return(1);
+  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+    return(0);
   }
 
   logprintfl(EUCADEBUG, "instNetReassignAddrs(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);

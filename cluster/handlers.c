@@ -1579,7 +1579,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      }
 
 	      // check for network instance IP inconsistency
-	      if ( strcmp(myInstance->ccnet.publicIp, ncOutInsts[j]->ncnet.publicIp) ) {
+	      if (strcmp(myInstance->ccnet.publicIp, ncOutInsts[j]->ncnet.publicIp) ) {
 		logprintfl(EUCADEBUG, "refresh_instances(): instId=%s, publicIP reported by NC (%s) differs from publicIp assigned at CC (%s), updating.\n", myInstance->instanceId, ncOutInsts[j]->ncnet.publicIp, myInstance->ccnet.publicIp);
 		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 		if (rc) {
