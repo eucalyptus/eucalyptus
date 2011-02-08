@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -66,9 +66,13 @@
 package edu.ucsb.eucalyptus.storage.fs;
 
 import java.io.File;
+import java.util.NavigableSet;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
@@ -88,8 +92,12 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	private static final String CSTATE_WFCONNECTION = "WFConnection";
 	private static final String CSTATE_CONNECTED = "Connected";
 
+	public DRBDStorageManager() {
+	}
+
 	public DRBDStorageManager(String rootDirectory) {
 		super(rootDirectory);
+		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
 	}
 
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
@@ -154,13 +162,13 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private void unmountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "umount", DRBDInfo.getDRBDInfo().getBlockDevice()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "umount", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
 			throw new EucalyptusCloudException("Unable to unmount " + DRBDInfo.getDRBDInfo().getBlockDevice());
 		}
 	}
 
 	private boolean isMounted() throws ExecutionException {
-		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "mount"});
+		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "cat", "/proc/mounts"});
 		if(returnValue.length() > 0) {
 			if(returnValue.contains(DRBDInfo.getDRBDInfo().getBlockDevice())) {
 				return true;
@@ -197,9 +205,37 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		}
 	}
 
+	private boolean isPeerPrimary() throws EucalyptusCloudException, ExecutionException {
+		String roleString = getRole();
+		String[] roleParts = roleString.split("/");
+		if(roleParts.length > 1) {
+			if(PRIMARY_ROLE.equals(roleParts[1])) {
+				return true;
+			} else {
+				return false;
+			}			 
+		} else {
+			throw new EucalyptusCloudException("Unable to parse role.");
+		}
+	}
+
+	private boolean isPeerSecondary() throws EucalyptusCloudException, ExecutionException {
+		String roleString = getRole();
+		String[] roleParts = roleString.split("/");
+		if(roleParts.length > 1) {
+			if(SECONDARY_ROLE.equals(roleParts[1])) {
+				return true;
+			} else {
+				return false;
+			}			 
+		} else {
+			throw new EucalyptusCloudException("Unable to parse role.");
+		}
+	}
+
 	private boolean isConnected() throws ExecutionException, EucalyptusCloudException {
 		String cstateString = getConnectionStatus();
-		if(CSTATE_CONNECTED.equals(cstateString)) {
+		if((cstateString != null) && cstateString.startsWith(CSTATE_CONNECTED)) {
 			return true;
 		} else {
 			return false;
@@ -219,6 +255,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			throw new EucalyptusCloudException("Unable to get resource dstate.");
 		}		
 	}
+
 	private void checkLocalDisk() throws EucalyptusCloudException {		
 		String blockDevice = DRBDInfo.getDRBDInfo().getBlockDevice();
 		File mount = new File(blockDevice);
@@ -235,38 +272,60 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	public void becomeMaster() throws EucalyptusCloudException, ExecutionException {		
 		checkLocalDisk();
 		//role, cstate, dstate
-		if(isPrimary()) {
-			return;
+		if(!isPrimary()) {
+			//make primary
+			if(!isPeerSecondary()) {
+				throw new EucalyptusCloudException("Peer is not secondary and I am master!");
+			}
+			makePrimary();
 		}
 		if(!isConnected()) {
-			throw new EucalyptusCloudException("Resource not connected to peer.");
+			connectResource();
+			if(!isConnected()) {
+				throw new EucalyptusCloudException("Resource could not be connected to peer.");
+			}
 		}
-		//make primary
-		makePrimary();
 		//mount
 		if(!isMounted()) {
 			mountPrimary();
 		}
 		//verify state
+		if(!isPrimary()) {
+			throw new EucalyptusCloudException("Unable to make resource primary.");
+		}
 	}
 
 	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
 		checkLocalDisk();
 		//check mount point, block device, role, cstate, dstate
-		if(isSecondary()) {
-			return;
-		}
-		if(!isConnected()) {
-			throw new EucalyptusCloudException("Resource not connected to peer.");
-		}
 		if(isMounted()) {
 			unmountPrimary();
 		}
-		//make secondary
-		makeSecondary();
+		if(!isSecondary()) {
+			//make secondary
+			makeSecondary();
+		}
+		if(!isConnected()) {
+			connectResource();
+			if(!isConnected()) {
+				throw new EucalyptusCloudException("Resource not connected to peer.");
+			}
+		}
 		//verify state
+		if(!isSecondary()) {
+			throw new EucalyptusCloudException("Unable to make resource secondary.");
+		}
+		if(!isPeerPrimary()) {
+			LOG.warn("Warning! Peer is not primary. No usable component?");
+		}
 	}
 	//check status
+
+	public void secondaryDrasticRecovery() throws ExecutionException, EucalyptusCloudException {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "--", "--discard-my-data", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+			throw new EucalyptusCloudException("Unable to recover from split brain for resource: " + DRBDInfo.getDRBDInfo().getResource());
+		}
+	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
@@ -289,8 +348,73 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 
 	@Override
 	public void check() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
+		try {
+			boolean notConnected = false;
+			if(!isConnected()) {
+				connectResource();
+				if(!isConnected()) {
+					LOG.warn("Unable to connect resource");
+					notConnected = true;
+				}
+			}
+			boolean notUpToDate = false;
+			if(!isUpToDate()) {
+				LOG.warn("Resource is not up to date");
+				notUpToDate = true;
+			}
+			if (Component.State.ENABLED.equals(Components.lookup("walrus").getState())) {
+				if(!isPrimary()) {
+					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Aborting!");
+				}
+				return;
+			} else {
+				if (Component.State.DISABLED.equals(Components.lookup("walrus").getState())) {
+					if(!isSecondary()) {
+						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
+						makeSecondary();
+						if(!isSecondary()) {
+							throw new EucalyptusCloudException("Attempt to set secondary failed. Unable to proceed!");
+						}
+					}
+					NavigableSet<Service> hii = Components.lookup("walrus").getServices();
+					boolean isOtherPrimary = false;
+					for (Service ii : hii) {
+						isOtherPrimary |= Component.State.ENABLED.equals(ii.getState()) && !ii.isLocal() ? true : false;
+					}
+					if(!isOtherPrimary) {
+						return;
+					}
+				}
+				if(!notConnected) {
+					throw new EucalyptusCloudException("Resource not connected and not primary or cannot become one!");
+				}
+				if(!notUpToDate) {
+					throw new EucalyptusCloudException("Resource not up to date and not primary or cannot become one!");
+				}
+			}
+		} catch(ExecutionException ex) {
+			throw new EucalyptusCloudException(ex);
+		}
+	}
 
+	@Override
+	public void start() throws EucalyptusCloudException {
+		try {
+			becomeSlave();
+		} catch (ExecutionException e) {
+			throw new EucalyptusCloudException(e);
+		}
+	}
+
+	@Override
+	public void stop() throws EucalyptusCloudException {
+		try {
+			if(isMounted()) {
+				unmountPrimary();
+			}
+		} catch(ExecutionException ex) {
+			throw new EucalyptusCloudException(ex);
+		}
 	}
 
 }

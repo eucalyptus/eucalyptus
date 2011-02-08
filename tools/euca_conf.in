@@ -52,7 +52,7 @@
 #  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 #  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 #  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 #  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 #  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 #  ANY SUCH LICENSES OR RIGHTS.
@@ -120,7 +120,7 @@ usage () {
 	echo "   --deregister-cluster <clustername>     		remove cluster from EUCALYPTUS"
 	echo "   --configure-vmware                			add new vmware to EUCALYPTUS"
 	echo "   --register-walrus <host>         			add walrus to EUCALYPTUS"
-	echo "   --deregister-walrus <host>       			remove walrus from EUCALYPTUS"
+	echo "   --deregister-walrus		       			remove walrus from EUCALYPTUS"
         echo "   --register-sc <clustername> <host>      		add storage controller"
         echo "   --deregister-sc <clustername>           		remove storage controller from EUCALYPTUS"
 	echo "   --register-vmwarebroker <clustername> <host>		add vmware broker to EUCALYPTUS"
@@ -134,6 +134,7 @@ usage () {
 	echo "   --cc-port <port>                 			set CC port"
 	echo "   --nc-port <port>                 			set NC port"
 	echo "   --instances <path>               			set the INSTANCE path"
+#	echo "   --cloud-port <port1> <port2>     set the 2 cloud ports"
 	echo "   --hypervisor <kvm|xen>           			set hypervisor to use"
 	echo "   --user <euca_user>               			set the user to use"
 	echo "   --dhcpd <dhcpd>                  			set the dhcpd binary to <name>"
@@ -144,6 +145,7 @@ usage () {
 	echo "   --enable {cloud|walrus|sc|vmwarebroker}  		enable service at next start"
 	echo "   --disable {cloud|walrus|sc|vmwarebroker}    		disable service at next start"
 	echo "   --check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}	pre-flight checks"
+#	echo "   --sync {nc|cc|cloud|sc|walrus}   pre-flight checks"
 	echo "   --version                        			eucalyptus version"
 	echo
 }
@@ -195,7 +197,7 @@ check_heartbeat() {
 	fi
 
 	# let's talk to the host and check if something is running
-	ret="`$WGET -q -T 10 -t 1 -O - http://${__host}:8773/services/Heartbeat`"
+	ret="`$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  http://${__host}:8773/services/Heartbeat`"
 	if [ "$?" != "0" -o -z "$ret" ]; then
 		return 1
 	fi
@@ -224,19 +226,19 @@ check_ws() {
 		ret=""
 	elif [ "$2" != "" ]; then
 		if [ "$VERBOSE" = "Y" ]; then
-			echo   "$WGET -q -T 10 -t 1 -O - \"$URL\"" "|sed 's/<euca:registered>\\(.*\\)<\\/euca:registered>/\\n\\1\\n/g;s/<euca:name>/\\n>/g;s/<\\/*euca:item>//g;s/<\\/*euca:[^>]*>/ /g'|awk -F\">\" '/>/{print \"   \"$2}')"
+			echo   "$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\"" "|sed 's/<euca:registered>\\(.*\\)<\\/euca:registered>/\\n\\1\\n/g;s/<euca:name>/\\n>/g;s/<\\/*euca:item>//g;s/<\\/*euca:[^>]*>/ /g'|awk -F\">\" '/>/{print \"   \"$2}')"
 		fi
-		E=$($WGET -q -T 10 -t 1 -O - "$URL"|\
+		E=$($WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  "$URL"|\
 			sed 's/<euca:registered>\(.*\)<\/euca:registered>/\n\1\n/g;s/<euca:name>/\n>/g;s/<\/*euca:item>//g;s/<\/*euca:[^>]*>/ /g'|\
 			awk -F">" '/>/{print "   "$2}')
 		eval "$2=\"${E}\""
 	else
 		if [ "$VERBOSE" = "Y" ]; then
-			echo "$WGET -q -T 10 -t 1 -O - \"$URL\" |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'"
+			echo "$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\" |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'"
 		fi
-		soap_error="`$WGET -q -T 10 -t 1 -O - \"$URL\"`"
+		soap_error="`$WGET -q -T 10 -t 10 -w 1 -O - --retry-connrefused  \"$URL\"`"
 		ret="$?"
-		soap_error="`echo $soap_error |grep faultstring | sed 's:.*<faultstring>\(.*\)</faultstring>.*:\1:'`"
+		soap_error="`echo $soap_error |grep Error | sed 's:.*<Error>\(.*\)</Error>.*:\1:g;s:</\w*>: :g;s:<:\n:g;s:>:\:  :g;s:^\n::'`"
 		if test -n "$soap_error" ; then
 			echo $soap_error
 			ret="1"
@@ -903,9 +905,10 @@ if [ -n "$SETUP" ]; then
 			echo "Failed to create instance path!"
 			exit 1
 		fi
-		if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
-			exit 1
-		fi
+	fi
+	if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
+                echo "Failed to modify ownership of $INSTANCE_PATH (must be owned by $EUCA_USER:$EUCA_GROUP)!"
+		exit 1
 	fi
 
 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
@@ -956,18 +959,6 @@ fi
 if [ -n "$CHECK" ]; then
 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
 
-	# vblade and aoe may be needed
-	if [ "$DISABLE_EBS" != "Y" -a "$DISABLE_EBS" != "y" ]; then
-		if [ "$CHECK" = "sc" ]; then
-			VBLADE="`which vblade 2> /dev/null`"
-			if [ -z "$VBLADE" ]; then
-				echo
-				echo "ERROR: EBS is enabled and vblade was not found"
-				exit 1
-			fi
-		fi
-	fi
-	
 	# first of all check euca_rootwrap
 	if [ ! -x $ROOTWRAP ]; then
 		echo "Cannot find euca_rootwrap!"
@@ -1126,9 +1117,9 @@ checkLocalService() {
 	    done
 	fi
 	
-	CMD="$WGET -T 10 -t 10 -O - -q --no-check-certificate --retry-connrefused https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
+	CMD="$WGET -T 10 -t 10 -w 1 -O - -q --no-check-certificate --retry-connrefused https://127.0.0.1:8443/register | grep CloudVersion >/dev/null"
     elif [ "$SERVICE" = "CC" ]; then
-	CMD="$WGET -T 10 -t 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
+	CMD="$WGET -T 10 -t 10 -w 1 -O - -q http://127.0.0.1:8774/axis2/services/ | grep EucalyptusCC >/dev/null"
     fi
     
     if [ -n "${FAKEREG}" ]; then

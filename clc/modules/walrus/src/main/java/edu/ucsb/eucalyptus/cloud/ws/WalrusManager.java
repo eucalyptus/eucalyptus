@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -90,7 +90,7 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -388,7 +388,7 @@ public class WalrusManager {
 				updateARecord.setTtl(604800);
 				updateARecord.setZone(zone);
 				try {
-					ServiceDispatcher.lookupSingle(Component.dns).send(updateARecord);
+					ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(updateARecord);
 					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
 				} catch(Exception ex) {
 					LOG.error("Could not update DNS record", ex);
@@ -507,7 +507,7 @@ public class WalrusManager {
 								}
 								removeARecordType.setAddress(address);
 								try {
-									ServiceDispatcher.lookupSingle(Component.dns).send(
+									ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(
 											removeARecordType);
 									LOG.info("Removing mapping for "
 											+ removeARecordType.getName());

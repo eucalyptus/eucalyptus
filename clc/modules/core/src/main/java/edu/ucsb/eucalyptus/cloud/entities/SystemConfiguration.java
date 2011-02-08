@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -78,7 +78,8 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -260,7 +261,6 @@ public class SystemConfiguration {
   	}
   	catch ( EucalyptusCloudException e ) {
   	  LOG.warn("Failed to get system configuration. Loading defaults.");
-  	  LOG.error( e, e );
   		conf = SystemConfiguration.validateSystemConfiguration(null);
   		confDb.add(conf);
   		confDb.commit();
@@ -298,7 +298,7 @@ public class SystemConfiguration {
   public static String getWalrusUrl() throws EucalyptusCloudException {
     String walrusHost;
     try {
-      walrusHost = Configuration.getWalrusConfiguration( Component.walrus.name( ) ).getHostName( );
+      walrusHost = Configuration.getWalrusConfiguration( ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
     } catch ( Exception e ) {
       walrusHost = Configuration.getWalrusConfiguration( "Walrus" ).getHostName( );
     }

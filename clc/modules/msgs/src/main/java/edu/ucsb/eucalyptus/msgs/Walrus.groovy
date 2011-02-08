@@ -54,7 +54,7 @@ package edu.ucsb.eucalyptus.msgs
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,18 +63,21 @@ import java.util.ArrayList;
 import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.Walrus;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 
 /*
  *
  * Author: Neil Soman <neil@eucalyptus.com>
  */
-public class WalrusResponseType extends EucalyptusMessage {
+public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	def WalrusResponseType() {}
 }
 
-public class WalrusRequestType extends EucalyptusMessage {
+@ComponentMessage(Walrus.class)
+public class WalrusRequestType extends BaseMessage {
 	protected String accessKeyID;
 	protected Date timeStamp;
 	protected String signature;
@@ -83,14 +86,14 @@ public class WalrusRequestType extends EucalyptusMessage {
 	protected String bucket;
 	protected String key;
 
-	def WalrusRequestType() {}
+	public WalrusRequestType() {}
 
-  def WalrusRequestType( String bucket, String key ) {
+  public WalrusRequestType( String bucket, String key ) {
     this.bucket = bucket;
     this.key = key;
   }
 
-  def WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+  public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;
@@ -495,7 +498,7 @@ public class ListBucketResponseType extends WalrusResponseType {
 	boolean isTruncated;
 	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
-	ArrayList<PrefixEntry> commonPrefixes;
+	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
 }
 
 public class ListEntry extends EucalyptusData {

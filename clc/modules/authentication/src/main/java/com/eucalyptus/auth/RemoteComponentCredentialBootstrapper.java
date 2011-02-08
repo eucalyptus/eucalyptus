@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,19 +65,22 @@ package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.util.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.DependsRemote;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.SystemCredentialsInit)
-@DependsRemote(Component.eucalyptus)
+@DependsRemote(Eucalyptus.class)
 public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteComponentCredentialBootstrapper.class );
 
@@ -88,10 +91,10 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
       try {
         Thread.sleep( 2000 );
       } catch ( Exception e ) {
-        Thread.currentThread( ).interrupted( );
+        Thread.currentThread( ).interrupt( );
       }
     }
-    for ( Component c : Component.values( ) ) {
+    for ( ComponentId c : ComponentIds.list( )  ) {
       LOG.info( "Initializing system credentials for " + c.name( ) );
       SystemCredentialProvider.init( c );
     }
@@ -100,7 +103,7 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
 
   private boolean checkAllKeys( ) {
     for ( com.eucalyptus.component.Component c : Components.list( ) ) {
-      if ( c.isEnabled( ) ) {
+      if ( c.isAvailableLocally( ) ) {
         try {
           if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
             return false;

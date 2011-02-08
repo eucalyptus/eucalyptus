@@ -69,8 +69,7 @@ public class BaseRecord implements Serializable, Record {
   @Transient
   private static final String ISNULL = "NULL";
   @Transient
-  protected
-  static final String NEXT   = "\n";
+  protected static final String NEXT   = "\n";
   @Transient
   private transient String    lead;
   @Transient
@@ -108,7 +107,6 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record info( ) {
     this.level = RecordLevel.INFO;
-    this.maybeSave();
     Logger.getLogger( this.realCreator ).info( this );
     return this;
   }
@@ -119,7 +117,6 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record error( ) {
     this.level = RecordLevel.ERROR;
-    this.maybeSave();
     Logger.getLogger( this.realCreator ).error( this );
     return this;
   }
@@ -130,7 +127,6 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
-    this.maybeSave();
     Logger.getLogger( this.realCreator ).trace( this );
     return this;
   }
@@ -141,7 +137,6 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
-    this.maybeSave();
     Logger.getLogger( this.realCreator ).debug( this );
     return this;
   }
@@ -152,17 +147,10 @@ public class BaseRecord implements Serializable, Record {
    */
   public Record warn( ) {
     this.level = RecordLevel.WARN;
-    this.maybeSave();
     Logger.getLogger( this.realCreator ).warn( this );
     return this;
   }
 
-  private void maybeSave() {
-    if( this.type != null && Bootstrap.isFinished( ) ) {
-      this.level.enqueue( this );
-    }
-  }
-  
   /**
    * @see com.eucalyptus.records.Record#next()
    * @return

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -72,6 +72,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -165,7 +166,7 @@ public class Threads {
         return this.pool;
       }
     }
-    
+    private static final Runnable[] EMPTY = new Runnable[] {};
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
@@ -174,8 +175,15 @@ public class Threads {
       try {
         while( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
           LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
+          if( this.pool instanceof ThreadPoolExecutor ) {
+            ThreadPoolExecutor tpe = (ThreadPoolExecutor) this.pool;
+            for( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
+              LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ).getCanonicalName( ) );
+            }
+          }
         }
       } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupt( );
         LOG.error( e , e );
       }
       return ret;
@@ -189,6 +197,7 @@ public class Threads {
     private ThreadPool( String groupPrefix ) {
       this.name = "Eucalyptus." + groupPrefix;
       this.group = new ThreadGroup( this.name );
+      this.pool = Executors.newCachedThreadPool( );
       Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
         @Override
         public void run( ) {

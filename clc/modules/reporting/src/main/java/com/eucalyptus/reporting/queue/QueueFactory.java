@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.*;
 
 public class QueueFactory
@@ -118,10 +119,10 @@ public class QueueFactory
 		QueueFactory queueFactory = QueueFactory.getInstance();
 		QueueReceiver receiver = queueFactory.getReceiver(identifier);
 		if (listener) {
-			receiver.addEventListener(new EventListener()
+			receiver.addEventListener(new EventListener<Event>()
 			{
 				@Override
-				public void receiveEvent(Event e)
+				public void fireEvent(Event e)
 				{
 					System.out.println("Event received:" + e);
 				}

@@ -3,9 +3,10 @@ package com.eucalyptus.reporting.queue;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.*;
+import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.reporting.ReportingBootstrapper;
 
-@Provides(Component.reporting)
+@Provides(Reporting.class)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
 public class QueueBootstrapper extends Bootstrapper
 {

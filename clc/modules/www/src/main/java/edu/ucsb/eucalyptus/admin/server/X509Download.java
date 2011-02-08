@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -77,12 +77,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {
@@ -159,7 +160,7 @@ public class X509Download extends HttpServlet {
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, userName );
       x509.checkValidity( );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Component.eucalyptus ).getCertificate( );
+      cloudCert = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
       u.revokeX509Certificate( );
       u.setX509Certificate( x509 );
       //      Transactions.one( new UserEntity( userName ), new Tx<UserEntity>() {
@@ -194,6 +195,7 @@ public class X509Download extends HttpServlet {
       } catch ( Exception e ) {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
+      sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
       sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );

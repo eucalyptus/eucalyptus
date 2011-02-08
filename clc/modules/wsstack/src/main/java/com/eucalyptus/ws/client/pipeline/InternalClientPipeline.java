@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,9 +65,11 @@ package com.eucalyptus.ws.client.pipeline;
 
 import java.security.GeneralSecurityException;
 import org.jboss.netty.channel.ChannelPipeline;
+
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
+import com.eucalyptus.ws.handlers.NioResponseHandler;
 import com.eucalyptus.ws.handlers.ResponseHandler;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
 
 public class InternalClientPipeline extends NioClientPipeline {
   public InternalClientPipeline( final ResponseHandler handler ) throws GeneralSecurityException {

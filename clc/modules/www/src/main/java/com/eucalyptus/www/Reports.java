@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -36,9 +35,10 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.reporting.GroupByCriterion;
@@ -482,7 +482,7 @@ public class Reports extends HttpServlet {
     JasperPrint jasperPrint;
     final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
     if ( jdbc ) {
-      String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
+      String url = String.format( "jdbc:%s_%s", Components.lookup( Database.class ).getUri( ).toString( ), "records" );
       Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
         put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );

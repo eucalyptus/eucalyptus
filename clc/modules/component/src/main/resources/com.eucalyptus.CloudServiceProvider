@@ -1,6 +1,0 @@
-name=component
-euca.model.component=component-model.xml
-euca.model.component.services=component-services.xml
-euca.url.local=vm://ComponentInternal
-euca.url.pattern=http://%s:%d/internal/ComponentInternal
-euca.url.port=8773

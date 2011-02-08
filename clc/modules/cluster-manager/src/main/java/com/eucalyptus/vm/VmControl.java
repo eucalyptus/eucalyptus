@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -88,7 +88,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.ws.util.Messaging;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
@@ -106,13 +105,46 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import com.eucalyptus.records.EventRecord;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
+import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
+import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeBundleTasksType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
+import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
+import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType;
 import edu.ucsb.eucalyptus.msgs.GetPasswordDataType;
+import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.StartInstancesType;
+import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.StopInstancesType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
+import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
 
 public class VmControl {
   
@@ -184,7 +216,7 @@ public class VmControl {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( admin || v.getOwnerId( ).equals( userId ) ) {
-              Callbacks.newClusterRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
+              Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
               return true;
             } else {
               return false;
@@ -214,7 +246,7 @@ public class VmControl {
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
         reply.setOutput( v.getConsoleOutputString( ) );
-        ServiceContext.dispatch( "ReplyQueue", reply );
+        ServiceContext.response( reply );
       } catch ( NoSuchElementException ex ) {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
@@ -222,7 +254,11 @@ public class VmControl {
     if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-      throw new EucalyptusCloudException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+      GetConsoleOutputResponseType reply = request.getReply( );
+      reply.setInstanceId( request.getInstanceId( ) );
+      reply.setTimestamp( new Date( ) );
+      reply.setOutput( v.getConsoleOutputString( ) );
+      ServiceContext.response( reply );
     } else {
       Cluster cluster = null;
       try {
@@ -231,7 +267,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      Callbacks.newClusterRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
     }
   }
   
@@ -260,7 +296,66 @@ public class VmControl {
     }
     return reply;
   }
-  
+  public UnmonitorInstancesResponseType unmonitorInstances(UnmonitorInstancesType request) {
+    UnmonitorInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public StartInstancesResponseType startInstances(StartInstancesType request) {
+    StartInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public StopInstancesResponseType stopInstances(StopInstancesType request) {
+    StopInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ResetInstanceAttributeResponseType resetInstanceAttribute(ResetInstanceAttributeType request) {
+    ResetInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public MonitorInstancesResponseType monitorInstances(MonitorInstancesType request) {
+    MonitorInstancesResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ModifyInstanceAttributeResponseType modifyInstanceAttribute(ModifyInstanceAttributeType request) {
+    ModifyInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public DescribeTagsResponseType describeTags(DescribeTagsType request) {
+    DescribeTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribePlacementGroupsResponseType describePlacementGroups(DescribePlacementGroupsType request) {
+    DescribePlacementGroupsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeInstanceAttributeResponseType describeInstanceAttribute(DescribeInstanceAttributeType request) {
+    DescribeInstanceAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeleteTagsResponseType deleteTags(DeleteTagsType request) {
+    DeleteTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeletePlacementGroupResponseType deletePlacementGroup(DeletePlacementGroupType request) {
+    DeletePlacementGroupResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreateTagsResponseType createTags(CreateTagsType request) {
+    CreateTagsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreatePlacementGroupResponseType createPlacementGroup(CreatePlacementGroupType request) {
+    CreatePlacementGroupResponseType reply = request.getReply( );
+    return reply;
+  }
+
   public CancelBundleTaskResponseType cancelBundleTask( CancelBundleTaskType request ) throws EucalyptusCloudException {
     CancelBundleTaskResponseType reply = request.getReply( );
     reply.set_return( true );

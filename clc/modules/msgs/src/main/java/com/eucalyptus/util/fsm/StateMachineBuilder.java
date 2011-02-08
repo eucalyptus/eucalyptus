@@ -1,5 +1,6 @@
 package com.eucalyptus.util.fsm;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -7,6 +8,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -39,17 +41,21 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
   }
   
   protected class TransitionBuilder {
-    Transition<P, S, T> transition;
-    T                   name;
-    S                   fromState;
-    S                   toState;
-    S                   errorState;
+    Transition<P, S, T>          transition;
+    T                            name;
+    S                            fromState;
+    S                            toState;
+    S                            errorState;
+    TransitionAction<P>          action;
+    List<TransitionListener<P>> listeners = Lists.newArrayList( );
     
-    TransitionBuilder init( ) {
+    TransitionBuilder init( TransitionAction<P> action ) {
+      this.action = action;
       this.errorState = ( this.errorState == null )
         ? this.fromState
         : this.errorState;
-      transition = Transitions.create( this.name, this.fromState, this.toState, this.errorState );
+      this.transition = Transitions.create( this.name, this.fromState, this.toState, this.errorState, this.action, this.listeners.toArray( new TransitionListener[] {} ) );
+      this.listeners = null;;
       return this;
     }
     
@@ -66,39 +72,66 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       this.toState = toState;
       return this;
     }
-
+    
     public TransitionBuilder error( S errorState ) {
       this.errorState = errorState;
       return this;
     }
     
-    public void noop( ) {
-      this.init( ).transition.addListener( new TransitionListener<P>( ) {
+    public void outOfBand( ) {
+      this.init( new TransitionAction<P>( ) {
         public boolean before( P parent ) {
           return true;
         }
+        
         public void leave( P parent, Completion transitionCallback ) {}
+        
         public void enter( P parent ) {}
+        
         public void after( P parent ) {}
+        
         public String toString( ) {
-          return "TransitionListener.noop";
+          return "TransitionAction.outOfBand";
+        }
+      } );
+      this.commit( );
+    }
+
+    public void oob( ) {
+      this.init( TransitionAction.OUTOFBAND );
+      this.commit( );
+    }
+    
+    public void noop( ) {
+      this.init( TransitionAction.NOOP );
+      this.commit( );
+    }
+    
+    public void run( TransitionAction<P> action ) {
+      this.init( action );
+      this.commit( );
+    }
+    
+    public TransitionBuilder add( TransitionListener<P> listener ) {
+      if( this.listeners == null ) {
+        this.transition.addListener( listener );
+      } else {
+        this.listeners.add( listener );
+      }
+      return this;
+    }
+    
+    public TransitionBuilder add( TransitionListener<P>... listeners ) {
+      if( this.listeners == null ) {
+        for ( TransitionListener<P> l : listeners ) {
+          transition.addListener( l );
+        }
+      } else {
+        for ( TransitionListener<P> l : listeners ) {
+          this.listeners.add( l );
         }
       }
-                             );
-      this.commit( );
-    }
-    
-    public void run( TransitionListener<P> listener ) {
-      this.init( ).transition.addListener( listener );
-      this.commit( );
-    }
-    
-    public void run( TransitionListener<P>... listeners ) {
-      this.init( );
-      for ( TransitionListener<P> l : listeners ) {
-        transition.addListener( l );
-      }
-      this.commit( );
+      return this;
     }
   }
   
@@ -159,17 +192,17 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
     }
     LOG.debug( "Starting state machine: " + this.parent.getClass( ).getSimpleName( ) + " " + this.parent.getName( ) );
-    for ( S s : this.immutableStates ) {
-      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
-    }
+//    for ( S s : this.immutableStates ) {
+//      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
+//    }
     Multimap<T, Transition<P, S, T>> transNames = Multimaps.newArrayListMultimap( );
     for ( Transition<P, S, T> t : this.transitions ) {
       transNames.put( t.getName( ), t );
     }
     for ( T t : trans ) {
-      LOG.debug( "fsm " + this.parent.getName( ) + " transitions:" + ( transNames.containsKey( t )
-        ? transNames.get( t )
-        : t.name( ) + ":NONE" ) );
+//      LOG.debug( "fsm " + this.parent.getName( ) + " transitions:" + ( transNames.containsKey( t )
+//        ? transNames.get( t )
+//        : t.name( ) + ":NONE" ) );
       for ( Transition<P, S, T> tr : transNames.get( t ) ) {
         String trKey = String.format( "%s.%s->%s.%s", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ) );
         if ( alltransitions.get( trKey ) != null ) {
@@ -181,7 +214,9 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
     }
     for ( String trKey : alltransitions.keySet( ) ) {
-      LOG.debug( String.format( "fsm %s %-60.60s %s", this.parent.getName( ), trKey, alltransitions.get( trKey ) ) );
+      if ( alltransitions.get( trKey ) != null ) {
+        LOG.debug( String.format( "fsm %s %-60.60s %s", this.parent.getName( ), trKey, alltransitions.get( trKey ) ) );
+      }
     }
   }
   

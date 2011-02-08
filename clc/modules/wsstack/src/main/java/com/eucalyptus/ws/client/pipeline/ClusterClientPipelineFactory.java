@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -69,13 +69,12 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.ServiceInfoInjectionHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.ClusterWsSecHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
   @Override
@@ -91,7 +90,6 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
     pipeline.addLast( "soap", new SoapHandler( ) );
     pipeline.addLast( "binding",
                       new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
-    pipeline.addLast( "serviceinfo", new ServiceInfoInjectionHandler( ) ); 
     return pipeline;
   }
 }

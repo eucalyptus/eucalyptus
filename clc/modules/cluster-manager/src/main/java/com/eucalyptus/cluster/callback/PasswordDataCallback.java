@@ -6,6 +6,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
@@ -43,7 +44,11 @@ public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,G
     } else {
       rep.setOutput( null );
     }
-    ServiceContext.dispatch( "ReplyQueue", rep );
+    try {
+      ServiceContext.response( rep );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
   }
 
 

@@ -1,16 +1,17 @@
 package com.eucalyptus.util.fsm;
 
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.util.HasName;
+import com.google.common.base.Predicate;
 
 public class Transitions {
   private static Logger                        LOG  = Logger.getLogger( Transitions.class );
-  public static final SimpleTransitionListener NOOP = new SimpleTransitionListener( ) {
-                                                    };
                                                     
-  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionListener<P>... listeners ) {
+  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionAction<P> action, TransitionListener<P>... listeners ) {
     TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState );
-    return new Transition<P, S, T>( rule, listeners );
+    return new Transition<P, S, T>( rule, action, listeners );
   }
   
   static class BasicTransitionRule<S extends Enum<S>, T extends Enum<T>> implements TransitionRule<S, T> {
@@ -94,4 +95,27 @@ public class Transitions {
 
   }
   
+  public static <P extends HasName<P>> TransitionListener<P> createListener( final Predicate<P> p ) {
+    return new TransitionListener<P>() {
+
+      @Override
+      public boolean before( P parent ) {
+        return true;
+      }
+
+      @Override
+      public void leave( P parent ) {
+        try {
+          p.apply( parent );
+        } catch ( Throwable ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+
+      @Override
+      public void enter( P parent ) {}
+
+      @Override
+      public void after( P parent ) {}};
+  }
 }

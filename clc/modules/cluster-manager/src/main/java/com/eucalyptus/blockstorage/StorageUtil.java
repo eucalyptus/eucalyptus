@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -70,7 +70,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -85,6 +85,7 @@ import com.google.common.collect.Multimaps;
 
 import edu.ucsb.eucalyptus.cloud.state.State;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -93,19 +94,15 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
-  public static Dispatcher lookup( String hostName ) {
-    return ServiceDispatcher.lookup( Component.storage, hostName );
-  }
-  
-  public static <TYPE> TYPE send( String clusterName, EucalyptusMessage message ) throws EucalyptusCloudException {
+  public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
     StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
-    Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
+    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
   }
   
-  public static void dispatchAll( EucalyptusMessage message ) throws EucalyptusCloudException {
-    for( Dispatcher sc : ServiceDispatcher.lookupMany( Component.storage ) ) {
+  public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
+    for( Dispatcher sc : ServiceDispatcher.lookupMany( Components.lookup("storage") ) ) {
       sc.dispatch( message );
     }
   }
@@ -126,8 +123,8 @@ public class StorageUtil {
         }
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      Dispatcher sc = ServiceDispatcher.lookup( Component.storage, scConfig.getHostName( ) );
-      DescribeStorageVolumesResponseType volState = sc.send( descVols, DescribeStorageVolumesResponseType.class );    
+      Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
+      DescribeStorageVolumesResponseType volState = sc.send( descVols );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
       }

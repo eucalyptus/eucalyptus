@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -90,14 +90,17 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.UserInfo;
 import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -131,6 +134,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	private static Properties props = new Properties();
 	private static long session_timeout_ms = 1000 * 60 * 60 * 24 * 14L; /* 2 weeks (TODO: put into config?) */
 	private static long pass_expiration_ms = 1000 * 60 * 60 * 24 * 365L; /* 1 year (TODO: put into config?) */
+	private static long recovery_expiration_ms = 1000 * 60 * 30; // 30 minutes (TODO: put into config?)
 
 	/* parameters to be read from config file */
 	private static String thanks_for_signup;
@@ -287,6 +291,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			SessionInfo session = verifySession (sessionId);
 			UserInfoWeb requestingUser = verifyUser (session, session.getUserId(), true);
 			if ( !requestingUser.isAdministrator().booleanValue()) {
+				user.setAdministrator(false); // in case someone is trying to be sneaky
 				throw new SerializableException("Administrative privileges required");
 			} else {
 				admin = true;
@@ -296,6 +301,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		/* add the user */
 		long now = System.currentTimeMillis();
 		user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+        user.setConfirmationCode( Crypto.generateSessionToken( user.getUserName() ) );
 		EucalyptusManagement.addWebUser(user);
 
 		String response;
@@ -316,7 +322,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		return response;
 	}
 
-	private String notifyUserRecovery(UserInfoWeb user)
+	private void notifyUserRecovery(UserInfoWeb user)
 	{
 		try {
 			String http_eucalyptus = ServletUtils.getRequestUrl(getThreadLocalRequest());
@@ -337,10 +343,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			LOG.error ("Confirmation code for user '" + user.getUserName()
 					+ "' and address " + user.getEmail()
 					+ " is " + user.getConfirmationCode());
-
-			return "Internal problem (failed to notify " + user.getEmail() + " by email)";
 		}
-		return "Notified '" + user.getUserName() + "' by email, thank you.";
 	}
 
 	public String recoverPassword ( UserInfoWeb web_user )
@@ -350,17 +353,46 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new SerializableException("Invalid RPC arguments");
 		}
 
-		UserInfoWeb db_user;
-		try {
-			/* try login first */
-			db_user = EucalyptusManagement.getWebUser(web_user.getUserName());
-		} catch (Exception e) {
-			/* try email then */
-			db_user = EucalyptusManagement.getWebUserByEmail(web_user.getEmail());
+		String response;
+		if (web_user.getPassword()==null) { // someone is initiating password recovery
+			try {
+				UserInfoWeb db_user = EucalyptusManagement.getWebUser(web_user.getUserName());
+				if (!db_user.isConfirmed() || !db_user.isEnabled()) {
+					throw new SerializableException("Illegal request"); // no password recoveries before confirmation or while disabled
+				}
+				if (db_user.getEmail().equalsIgnoreCase(web_user.getEmail())) {
+					long expires = System.currentTimeMillis() + recovery_expiration_ms;
+					db_user.setConfirmationCode(String.format("%015d", expires) + Crypto.generateSessionToken( db_user.getUserName() ) );
+					EucalyptusManagement.commitWebUser(db_user);
+					notifyUserRecovery(db_user);
+				}
+			} catch (Exception e) { } // pretend all is well regardless of the outcome
+			response = "Please, check your email for further instructions.";
+
+		} else { // someone is trying to change the password			
+			String code = web_user.getConfirmationCode();
+			if (code==null) {
+				throw new SerializableException("Insufficient parameters");
+			}
+			UserInfoWeb db_user;
+			try {
+				db_user = EucalyptusManagement.getWebUserByCode(code);
+				long expires = Long.parseLong(code.substring(0, 15));
+				long now = System.currentTimeMillis();
+				if (now > expires) {
+					throw new SerializableException("Recovery attempt expired");
+				}
+				db_user.setConfirmationCode("-unset-"); // so the code cannot be reused
+				db_user.setPassword (web_user.getPassword());
+				db_user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				EucalyptusManagement.commitWebUser(db_user);
+			} catch (Exception e) {
+				throw new SerializableException("Incorrect code");
+			}
+
+			response = "Your password has been reset.";
 		}
-		db_user.setPassword (web_user.getPassword());
-		EucalyptusManagement.commitWebUser(db_user);
-		return notifyUserRecovery(db_user);
+		return response;
 	}
 
 	/* ensure the sessionId is (still) valid */
@@ -503,20 +535,18 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		if (action.equals("recover") ||
 				action.equals("confirm")) {
 			UserInfoWeb user = EucalyptusManagement.getWebUserByCode(param);
-			String response;
+			String response = "OK";
 
 			if (action.equals("confirm")) {
 				if ( user != null ) {
 				  user.setConfirmed(true);
-				}
-				EucalyptusManagement.commitWebUser(user);
-				response = "Your account is now active.";
-			} else {
-				if(user != null) {
-			      user.setPassword (user.getPassword());
-				  long now = System.currentTimeMillis();
-				  user.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				  user.setConfirmationCode("-unset-"); // so the code cannot be reused
 				  EucalyptusManagement.commitWebUser(user);
+				}
+				response = "Your account is now active.";				
+			} else if (action.equals("recover")) { // this is just a way to verify that the code is valid (TODO: remove?)
+				if (user == null) {
+			      throw new SerializableException("Invalid code");
 				}
 				response = "Your password has been reset.";
 			}
@@ -538,6 +568,9 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName);
 			if (action.equals("approve")) {
+				if (new_user.isApproved()) {
+					throw new SerializableException("User already approved");
+				}
 				new_user.setApproved(true);
 				new_user.setEnabled(true);
 				new_user.setConfirmed(false);
@@ -701,29 +734,40 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new SerializableException ("Operation restricted to owner and administrator");
 		}
 
-		// set expiration for admin setting password for the first time
-		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
-			long now = System.currentTimeMillis();
-			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
-		}
+		// only an admin should be able to change this settings                                                                    
+		if (callerRecord.isAdministrator()) {   
 
-		/* TODO: Any checks? */
+			// set password and expiration for admin when logging in for the first time
+			if (oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
+				long now = System.currentTimeMillis();
+				oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+				oldRecord.setPassword (newRecord.getPassword());
+			}
+			
+			// admin can reset pwd of another user, but
+			// to reset his own password he has to use
+			// "change password" functionality
+			if(!callerRecord.getUserName().equals(userName))
+				oldRecord.setPassword (newRecord.getPassword());	
+
+			if(oldRecord.isAdministrator() != newRecord.isAdministrator())                                                     
+				oldRecord.setAdministrator(newRecord.isAdministrator());                                                   
+			if(oldRecord.isEnabled() != newRecord.isEnabled())                                                                 
+				oldRecord.setEnabled(newRecord.isEnabled( ));                                                              
+			// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement                       
+			if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {                                                         
+				oldRecord.setConfirmed(true);                                                                              
+				oldRecord.setEnabled(true);                                                                                
+				oldRecord.setApproved(true);                                                                               
+			}                                                                                                                  
+		}  
+		
 		oldRecord.setRealName (newRecord.getRealName());
 		oldRecord.setEmail (newRecord.getEmail());
-		oldRecord.setPassword (newRecord.getPassword());
 		oldRecord.setTelephoneNumber (newRecord.getTelephoneNumber());
 		oldRecord.setAffiliation (newRecord.getAffiliation());
 		oldRecord.setProjectDescription (newRecord.getProjectDescription());
 		oldRecord.setProjectPIName (newRecord.getProjectPIName());
-		oldRecord.setAdministrator(newRecord.isAdministrator());
-    oldRecord.setEnabled(newRecord.isEnabled( ));
-
-		// once confirmed, cannot be unconfirmed; also, confirmation implies approval and enablement
-		if (!oldRecord.isConfirmed() && newRecord.isConfirmed()) {
-			oldRecord.setConfirmed(true);
-			oldRecord.setEnabled(true);
-			oldRecord.setApproved(true);
-		}
 
 		EucalyptusManagement.commitWebUser( oldRecord );
 
@@ -1191,12 +1235,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   public static List<ReportInfo> getServiceLogInfo( Service s ) {
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
     ServiceConfiguration conf = s.getServiceConfiguration( );
-    com.eucalyptus.bootstrap.Component c = conf.getComponent( );
-    if( c.walrus.equals( c ) ) {
+    ComponentId compId = conf.getComponentId( );
+    if( compId instanceof Walrus ) {
       String serviceFq = "Walrus @ "+conf.getHostName( );
-      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
-    } else if( c.cluster.equals( c ) ) {
-      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
+    } else if( compId  instanceof com.eucalyptus.component.id.Cluster ) {
+      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
       Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
       for( String nodeTag : cluster.getNodeTags( ) ) {
         URI uri = URI.create( nodeTag );
@@ -1204,7 +1248,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       }
       try {
         ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
-        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponent( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
+        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponentId( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
       } catch ( EucalyptusCloudException e ) {
       }
     }

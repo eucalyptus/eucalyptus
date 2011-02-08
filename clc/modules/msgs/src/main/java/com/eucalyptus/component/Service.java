@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,18 +63,22 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import java.util.List;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
-import edu.ucsb.eucalyptus.msgs.ServiceId;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final Component            parent;
   private final String               name;
-  private final Credentials          keys;
+  private final ServiceCredentials   keys;
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
+  private final Component.State      state = State.ENABLED/**ASAP:FIXME:GRZE**/;
 
   public final ServiceId getServiceId( ) {
     return new ServiceId() {{
@@ -89,12 +93,12 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   public Service( Component parent, ServiceConfiguration serviceConfig ) {
     this.parent = parent;
     this.serviceConfiguration = serviceConfig;
-    if ( "cluster".equals( parent.getName( ) ) && com.eucalyptus.bootstrap.Component.eucalyptus.isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
+    if ( "cluster".equals( parent.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
       this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.parent.getConfiguration( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+      URI uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       this.endpoint = new ServiceEndpoint( this, false, uri );
     } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.parent.getConfiguration( ).getLocalUri( );
+      URI uri = this.parent.getIdentity( ).getLocalEndpointUri( );
       this.name = parent.getName( ) + LOCAL_HOSTNAME;
       this.endpoint = new ServiceEndpoint( this, true, uri );
     } else {
@@ -111,14 +115,14 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
       URI uri = null;
       if ( !local ) {
         this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.parent.getConfiguration( ).makeUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+        uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       } else {
         this.name = parent.getName( ) + LOCAL_HOSTNAME;
-        uri = this.parent.getConfiguration( ).getLocalUri( );
+        uri = this.parent.getIdentity( ).getLocalEndpointUri( );
       }
       this.endpoint = new ServiceEndpoint( this, local, uri );
     }
-    this.keys = new Credentials( this );//TODO: integration with JAAS
+    this.keys = new ServiceCredentials( this );//TODO: integration with JAAS
     this.dispatcher = DispatcherFactory.build( parent, this );
   }
   
@@ -126,7 +130,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     return this.endpoint.isLocal( );
   }
   
-  public Credentials getKeys( ) {
+  public ServiceCredentials getCredentials( ) {
     return this.keys;
   }
   
@@ -184,8 +188,26 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    */
   @Override
   public String toString( ) {
-    return String.format( "Service %s name=%s endpoint=%s dispatcher=%s serviceConfiguration=%s keys=%s", this.parent.getPeer( ), this.name, 
-                          this.endpoint, this.dispatcher, this.serviceConfiguration, this.keys );
+    return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s", 
+                          this.parent.getIdentity( ), this.name, this.endpoint, 
+                          this.parent.getIdentity( ), this.name, this.serviceConfiguration, 
+                          this.parent.getIdentity( ), this.name, this.keys );
+  }
+
+  /**
+   * @return the state
+   */
+  public Component.State getState( ) {
+    if( this.serviceConfiguration.isLocal( ) ) {
+      return this.parent.getState( );
+    } else {
+      return this.state;
+    }
+  }
+
+  /**ASAP:FIXME:GRZE**/
+  public List<String> getDetails( ) {
+    return Arrays.asList( this.toString( ).split( "\n" ) );
   }
 
 }

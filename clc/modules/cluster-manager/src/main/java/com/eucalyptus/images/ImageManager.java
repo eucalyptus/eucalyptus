@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -75,7 +75,6 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.auth.GroupEntity;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchGroupException;
 import com.eucalyptus.auth.NoSuchUserException;
@@ -86,19 +85,16 @@ import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ProductCode;
-import com.eucalyptus.ldap.LdapConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
+import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateImageType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.DeregisterImageType;
 import edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType;
@@ -223,6 +219,7 @@ public class ImageManager {
       throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
+    
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     VirtualBootRecord ref = null;
@@ -306,29 +303,38 @@ public class ImageManager {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       imageInfo.setImageType( ImageManager.IMAGE_KERNEL );
       imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
       if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       imageInfo.setImageType( ImageManager.IMAGE_RAMDISK );
       imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
+      imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
     } else {
-      if ( kernelId != null ) {
-        try {
-          ImageUtil.getImageInfobyId( kernelId );
-        } catch ( EucalyptusCloudException e ) {
-          throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
+      if ( imagePathParts[1].startsWith( ImageManager.IMAGE_PLATFORM_WINDOWS ) && System.getProperty( "euca.disable.windows" ) == null ) {
+        imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
+        imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_WINDOWS );
+        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
+      } else {
+        imageInfo.setPlatform( ImageManager.IMAGE_PLATFORM_DEFAULT );
+        if ( kernelId != null ) {
+          try {
+            ImageUtil.getImageInfobyId( kernelId );
+          } catch ( EucalyptusCloudException e ) {
+            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
+          }
         }
-      }
-      if ( ramdiskId != null ) {
-        try {
-          ImageUtil.getImageInfobyId( ramdiskId );
-        } catch ( EucalyptusCloudException e ) {
-          throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
+        if ( ramdiskId != null ) {
+          try {
+            ImageUtil.getImageInfobyId( ramdiskId );
+          } catch ( EucalyptusCloudException e ) {
+            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
+          }
         }
+        imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
+        imageInfo.setKernelId( kernelId );
+        imageInfo.setRamdiskId( ramdiskId );
+        imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
       }
-      imageInfo.setImageType( ImageManager.IMAGE_MACHINE );
-      imageInfo.setKernelId( kernelId );
-      imageInfo.setRamdiskId( ramdiskId );
-      imageInfo.setImageId( ImageUtil.newImageId( ImageManager.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
     }
     
     String signature = null;
@@ -533,4 +539,9 @@ public class ImageManager {
     }
     return reply;
   }
+  public CreateImageResponseType createImage(CreateImageType request) {
+    CreateImageResponseType reply = request.getReply( );
+    return reply;
+  }
+
 }

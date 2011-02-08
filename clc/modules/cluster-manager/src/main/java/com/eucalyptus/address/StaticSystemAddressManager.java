@@ -3,8 +3,9 @@ package com.eucalyptus.address;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
@@ -43,7 +44,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
     final Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
-    Callbacks.newClusterRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+    Callbacks.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
@@ -77,14 +78,14 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     if ( allocCount > 0 ) {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          this.allocateNext( Component.eucalyptus.name( ) );
+          this.allocateNext( ComponentIds.lookup( Eucalyptus.class ).name( ) );
         } catch ( NotEnoughResourcesAvailable e ) {
           break;
         }
       }
     } else {
       for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-        if ( Component.eucalyptus.name( ).equals( addr.getUserId( ) ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( ComponentIds.lookup( Eucalyptus.class ).name( ).equals( addr.getUserId( ) ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
           addr.release( );
           if ( allocCount++ >= 0 ) break;
         }

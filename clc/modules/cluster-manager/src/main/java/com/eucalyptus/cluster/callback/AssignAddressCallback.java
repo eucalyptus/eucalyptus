@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -86,7 +86,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   
   public AssignAddressCallback( Address address ) {
     this.address = address;
-    super.setRequest( new AssignAddressType( address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
+    super.setRequest( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
   }
   
   @Override
@@ -99,10 +99,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   
@@ -146,7 +146,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
     } else if ( this.address.isAssigned( ) ) {
-      Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   

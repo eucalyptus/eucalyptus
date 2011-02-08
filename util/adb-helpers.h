@@ -42,6 +42,36 @@
   }
 
 
+static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *env)
+{
+    time_t tsu, ts, tsdelta, tsdelta_min;
+    struct tm *tmu;
+    
+    if (!dt || !env) {
+      return(0);
+    }
+
+    ts = time(NULL);
+    tmu = gmtime(&ts);
+    tsu = mktime(tmu);
+    tsdelta = (tsu - ts) / 3600;
+    tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
+    
+    struct tm t = {
+        axutil_date_time_get_second(dt, env),
+        axutil_date_time_get_minute(dt, env) - tsdelta_min,
+        axutil_date_time_get_hour(dt, env) - tsdelta,
+        axutil_date_time_get_date(dt, env),
+        axutil_date_time_get_month(dt, env)-1,
+        axutil_date_time_get_year(dt, env)-1900,
+        0,
+        0,
+        0
+    };
+    
+    return (int) mktime(&t);
+}
+
 static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMachineType_t * vm_type, const axutil_env_t *env)
 {
   int i;
@@ -121,31 +151,4 @@ static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_
   }
 }
 
-/*
-static inline adb_serviceStatusType_t * copy_service_status_type_to_adb(const axutil_env_t *env, serviceStatusType * input) {
-  adb_serviceStatusType_t *sst = adb_serviceStatusType_create(env);
-  adb_serviceInfoType_t *sit=NULL;
-
-  adb_serviceStatusType_set_localState(sst, env, input->localState);
-  adb_serviceStatusType_set_localEpoch(sst, env, input->localEpoch);
-  adb_serviceStatusType_add_details(sst, env, input->details);
-  
-  sit = copy_service_info_type_to_adb(env, &(input->serviceId));
-  adb_serviceStatusType_set_serviceId(sst, env, sit);
-
-  return (sst);
-}
-
-static inline void copy_service_status_type_from_adb(serviceStatusType *input, adb_serviceStatusType_t *sst, const axutil_env_t *env) {
-  adb_serviceInfoType_t *sit=NULL;
-
-  snprintf(input->localState, 32, "%s", adb_serviceStatusType_get_localState(sst, env));
-  input->localEpoch = adb_serviceStatusType_get_localEpoch(sst, env);
-  snprintf(input->details, 1024, "%s", adb_serviceStatusType_get_details_at(sst, env, 0));
-	   
-  sit = adb_serviceStatusType_get_serviceId(sst, env);
-  copy_service_info_type_from_adb(&(input->serviceId), sit, env);
-
-}
-*/
 #endif // _ADB_HELPERS_H

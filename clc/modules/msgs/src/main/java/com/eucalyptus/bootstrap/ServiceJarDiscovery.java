@@ -53,7 +53,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             try {
               ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
-              EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, discover.getClass( ).getCanonicalName( ) ).info( );
             } catch ( Exception e ) {
               LOG.fatal( e, e );
               jar.close( );
@@ -71,7 +70,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static void doDiscovery( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( com.eucalyptus.bootstrap.Component.eucalyptus.name( ) ) && f.getName( ).endsWith( ".jar" )
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
@@ -98,17 +97,24 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( ServiceJarDiscovery s : discovery ) {
-      LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
-      for ( Class c : classList.keySet( ) ) {
-        try {
-          s.checkClass( c );
-        } catch ( Throwable t ) {
-          LOG.debug( t, t );
-        }
+      EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).info( );
+    }
+    for ( ServiceJarDiscovery s : discovery ) {
+      runDiscovery( s );
+    }
+  }
+
+  public static void runDiscovery( ServiceJarDiscovery s ) {
+    LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
+    for ( Class c : classList.keySet( ) ) {
+      try {
+        s.checkClass( c );
+      } catch ( Throwable t ) {
+        LOG.debug( t, t );
       }
     }
   }
-  
+
   private void checkClass( Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {

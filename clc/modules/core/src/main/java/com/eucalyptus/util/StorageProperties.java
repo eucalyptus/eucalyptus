@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -66,11 +66,14 @@
 package com.eucalyptus.util;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentState;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -97,7 +100,7 @@ public class StorageProperties {
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 50;
 	public static final int MAX_VOLUME_SIZE = 10;
-	public static final int TRANSFER_CHUNK_SIZE = 8192;
+	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
 
 	public static boolean enableSnapshots = false;
@@ -122,43 +125,28 @@ public class StorageProperties {
 	public static enum IscsiAuthType {
 		HBA
 	}
-	
+	public final static int SNAP_RESERVE = 20;
+	public static double NETAPP_META_OVERHEAD = 5;
+
 	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
-		if(!Component.eucalyptus.isLocal()) {
-			String scName = System.getProperty("euca.storage.name");
-			if(scName != null) {
-				StorageProperties.NAME = scName;
-			} else {
-				SystemUtil.shutdownWithError("Storage controller name cannot be determined. Shutting down.");
-			}
-		} else {
-			try {
-				List<StorageControllerConfiguration> configs = Configuration.getStorageControllerConfigurations();
-				for(StorageControllerConfiguration config : configs) {
-					if(NetworkUtil.testLocal(config.getHostName())) {
-						StorageProperties.NAME = config.getName();
-						return;
-					}
-				}
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-			}
-		}
+	  try {
+      StorageProperties.NAME = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getPartition( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller NAME." );
+      throw ex;
+    }
 	}
 
 	public static void updateStorageHost() {
-		try {
-			if(!"unregistered".equals(StorageProperties.NAME)) {
-				StorageControllerConfiguration config = Configuration.getStorageControllerConfiguration(StorageProperties.NAME);
-				STORAGE_HOST = config.getHostName();
-			} else {
-				LOG.info("Storage Controller not registered yet.");
-			}
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-		}
+    try {
+      STORAGE_HOST = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getHostName( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
+    }
 	}
 
 	public static void updateStorageHost(String hostName) {

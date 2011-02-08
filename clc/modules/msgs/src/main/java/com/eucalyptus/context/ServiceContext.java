@@ -1,32 +1,40 @@
 package com.eucalyptus.context;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.Channels;
+import org.mule.DefaultMuleEvent;
+import org.mule.DefaultMuleMessage;
+import org.mule.DefaultMuleSession;
 import org.mule.RequestContext;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
-import org.mule.api.context.MuleContextFactory;
-import org.mule.api.registry.Registry;
-import org.mule.config.ConfigResource;
+import org.mule.api.MuleSession;
+import org.mule.api.endpoint.OutboundEndpoint;
+import org.mule.api.transport.DispatchException;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
-import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import org.mule.transport.AbstractConnector;
+import org.mule.transport.vm.VMMessageDispatcherFactory;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.util.ReplyQueue;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
-  static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
+  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
@@ -36,106 +44,100 @@ public class ServiceContext {
   public static class HupListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      if ( "123".equals( t.getValue( ) ) ) {
-        System.exit( 123 );
+      if( Bootstrap.isFinished( ) ) {
+        ServiceContextManager.restart( );
       }
     }
   }
   
-  private static AtomicReference<MuleContext> context = new AtomicReference<MuleContext>( null );
-  private static AtomicReference<MuleClient> client = new AtomicReference<MuleClient>( null );
-  private static final BootstrapException failEx = new BootstrapException( "Attempt to use esb client before the service bus has been started." );
-  private static MuleClient getClient( ) throws MuleException {
-    if( context.get( ) == null ) {
-      LOG.fatal( failEx, failEx );
-      System.exit( 123 );
-      throw failEx;
-    } else if( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.get( ) ) ) ) {
-      return client.get( );
-    } else {
-      return client.get( );
+  private static final VMMessageDispatcherFactory  dispatcherFactory = new VMMessageDispatcherFactory( );
+  private static final AtomicReference<MuleClient> client            = new AtomicReference<MuleClient>( null );
+  private static final BootstrapException          failEx            = new BootstrapException(
+                                                                                                    "Attempt to use esb client before the service bus has been started." );
+  
+  public static void dispatch( String dest, Object msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
+    dest = ServiceContextManager.mapServiceToEndpoint( dest );
+    MuleContext muleCtx;
+    try {
+      muleCtx = ServiceContextManager.getContext( );
+    } catch ( ServiceInitializationException ex ) {
+      LOG.debug( ex.getMessage( ) );
+      throw ex;
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service context reference: "
+                                          + ex.getMessage( ), ex );
+    }
+    OutboundEndpoint endpoint;
+    try {
+      endpoint = muleCtx.getRegistry( ).lookupEndpointFactory( ).getOutboundEndpoint( dest );
+      if ( !endpoint.getConnector( ).isStarted( ) ) {
+        endpoint.getConnector( ).start( );
+      }
+    } catch ( MuleException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service endpoint reference: "
+                                          + ex.getMessage( ), ex );
+    }
+    MuleMessage muleMsg = new DefaultMuleMessage( msg );
+    MuleSession muleSession;
+    try {
+      muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
+                                                          ServiceContextManager.getContext( ) );
+    } catch ( ServiceStateException ex ) {
+      LOG.error( ex, ex );
+      throw ex;
+    } catch ( MuleException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to contruct session: " + ex.getMessage( ), ex );
+    }
+    MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
+    LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
+    try {
+      dispatcherFactory.create( endpoint ).dispatch( muleEvent );
+    } catch ( DispatchException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceDispatchException( "Error while dispatching message (" + msg + ")t o " + dest + " caused by: " + ex.getMessage( ), ex );
+    } catch ( MuleException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
+                                          + ex.getMessage( ), ex );
     }
   }
-
-  public static void dispatch( String dest, Object msg ) {
+  
+  public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
+    dest = ServiceContextManager.mapEndpointToService( dest );
     MuleEvent context = RequestContext.getEvent( );
     try {
-      ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
-    } catch ( MuleException e ) {
-      LOG.error( e );
+      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
+      MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
+      
+      if ( reply.getExceptionPayload( ) != null ) {
+        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getRootException( ).getMessage( ),
+                                                                    reply.getExceptionPayload( ).getRootException( ) ) );
+      } else {
+        return ( T ) reply.getPayload( );
+      }
+    } catch ( Throwable e ) {
+      throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
+                                                                  + " because of " + e.getMessage( ), e ) );
     } finally {
       RequestContext.setEvent( context );
     }
   }
 
-  public static <T> T send( String dest, Object msg ) throws EucalyptusCloudException {
-    MuleEvent context = RequestContext.getEvent( );
+  @SuppressWarnings( "unchecked" )
+  public static void response( BaseMessage responseMessage ) {
+    EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
+    String corrId = responseMessage.getCorrelationId( );
     try {
-      MuleMessage reply = ServiceContext.getClient( ).sendDirect( dest, null, msg, null );
-
-      if ( reply.getExceptionPayload( ) != null ) throw new EucalyptusCloudException( reply.getExceptionPayload( ).getRootException( ).getMessage( ), reply.getExceptionPayload( ).getRootException( ) );
-      else return (T) reply.getPayload( );
-    } catch ( MuleException e ) {
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    } finally {
-      RequestContext.setEvent( context );
-    }
-  }
-
-  
-  public static void buildContext( List<ConfigResource> configs ) {
-    ServiceContext.builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-  }
-  
-  public static void createContext( ) {
-    MuleContextFactory contextFactory = new DefaultMuleContextFactory( );
-    try {
-      MuleContext context = contextFactory.createMuleContext( builder );
-      if ( !ServiceContext.context.compareAndSet( null, context ) ) {
-        throw new ServiceInitializationException( "Service context initialized twice." );
-      }
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      throw new ServiceInitializationException( "Failed to build service context.", e );
-    }
-  }
-  
-  public static void startContext( ) {
-    try {
-      if ( !ServiceContext.getContext( ).isInitialised( ) ) {
-        ServiceContext.getContext( ).initialise( );
-      }
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-      throw new ServiceInitializationException( "Failed to initialize service context.", e );
-    }
-    try {
-      ServiceContext.getContext( ).start( );
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-      throw new ServiceInitializationException( "Failed to start service context.", e );
-    }
-  }
-  
-  public static MuleContext getContext( ) {
-    if ( ServiceContext.context.get( ) == null ) {
-      throw new ServiceInitializationException( "Attempt to reference service context before it is ready." );
-    } else {
-      return context.get( );
-    }
-  }
-  
-  public static Registry getRegistry( ) {
-    return ServiceContext.getContext( ).getRegistry( );
-  }
-  
-  public static void stopContext( ) {
-    try {
-      ServiceContext.getContext( ).stop( );
-      ServiceContext.getContext( ).dispose( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
+      Context context = Contexts.lookup( corrId );
+      Channel channel = context.getChannel( );
+      Channels.write( channel, responseMessage );
+      Contexts.clear(context);
+    } catch ( NoSuchContextException e ) {
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      LOG.debug( responseMessage );
     }
   }
   

@@ -1,7 +1,7 @@
 package com.eucalyptus.reporting.queue;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.log4j.*;
@@ -14,6 +14,8 @@ public class QueueBroker
 	public static final String DEFAULT_DIR  = "/tmp";
 	public static final String DEFAULT_URL  = "tcp://localhost:63636";
 		
+	private boolean started = false;
+
 	private String brokerName;
 	private String brokerDataDir;
 	private String brokerUrl;
@@ -149,3 +151,4 @@ public class QueueBroker
 	}
 
 }
+

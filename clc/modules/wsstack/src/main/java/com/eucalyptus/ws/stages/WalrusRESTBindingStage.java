@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,17 +65,19 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
-import com.eucalyptus.ws.handlers.EucalyptusQueryBinding;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
-import com.eucalyptus.ws.handlers.WalrusRESTLoggerOutbound;
 import com.eucalyptus.ws.handlers.WalrusRESTLoggerInbound;
+import com.eucalyptus.ws.handlers.WalrusRESTLoggerOutbound;
 
 public class WalrusRESTBindingStage implements UnrollableStage {
 
-	@Override
-	public String getStageName( ) {
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
 		return "walrus-rest-binding";
 	}
 

@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -118,12 +118,6 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
 
     logprintfl (EUCADEBUG, "DEBUG: requested URI %s\n", uri);
 
-    // see if we should redirect to the VMware broker
-    if (strstr (uri, "VMwareBroker")) {
-      uri = "http://localhost:8773/services/VMwareBroker";
-      logprintfl (EUCADEBUG, "DEBUG: redirecting request to %s\n", uri);
-    }
-
     // TODO: what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)uri);
 
@@ -155,32 +149,6 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-static int datetime_to_unix (axutil_date_time_t *dt, axutil_env_t *env)
-{
-    time_t tsu, ts, tsdelta, tsdelta_min;
-    struct tm *tmu;
-    
-    ts = time(NULL);
-    tmu = gmtime(&ts);
-    tsu = mktime(tmu);
-    tsdelta = (tsu - ts) / 3600;
-    tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
-    
-    struct tm t = {
-        axutil_date_time_get_second(dt, env),
-        axutil_date_time_get_minute(dt, env) - tsdelta_min,
-        axutil_date_time_get_hour(dt, env) - tsdelta,
-        axutil_date_time_get_date(dt, env),
-        axutil_date_time_get_month(dt, env)-1,
-        axutil_date_time_get_year(dt, env)-1900,
-        0,
-        0,
-        0
-    };
-    
-    return (int) mktime(&t);
-}
-
 static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
 {
     int i;
@@ -203,8 +171,12 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     for (i = 0; i<EUCA_MAX_GROUPS && i<groupNamesSize; i++) {
         groupNames[i] = adb_instanceType_get_groupNames_at (instance, env, i);
     }
+    int expiryTime=0;
+    axutil_date_time_t *dt = adb_instanceType_get_expiryTime(instance, env);
+    expiryTime = datetime_to_unix(dt, env);
 
     ncInstance * outInst = allocate_instance(
+        (char *)adb_instanceType_get_uuid(instance, env),
         (char *)adb_instanceType_get_instanceId(instance, env),
         (char *)adb_instanceType_get_reservationId(instance, env),
         &params,
@@ -215,13 +187,16 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
-		(char *)adb_instanceType_get_platform(instance, env),
+	(char *)adb_instanceType_get_platform(instance, env),
+	expiryTime,
         groupNames, groupNamesSize
         );
 
-	strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
+    outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
-    axutil_date_time_t * dt = adb_instanceType_get_launchTime(instance, env);
+    dt = adb_instanceType_get_launchTime(instance, env);
     if (dt!=NULL) {
         outInst->launchTime = datetime_to_unix (dt, env);
         axutil_date_time_free(dt, env);
@@ -241,7 +216,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     int i;
     axutil_env_t * env = st->env;
@@ -257,6 +232,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     }
 
     // set op-specific input fields
+    adb_ncRunInstanceType_set_uuid(request, env, uuid);
     adb_ncRunInstanceType_set_instanceId(request, env, instanceId);
     adb_ncRunInstanceType_set_reservationId(request, env, reservationId);
     adb_ncRunInstanceType_set_instanceType(request, env, copy_vm_type_to_adb(env, params));
@@ -281,6 +257,10 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *res
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_launchIndex(request, env, launchIndex);
     adb_ncRunInstanceType_set_platform(request, env, platform);
+
+    axutil_date_time_t *dt = axutil_date_time_create_with_offset(env, expiryTime);
+    adb_ncRunInstanceType_set_expiryTime(request, env, dt);
+
     for (i=0; i<groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }
@@ -543,6 +523,44 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
     return status;
 }
 
+int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp) {
+  axutil_env_t * env  = st->env;
+  axis2_stub_t * stub = st->stub;
+  adb_ncAssignAddress_t     * input   = adb_ncAssignAddress_create (env);
+  adb_ncAssignAddressType_t * request = adb_ncAssignAddressType_create (env);
+  
+  // set standard input fields
+  adb_ncAssignAddressType_set_nodeName(request, env, st->node_name);
+  if (meta) {
+    if (meta->correlationId) { meta->correlationId = NULL; }
+    EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, meta);
+  }
+  
+  // set op-specific input fields
+  adb_ncAssignAddressType_set_instanceId(request, env, instanceId);
+  adb_ncAssignAddressType_set_publicIp(request, env, publicIp);
+
+  adb_ncAssignAddress_set_ncAssignAddress(input, env, request);
+  
+  int status = 0;
+  { // do it
+    adb_ncAssignAddressResponse_t * output = axis2_stub_op_EucalyptusNC_ncAssignAddress (stub, env, input);
+    
+    if (!output) {
+      logprintfl (EUCAERROR, "ERROR: AssignAddress" NULL_ERROR_MSG);
+      status = -1;
+    } else {
+      adb_ncAssignAddressResponseType_t * response = adb_ncAssignAddressResponse_get_ncAssignAddressResponse (output, env);
+      if ( adb_ncAssignAddressResponseType_get_return(response, env) == AXIS2_FALSE ) {
+	logprintfl (EUCAERROR, "ERROR: AssignAddress returned an error\n");
+	status = 1;
+      }
+    }
+  }
+  
+  return status;
+}
+
 int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   axutil_env_t * env  = st->env;
   axis2_stub_t * stub = st->stub;
@@ -578,7 +596,7 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
   return status;
 }
 
-int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLen, int port, int vlan, char **outStatus) 
+int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) 
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -593,6 +611,7 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char **peers, int peersLe
     }
     
     // set op-specific input fields
+    adb_ncStartNetworkType_set_uuid(request, env, uuid);
     adb_ncStartNetworkType_set_vlan(request, env, vlan);
     adb_ncStartNetworkType_set_remoteHostPort(request, env, port);
     int i;
@@ -831,6 +850,46 @@ int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int
 	      snprintf( (*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
 	      snprintf( (*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
 	    }
+        }
+    }
+    
+    return status;
+}
+
+int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev) 
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncCreateImage_t     * input   = adb_ncCreateImage_create (env); 
+    adb_ncCreateImageType_t * request = adb_ncCreateImageType_create (env);
+    
+    // set standard input fields
+    adb_ncCreateImageType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, meta);
+    }
+    
+    // set op-specific input fields
+    adb_ncCreateImageType_set_instanceId(request, env, instanceId);
+    adb_ncCreateImageType_set_volumeId(request, env, volumeId);
+    adb_ncCreateImageType_set_remoteDev(request, env, remoteDev);
+    adb_ncCreateImage_set_ncCreateImage(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncCreateImageResponse_t * output = axis2_stub_op_EucalyptusNC_ncCreateImage (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: CreateImage" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncCreateImageResponseType_t * response = adb_ncCreateImageResponse_get_ncCreateImageResponse (output, env);
+            if ( adb_ncCreateImageResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: CreateImage returned an error\n");
+                status = 1;
+            }
         }
     }
     

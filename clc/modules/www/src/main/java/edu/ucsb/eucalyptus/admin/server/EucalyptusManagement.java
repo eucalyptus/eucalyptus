@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -96,7 +96,7 @@ import com.eucalyptus.auth.WrappedUser;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRulesGroup;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.images.Image;
@@ -192,7 +192,6 @@ public class EucalyptusManagement {
         user = Users.addUser( webUser.getUserName( ), webUser.isAdministrator( ), webUser.isEnabled( ) );
         try {
           UserInfo userInfo = Composites.updateNew( webUser, UserInfo.class );
-          userInfo.setConfirmationCode( Crypto.generateSessionToken( webUser.getUserName() ) );
           try {
             NetworkGroupUtil.createUserNetworkRulesGroup( userInfo.getUserName( ), NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
           } catch ( EucalyptusCloudException e1 ) {
@@ -379,7 +378,7 @@ public class EucalyptusManagement {
 		}
     try {
       ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
-    } catch ( EventVetoedException e ) {
+    } catch ( EventFailedException e ) {
       LOG.debug( e, e );
     }
 	}

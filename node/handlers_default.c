@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -117,6 +117,7 @@ prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName
 static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
+		char *uuid,
                 char *instanceId,
                 char *reservationId,
                 virtualMachine *params, 
@@ -125,7 +126,7 @@ doRunInstance(	struct nc_state_t *nc,
                 char *ramdiskId, char *ramdiskURL, // ignored
                 char *keyName, 
                 netConfig *netparams,
-                char *userData, char *launchIndex, char *platform,
+                char *userData, char *launchIndex, char *platform, int expiryTime,
                 char **groupNames, int groupNamesSize,
                 ncInstance **outInst)
 {
@@ -145,14 +146,15 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
-    if (!(instance = allocate_instance (instanceId, 
+    if (!(instance = allocate_instance (uuid,
+					instanceId, 
                                         reservationId,
                                         params, 
                                         instance_state_names[PENDING], 
                                         PENDING, 
                                         meta->userId, 
                                         &ncnet, keyName,
-                                        userData, launchIndex, platform, groupNames, groupNamesSize))) {
+                                        userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
         logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
         return ERROR;
     }
@@ -498,7 +500,7 @@ doDescribeInstances(	struct nc_state_t *nc,
 	ncInstance *instance, *tmp;
 	int total, i, j, k;
 
-	logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
+	logprintfl(EUCADEBUG, "doDescribeInstances: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
 
 	*outInstsLen = 0;
 	*outInsts = NULL;
@@ -605,6 +607,30 @@ doDescribeResource(	struct nc_state_t *nc,
 }
 
 static int
+doAssignAddress(struct nc_state_t *nc,
+		ncMetadata *ccMeta,
+		char *instanceId,
+		char *publicIp)
+{
+  int ret = OK;
+  ncInstance *instance=NULL;
+
+  if (instanceId == NULL || publicIp == NULL) {
+    logprintfl(EUCAERROR, "doAssignAddress(): bad input params\n");
+    return(ERROR);
+  }
+
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  if ( instance ) {
+    snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
+  }
+  sem_v (inst_sem);
+  
+  return ret;
+}
+
+static int
 doPowerDown(	struct nc_state_t *nc,
 		ncMetadata *ccMeta)
 {
@@ -624,6 +650,7 @@ doPowerDown(	struct nc_state_t *nc,
 static int
 doStartNetwork(	struct nc_state_t *nc,
 		ncMetadata *ccMeta, 
+		char *uuid,
 		char **remoteHosts, 
 		int remoteHostsLen, 
 		int port, 
@@ -631,7 +658,7 @@ doStartNetwork(	struct nc_state_t *nc,
 	int rc, ret, i, status;
 	char *brname;
 
-	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, &brname);
+	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
 		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);
@@ -669,6 +696,154 @@ doDetachVolume(	struct nc_state_t *nc,
 {
 	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
 	return ERROR_FATAL;
+}
+
+// helper for changing bundling task state and stateName together                                                              
+static void change_createImage_state (ncInstance * instance, createImage_progress state)
+{
+  instance->createImageTaskState = state;
+  strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
+}
+
+// helper for cleaning up 
+static int cleanup_createImage_task (ncInstance * instance, struct createImage_params_t * params, instance_states state, createImage_progress result)
+{
+        char cmd[MAX_PATH];
+	char buf[MAX_PATH];
+	int rc;
+	logprintfl (EUCAINFO, "cleanup_createImage_task: instance %s createImage task result=%s\n", instance->instanceId, createImage_progress_names [result]);
+	sem_p (inst_sem);
+	change_createImage_state (instance, result);
+	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
+		change_state (instance, state);
+	sem_v (inst_sem);
+
+	if (params) {
+	        // if the result was failed or cancelled, clean up walrus state
+	        if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
+		}
+		if (params->workPath) {
+			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+			free (params->workPath);
+		}
+		if (params->volumeId) free (params->volumeId);
+		if (params->remoteDev) free (params->remoteDev);
+		if (params->diskPath) free (params->diskPath);
+		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
+		free (params);
+	}
+
+	return (result==CREATEIMAGE_SUCCESS)?OK:ERROR;
+}
+
+static void * createImage_thread (void *arg) 
+{
+	struct createImage_params_t * params = (struct createImage_params_t *)arg;
+	ncInstance * instance = params->instance;
+	char cmd[MAX_PATH];
+	char buf[MAX_PATH];
+	int rc;
+
+	logprintfl (EUCAINFO, "createImage_thread: waiting for instance %s to shut down\n", instance->instanceId);
+	// wait until monitor thread changes the state of the instance instance 
+	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
+	  if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
+	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s\n", instance->instanceId);
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+	  } else {
+	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s\n", instance->instanceId);
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	  }
+	  return NULL;
+	}
+
+	logprintfl (EUCAINFO, "createImage_thread: started createImage instance %s\n", instance->instanceId);
+	{
+	  rc = 0;
+	  if (rc==0) {
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_SUCCESS);
+	    logprintfl (EUCAINFO, "createImage_thread: finished createImage instance %s\n", instance->instanceId);
+	  } else if (rc == -1) {
+	    // bundler child was cancelled (killed)
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+	  } else {
+	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+	  }
+	}
+	
+	return NULL;
+}
+
+static int
+doCreateImage(	struct nc_state_t *nc,
+		ncMetadata *meta,
+		char *instanceId,
+		char *volumeId,
+		char *remoteDev)
+{
+	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
+
+	// sanity checking
+	if (instanceId==NULL
+	    || remoteDev==NULL) {
+	  logprintfl (EUCAERROR, "CreateImage: called with invalid parameters\n");
+	  return ERROR;
+	}
+
+	// find the instance
+	ncInstance * instance = find_instance(&global_instances, instanceId);
+	if (instance==NULL) {
+		logprintfl (EUCAERROR, "CreateImage: instance %s not found\n", instanceId);
+		return ERROR;
+	}
+
+	// "marshall" thread parameters
+	struct createImage_params_t * params = malloc (sizeof (struct createImage_params_t));
+	if (params==NULL) 
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+
+	bzero (params, sizeof (struct createImage_params_t));
+	params->instance = instance;
+	params->volumeId = strdup (volumeId);
+	params->remoteDev = strdup (remoteDev);
+
+	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
+	if (params->sizeMb<1)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+	params->workPath = alloc_work_path (instanceId, instance->userId, params->sizeMb); // reserve work disk space for bundling
+	if (params->workPath==NULL)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
+	if (params->diskPath==NULL)
+		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
+
+	// terminate the instance
+	sem_p (inst_sem);
+	instance->createImageTime = time (NULL);
+	change_state (instance, CREATEIMAGE_SHUTDOWN);
+	change_createImage_state (instance, CREATEIMAGE_IN_PROGRESS);
+	
+	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	if (err!=OK) {
+	  sem_v (inst_sem);
+	  if (params) free(params);
+	  return err;
+	}
+	sem_v (inst_sem);
+	
+	// do the rest in a thread
+	pthread_attr_t tattr;
+	pthread_t tid;
+	pthread_attr_init (&tattr);
+	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
+	if (pthread_create (&tid, &tattr, createImage_thread, (void *)params)!=0) {
+		logprintfl (EUCAERROR, "CreateImage: failed to start VM createImage thread\n");
+		return cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+	}
+
+	return OK;
 }
 
 // helper for changing bundling task state and stateName together
@@ -1044,9 +1219,11 @@ struct handlers default_libvirt_handlers = {
     .doGetConsoleOutput  = doGetConsoleOutput,
     .doDescribeResource  = doDescribeResource,
     .doStartNetwork      = doStartNetwork,
+    .doAssignAddress     = doAssignAddress,
     .doPowerDown         = doPowerDown,
     .doAttachVolume      = doAttachVolume,
     .doDetachVolume      = doDetachVolume,
+    .doCreateImage       = doCreateImage,
     .doBundleInstance    = doBundleInstance,
     .doCancelBundleTask  = doCancelBundleTask,
     .doDescribeBundleTasks    = doDescribeBundleTasks

@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -74,7 +74,7 @@ public class EucaLayout extends PatternLayout {
       LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
     } catch ( NumberFormatException e ) {}
   }
-  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(LogLevels.DEBUG?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
+  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(LogLevels.TRACE?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
   private String CONTINUATION = "%m%n";
   private PatternLayout continuation = null;
   
@@ -93,44 +93,48 @@ public class EucaLayout extends PatternLayout {
   
   @Override
   public String format( LoggingEvent event ) {
-    if( event.getThrowableInformation( ) != null ) {
-      Throwable t = event.getThrowableInformation( ).getThrowable( );
-      if( t != null && t instanceof GenericJDBCException ) {
+    try {
+      if( event.getThrowableInformation( ) != null ) {
+        Throwable t = event.getThrowableInformation( ).getThrowable( );
+        if( t != null && t instanceof GenericJDBCException ) {
+          return "";
+        }
+      } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
         return "";
       }
-    } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
-      return "";
-    }
-    String renderedMessage = event.getRenderedMessage( );
-    if(renderedMessage != null) {
-	String[] messages = renderedMessage.split( "\n" );
-    StringBuffer sb = new StringBuffer( );
-    boolean con = false;
-    for( int i = 0; i < messages.length; i++ ) {
+      String renderedMessage = event.getRenderedMessage( );
+      if(renderedMessage != null) {
+String[] messages = renderedMessage.split( "\n" );
+      StringBuffer sb = new StringBuffer( );
+      boolean con = false;
+      for( int i = 0; i < messages.length; i++ ) {
 //      String message= messages[i];
-      String substring= messages[i];
+        String substring= messages[i];
 //      while ( message.length( ) > 0 ) {
 //        int rb = LINE_BYTES>message.length( )?message.length( ):LINE_BYTES;
 //        String substring = message.substring( 0, rb );
 //        message = message.substring( rb );
-        LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
-                                           event.getTimeStamp( ), event.getLevel( ), 
-                                           substring, event.getThreadName( ), 
-                                           event.getThrowableInformation( ), null, null, null );
-        sb.append( (!con)?super.format( n ):continuation.format( n ) );
-        if(continuation==null) {
-          continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
-        }
-        con = true;        
+          LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+                                             event.getTimeStamp( ), event.getLevel( ), 
+                                             substring, event.getThreadName( ), 
+                                             event.getThrowableInformation( ), null, null, null );
+          sb.append( (!con)?super.format( n ):continuation.format( n ) );
+          if(continuation==null) {
+            continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
+          }
+          con = true;        
 //      }      
-    }    
-    return sb.toString( );
+      }    
+      return sb.toString( );
+      }
+    } catch ( Exception ex ) {
+      ex.printStackTrace( );
     }
     return null;
   }
 
   @Override
   public boolean ignoresThrowable( ) {
-    return false;
+    return true;
   }
 }

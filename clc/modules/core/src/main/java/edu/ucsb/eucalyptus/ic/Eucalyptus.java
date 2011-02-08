@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,16 +65,9 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 import edu.ucsb.eucalyptus.msgs.UnimplementedMessage;
 
 public class Eucalyptus {
@@ -84,17 +77,6 @@ public class Eucalyptus {
   public EucalyptusMessage handle( EucalyptusMessage msg ) {
     if ( msg instanceof UnimplementedMessage ) {
       return msg.getReply( );
-    }
-    if ( msg instanceof DescribeRegionsType ) {
-      DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) msg.getReply( );
-      SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-      reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
-      try {
-        reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-      }
-      return reply;
     }
     return new EucalyptusErrorMessageType( "Eucalyptus", msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ) );
   }

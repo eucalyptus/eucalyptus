@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -95,7 +95,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
@@ -103,13 +103,12 @@ import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;
 import com.eucalyptus.auth.login.WalrusWrappedCredentials;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.AbstractKeyStore;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.AbstractKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;

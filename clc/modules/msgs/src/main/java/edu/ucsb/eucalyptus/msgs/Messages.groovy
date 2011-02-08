@@ -7,10 +7,13 @@ import java.util.NoSuchElementException;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 
 
@@ -69,7 +72,7 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -93,31 +96,6 @@ public class HeartbeatComponentType extends EucalyptusData {
     this.name = name;
   }
 }
-public class ServiceInfoType extends EucalyptusData {
-  String partition;
-  String name;
-  String type;
-  ArrayList<String> uris = new ArrayList<String>( );
-}
-public class ServiceId extends EucalyptusData {
-  String uuid;/** A UUID of the registration **/
-  String partition;/** The resource partition name **/
-  String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
-  String uri;/** this is here to account for possibly overlapping private subnets allow for multiple **/
-}
-public class ServiceStatusType extends EucalyptusData {
-  ServiceId serviceId;
-  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
-  Integer localEpoch;
-  ArrayList<String> details = new ArrayList<String>( );
-}
-public class DescribeServicesType extends EucalyptusMessage {
-  ArrayList<ServiceId> ids = new ArrayList<ServiceId>();
-}
-public class DescribeServicesResponseType extends EucalyptusMessage {
-  ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>();
-}
 
 public class ComponentType extends EucalyptusData {
   String component;
@@ -131,7 +109,7 @@ public class ComponentType extends EucalyptusData {
   public ComponentType( ) {}  
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
-    final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
+    final ComponentId c = ComponentId.lookup( component );
     return new EphemeralConfiguration( name, c, realUri );
   }
 }
@@ -193,9 +171,8 @@ public class WalrusStateType extends EucalyptusMessage{
   }
 }
 
-public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
-}
 
+@ComponentMessage(Eucalyptus.class)
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
   public EucalyptusMessage() {
@@ -248,7 +225,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
 }
 
-public class EucalyptusData implements Cloneable, Serializable {
+public class EucalyptusData implements BaseData {
   public MetaClass getMetaClass() {
     return metaClass;
   }
@@ -628,6 +605,7 @@ public class BundleTask extends EucalyptusData {
   }
 }
 public class DescribeBundleTasksType extends VmBundleMessage {
+  @HttpParameterMapping (parameter = "BundleId")
   ArrayList<String> bundleIds = new ArrayList<String>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {
@@ -654,6 +632,7 @@ public class StatEventRecord extends EucalyptusMessage {
   }
 }
 
+@ComponentMessage(ComponentService.class)
 public class ComponentMessageType extends BaseMessage {
   String component;
   String host;

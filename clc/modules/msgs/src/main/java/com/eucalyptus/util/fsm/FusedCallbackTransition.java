@@ -8,7 +8,7 @@ import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 
-public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends SplitTransition<P, S> {
+public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends TransitionAction<P> {
   private final SubjectRemoteCallbackFactory<RemoteCallback, ServiceEndpoint> msgFactory;
   private final ChannelPipelineFactory                                        channelFactory;
   
@@ -32,7 +32,7 @@ public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T 
    */
   @Override
   public final void leave( P parent, final Callback.Completion transitionCallback ) {
-    Callbacks.newRequest( msgFactory.newInstance( ), channelFactory ).then( new Callback.Completion( ) {
+    Callbacks.newRequest( msgFactory.newInstance( ) ).then( new Callback.Completion( ) {
       
       @Override
       public void fire( ) {
