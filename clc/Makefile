@@ -48,9 +48,9 @@ build: deps extras
 # this causes problems for pbuilder, should be handled by configure and build.xml already 
 #	@if test ! -e deps/cloud-lib.tar.gz; then \
 #		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) build-all
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) bind
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) jar
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) bind
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C modules/storage-controller/native
 	@make -C modules/bootstrap
 
