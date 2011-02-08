@@ -232,7 +232,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
   }
 
   logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
-  sem_mywait(VNET);
+
   if (inst->ccnet.vlan >= 0) {
     // activate network
     vnetconfig->networks[inst->ccnet.vlan].active = 1;
@@ -251,14 +251,18 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 
   if (!ret) {
     // so far so good
-    logprintfl(EUCADEBUG, "instNetParamsSet(): (re)generating public/private network params\n");
     rc = vnetGenerateNetworkParams(vnetconfig, inst->instanceId, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ccnet.privateMac, inst->ccnet.publicIp, inst->ccnet.privateIp);
     if (rc) {
       print_ccInstance("instNetParamsSet(): failed to (re)generate network parameters: ", inst);
       ret = 1;
     }
   }
-  sem_mypost(VNET);
+
+  if (ret) {
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+  } else {
+    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+  }
 
   return(0);
 }

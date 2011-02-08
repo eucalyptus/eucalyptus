@@ -956,39 +956,6 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
       ret = 1;
     }
 
-    /*
-    rc = vnetGetPublicIP(vnetconfig, src, NULL, &allocated, &addrdevno);
-    if (rc) {
-      logprintfl(EUCAERROR,"AssignAddress(): failed to retrieve publicip record %s\n", src);
-      ret = 1;
-    } else {
-      if (!allocated) {
-	snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, src, vnetconfig->pubInterface);
-	logprintfl(EUCADEBUG,"running cmd %s\n", cmd);
-	rc = system(cmd);
-	rc = rc>>8;
-	if (rc && (rc != 2)) {
-	  logprintfl(EUCAERROR,"AssignAddress(): cmd '%s' failed\n", cmd);
-	  ret = 1;
-	} else {
-	  rc = vnetAssignAddress(vnetconfig, src, dst);
-	  if (rc) {
-	    logprintfl(EUCAERROR,"AssignAddress(): vnetAssignAddress() failed\n");
-	    ret = 1;
-	  } else {
-	    rc = vnetAllocatePublicIP(vnetconfig, uuid, src, dst);
-	    if (rc) {
-	      logprintfl(EUCAERROR,"AssignAddress(): vnetAllocatePublicIP() failed\n");
-	      ret = 1;
-	    }
-	  }
-	}
-      } else {
-	logprintfl(EUCAWARN,"AssignAddress(): ip %s is already assigned, ignoring\n", src);
-	ret = 0;
-      }
-    }
-    */
     sem_mypost(VNET);
   }
   
@@ -1477,6 +1444,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
+  char originalPublicIp[24];
 
   //  ccResourceCache resourceCacheLocal;
 
@@ -1547,7 +1515,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		}
 		bzero(myInstance, sizeof(ccInstance));
 	      }
-	      
+	      snprintf(originalPublicIp, 24, "%s", myInstance->ccnet.publicIp);
+
 	      // update CC instance with instance state from NC 
 	      rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
 	      
@@ -1579,7 +1548,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      }
 
 	      // check for network instance IP inconsistency
-	      if (strcmp(myInstance->ccnet.publicIp, ncOutInsts[j]->ncnet.publicIp) ) {
+	      if (strcmp(originalPublicIp, myInstance->ccnet.publicIp) ) {
 		logprintfl(EUCADEBUG, "refresh_instances(): instId=%s, publicIP reported by NC (%s) differs from publicIp assigned at CC (%s), updating.\n", myInstance->instanceId, ncOutInsts[j]->ncnet.publicIp, myInstance->ccnet.publicIp);
 		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 		if (rc) {
@@ -3669,9 +3638,18 @@ int restoreNetworkState() {
   */
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): restoring network state\n");
+  
   sem_mywait(VNET);
 
-  // restore iptables state                                                                                    
+  // sync up internal network state with information from instances
+  logprintfl(EUCADEBUG, "restoreNetworkState(): syncing internal network state with current instance state\n");
+  rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
+  if (rc) {
+    logprintfl(EUCAERROR, "restoreNetworkState(): could not sync internal network state with current instance state\n");
+    ret = 1;
+  }
+
+  // restore iptables state, if internal iptables state exists
   logprintfl(EUCADEBUG, "restoreNetworkState(): restarting iptables\n");
   rc = vnetRestoreTablesFromMemory(vnetconfig);
   if (rc) {
@@ -3679,32 +3657,7 @@ int restoreNetworkState() {
     ret = 1;
   }
   
-  // restore ip addresses                                                                                      
-  logprintfl(EUCADEBUG, "restoreNetworkState(): restarting ips\n");
-  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254/32 scope link dev %s", config->eucahome, vnetconfig->privInterface);
-    logprintfl(EUCADEBUG,"restoreNetworkState(): running cmd %s\n", cmd);
-    rc = system(cmd);
-    if (rc) {
-      logprintfl(EUCAWARN, "restoreNetworkState(): cannot add ip 169.254.169.254\n");
-    }
-  }
-  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
-    if (vnetconfig->publicips[i].allocated) {
-      char *tmp;
-
-      tmp = hex2dot(vnetconfig->publicips[i].ip);
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/32 dev %s", config->eucahome, tmp, vnetconfig->pubInterface);
-      logprintfl(EUCADEBUG,"restoreNetworkState(): running cmd %s\n", cmd);
-      rc = system(cmd);
-      if (rc) {
-        logprintfl(EUCAWARN, "restoreNetworkState(): cannot add ip %s\n", tmp);
-      }
-      free(tmp);
-    }
-  }
-
-  // re-create all active networks
+  // re-create all active networks (bridges, vlan<->bridge mappings)
   logprintfl(EUCADEBUG, "restoreNetworkState(): restarting networks\n");
   for (i=2; i<NUMBER_OF_VLANS; i++) {
     if (vnetconfig->networks[i].active) {
@@ -3721,7 +3674,8 @@ int restoreNetworkState() {
   //  ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
   rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
   if (rc) {
-    
+    logprintfl(EUCAERROR, "restoreNetworkState(): could not (re)assign public/private IP mappings\n");
+    ret = 1;
   }
 
   // get DHCPD back up and running
