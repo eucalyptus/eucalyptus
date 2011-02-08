@@ -157,7 +157,7 @@ public class NetworkGroupUtil {
     return groupInfo;
   }
 
-  static List<NetworkRule> getNetworkRules( final IpPermissionType ipPerm ) {
+  static List<NetworkRule> getNetworkRules( final IpPermissionType ipPerm ) throws IllegalArgumentException {
     List<NetworkRule> ruleList = new ArrayList<NetworkRule>();
     if ( !ipPerm.getGroups().isEmpty() ) {
       if( ipPerm.getFromPort() == 0 && ipPerm.getToPort() == 0 ) {
@@ -195,6 +195,8 @@ public class NetworkGroupUtil {
       }
       NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol(), ipPerm.getFromPort(), ipPerm.getToPort(), ipRanges );
       ruleList.add( rule );
+    } else {
+      throw new IllegalArgumentException( "Invalid Ip Permissions:  must specify either a source cidr or user" );
     }
     return ruleList;
   }

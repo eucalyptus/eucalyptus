@@ -68,10 +68,12 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.empyrean.Empyrean;
 
-@Provides(Component.bootstrap)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
-@DependsLocal(Component.dns)
+@DependsLocal(Dns.class)
 public class DNSBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );
 	private static DNSBootstrapper singleton;

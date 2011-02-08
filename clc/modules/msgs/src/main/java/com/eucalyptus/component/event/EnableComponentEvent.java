@@ -3,7 +3,7 @@ package com.eucalyptus.component.event;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.LocalConfiguration;
 
@@ -16,14 +16,14 @@ public class EnableComponentEvent extends LifecycleEvent {
     } catch ( URISyntaxException e ) {
       LOG.fatal( "Failed to construct a valid URL from a component configuration", e );
     }
-    return new EnableComponentEvent( new LocalConfiguration( config.getPartition( ), config.getComponent( ), uri ), config.getComponent(), true );
+    return new EnableComponentEvent( new LocalConfiguration( config.getPartition( ), config.getComponentId( ), uri ), config.getComponentId(), true );
   }
   public static EnableComponentEvent getRemote( ServiceConfiguration config ) {
-    return new EnableComponentEvent( config, config.getComponent( ), false );
+    return new EnableComponentEvent( config, config.getComponentId( ), false );
   }
   
-  private EnableComponentEvent( ServiceConfiguration configuration, com.eucalyptus.bootstrap.Component component, boolean local ) {
-    super( configuration, component.name( ), local );
+  private EnableComponentEvent( ServiceConfiguration configuration, ComponentId componentId, boolean local ) {
+    super( configuration, componentId, local );
   }
   @Override
   public String toString( ) {

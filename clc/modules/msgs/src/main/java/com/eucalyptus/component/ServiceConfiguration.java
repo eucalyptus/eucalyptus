@@ -25,7 +25,7 @@ public interface ServiceConfiguration extends Serializable {
   
   public abstract void setServicePath( String servicePath );
   
-  public abstract com.eucalyptus.bootstrap.Component getComponent( );
+  public abstract ComponentId getComponentId( );
   
   public abstract String getUri( );
   

@@ -45,9 +45,9 @@ public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,G
       rep.setOutput( null );
     }
     try {
-      ServiceContext.dispatch( "ReplyQueue", rep );
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
+      ServiceContext.response( rep );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1 , ex1 );
     }
   }
 

@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -20,13 +19,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JRExporter;
-import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.JasperCompileManager;
-import net.sf.jasperreports.engine.JasperFillManager;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperReport;
+
+import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.design.JasperDesign;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
@@ -37,14 +31,23 @@ import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.xml.JRXmlLoader;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.instance.InstanceDisplayBean;
+import com.eucalyptus.reporting.instance.InstanceDisplayDb;
+import com.eucalyptus.reporting.storage.StorageDisplayBean;
+import com.eucalyptus.reporting.storage.StorageDisplayDb;
+import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.system.SubDirectory;
 import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusManagement;
@@ -60,8 +63,15 @@ public class Reports extends HttpServlet {
   public static Integer REPORT_CACHE_SECS = 1200;
   private static Logger LOG               = Logger.getLogger( Reports.class );
   
+  private static String STORAGE_REPORT_FILENAME         = "storage.jrxml";
+  private static String NESTED_STORAGE_REPORT_FILENAME  = "nested_storage.jrxml";
+  private static String INSTANCE_REPORT_FILENAME        = "instance.jrxml";
+  private static String NESTED_INSTANCE_REPORT_FILENAME = "nested_instance.jrxml";
+  
   enum Param {
-    name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ), cluster( false ), host( false );
+    name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ),
+     cluster( false ), host( false ), criterionId( false ), groupById( false );
+
     private String  value    = null;
     private Boolean required = Boolean.TRUE;
     
@@ -199,9 +209,90 @@ public class Reports extends HttpServlet {
       Type reportType = Type.valueOf( Param.type.get( ) );
       try {
         Boolean doFlush = this.doFlush( );
+
+
         final JRExporter exporter = reportType.setup( req, res, Param.name.get( req ) );
         ReportCache reportCache = getReportManager( Param.name.get( req ), doFlush );
-        JasperPrint jasperPrint = reportCache.getJasperPrint( req );
+        LOG.info("--> scriptName:" + Param.name.get( req ));
+
+        String scriptName = Param.name.get( req );
+        JasperPrint jasperPrint = null;
+        if (scriptName.equals("user_vms") || scriptName.equals("user_storage")) {
+
+        	long start = Long.parseLong(Param.start.get(req));
+        	long end = Long.parseLong(Param.end.get(req));
+        	Period period = new Period(start, end);
+        	int criterionId = Integer.parseInt(Param.criterionId.get(req));
+        	int groupById = Integer.parseInt(Param.groupById.get(req));
+        	GroupByCriterion criterion = GroupByCriterion.values()[criterionId+1]; //TODO: explain magic num
+        	Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+ 
+        	Map<String,String> params = new HashMap<String,String>();
+    		params.put("criterion", criterion.toString());
+    		params.put("timeUnit", displayUnits.getTimeUnit().toString());
+    		params.put("sizeUnit", displayUnits.getSizeUnit().toString());
+    		params.put("sizeTimeTimeUnit", displayUnits.getSizeTimeTimeUnit().toString());
+    		params.put("sizeTimeSizeUnit", displayUnits.getSizeTimeSizeUnit().toString());
+    		
+    		GroupByCriterion groupByCriterion =  null;
+    		if (groupById > 0) {
+				groupByCriterion = GroupByCriterion.values()[groupById-1];
+				params.put("groupByCriterion", groupByCriterion.toString());        		
+        	}
+    		
+    		
+    		if (scriptName.equals("user_vms")) {
+
+    			InstanceDisplayDb dbInstance = InstanceDisplayDb.getInstance();
+    			File jrxmlFile = null;
+    			JRDataSource dataSource = null;
+    			if (groupById == 0) {
+    				List<InstanceDisplayBean> list =
+    					dbInstance.search(period, criterion, displayUnits);
+    				dataSource = new JRBeanCollectionDataSource(list);
+    				jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + INSTANCE_REPORT_FILENAME);
+    			} else {
+    				List<InstanceDisplayBean> list =
+    					dbInstance.searchGroupBy(period, groupByCriterion, criterion, displayUnits);
+    				dataSource = new JRBeanCollectionDataSource(list);
+    				jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + NESTED_INSTANCE_REPORT_FILENAME);
+        		}
+    			
+				JasperReport report =
+					JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+				jasperPrint =
+					JasperFillManager.fillReport(report, params, dataSource);
+				
+    		} else if (scriptName.equals("user_storage")) {
+
+    			StorageDisplayDb dbStorage = StorageDisplayDb.getInstance();
+    			File jrxmlFile = null;
+    			JRDataSource dataSource = null;
+            	if (groupById == 0) {
+            		List<StorageDisplayBean> list =
+            			dbStorage.search(period, criterion, displayUnits);
+            		dataSource = new JRBeanCollectionDataSource(list);
+            		jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + STORAGE_REPORT_FILENAME);
+            	} else {
+            		List<StorageDisplayBean> list =
+            			dbStorage.searchGroupBy(period, groupByCriterion, criterion, displayUnits);
+            		dataSource = new JRBeanCollectionDataSource(list);
+            		jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + NESTED_STORAGE_REPORT_FILENAME);
+            	}
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
+    			
+    		}
+
+        } else {
+        	
+        	/* Load reports using the older mechanism
+        	 */
+        	jasperPrint = reportCache.getJasperPrint( req );
+        }
+
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
         //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
         exporter.exportReport( );
@@ -221,7 +312,7 @@ public class Reports extends HttpServlet {
       this.hasError( "Failed to generate report: " + e.getMessage( ), res );
     }
   }
-  
+
   private Date parseTime( Param p ) {
     Date time = new Date( );
     try {
@@ -391,7 +482,7 @@ public class Reports extends HttpServlet {
     JasperPrint jasperPrint;
     final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
     if ( jdbc ) {
-      String url = String.format( "jdbc:%s_%s", Component.db.getUri( ).toString( ), "records" );
+      String url = String.format( "jdbc:%s_%s", Components.lookup( Database.class ).getUri( ).toString( ), "records" );
       Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
         put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
@@ -399,6 +490,7 @@ public class Reports extends HttpServlet {
         put( "EUCA_NOT_BEFORE_DATE", new Date( new Long( Param.start.get( req ) ) ) );
         put( "EUCA_NOT_AFTER_DATE", new Date( new Long( Param.end.get( req ) ) ) );
       }}, jdbcConnection );
+
     } else {
       FileReader fileReader = null;
       try {
@@ -421,6 +513,7 @@ public class Reports extends HttpServlet {
           LOG.error( e, e );
         }
         JRBeanCollectionDataSource data = new JRBeanCollectionDataSource( results );
+
         jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
           put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
           put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );

@@ -70,8 +70,8 @@ import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.handlers.soap.AddressingHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
 public class LogClientPipeline extends NioClientPipeline {
@@ -82,7 +82,7 @@ public class LogClientPipeline extends NioClientPipeline {
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     ChannelPipeline pipeline = Channels.pipeline( );
-    ChannelUtil.addPipelineMonitors( pipeline, 15 );
+    ChannelUtil.addPipelineMonitors( pipeline, 30 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );

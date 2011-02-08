@@ -69,6 +69,10 @@ public abstract class AbstractListenableFuture<V>
     executionList.add(listener, exec);
   }
 
+  public void addListener(Runnable listener) {
+    executionList.add(listener, MoreExecutors.sameThreadExecutor( ));
+  }
+
   /*
    * Override the done method to execute the execution list.
    */

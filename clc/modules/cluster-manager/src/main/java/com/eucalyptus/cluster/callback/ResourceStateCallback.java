@@ -45,4 +45,5 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   public void fireException( FailedRequestException t ) {
     LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
   }
+
 }

@@ -71,9 +71,9 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.ComponentState;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -131,22 +131,22 @@ public class StorageProperties {
 	static { GroovyUtil.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
-		try {
-			StorageProperties.NAME = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getPartition();
-		} catch ( NoSuchElementException ex ) {
-			LOG.error( ex , ex );
-			LOG.error( "Failed to configure Storage Controller NAME." );
-			throw ex;
-		}
+	  try {
+      StorageProperties.NAME = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getPartition( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller NAME." );
+      throw ex;
+    }
 	}
 
 	public static void updateStorageHost() {
-		try {
-			STORAGE_HOST = Components.lookup( Component.storage ).getLocalService( ).getServiceConfiguration( ).getHostName( );
-		} catch ( NoSuchElementException ex ) {
-			LOG.error( ex , ex );
-			LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
-		}
+    try {
+      STORAGE_HOST = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getHostName( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
+    }
 	}
 
 	public static void updateStorageHost(String hostName) {

@@ -96,9 +96,11 @@ import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
@@ -1233,12 +1235,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   public static List<ReportInfo> getServiceLogInfo( Service s ) {
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
     ServiceConfiguration conf = s.getServiceConfiguration( );
-    com.eucalyptus.bootstrap.Component c = conf.getComponent( );
-    if( c.walrus.equals( c ) ) {
+    ComponentId compId = conf.getComponentId( );
+    if( compId instanceof Walrus ) {
       String serviceFq = "Walrus @ "+conf.getHostName( );
-      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
-    } else if( c.cluster.equals( c ) ) {
-      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, c.name( ), conf.getName( ), conf.getHostName( ) ) );
+      reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
+    } else if( compId  instanceof com.eucalyptus.component.id.Cluster ) {
+      reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
       Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
       for( String nodeTag : cluster.getNodeTags( ) ) {
         URI uri = URI.create( nodeTag );
@@ -1246,7 +1248,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       }
       try {
         ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
-        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponent( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
+        reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponentId( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
       } catch ( EucalyptusCloudException e ) {
       }
     }

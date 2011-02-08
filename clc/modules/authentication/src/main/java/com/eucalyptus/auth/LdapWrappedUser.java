@@ -253,4 +253,9 @@ public class LdapWrappedUser implements User, WrappedUser {
     sb.append( "]" );
     return sb.toString( );
   }
+
+  @Override
+  public Boolean isSystem( ) {
+    return false;
+  }
 }

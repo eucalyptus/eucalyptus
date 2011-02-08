@@ -1,7 +1,5 @@
 package com.eucalyptus.reporting.instance;
 
-import javax.persistence.*;
-
 /**
  * Snapshot of the resource usage of some instance at some point in time.
  * Contains <i>cumulative</i> usage data so it's populated with
@@ -10,12 +8,9 @@ import javax.persistence.*;
  * 
  * @author tom.werges
  */
-@Embeddable
-public class UsageSnapshot
+class UsageSnapshot
 {
-	@Column(name="timestamp_ms", nullable=false)
 	private final Long timestampMs;
-	@Embedded
 	private final UsageData cumulativeUsageData;
 
 	/**
@@ -23,22 +18,22 @@ public class UsageSnapshot
 	 */
 	protected UsageSnapshot()
 	{
-		this.timestampMs = null;  //hibernate will override these despite finality
+		this.timestampMs = null;
 		this.cumulativeUsageData = null;
 	}
-	
+
 	public UsageSnapshot(long timestampMs, UsageData cumulativeUsageData)
 	{
 		this.timestampMs = new Long(timestampMs);
 		this.cumulativeUsageData = cumulativeUsageData;
 	}
-	
+
 	public long getTimestampMs()
 	{
-		assert this.timestampMs != null;  //hibernate notNullable
+		assert this.timestampMs != null;
 		return this.timestampMs.longValue();
 	}
-	
+
 	public UsageData getCumulativeUsageData()
 	{
 		return this.cumulativeUsageData;

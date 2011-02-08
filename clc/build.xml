@@ -86,7 +86,16 @@
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
-	<target name="build">
+  <target name="build">
+    <ant dir="." inheritall="false" target="build-all" />
+    <ant dir="." inheritall="false" target="bind" />
+    <ant dir="." inheritall="false" target="jar" />
+	</target>
+  <target name="build-all">
+    <ant dir="." inheritall="false" target="build-nogwt" />
+    <ant dir="." inheritall="false" target="build-gwt" />
+  </target>
+  <target name="build-nogwt">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
 		<ant dir="modules/ldap" inheritall="false" target="builder" />
@@ -97,7 +106,8 @@
 		<ant dir="modules/component" inheritall="false" target="builder" />
 		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/reporting" inheritall="false" target="builder" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
+    <ant dir="modules/cluster-manager" inheritall="false" target="builder" />
+    <ant dir="modules/notifications" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
@@ -105,14 +115,10 @@
 		<ant dir="modules/www" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 		<ant dir="modules/reporting" inheritall="false" target="builder" />
-		<!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir=".deprecated/image-manager" inheritall="false" target="builder" />
-		<ant dir=".deprecated/group-manager" inheritall="false" target="builder" />
-		<ant dir=".deprecated/interface" inheritall="false" target="builder" />
-		<ant dir=".deprecated/key-manager" inheritall="false" target="builder" />
-		<!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-		<ant dir="." inheritall="false" target="jar" />
 	</target>
+  <target name="build-gwt">
+    <ant dir="modules/www" inheritall="false" target="builder" />
+  </target>
 	<target name="jar" depends="bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
@@ -124,7 +130,8 @@
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="jar" />
+    <ant dir="modules/cluster-manager" inheritall="false" target="jar" />
+    <ant dir="modules/notifications" inheritall="false" target="jar" />
 		<ant dir="modules/storage-common" inheritall="false" target="jar" />
 		<ant dir="modules/walrus" inheritall="false" target="jar" />
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
@@ -132,12 +139,6 @@
 		<ant dir="modules/www" inheritall="false" target="jar" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
-                <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-                <ant dir=".deprecated/image-manager" inheritall="false" target="jar" />
-                <ant dir=".deprecated/group-manager" inheritall="false" target="jar" />
-                <ant dir=".deprecated/interface" inheritall="false" target="jar" />
-                <ant dir=".deprecated/key-manager" inheritall="false" target="jar" />
-                <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -182,7 +183,8 @@
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
+    <ant dir="modules/cluster-manager" inheritall="false" target="clean" />
+    <ant dir="modules/notifications" inheritall="false" target="clean" />
 		<ant dir="modules/storage-common" inheritall="false" target="clean" />
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
@@ -190,12 +192,6 @@
 		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
-                <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-                <ant dir=".deprecated/image-manager" inheritall="false" target="clean" />
-                <ant dir=".deprecated/group-manager" inheritall="false" target="clean" />
-                <ant dir=".deprecated/interface" inheritall="false" target="clean" />
-                <ant dir=".deprecated/key-manager" inheritall="false" target="clean" />
-                <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
@@ -254,7 +250,8 @@
 		<ant dir="modules/wsstack" inheritall="false" target="install" />
 		<ant dir="modules/storage-common" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
+    <ant dir="modules/cluster-manager" inheritall="false" target="install" />
+    <ant dir="modules/notifications" inheritall="false" target="install" />
 		<ant dir="modules/walrus" inheritall="false" target="install" />
 		<ant dir="modules/storage-controller" inheritall="false" target="install" />
 		<ant dir="modules/dns" inheritall="false" target="install" />
@@ -262,12 +259,6 @@
 		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
 	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
-    <!-- DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
-    <ant dir=".deprecated/image-manager" inheritall="false" target="install" />
-    <ant dir=".deprecated/group-manager" inheritall="false" target="install" />
-    <ant dir=".deprecated/interface" inheritall="false" target="install" />
-    <ant dir=".deprecated/key-manager" inheritall="false" target="install" />
-    <!-- END DEPRECATED MODULE DIRS TO BE REMOVED IN A FUTURE RELEASE -->
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">

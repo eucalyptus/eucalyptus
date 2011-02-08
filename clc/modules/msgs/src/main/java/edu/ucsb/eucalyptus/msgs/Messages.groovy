@@ -7,10 +7,13 @@ import java.util.NoSuchElementException;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 
 
@@ -93,12 +96,6 @@ public class HeartbeatComponentType extends EucalyptusData {
     this.name = name;
   }
 }
-public class ServiceInfoType extends EucalyptusData {
-  String partition;
-  String name;
-  String type;
-  ArrayList<String> uris = new ArrayList<String>( );
-}
 
 public class ComponentType extends EucalyptusData {
   String component;
@@ -112,7 +109,7 @@ public class ComponentType extends EucalyptusData {
   public ComponentType( ) {}  
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
-    final com.eucalyptus.bootstrap.Component c = com.eucalyptus.bootstrap.Component.valueOf( component );
+    final ComponentId c = ComponentId.lookup( component );
     return new EphemeralConfiguration( name, c, realUri );
   }
 }
@@ -174,9 +171,8 @@ public class WalrusStateType extends EucalyptusMessage{
   }
 }
 
-public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
-}
 
+@ComponentMessage(Eucalyptus.class)
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
     
   public EucalyptusMessage() {
@@ -229,7 +225,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
 }
 
-public class EucalyptusData implements Cloneable, Serializable {
+public class EucalyptusData implements BaseData {
   public MetaClass getMetaClass() {
     return metaClass;
   }
@@ -636,6 +632,7 @@ public class StatEventRecord extends EucalyptusMessage {
   }
 }
 
+@ComponentMessage(ComponentService.class)
 public class ComponentMessageType extends BaseMessage {
   String component;
   String host;

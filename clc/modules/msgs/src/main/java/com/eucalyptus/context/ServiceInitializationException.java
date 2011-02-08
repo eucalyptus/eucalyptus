@@ -1,21 +1,16 @@
 package com.eucalyptus.context;
 
-public class ServiceInitializationException extends RuntimeException {
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.ws.WebServicesException;
 
-  public ServiceInitializationException( ) {
-    super( );
-  }
+public class ServiceInitializationException extends WebServicesException {
 
   public ServiceInitializationException( String message, Throwable cause ) {
-    super( message, cause );
+    super( message, cause, HttpResponseStatus.PRECONDITION_FAILED );
   }
 
   public ServiceInitializationException( String message ) {
-    super( message );
-  }
-
-  public ServiceInitializationException( Throwable cause ) {
-    super( cause );
+    super( message, HttpResponseStatus.PRECONDITION_FAILED );
   }
 
 }

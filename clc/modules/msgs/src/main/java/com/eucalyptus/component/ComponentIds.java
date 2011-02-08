@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,23 +63,72 @@
 
 package com.eucalyptus.component;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Lists;
 
 public class ComponentIds {
+  private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
+  private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
   
-  public static ComponentId lookup( String name ) {
-    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
-    if( !map.containsKey( name ) ) {
-      throw new NoSuchElementException( "No ComponentId with name: " + name );
+  public static List<ComponentId> listEnabled( ) {
+    List<ComponentId> components = Lists.newArrayList( );
+    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      for ( Component comp : Components.list( ) ) {
+        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        }
+      }
+    }
+    for ( Component comp : Components.list( ) ) {
+      if ( comp.isRunningLocally( ) || comp.getIdentity( ).isAlwaysLocal( ) ) {
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        }
+      }
+    }
+    return components;
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static List<ComponentId> list( ) {
+    return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
+  }
+
+  public static ComponentId lookup( Class compIdClass ) {
+    if ( !compIdMap.containsKey( compIdClass ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
     } else {
-      return map.get( name );
+      return compIdMap.get( compIdClass );
     }
   }
-
-  public static void register( ComponentId componentId ) {
-    Map<String,ComponentId> map = Components.lookup( ComponentId.class );
-    map.put( componentId.getName( ), componentId );
+  
+  /**
+   * Lookup the ComponentId with name <tt>name</tt>. Note that this method is case-insensitive in
+   * that the lower-case of <tt>name</tt> is compared to the l-case of ComponentId names.
+   * 
+   * @param name
+   * @throws NoSuchElementException
+   * @return
+   */
+  public static ComponentId lookup( String name ) {
+    String realName = name.toLowerCase( );
+    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
+    if ( !map.containsKey( realName ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + realName );
+    } else {
+      return map.get( realName );
+    }
   }
-
+  
+  public static void register( ComponentId componentId ) {
+    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
+    map.put( componentId.getName( ), componentId );
+    compIdMap.put( componentId.getClass( ), componentId );
+  }
 }

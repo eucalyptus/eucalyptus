@@ -49,7 +49,8 @@ public class ReportInfo implements IsSerializable {
   public String getUrl( ReportType type ) {
     return "/reports?name=" + this.controller.getCurrentFileName( ) + "&type=" + type.name( ).toLowerCase( ) + "&session=" + this.controller.getSessionid( )
            + "&page=" + this.controller.getCurrentPage( ) + "&flush=" + this.controller.getForceFlush( ) + "&start=" + this.controller.getStartMillis( )
-           + "&end=" + this.controller.getEndMillis( ) + ( this.remote ? "&component=" + this.component + "&cluster=" + this.clusterName + "&host=" + this.hostName: "" );
+           + "&end=" + this.controller.getEndMillis( ) + "&criterionId=" + this.controller.getCriterionInd() + "&groupById=" + this.controller.getGroupByInd()
+           + ( this.remote ? "&component=" + this.component + "&cluster=" + this.clusterName + "&host=" + this.hostName: "" );
   }
   
   public Integer getLength( ) {

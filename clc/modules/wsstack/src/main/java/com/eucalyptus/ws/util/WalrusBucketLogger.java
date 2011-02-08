@@ -84,7 +84,6 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
@@ -201,7 +200,7 @@ public class WalrusBucketLogger {
 		try {
 			logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
 		} catch(InterruptedException ex) {
-
+      Thread.currentThread( ).interrupt( );
 		}
 	}
 

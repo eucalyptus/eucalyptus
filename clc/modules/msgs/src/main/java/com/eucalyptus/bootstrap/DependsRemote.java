@@ -7,10 +7,10 @@ import java.lang.annotation.Target;
 
 /**
  * NOTE: this annotation can only be used with Component values that are
- * {@link Component#isCloudLocal()}
+ * {@link ComponentId#isCloudLocal()}
  */
 @Target( { ElementType.TYPE, ElementType.FIELD } )
 @Retention( RetentionPolicy.RUNTIME )
 public @interface DependsRemote {
-  Component[] value( );
+  Class[] value();
 }

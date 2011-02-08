@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -103,25 +103,25 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
             Network network = vm.getNetworks( ).get( 0 );
             try {
               network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );
-            } catch ( EucalyptusCloudException e ) {
-              LOG.error( e, e );
-            }
-            networks.put( network.getName( ), vm.getPrivateAddress( ) );
-            if ( !rules.containsKey( network.getName( ) ) ) {
-              
-              for ( PacketFilterRule pf : network.getRules( ) ) {
-                String rule = String.format( "-P %s -%s %d%s%d ", pf.getProtocol( ), ( "icmp".equals( pf.getProtocol( ) )
-                  ? "t"
-                  : "p" ), pf.getPortMin( ), ( "icmp".equals( pf.getProtocol( ) )
-                  ? ":"
-                  : "-" ), pf.getPortMax( ) );
-                for ( VmNetworkPeer peer : pf.getPeers( ) ) {
-                  rules.put( network.getName( ), String.format( "%s -o %s -u %s", rule, peer.getSourceNetworkName( ), peer.getUserName( ) ) );
-                }
-                for ( String cidr : pf.getSourceCidrs( ) ) {
-                  rules.put( network.getName( ), String.format( "%s -s %s", rule, cidr ) );
+              networks.put( network.getName( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( network.getName( ) ) ) {
+                
+                for ( PacketFilterRule pf : network.getRules( ) ) {
+                  String rule = String.format( "-P %s -%s %d%s%d ", pf.getProtocol( ), ( "icmp".equals( pf.getProtocol( ) )
+                    ? "t"
+                    : "p" ), pf.getPortMin( ), ( "icmp".equals( pf.getProtocol( ) )
+                    ? ":"
+                    : "-" ), pf.getPortMax( ) );
+                  for ( VmNetworkPeer peer : pf.getPeers( ) ) {
+                    rules.put( network.getName( ), String.format( "%s -o %s -u %s", rule, peer.getSourceNetworkName( ), peer.getUserName( ) ) );
+                  }
+                  for ( String cidr : pf.getSourceCidrs( ) ) {
+                    rules.put( network.getName( ), String.format( "%s -s %s", rule, cidr ) );
+                  }
                 }
               }
+            } catch ( EucalyptusCloudException e ) {
+              LOG.trace( "Topology info not available for unknown group: " + network.getName( ) + " because of " + e.getMessage( ), e );
             }
           }
           for ( String networkName : rules.keySet( ) ) {

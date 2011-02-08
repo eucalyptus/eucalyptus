@@ -65,13 +65,8 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.WalrusSoapHandler;
 import com.eucalyptus.ws.handlers.WalrusSoapUserAuthenticationHandler;
-import com.eucalyptus.ws.handlers.soap.SoapHandler;
-import com.eucalyptus.ws.handlers.wssecurity.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.wssecurity.UserWsSecHandler;
 
 public class WalrusSoapUserAuthenticationStage implements UnrollableStage {
 
@@ -81,8 +76,13 @@ public class WalrusSoapUserAuthenticationStage implements UnrollableStage {
 		pipeline.addLast( "walrus-soap-authentication", new WalrusSoapUserAuthenticationHandler( ) );
 	}
 
-	@Override
-	public String getStageName( ) {
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
 		return "walrus-soap-user-authentication";
 	}
 

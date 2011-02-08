@@ -83,6 +83,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;
@@ -217,7 +218,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isAssigned( ) ) {
-        Callbacks.newClusterRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+        Callbacks.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
           @Override
           public void fire( ) {
             try {

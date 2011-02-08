@@ -63,19 +63,14 @@
 
 package com.eucalyptus.config;
 
-import java.util.List;
 import org.apache.log4j.Logger;
-import org.mule.config.ConfigResource;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Resource;
-import com.google.common.collect.Lists;
+import com.eucalyptus.empyrean.Empyrean;
 
-@Provides( Component.bootstrap )
+@Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
 public class ArbitratorBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ArbitratorBootstrapper.class );

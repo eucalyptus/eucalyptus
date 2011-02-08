@@ -4,21 +4,26 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.MessageEvent;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.http.MappingHttpMessage;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
   String                     correlationId;
   String                     userId;
   String                     effectiveUserId;
-  Boolean                    _return = true;
+  Boolean                    _return      = true;
   String                     statusMessage;
-  Integer                    epoch = currentEpoch++;
-  ArrayList<ServiceInfoType> services = Lists.newArrayList( );
-  private static Integer currentEpoch = 0;
+  Integer                    epoch        = currentEpoch++;
+  ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
+  private static Integer     currentEpoch = 0;
+  
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
@@ -40,7 +45,11 @@ public class BaseMessage {
   }
   
   public String getCorrelationId( ) {
-    return this.correlationId;
+    if ( this.correlationId == null ) {
+      return ( this.correlationId = UUID.randomUUID( ).toString( ) );
+    } else {
+      return this.correlationId;
+    }
   }
   
   public void setCorrelationId( String correlationId ) {
@@ -171,32 +180,55 @@ public class BaseMessage {
     return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ),
                           this.get_return( ), this.getStatusMessage( ) );
   }
-
+  
   /**
    * @return the epoch
    */
   public Integer getBaseEpoch( ) {
     return this.epoch;
   }
-
+  
   /**
    * @param epoch the epoch to set
    */
   public void setBaseEpoch( Integer epoch ) {
     this.epoch = epoch;
   }
-
+  
   /**
    * @return the services
    */
   public ArrayList<ServiceInfoType> getBaseServices( ) {
     return this.services;
   }
-
+  
   /**
    * @param services the services to set
    */
   public void setBaseServices( ArrayList<ServiceInfoType> services ) {
     this.services = services;
+  }
+  
+  /**
+   * Get the message from within a ChannelEvent. Returns null if no message found.
+   * 
+   * @param <T>
+   * @param e
+   * @return message or null if no msg.
+   */
+  public static <T extends BaseMessage> T extractMessage( ChannelEvent e ) {
+    if ( e instanceof MessageEvent ) {
+      final MessageEvent msge = ( MessageEvent ) e;
+      MappingHttpMessage msgHttp = null;
+      if ( msge.getMessage( ) instanceof BaseMessage ) {
+        return ( T ) msge.getMessage( );
+      } else if ( msge.getMessage( ) instanceof MappingHttpMessage && (msgHttp = (MappingHttpMessage)msge.getMessage( )).getMessage( ) instanceof BaseMessage ) {
+        return ( T ) msgHttp.getMessage( );
+      } else {
+        return null;
+      }
+    } else {
+      return null;
+    }
   }
 }

@@ -94,7 +94,7 @@ public class Users {
   }
 
   public static User addUser( String userName, Boolean admin, Boolean enabled ) throws UserExistsException, UnsupportedOperationException {
-    EventRecord.here( Users.class, EventClass.USER, EventType.USER_ADDED ).withDetails( userName, userName, "admin="+admin, "enabled="+enabled );
+    EventRecord.here( Users.class, EventClass.USER, EventType.USER_ADDED, userName, "admin="+admin, "enabled="+enabled ).info();
     return Users.getUserProvider().addUser( userName, admin, enabled );
   }
 

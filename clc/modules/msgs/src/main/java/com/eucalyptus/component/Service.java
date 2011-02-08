@@ -65,17 +65,16 @@ package com.eucalyptus.component;
 import java.net.URI;
 import java.util.List;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
-import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
-import edu.ucsb.eucalyptus.msgs.ServiceId;
 
 public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final Component            parent;
   private final String               name;
-  private final Credentials          keys;
+  private final ServiceCredentials   keys;
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
@@ -123,7 +122,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
       }
       this.endpoint = new ServiceEndpoint( this, local, uri );
     }
-    this.keys = new Credentials( this );//TODO: integration with JAAS
+    this.keys = new ServiceCredentials( this );//TODO: integration with JAAS
     this.dispatcher = DispatcherFactory.build( parent, this );
   }
   
@@ -131,7 +130,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
     return this.endpoint.isLocal( );
   }
   
-  public Credentials getCredentials( ) {
+  public ServiceCredentials getCredentials( ) {
     return this.keys;
   }
   
@@ -190,9 +189,9 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
   @Override
   public String toString( ) {
     return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s", 
-                          this.parent.getPeer( ), this.name, this.endpoint, 
-                          this.parent.getPeer( ), this.name, this.serviceConfiguration, 
-                          this.parent.getPeer( ), this.name, this.keys );
+                          this.parent.getIdentity( ), this.name, this.endpoint, 
+                          this.parent.getIdentity( ), this.name, this.serviceConfiguration, 
+                          this.parent.getIdentity( ), this.name, this.keys );
   }
 
   /**

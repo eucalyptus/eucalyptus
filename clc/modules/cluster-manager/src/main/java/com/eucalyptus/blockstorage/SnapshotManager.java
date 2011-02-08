@@ -67,7 +67,6 @@ package com.eucalyptus.blockstorage;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
@@ -90,12 +89,18 @@ import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
+import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
+import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class SnapshotManager {
@@ -171,9 +176,8 @@ public class SnapshotManager {
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ) );
     }
     db.commit( );
-    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE ).withDetails( snap.getUserName( ), snap.getDisplayName( ),
-                                                                                                           "volume", vol.getDisplayName( ) )
-               .withDetails( "volumeSize", vol.getSize( ).toString( ) );
+    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getUserName( ), "snapshot=" + snap.getDisplayName( ),
+                      "volume=" + snap.getParentVolume( ) ).info( );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
@@ -253,6 +257,18 @@ public class SnapshotManager {
     } catch ( Throwable e ) {
       db.rollback( );
     }
+    return reply;
+  }
+  public ResetSnapshotAttributeResponseType resetSnapshotAttribute(ResetSnapshotAttributeType request) {
+    ResetSnapshotAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public ModifySnapshotAttributeResponseType modifySnapshotAttribute(ModifySnapshotAttributeType request) {
+    ModifySnapshotAttributeResponseType reply = request.getReply( );
+    return reply;
+  }
+  public DescribeSnapshotAttributeResponseType describeSnapshotAttribute(DescribeSnapshotAttributeType request) {
+    DescribeSnapshotAttributeResponseType reply = request.getReply( );
     return reply;
   }
 }

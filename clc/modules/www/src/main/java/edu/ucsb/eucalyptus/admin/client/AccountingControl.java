@@ -61,6 +61,8 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
   private EucaButton                       errorButton     = null;
   private Long                             startMillis;
   private Long                             endMillis;
+  private Integer                          criterionInd    = new Integer(0);
+  private Integer                          groupByInd      = new Integer(2);
   private final Map<String, List<ReportInfo>> groupMap;
   
   public AccountingControl( String sessionId ) {
@@ -247,6 +249,26 @@ public class AccountingControl extends VerticalPanel implements ContentControl, 
     }
     this.update( );
     return this.endMillis;
+  }
+  
+  public Integer getCriterionInd()
+  {
+	  return criterionInd;
+  }
+  
+  public void setCriterionInd(Integer criterionInd)
+  {
+	  this.criterionInd = criterionInd;
+  }
+  
+  public Integer getGroupByInd()
+  {
+	  return groupByInd;
+  }
+  
+  public void setGroupByInd(Integer groupByInd)
+  {
+	  this.groupByInd = groupByInd;
   }
   
   public Date getStartTime( ) {

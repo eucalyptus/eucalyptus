@@ -7,6 +7,7 @@ import org.mule.api.MuleEvent;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -32,7 +33,11 @@ public class LocalDispatcher extends ServiceDispatcher {
 
   @Override
   public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
-    return ServiceContext.send( this.getComponent( ).getLocalEndpointName( ), msg );
+    try {
+      return ServiceContext.send( this.getComponent( ).getLocalEndpointName( ), msg );
+    } catch ( ServiceDispatchException ex ) {
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
+    }
   }
 
 }

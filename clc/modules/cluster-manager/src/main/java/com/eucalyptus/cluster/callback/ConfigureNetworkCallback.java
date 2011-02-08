@@ -65,7 +65,8 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 import edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType;
@@ -81,7 +82,7 @@ public class ConfigureNetworkCallback extends BroadcastCallback<ConfigureNetwork
     this.rules = rules;
     ConfigureNetworkType msg = new ConfigureNetworkType().regarding( );
     msg.setUserId( userName );
-    msg.setEffectiveUserId( Component.eucalyptus.name( ) );
+    msg.setEffectiveUserId( ComponentIds.lookup(Eucalyptus.class).name( ) );
     msg.getRules( ).addAll( rules );
     this.setRequest( msg );
   }
