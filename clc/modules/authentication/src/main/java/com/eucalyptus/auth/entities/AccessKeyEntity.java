@@ -54,9 +54,8 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   }
 
   public static AccessKeyEntity newInstanceWithId( final String id ) {
-    AccessKeyEntity k = new AccessKeyEntity() {{
-      this.setId( id );
-    }};
+    AccessKeyEntity k = new AccessKeyEntity( );
+    k.setId( id );
     return k;
   }
 

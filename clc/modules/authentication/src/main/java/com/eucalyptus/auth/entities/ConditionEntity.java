@@ -63,10 +63,8 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
   }
   
   public static ConditionEntity newInstanceWithId( final String id ) {
-    ConditionEntity c = new ConditionEntity() {{
-      this.values = null;
-      this.setId( id );
-    }};
+    ConditionEntity c = new ConditionEntity( );
+    c.setId( id );
     return c;
   }
 

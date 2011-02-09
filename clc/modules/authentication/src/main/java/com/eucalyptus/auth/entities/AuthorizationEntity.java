@@ -84,9 +84,8 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   }
 
   public static AuthorizationEntity newInstanceWithId( final String id ) {
-    AuthorizationEntity a = new AuthorizationEntity() {{
-      this.setId( id );
-    }};
+    AuthorizationEntity a = new AuthorizationEntity( );
+    a.setId( id );
     return a;
   }
 

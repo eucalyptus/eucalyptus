@@ -111,13 +111,8 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   }
   
   public static UserEntity newInstanceWithId( final String id ) {
-    UserEntity u = new UserEntity() {{
-      this.keys = null;
-      this.certificates = null;
-      this.info = null;
-      this.groups = null;
-      this.setId( id );
-    }};
+    UserEntity u = new UserEntity( );
+    u.setId( id );
     return u;
   }
   

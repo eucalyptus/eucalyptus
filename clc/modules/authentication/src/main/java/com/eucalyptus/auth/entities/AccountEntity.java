@@ -39,9 +39,8 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   }
 
   public static AccountEntity newInstanceWithId( final String id ) {
-    AccountEntity a = new AccountEntity() {{
-      this.setId( id );
-    }};
+    AccountEntity a = new AccountEntity( );
+    a.setId( id );
     return a;
   }
 

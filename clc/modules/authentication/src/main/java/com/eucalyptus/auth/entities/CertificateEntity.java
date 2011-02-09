@@ -59,9 +59,8 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   }
   
   public static CertificateEntity newInstanceWithId( final String id ) {
-    CertificateEntity c = new CertificateEntity() {{
-      this.setId( id );
-    }};
+    CertificateEntity c = new CertificateEntity( );
+    c.setId( id );
     return c;
   }
 
