@@ -941,7 +941,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     snprintf(statusMessage, 255, "ERROR");
   } else {
     for (i=0; i<outNodesLen; i++) {
-//      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
+      //      adb_describeResourcesResponseType_add_serviceTags(drrt, env, outNodes[i].ncURL);
       adb_ccNodeType_t *nt=NULL;
       
       nt = adb_ccNodeType_create(env);

@@ -227,9 +227,12 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 
   if (!inst) {
     return(1);
+  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+    return(0);
   }
 
-  sem_mywait(VNET);
+  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+
   if (inst->ccnet.vlan >= 0) {
     // activate network
     vnetconfig->networks[inst->ccnet.vlan].active = 1;
@@ -254,7 +257,31 @@ int instNetParamsSet(ccInstance *inst, void *in) {
       ret = 1;
     }
   }
-  sem_mypost(VNET);
+
+  if (ret) {
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+  } else {
+    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+  }
+
+  return(0);
+}
+
+int instNetReassignAddrs(ccInstance *inst, void *in) {
+  int rc, ret=0, i;
+
+  if (!inst) {
+    return(1);
+  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+    return(0);
+  }
+
+  logprintfl(EUCADEBUG, "instNetReassignAddrs(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+  rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
+  if (rc) {
+    logprintfl(EUCAERROR, "instNetReassignAddrs(): cannot reassign address\n");
+    ret = 1;
+  }
 
   return(0);
 }
