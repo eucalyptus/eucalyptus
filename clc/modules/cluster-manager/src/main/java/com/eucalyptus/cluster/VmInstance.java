@@ -329,8 +329,9 @@ public class VmInstance implements HasName<VmInstance> {
 
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ), this.ownerId, this.placement,
-                                                                    this.partition, this.networkBytes, this.blockBytes ) );
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ), 
+                                                                    this.getOwnerId( ), this.getOwnerId( ), /** TODO:ASAP:GRZE update w/ account! **/ 
+                                                                    this.placement, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }

@@ -76,6 +76,7 @@ permission notice:
 #include "ipc.h"
 #include "walrus.h"
 #include "euca_auth.h"
+#include <http.h>
 #include <data.h>
 #include <misc.h>
 #include <storage.h>

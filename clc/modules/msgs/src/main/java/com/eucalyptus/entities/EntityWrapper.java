@@ -290,4 +290,8 @@ public class EntityWrapper<TYPE> {
     }
   }
 
+  public Query createSQLQuery( String sqlQuery ) {
+    return this.getSession( ).createSQLQuery( sqlQuery );
+  }
+
 }

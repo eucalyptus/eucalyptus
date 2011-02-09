@@ -1,6 +1,6 @@
 package com.eucalyptus.event;
 
 
-public interface EventListener {
-  public void fireEvent( Event event );
+public interface EventListener<T extends Event> {
+  public void fireEvent( T event );
 }

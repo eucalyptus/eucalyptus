@@ -127,6 +127,7 @@ public class ReportList extends DecoratedStackPanel implements Observer {
   }
   
   @Override
-  public void update( ) {
+  public void update( )
+  {
   }
 }
