@@ -4,9 +4,9 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = -lcurl -lssl
+STORAGE_LIBS = -lcurl -lssl -lcrypto
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
-VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
+VDDK_FLAGS = $(LIBS) -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
 IMAGER=_euca_imager
 
@@ -15,7 +15,7 @@ all: storage.o storage-windows.o walrus.o Wclient $(IMAGER)
 build: all
 
 $(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl
+	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl -lcrypto
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
@@ -29,7 +29,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
-.c.o: 
+.c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
