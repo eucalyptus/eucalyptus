@@ -45,13 +45,13 @@ Version:       2.1.0
 Release:       0
 License:       GPLv3
 Group:         Applications/System
-# FIXME:  gcc and make are probably unnecessary
-BuildRequires: gcc
-BuildRequires: make
+
 BuildRequires: ant
 BuildRequires: ant-nodeps
 BuildRequires: euca-axis2c >= 1.6.0
 BuildRequires: euca-rampartc >= 1.3.0
+BuildRequires: libxml2-devel
+BuildRequires: libxslt-devel
 BuildRequires: swig
 BuildRequires: %{euca_iscsi_client}
 BuildRequires: %{euca_libvirt}-devel
@@ -59,8 +59,8 @@ BuildRequires: %{euca_libvirt}
 BuildRequires: %{euca_libcurl}
 BuildRequires: %{euca_java}
 Requires:      %{euca_build_req}
-Requires:      perl-Crypt-OpenSSL-RSA
-Requires:      perl-Crypt-OpenSSL-Random
+Requires:      perl(Crypt::OpenSSL::RSA)
+Requires:      perl(Crypt::OpenSSL::Random)
 
 Source:        http://eucalyptussoftware.com/downloads/releases/eucalyptus-%{version}.tar.gz
 URL:           http://open.eucalyptus.com
@@ -177,6 +177,8 @@ Requires:     %{name}-gl = %{version}-%{release}
 Requires:     euca-axis2c >= 1.6.0
 Requires:     euca-rampartc >= 1.3.0
 Requires:     bridge-utils
+Requires:     device-mapper
+Requires:     euca2ools
 Requires:     %{euca_curl}
 Requires:     %{euca_httpd}
 Requires:     %{euca_hypervisor}
@@ -235,6 +237,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 [ ${RPM_BUILD_ROOT} != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %files
+%defattr(-,root,root,-)
 %doc LICENSE INSTALL README CHANGELOG
 /etc/eucalyptus/eucalyptus.conf
 /var/lib/eucalyptus/keys
@@ -253,8 +256,10 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/sbin/euca_killall
 /etc/eucalyptus/httpd.conf
 /etc/eucalyptus/eucalyptus-version
+%doc /usr/share/doc/eucalyptus
 /usr/share/eucalyptus/connect_iscsitarget.pl
 /usr/share/eucalyptus/disconnect_iscsitarget.pl
+/usr/share/eucalyptus/floppy
 /usr/share/eucalyptus/get_iscsitarget.pl
 /usr/sbin/euca-add-user
 /usr/sbin/euca-add-user-group
@@ -291,6 +296,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 
 #%files common-java -f jar_list
 %files common-java
+%defattr(-,root,root,-)
 /etc/init.d/eucalyptus-cloud
 /etc/eucalyptus/cloud.d
 /var/lib/eucalyptus/db
@@ -302,17 +308,25 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/licenses
 
 %files cloud
+%defattr(-,root,root,-)
 
 %files walrus
+%defattr(-,root,root,-)
 
 %files sc
+%defattr(-,root,root,-)
+/usr/share/eucalyptus/connect_iscsitarget_sc.pl
+/usr/share/eucalyptus/disconnect_iscsitarget_sc.pl
 
 %files cc
+%defattr(-,root,root,-)
 /opt/euca-axis2c/services/EucalyptusCC
 /etc/init.d/eucalyptus-cc
 /etc/eucalyptus/vtunall.conf.template
+/usr/share/eucalyptus/dynserv.pl
 
 %files nc
+%defattr(-,root,root,-)
 /usr/share/eucalyptus/gen_libvirt_xml
 /usr/share/eucalyptus/gen_kvm_libvirt_xml
 /usr/share/eucalyptus/partition2disk
@@ -320,10 +334,12 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /usr/share/eucalyptus/get_sys_info
 /usr/share/eucalyptus/detach.pl
 /usr/sbin/euca_test_nc
+/usr/sbin/eucanetd
 /opt/euca-axis2c/services/EucalyptusNC
 /etc/init.d/eucalyptus-nc
 
 %files gl
+%defattr(-,root,root,-)
 /opt/euca-axis2c/services/EucalyptusGL
 
 %pre
