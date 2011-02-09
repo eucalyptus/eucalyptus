@@ -40,7 +40,7 @@ build: eucalyptus-cloud
 	$(CC) $(CFLAGS) -c $< -o $@
 
 eucalyptus-cloud: $(OBJS)
-	$(LDCMD) $(LDFLAGS) $(OBJS) -o eucalyptus-cloud
+	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)
 
 ggo:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
