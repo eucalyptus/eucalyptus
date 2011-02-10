@@ -108,6 +108,7 @@ public class Threads {
   
   public static ThreadPool lookup( String groupName ) {
     if ( execServices.containsKey( groupName ) ) {
+      LOG.debug( "LOOKUP thread threadpool named: " + groupName  );
       return execServices.get( groupName );
     } else {
       ThreadPool f = new ThreadPool( groupName );
@@ -298,6 +299,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable)
      */
     public <T> Future<T> submit( Callable<T> task ) {
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
       return this.pool.submit( task );
     }
     
@@ -309,6 +311,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable, java.lang.Object)
      */
     public <T> Future<T> submit( Runnable task, T result ) {
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
       return this.pool.submit( task, result );
     }
     
@@ -318,6 +321,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable)
      */
     public Future<?> submit( Runnable task ) {
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
       return this.pool.submit( task );
     }
     

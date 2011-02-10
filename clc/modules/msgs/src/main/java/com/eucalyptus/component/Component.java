@@ -647,7 +647,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       if ( event instanceof Hertz ) {
         for ( final Component c : Components.list( ) ) {
           if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
-            if( !c.stateMachine.isBusy( ) && Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+            if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
               Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
             } else if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
               c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
