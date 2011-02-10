@@ -100,12 +100,13 @@ public class ExecPair<V> implements Runnable {
   
   @Override
   public void run( ) {
-    EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
     try {
       if( this.runnable != null ) {
+        EventRecord.here( callable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
         this.executor.submit( this.runnable, null ).get( );
         this.future.set( null );
       } else {
+        EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
         this.future.set( this.executor.submit( callable ).get( ) );
       }
     } catch ( InterruptedException ex ) {
