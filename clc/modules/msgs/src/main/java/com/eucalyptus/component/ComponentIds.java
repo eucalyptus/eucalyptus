@@ -78,19 +78,14 @@ public class ComponentIds {
   
   public static List<ComponentId> listEnabled( ) {
     List<ComponentId> components = Lists.newArrayList( );
-    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
       for ( Component comp : Components.list( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        } else if ( comp.getIdentity( ).isAlwaysLocal( ) ) {
+          components.add( comp.getIdentity( ) );
+        } else if ( comp.getIdentity( ).hasDispatcher( ) ) {
           components.add( comp.getIdentity( ) );
         }
-      }
-    }
-    for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) || comp.getIdentity( ).isAlwaysLocal( ) ) {
-        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
-          components.add( comp.getIdentity( ) );
-        }
-      }
     }
     return components;
   }
