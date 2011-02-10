@@ -311,7 +311,7 @@ public class OverlayManager implements LogicalStorageManager {
 	public void configure() throws EucalyptusCloudException {
 		exportManager.configure();
 		//First call to StorageInfo.getStorageInfo will add entity if it does not exist
-		LOG.info(StorageInfo.getStorageInfo().getName());
+		LOG.info(""+StorageInfo.getStorageInfo().getName());
 		checkVolumesDir();
 	}
 

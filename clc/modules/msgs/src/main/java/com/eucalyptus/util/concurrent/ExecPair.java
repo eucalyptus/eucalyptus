@@ -76,37 +76,38 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 
 public class ExecPair<V> implements Runnable {
-  private static Logger LOG = Logger.getLogger( ExecPair.class );
-  private final Callable<V>     callable;
+  private static Logger                    LOG    = Logger.getLogger( ExecPair.class );
+  private Callable<V>                callable;
+  private Runnable                   runnable;
   private final CheckedListenableFuture<V> future = Futures.newGenericFuture( );
-  private final ExecutorService executor;
+  private final ExecutorService            executor;
   
   ExecPair( Callable callable, ExecutorService executor ) {
     Assertions.assertArgumentNotNull( "Callable was null.", callable );
     Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
-
+    
     this.callable = callable;
     this.executor = executor;
   }
-  ExecPair( final Runnable runnable , ExecutorService executor ) {
+  
+  ExecPair( final Runnable runnable, ExecutorService executor ) {
     Assertions.assertArgumentNotNull( "Runnable was null.", runnable );
     Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
 
-    this.callable = new Callable<V>( ) {
-      @Override
-      public V call( ) throws Exception {
-        runnable.run( );
-        return null;
-      }
-    };
+    this.runnable = runnable;
     this.executor = executor;
   }
-
+  
   @Override
   public void run( ) {
     EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
     try {
-      this.future.set( this.executor.submit( callable ).get( ) );
+      if( this.runnable != null ) {
+        this.executor.submit( this.runnable, null ).get( );
+        this.future.set( null );
+      } else {
+        this.future.set( this.executor.submit( callable ).get( ) );
+      }
     } catch ( InterruptedException ex ) {
       LOG.error( ex, ex );
       this.future.setException( ex );
@@ -115,13 +116,15 @@ public class ExecPair<V> implements Runnable {
       this.future.setException( ex.getCause( ) );
     }
   }
-
+  
   CheckedListenableFuture<V> getFuture( ) {
     return this.future;
   }
+  
   protected Callable<V> getCallable( ) {
     return this.callable;
   }
+  
   protected ExecutorService getExecutor( ) {
     return this.executor;
   }
