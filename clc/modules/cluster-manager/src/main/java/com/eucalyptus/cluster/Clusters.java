@@ -95,7 +95,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       return Clusters.getInstance( ).lookup( clusterName );
     } else {
       ClusterCredentials credentials = null;//ASAP: fix it.
-      EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+      EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
       try {
         credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
         credDb.rollback( );
