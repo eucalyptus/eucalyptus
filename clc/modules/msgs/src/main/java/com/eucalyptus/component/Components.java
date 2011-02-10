@@ -82,7 +82,6 @@ import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Components {
   private static Logger                            LOG                  = Logger
@@ -259,15 +258,19 @@ public class Components {
               buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
                           + s.getDispatcher( ).getAddress( ) ).append( "\n" );
               buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
-//TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
               buf.append( "|-> Service config:   "
                           + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
+            //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
             }
             return buf.toString( );
           }
         };
       }
     }
+  }
+  
+  public static Component oneWhichHandles( Class c ) {
+    return ServiceBuilderRegistry.handles( c ).getComponent( );
   }
   
   private static final Callback.Success<Component> componentPrinter = componentPrinter( );

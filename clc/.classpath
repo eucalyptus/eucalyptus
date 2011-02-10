@@ -91,7 +91,7 @@
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
+	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar" sourcepath="/bzr/third-party/hibernate-distribution-3.5.0-CR-1"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/iText-2.1.7.jar"/>

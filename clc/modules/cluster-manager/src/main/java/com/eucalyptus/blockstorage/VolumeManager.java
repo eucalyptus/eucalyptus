@@ -79,6 +79,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
@@ -122,7 +123,12 @@ public class VolumeManager {
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
-    StorageControllerConfiguration sc = Configuration.lookupSc( request.getAvailabilityZone( ) );
+    ServiceConfiguration sc;
+    try {
+      sc = StorageUtil.getActiveSc( request.getAvailabilityZone( ) ).getServiceConfiguration( );
+    } catch ( NoSuchElementException ex ) {
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
+    }
     try {
       User u = Accounts.lookupUserById( request.getUserId( ) );
     } catch ( AuthException e ) {
@@ -332,16 +338,16 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Can only attach volume " + request.getVolumeId() + " to your own instance" );
       }
     }
-    StorageControllerConfiguration sc;
+    ServiceConfiguration sc;
     try {
-      sc = Configuration.lookupSc( volume.getCluster( ) );
-    } catch ( Exception ex ) {
+      sc = StorageUtil.getActiveSc( volume.getCluster( ) ).getServiceConfiguration( );
+    } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for volume: " + volume, ex );
     }
-    StorageControllerConfiguration scVm;
+    ServiceConfiguration scVm;
     try {
-      scVm = Configuration.lookupSc( cluster.getName( ) );
+      scVm = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
@@ -414,9 +420,9 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPlacement( ) );
     }
-    StorageControllerConfiguration scVm;
+    ServiceConfiguration scVm;
     try {
-      scVm = Configuration.lookupSc( cluster.getName( ) );
+      scVm = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );

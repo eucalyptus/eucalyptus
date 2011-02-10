@@ -100,7 +100,7 @@ public class ComponentIds {
     return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
   }
 
-  public static ComponentId lookup( Class compIdClass ) {
+  public final static ComponentId lookup( final Class compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
     } else {
@@ -116,7 +116,7 @@ public class ComponentIds {
    * @throws NoSuchElementException
    * @return
    */
-  public static ComponentId lookup( String name ) {
+  public final static ComponentId lookup( final String name ) {
     String realName = name.toLowerCase( );
     Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     if ( !map.containsKey( realName ) ) {
@@ -126,7 +126,7 @@ public class ComponentIds {
     }
   }
   
-  public static void register( ComponentId componentId ) {
+  public final static void register( final ComponentId componentId ) {
     Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     map.put( componentId.getName( ), componentId );
     compIdMap.put( componentId.getClass( ), componentId );

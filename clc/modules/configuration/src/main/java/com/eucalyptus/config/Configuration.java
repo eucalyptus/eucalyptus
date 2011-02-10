@@ -67,11 +67,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
@@ -79,143 +77,42 @@ import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.util.concurrent.GenericFuture;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 public class Configuration {
-  static Logger        LOG                 = Logger.getLogger( Configuration.class );
+  public static Logger        LOG                 = Logger.getLogger( Configuration.class );
   public static String DB_NAME             = "eucalyptus_config";
   static String        CLUSTER_KEY_FSTRING = "cc-%s";
   static String        NODE_KEY_FSTRING    = "nc-%s";
   
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
-    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
+    Component component = Components.oneWhichHandles( request.getClass( ) );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     String name = request.getName( );
     String partition = request.getPartition( );
     String hostName = request.getHost( );
     Integer port = request.getPort( );
-    reply.set_return( register( builder, partition != null
-      ? partition
-      : name, name, hostName, port ) );
+    reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
     return reply;
-  }
-  
-  private boolean register( final ServiceBuilder builder, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
-    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
-    if ( !builder.checkAdd( null, name, hostName, port ) ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
-      return false;
-    }
-    try {
-      final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
-      final GenericFuture<ServiceConfiguration> v = Futures.newGenericFuture( );
-      try {
-        final Runnable enableRunner = new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              builder.getComponent( ).enableService( newComponent );
-              v.set( newComponent );
-            } catch ( ServiceRegistrationException ex ) {
-              v.setException( ex );
-            }
-          }
-        };
-        final Runnable startRunner = new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              builder.getComponent( ).startService( newComponent ).addListener( enableRunner );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        };
-        builder.getComponent( ).loadService( newComponent ).addListener( startRunner ); 
-        v.get( );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-      return true;
-    } catch ( Throwable e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
-    }
   }
   
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
-    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
+    Component component = Components.oneWhichHandles( request.getClass( ) );
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( deregister( request.getPartition( ) != null
-      ? request.getPartition( )
-      : request.getName( ), request.getName( ), builder ) );
+    reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ), request.getName( ) ) );
     return reply;
   }
-  
-  private boolean deregister( String partition, String name, ServiceBuilder builder ) throws ServiceRegistrationException, EucalyptusCloudException {
-    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
-    try {
-      if ( !builder.checkRemove( partition, name ) ) {
-        LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-        throw new ServiceRegistrationException(
-                                                builder.getClass( ).getSimpleName( )
-                                                    + ": checkRemove returned false.  It is unsafe to currently deregister, please check the logs for additional information." );
-      }
-    } catch ( Exception e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
-    }
-    ServiceConfiguration conf;
-    try {
-      conf = builder.lookupByName( name );
-    } catch ( ServiceRegistrationException e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
-      LOG.error( e, e );
-      throw e;
-    }
-    try {
-      try {
-        builder.getComponent( ).disableService( conf );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
-      try {
-        builder.getComponent( ).stopService( conf );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
-      try {
-        builder.getComponent( ).destroyService( conf );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
-      builder.remove( conf );
-      return true;
-    } catch ( Throwable e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
-      LOG.info( e.getMessage( ) );
-      LOG.error( e, e );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": remove failed with message: " + e.getMessage( ), e );
-    }
-  }
-  
+    
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
-  
   public ModifyComponentAttributeResponseType modify( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     ModifyComponentAttributeResponseType reply = request.getReply( );
     if ( !attributes.contains( request.getAttribute( ) ) ) {
       throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute( ) );
     }
-    ServiceBuilder builder = ServiceBuilderRegistry.get( request.getClass( ) );
+    Component component = Components.oneWhichHandles( request.getClass( ) );
+    ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     if ( "state".equals( request.getAttribute( ) ) ) {
       ServiceConfiguration conf;
@@ -226,9 +123,9 @@ public class Configuration {
         LOG.error( e, e );
         throw e;
       }
-      if ( "enabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+      if ( "enable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
         builder.getComponent( ).enableService( conf );
-      } else if ( "disabled".startsWith( request.getValue( ).toLowerCase( ) ) ) {
+      } else if ( "disable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
         builder.getComponent( ).disableService( conf );
       }
     }
@@ -261,7 +158,7 @@ public class Configuration {
         }
       }
     } else {
-      for ( ServiceConfiguration conf : ServiceBuilderRegistry.get( request.getClass( ) ).list( ) ) {
+      for ( ServiceConfiguration conf : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
         try {
           Service s = Components.lookup( conf );
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
@@ -271,146 +168,6 @@ public class Configuration {
       }
     }
     return reply;
-  }
-  
-  public static StorageControllerConfiguration lookupSc( final String requestedZone ) throws EucalyptusCloudException {
-    return getStorageControllerConfiguration( requestedZone );
-    /*
-    try {
-      return getStorageControllerConfiguration( requestedZone );
-    } catch ( Exception e ) {
-      try {
-        Group g = Groups.lookupGroup( requestedZone );
-        for ( Authorization a : g.getAuthorizations( ) ) {
-          if ( a instanceof AvailabilityZonePermission ) {
-            try {
-              return Configuration.getStorageControllerConfiguration( a.getValue( ) );
-            } catch ( NoSuchComponentException ex ) {}
-          }
-        }
-        return getStorageControllerConfiguration( g.getName( ) );
-      } catch ( NoSuchGroupException ex1 ) {
-        try {
-          Group g = Iterables.find( Groups.listAllGroups( ), new Predicate<Group>( ) {
-            @Override
-            public boolean apply( Group arg0 ) {
-              return Iterables.any( arg0.getAuthorizations( ), new Predicate<Authorization>( ) {
-                @Override
-                public boolean apply( Authorization arg0 ) {
-                  return arg0.check( new AvailabilityZonePermission( requestedZone ) );
-                }
-              } );
-            }
-          } );
-          return getStorageControllerConfiguration( g.getName( ) );
-        } catch ( Exception ex ) {
-          throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone: " + requestedZone );
-        }
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( "Storage services are not available for the requested availability zone: " + requestedZone, ex );
-      }
-    }
-    */
-  }
-  
-  public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-    try {
-      List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
-      for ( ClusterConfiguration cc : componentList ) {
-        if ( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
-        if ( cc.getMaxVlan( ) == null ) cc.setMaxVlan( 4095 );
-      }
-      db.commit( );
-      return componentList;
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-  }
-  
-  public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<StorageControllerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-    try {
-      List<StorageControllerConfiguration> componentList = db.query( new StorageControllerConfiguration( ) );
-      db.commit( );
-      return componentList;
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-  }
-  
-  public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<WalrusConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-    try {
-      List<WalrusConfiguration> componentList = db.query( new WalrusConfiguration( ) );
-      db.commit( );
-      return componentList;
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-  }
-  
-  public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<VMwareBrokerConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-    try {
-      List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
-      db.commit( );
-      return componentList;
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-  }
-  
-  public static List<ArbitratorConfiguration> getArbitratorConfigurations( ) throws EucalyptusCloudException {
-    EntityWrapper<ArbitratorConfiguration> db = ServiceConfigurations.getEntityWrapper( );
-    try {
-      List<ArbitratorConfiguration> componentList = db.query( new ArbitratorConfiguration( ) );
-      db.commit( );
-      return componentList;
-    } catch ( Exception e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new EucalyptusCloudException( e );
-    }
-  }
-  
-  public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException {
-    List<StorageControllerConfiguration> scs = Configuration.getStorageControllerConfigurations( );
-    for ( StorageControllerConfiguration sc : scs ) {
-      if ( sc.getName( ).equals( scName ) ) {
-        return sc;
-      }
-    }
-    throw new NoSuchComponentException( StorageControllerConfiguration.class.getSimpleName( ) + " named " + scName );
-  }
-  
-  public static WalrusConfiguration getWalrusConfiguration( String walrusName ) throws EucalyptusCloudException {
-    List<WalrusConfiguration> walri = Configuration.getWalrusConfigurations( );
-    for ( WalrusConfiguration w : walri ) {
-      if ( w.getName( ).equals( walrusName ) ) {
-        return w;
-      }
-    }
-    throw new NoSuchComponentException( WalrusConfiguration.class.getSimpleName( ) + " named " + walrusName );
-  }
-  
-  public static ClusterConfiguration getClusterConfiguration( String clusterName ) throws EucalyptusCloudException {
-    List<ClusterConfiguration> clusters = Configuration.getClusterConfigurations( );
-    for ( ClusterConfiguration c : clusters ) {
-      if ( c.getName( ).equals( clusterName ) ) {
-        return c;
-      }
-    }
-    throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
   }
   
 }

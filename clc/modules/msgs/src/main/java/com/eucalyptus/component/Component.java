@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -83,12 +84,14 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.concurrent.MoreExecutors;
+import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
@@ -339,7 +342,7 @@ public class Component implements ComponentInformation, HasName<Component> {
                 future.setException( ex );
               }
             }
-          }, MoreExecutors.sameThreadExecutor( ) );
+          }, Threads.currentThreadExecutor( ) );
           return future;
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
@@ -449,8 +452,8 @@ public class Component implements ComponentInformation, HasName<Component> {
     }
   }
   
-  public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
-    ServiceBuilder<ServiceConfiguration> ret = ServiceBuilderRegistry.get( this.identity );
+  public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
+    ServiceBuilder<? extends ServiceConfiguration> ret = ServiceBuilderRegistry.lookup( this.identity );
     return ret != null
       ? ret
       : new DummyServiceBuilder( this );
@@ -483,7 +486,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @return
    * @throws ServiceRegistrationException
    */
-  public List<ServiceConfiguration> list( ) throws ServiceRegistrationException {
+  public List<? extends ServiceConfiguration> list( ) throws ServiceRegistrationException {
     return this.getBuilder( ).list( );
   }
   
@@ -524,6 +527,19 @@ public class Component implements ComponentInformation, HasName<Component> {
     return Sets.newTreeSet( this.services.values( ) );
   }
   
+  public NavigableSet<Service> getServices( String partition ) throws NoSuchElementException {
+    NavigableSet<Service> partitionServices = Sets.newTreeSet( );
+    for( Service s : this.services.values( ) ) {
+      if( partition.equals( s.getServiceConfiguration( ).getPartition( ) ) ) {
+        partitionServices.add( s );
+      }
+    }
+    if( partitionServices.isEmpty( ) ) {
+      throw new NoSuchElementException( "No services were found in partition: " + partition + " for component " + this.getIdentity( ) );
+    }
+    return partitionServices;
+  }
+
   /**
    * Lookup the {@link Service} instance of this {@link Component} registered as {@code name}
    * 
@@ -533,7 +549,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    *           {@code name}
    */
   public Service lookupServiceByName( String name ) {
-    Exceptions.ifNullArgument( name );
+    Assertions.assertArgumentNotNull( name );
     for ( Service s : this.services.values( ) ) {
       LOG.error( s );
       if ( name.equals( s.getServiceConfiguration( ).getName( ) ) ) {
@@ -552,7 +568,7 @@ public class Component implements ComponentInformation, HasName<Component> {
    *           {@code hostName}
    */
   public Service lookupServiceByHost( String hostName ) {
-    Exceptions.ifNullArgument( hostName );
+    Assertions.assertArgumentNotNull( hostName );
 //ASAP:FIXME:GRZE:    hostName = InetAddress.getByName( hostName ).getCanonicalHostName( );
     for ( Service s : this.services.values( ) ) {
       if ( hostName.equals( s.getServiceConfiguration( ).getHostName( ) ) ) {
@@ -690,5 +706,50 @@ public class Component implements ComponentInformation, HasName<Component> {
         }
       }
     };
+  }
+  private final Callable<Component> noTransition = new Callable<Component>() {
+
+    @Override
+    public Component call( ) throws Exception {
+      return Component.this;
+    }};
+
+  
+  public Callable<Component> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+    final Callable<Component> enableRunner = new Callable<Component> ( ) {
+      @Override
+      public Component call( ) throws ServiceRegistrationException {
+        try {
+          Component.this.enableService( configuration );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
+        return Component.this;
+      }
+    };
+    switch ( this.getState( ) ) {
+      case NOTREADY:
+      case DISABLED:
+        return enableRunner;
+      case LOADED:
+      case STOPPED:
+        return new Callable<Component>( ) {
+          @Override
+          public Component call( ) throws ServiceRegistrationException {
+            try {
+              Component.this.startService( configuration ).addListener( enableRunner );
+            } catch ( ServiceRegistrationException ex ) {
+              LOG.error( ex, ex );
+              throw ex;
+            }
+            return Component.this;
+          }
+        };
+      case ENABLED:
+        return noTransition;
+      default:
+        throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
+    }
   }
 }

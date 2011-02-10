@@ -74,13 +74,14 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceException;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -277,7 +278,7 @@ public class SystemConfiguration {
     try {
       String cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
-        for( WalrusConfiguration w : Configuration.getWalrusConfigurations( ) ) {
+        for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
           if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
@@ -290,7 +291,7 @@ public class SystemConfiguration {
         } catch ( SocketException e ) {}
       }
       return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( PersistenceException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
     }
   }
@@ -298,9 +299,9 @@ public class SystemConfiguration {
   public static String getWalrusUrl() throws EucalyptusCloudException {
     String walrusHost;
     try {
-      walrusHost = Configuration.getWalrusConfiguration( ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
+      walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
     } catch ( Exception e ) {
-      walrusHost = Configuration.getWalrusConfiguration( "Walrus" ).getHostName( );
+      walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, "Walrus" ).getHostName( );
     }
     return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
   }
@@ -310,14 +311,14 @@ public class SystemConfiguration {
     try {
       cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
-        for( WalrusConfiguration w : Configuration.getWalrusConfigurations( ) ) {
+        for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
           if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
           }
         }
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( PersistenceException e ) {
     }
     if( cloudHost == null ) {
       try {
@@ -339,10 +340,8 @@ public class SystemConfiguration {
     return ipAddr == null ? "127.0.0.1" : ipAddr;
   }
 
-  private static SystemConfiguration validateSystemConfiguration(SystemConfiguration sysConf) {
-    if(sysConf == null) {
-      sysConf = new SystemConfiguration();
-    }
+  private static SystemConfiguration validateSystemConfiguration(SystemConfiguration s) {
+    SystemConfiguration sysConf = s != null ? s : new SystemConfiguration(); 
     if( sysConf.getRegistrationId() == null ) {
       sysConf.setRegistrationId( UUID.randomUUID().toString() );
     }

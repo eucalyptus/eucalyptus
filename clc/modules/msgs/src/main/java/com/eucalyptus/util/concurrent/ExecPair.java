@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,10 +64,65 @@
 package com.eucalyptus.util.concurrent;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 
-public class GenericFuture<V> extends AbstractCheckedListenableFuture<V> implements CheckedListenableFuture<V> {
+public class ExecPair<V> implements Runnable {
+  private static Logger LOG = Logger.getLogger( ExecPair.class );
+  private final Callable<V>     callable;
+  private final CheckedListenableFuture<V> future = Futures.newGenericFuture( );
+  private final ExecutorService executor;
+  
+  ExecPair( Callable callable, ExecutorService executor ) {
+    Assertions.assertArgumentNotNull( "Callable was null.", callable );
+    Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
 
+    this.callable = callable;
+    this.executor = executor;
+  }
+  ExecPair( final Runnable runnable , ExecutorService executor ) {
+    Assertions.assertArgumentNotNull( "Runnable was null.", runnable );
+    Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
+
+    this.callable = new Callable<V>( ) {
+      @Override
+      public V call( ) throws Exception {
+        runnable.run( );
+        return null;
+      }
+    };
+    this.executor = executor;
+  }
+
+  @Override
+  public void run( ) {
+    EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
+    try {
+      this.future.set( this.executor.submit( callable ).get( ) );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex, ex );
+      this.future.setException( ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex, ex );
+      this.future.setException( ex.getCause( ) );
+    }
+  }
+
+  CheckedListenableFuture<V> getFuture( ) {
+    return this.future;
+  }
+  protected Callable<V> getCallable( ) {
+    return this.callable;
+  }
+  protected ExecutorService getExecutor( ) {
+    return this.executor;
+  }
 }

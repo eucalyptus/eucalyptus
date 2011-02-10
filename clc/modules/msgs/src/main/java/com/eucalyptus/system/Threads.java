@@ -57,13 +57,31 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
+ * This file may incorporate work covered under the following copyright and
+ * permission notice:
+ *
+ * Copyright (C) 2009 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.system;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -71,11 +89,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 
@@ -166,25 +188,27 @@ public class Threads {
         return this.pool;
       }
     }
+    
     private static final Runnable[] EMPTY = new Runnable[] {};
+    
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ).getCanonicalName( ) + " [" + r.toString( ) + "]" );
       }
       try {
-        while( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
-          LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
-          if( this.pool instanceof ThreadPoolExecutor ) {
-            ThreadPoolExecutor tpe = (ThreadPoolExecutor) this.pool;
-            for( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
-              LOG.warn(  "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ).getCanonicalName( ) );
+        while ( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
+          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
+          if ( this.pool instanceof ThreadPoolExecutor ) {
+            ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
+            for ( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
+              LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ).getCanonicalName( ) );
             }
           }
         }
       } catch ( InterruptedException e ) {
         Thread.currentThread( ).interrupt( );
-        LOG.error( e , e );
+        LOG.error( e, e );
       }
       return ret;
     }
@@ -282,8 +306,7 @@ public class Threads {
      * @param task
      * @param result
      * @return
-     * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable,
-     *      java.lang.Object)
+     * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable, java.lang.Object)
      */
     public <T> Future<T> submit( Runnable task, T result ) {
       return this.pool.submit( task, result );
@@ -316,8 +339,8 @@ public class Threads {
      * @param unit
      * @return
      * @throws InterruptedException
-     * @see java.util.concurrent.ExecutorService#invokeAll(java.util.Collection,
-     *      long, java.util.concurrent.TimeUnit)
+     * @see java.util.concurrent.ExecutorService#invokeAll(java.util.Collection, long,
+     *      java.util.concurrent.TimeUnit)
      */
     public <T> List<Future<T>> invokeAll( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException {
       return this.pool.invokeAll( tasks, timeout, unit );
@@ -344,12 +367,117 @@ public class Threads {
      * @throws InterruptedException
      * @throws ExecutionException
      * @throws TimeoutException
-     * @see java.util.concurrent.ExecutorService#invokeAny(java.util.Collection,
-     *      long, java.util.concurrent.TimeUnit)
+     * @see java.util.concurrent.ExecutorService#invokeAny(java.util.Collection, long,
+     *      java.util.concurrent.TimeUnit)
      */
     public <T> T invokeAny( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
       return this.pool.invokeAny( tasks, timeout, unit );
     }
   }
   
+  public static ExecutorService currentThreadExecutor( ) {
+    return new AbstractExecutorService( ) {
+      private final Lock      lock         = new ReentrantLock( );
+      private final Condition termination  = lock.newCondition( );
+      private int             runningTasks = 0;
+      private boolean         shutdown     = false;
+      public void execute( Runnable command ) {
+        startTask( );
+        try {
+          command.run( );
+        } finally {
+          endTask( );
+        }
+      }
+      
+      /*@Override*/
+      public boolean isShutdown( ) {
+        lock.lock( );
+        try {
+          return shutdown;
+        } finally {
+          lock.unlock( );
+        }
+      }
+      
+      /*@Override*/
+      public void shutdown( ) {
+        lock.lock( );
+        try {
+          shutdown = true;
+        } finally {
+          lock.unlock( );
+        }
+      }
+      
+      // See sameThreadExecutor javadoc for unusual behavior of this method.
+      /*@Override*/
+      public List<Runnable> shutdownNow( ) {
+        shutdown( );
+        return Collections.emptyList( );
+      }
+      
+      /*@Override*/
+      public boolean isTerminated( ) {
+        lock.lock( );
+        try {
+          return shutdown && runningTasks == 0;
+        } finally {
+          lock.unlock( );
+        }
+      }
+      
+      /*@Override*/
+      public boolean awaitTermination( long timeout, TimeUnit unit ) throws InterruptedException {
+        long nanos = unit.toNanos( timeout );
+        lock.lock( );
+        try {
+          for ( ;; ) {
+            if ( isTerminated( ) ) {
+              return true;
+            } else if ( nanos <= 0 ) {
+              return false;
+            } else {
+              nanos = termination.awaitNanos( nanos );
+            }
+          }
+        } finally {
+          lock.unlock( );
+        }
+      }
+      
+      /**
+       * Checks if the executor has been shut down and increments the running task count.
+       * 
+       * @throws RejectedExecutionException
+       *           if the executor has been previously shutdown
+       */
+      private void startTask( ) {
+        lock.lock( );
+        try {
+          if ( isShutdown( ) ) {
+            throw new RejectedExecutionException( "Executor already shutdown" );
+          }
+          runningTasks++;
+        } finally {
+          lock.unlock( );
+        }
+      }
+      
+      /**
+       * Decrements the running task count.
+       */
+      private void endTask( ) {
+        lock.lock( );
+        try {
+          runningTasks--;
+          if ( isTerminated( ) ) {
+            termination.signalAll( );
+          }
+        } finally {
+          lock.unlock( );
+        }
+      }
+    };
+  }
 }

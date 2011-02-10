@@ -97,16 +97,18 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasName<ComponentConfiguration> {
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasFullName<ComponentConfiguration> {
   @Column( name = "config_component_partition" )
   String partition;
   @Column( name = "config_component_name" )
@@ -157,7 +159,9 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  
+  public FullName getFullName( ) {
+    return new FullName( this.getComponentId(), this.partition, this.name );
+  }
   
   @Override
   public int hashCode( ) {
@@ -270,7 +274,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   Integer minVlan;
   @Column(name="maxvlan")
   Integer maxVlan;
-  
+  @Column(name="auth_cluster_x509_certificate")
+  String clusterCertificate;
+  @Column(name="auth_cluster_node_x509_certificate")
+  String nodeCertificate;
+
   public ClusterConfiguration( ) {}
   public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
@@ -287,16 +295,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
   }
 
-  public static ClusterConfiguration byClusterName( String name ) {
-    ClusterConfiguration c = new ClusterConfiguration( );
-    c.setClusterName(name);
-    return c;
-  }
-  public static ClusterConfiguration byHostName( String hostName ) {
-    ClusterConfiguration c = new ClusterConfiguration( );
-    c.setHostName(hostName);
-    return c;
-  }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Cluster.class);
   }
@@ -330,11 +328,35 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
   public WalrusConfiguration( ) {
   }
-  public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  public WalrusConfiguration( String name, String hostName, Integer port ) {
+    super( ComponentIds.lookup(Walrus.class).name(), name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Walrus.class);
+  }
+  @Override
+  public FullName getFullName( ) {
+    return new FullName( this.getComponentId(), this.getComponentId().name(), this.name );
+  }
+}
+@Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_eucalyptus" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";
+  public EucalyptusConfiguration( ) {
+  }
+  public EucalyptusConfiguration( String name, String hostName, Integer port ) {
+    super( ComponentIds.lookup(Eucalyptus.class).name(), name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Eucalyptus.class);
+  }
+  @Override
+  public FullName getFullName( ) {
+    return new FullName( "eucalyptus", "eucalyptus", this.name );
   }
 }
 
@@ -391,65 +413,3 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   }
 }
 
-@Entity
-@PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_cluster_certificates" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ClusterCredentials extends AbstractPersistent implements Serializable {
-
-  @Transient
-  private static final long serialVersionUID = 1L;
-
-  @Column( name = "auth_cluster_name", unique=true )
-  String clusterName;
-  
-  @Column(name="auth_cluster_x509_certificate")
-  String clusterCertificate;
-  
-  @Column(name="auth_cluster_node_x509_certificate")
-  String nodeCertificate;
-  
-  public ClusterCredentials( ) {
-  }
-  
-  public ClusterCredentials( String clusterName ) {
-    this.clusterName = clusterName;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( clusterName == null ) ? 0 : clusterName.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ClusterCredentials other = ( ClusterCredentials ) obj;
-    if ( clusterName == null ) {
-      if ( other.clusterName != null ) return false;
-    } else if ( !clusterName.equals( other.clusterName ) ) return false;
-    return true;
-  }
-  
-  public String getClusterCertificate( ) {
-    return this.clusterCertificate;
-  }
-  
-  public void setClusterCertificate( String cert ) {
-    this.clusterCertificate = cert;
-  }
-  
-  public String getNodeCertificate( ) {
-    return this.nodeCertificate;
-  }
-  
-  public void setNodeCertificate( String cert ) {
-    this.nodeCertificate = cert;
-  }
-  
-}

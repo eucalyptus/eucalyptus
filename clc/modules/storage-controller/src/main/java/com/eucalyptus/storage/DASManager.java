@@ -85,7 +85,8 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.config.ClusterCredentials;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -825,17 +826,15 @@ public class DASManager implements LogicalStorageManager {
 		}
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-			EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
 			try {
-				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
-				PublicKey ncPublicKey = X509CertHelper.toCertificate(credentials.getNodeCertificate()).getPublicKey();
-				credDb.commit();
+				List<ClusterConfiguration> partitionConfigs = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
+				ClusterConfiguration clusterConfig = partitionConfigs.get( 0 );
+				PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
 				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-			} catch ( Exception e ) {
+			} catch ( Throwable e ) {
 				LOG.error( "Unable to encrypt storage target password" );
-				credDb.rollback( );
 				throw new EucalyptusCloudException(e.getMessage(), e);
 			}
 		}

@@ -5,10 +5,10 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback.Checked;
 import com.eucalyptus.util.concurrent.GenericFuture;
-import com.eucalyptus.util.concurrent.MoreExecutors;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Futures {
@@ -19,7 +19,7 @@ public class Futures {
 
   public static Runnable addListenerHandler( CheckedListenableFuture<?> future, Callback<?> listener ) {
     Runnable r;
-    future.addListener( r = new BasicCallbackProcessor( future, listener ), MoreExecutors.sameThreadExecutor( ) );
+    future.addListener( r = new BasicCallbackProcessor( future, listener ), Threads.currentThreadExecutor( ) );
     return r;
   }
   

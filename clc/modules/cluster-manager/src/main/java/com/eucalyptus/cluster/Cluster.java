@@ -74,7 +74,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -89,9 +88,8 @@ import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Services;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.ClusterCredentials;
+import com.eucalyptus.config.FullName;
 import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -101,7 +99,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
@@ -126,20 +123,20 @@ import edu.ucsb.eucalyptus.msgs.NodeType;
 public class Cluster implements HasName<Cluster>, EventListener {
   private static Logger                                       LOG            = Logger.getLogger( Cluster.class );
   private final AtomicMarkedState<Cluster, State, Transition> stateMachine;
-  private ClusterConfiguration                                configuration;
-  private ThreadFactory                                       threadFactory;
-  private ConcurrentNavigableMap<String, NodeInfo>            nodeMap;
-  private ClusterState                                        state;
-  private ClusterNodeState                                    nodeState;
-  private ClusterCredentials                                  credentials;
+  private final ClusterConfiguration                          configuration;
+  private final FullName                                      fullName;
+  private final ThreadFactory                                 threadFactory;
+  private final ConcurrentNavigableMap<String, NodeInfo>      nodeMap;
+  private final ClusterState                                  state;
+  private final ClusterNodeState                              nodeState;
+  private NodeLogInfo                                         lastLog        = new NodeLogInfo( );
   private boolean                                             hasClusterCert = false;
   private boolean                                             hasNodeCert    = false;
-  private NodeLogInfo                                         lastLog        = new NodeLogInfo( );
   
   public enum State {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
-    AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS, 
+    AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
     RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, /* available */
   }
   
@@ -152,18 +149,26 @@ public class Cluster implements HasName<Cluster>, EventListener {
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
     INIT_CERTS, /* AUTHENTICATING -> STARTING */
-    INIT_RESOURCES, INIT_NET, INIT_VMS, INIT_ADDRS, INIT_VMS2, INIT_ADDRS2,/* STARTING -> RUNNING */
-    RUNNING_ADDRS, RUNNING_VMS, RUNNING_NET, RUNNING_RSC, /* RUNNING -> RUNNING */
+    INIT_RESOURCES,
+    INIT_NET,
+    INIT_VMS,
+    INIT_ADDRS,
+    INIT_VMS2,
+    INIT_ADDRS2, /* STARTING -> RUNNING */
+    RUNNING_ADDRS,
+    RUNNING_VMS,
+    RUNNING_NET,
+    RUNNING_RSC, /* RUNNING -> RUNNING */
   }
   
-  public Cluster( ClusterConfiguration configuration, ClusterCredentials credentials ) {
+  public Cluster( ClusterConfiguration configuration ) {
     super( );
     this.configuration = configuration;
+    this.fullName = configuration.getFullName( );
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
-    this.credentials = credentials;
-    this.threadFactory = Threads.lookup( "cluster-" + this.getName( ) );
+    this.threadFactory = Threads.lookup( "cluster-" + this.getFullName( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
       {
         //when entering state DOWN
@@ -208,6 +213,10 @@ public class Cluster implements HasName<Cluster>, EventListener {
     }.newAtomicState( );
   }
   
+  private FullName getFullName( ) {
+    return this.fullName;
+  }
+
   public Boolean isReady( ) {
     return this.hasClusterCert && this.hasNodeCert && Bootstrap.isFinished( );
   }
@@ -226,19 +235,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     return Services.lookupByHost( com.eucalyptus.component.id.Cluster.class, this.getHostName( ) );
   }
   
-  public ClusterCredentials getCredentials( ) {
-    synchronized ( this ) {
-      if ( this.credentials == null ) {
-        EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-        try {
-          this.credentials = credDb.getUnique( new ClusterCredentials( this.configuration.getName( ) ) );
-        } catch ( EucalyptusCloudException e ) {
-          LOG.error( "Failed to load credentials for cluster: " + this.configuration.getName( ) );
-        }
-        credDb.rollback( );
-      }
-    }
-    return credentials;
+  public X509Certificate getClusterCertificate( ) {
+    return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
+  }
+  
+  public X509Certificate getNodeCertificate( ) {
+    return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
   }
   
   @Override
@@ -264,7 +266,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     }
   }
-
+  
   public void updateNodeInfo( List<NodeType> nodeTags ) {
     NodeInfo ret = null;
     for ( NodeType node : nodeTags )
@@ -388,12 +390,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        /** TODO:ASAP:GRZE: RESTORE 
-        Callbacks.newRequest( new LogDataCallback( this, null ) )
-        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
-        .getResponse( ).get( );
-        Callbacks.newLogRequest( new LogDataCallback( this, null ) ).dispatch( this.getServiceEndpoint( ) );
-        **/
+        /**
+         * TODO:ASAP:GRZE: RESTORE
+         * Callbacks.newRequest( new LogDataCallback( this, null ) )
+         * .execute( this.getServiceEndpoint( ),
+         * com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+         * .getResponse( ).get( );
+         * Callbacks.newLogRequest( new LogDataCallback( this, null ) ).dispatch(
+         * this.getServiceEndpoint( ) );
+         **/
       } catch ( Throwable t ) {
         LOG.error( t, t );
       } finally {
@@ -420,10 +425,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
       try {
-        /** TODO:ASAP:GRZE: RESTORE 
-        Callbacks.newRequest( new LogDataCallback( this, null ) )
-        .execute( this.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
-        .getResponse( ).get( );
+        /**
+         * TODO:ASAP:GRZE: RESTORE
+         * Callbacks.newRequest( new LogDataCallback( this, null ) )
+         * .execute( this.getServiceEndpoint( ),
+         * com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+         * .getResponse( ).get( );
          **/
 //        Callbacks.newLogRequest( new LogDataCallback( this, nodeInfo ) ).dispatch( this.getServiceEndpoint( ) );
       } catch ( Throwable t ) {
@@ -444,16 +451,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
       return false;
     }
     
-    X509Certificate realClusterx509 = X509CertHelper.toCertificate( this.getCredentials( ).getClusterCertificate( ) );
-    X509Certificate realNodex509 = X509CertHelper.toCertificate( this.getCredentials( ).getNodeCertificate( ) );
     X509Certificate clusterx509 = PEMFiles.getCert( B64.dec( certs.getCcCert( ) ) );
     X509Certificate nodex509 = PEMFiles.getCert( B64.dec( certs.getNcCert( ) ) );
     if ( "self".equals( certs.getServiceTag( ) ) || certs.getServiceTag( ) == null ) {
-      return ( this.hasClusterCert = checkCerts( realClusterx509, clusterx509 ) ) && ( this.hasNodeCert = checkCerts( realNodex509, nodex509 ) );
+      return ( this.hasClusterCert = checkCerts( this.getClusterCertificate( ), clusterx509 ) )
+             && ( this.hasNodeCert = checkCerts( this.getNodeCertificate( ), nodex509 ) );
     } else if ( this.nodeMap.containsKey( certs.getServiceTag( ) ) ) {
       NodeInfo nodeInfo = this.nodeMap.get( certs.getServiceTag( ) );
-      nodeInfo.setHasClusterCert( checkCerts( realClusterx509, clusterx509 ) );
-      nodeInfo.setHasNodeCert( checkCerts( realNodex509, nodex509 ) );
+      nodeInfo.setHasClusterCert( checkCerts( this.getClusterCertificate( ), clusterx509 ) );
+      nodeInfo.setHasNodeCert( checkCerts( this.getNodeCertificate( ), nodex509 ) );
       return nodeInfo.getHasClusterCert( ) && nodeInfo.getHasNodeCert( );
     } else {
       LOG.error( "Cluster " + this.getName( ) + " failed to find cluster/node info for service tag: " + certs.getServiceTag( ) );
@@ -491,9 +497,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
           
           @Override
           public void fireException( Throwable t ) {
-            if( t instanceof FailedRequestException ) {
-              if( Cluster.this.getState( ).hasPublicAddressing( ) && PublicAddressStateCallback.class.isAssignableFrom( msgClass ) ) {
-                transitionCallback.fire();
+            if ( t instanceof FailedRequestException ) {
+              if ( Cluster.this.getState( ).hasPublicAddressing( ) && PublicAddressStateCallback.class.isAssignableFrom( msgClass ) ) {
+                transitionCallback.fire( );
               } else {
                 transitionCallback.fireException( t );
               }
@@ -506,8 +512,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
             Callbacks.newRequest( factory.newInstance( ) ).then( cb )
-            .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
-            .getResponse( ).get( );
+                     .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+                     .getResponse( ).get( );
           } else {
             Callbacks.newRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           }
@@ -525,22 +531,23 @@ public class Cluster implements HasName<Cluster>, EventListener {
       }
     };
   }
+  
   @Override
   public void fireEvent( Event event ) {
-    if( !Bootstrap.isFinished( ) ) {
-      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" ); 
+    if ( !Bootstrap.isFinished( ) ) {
+      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" );
     } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
       this.nextState( );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
-      if( State.STARTING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 5 ) ) {
+      if ( State.STARTING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 5 ) ) {
         this.updateVolatiles( );
-      } else if( State.RUNNING_ADDRS.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
+      } else if ( State.RUNNING_ADDRS.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
         this.nextState( );
       }
     }
   }
-
+  
   private void updateVolatiles( ) {
     try {
       Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
@@ -552,7 +559,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       /** operation self-cancelled **/
     }
   }
-
+  
   private void nextState( ) {
     try {
       switch ( this.stateMachine.getState( ) ) {
@@ -565,19 +572,19 @@ public class Cluster implements HasName<Cluster>, EventListener {
         case STARTING:
           this.stateMachine.startTransition( Transition.INIT_RESOURCES );
           break;
-        case STARTING_RESOURCES: 
+        case STARTING_RESOURCES:
           this.stateMachine.startTransition( Transition.INIT_NET );
           break;
-        case STARTING_NET: 
+        case STARTING_NET:
           this.stateMachine.startTransition( Transition.INIT_VMS );
           break;
-        case STARTING_VMS: 
+        case STARTING_VMS:
           this.stateMachine.startTransition( Transition.INIT_ADDRS );
           break;
-        case STARTING_ADDRS: 
+        case STARTING_ADDRS:
           this.stateMachine.startTransition( Transition.INIT_VMS2 );
           break;
-        case STARTING_VMS2: 
+        case STARTING_VMS2:
           this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
           break;
         case RUNNING_ADDRS:

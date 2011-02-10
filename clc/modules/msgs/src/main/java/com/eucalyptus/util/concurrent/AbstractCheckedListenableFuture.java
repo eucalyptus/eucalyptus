@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,11 +63,58 @@
 
 package com.eucalyptus.util.concurrent;
 
+import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.google.common.collect.Lists;
 
-public class GenericFuture<V> extends AbstractCheckedListenableFuture<V> implements CheckedListenableFuture<V> {
+public abstract class AbstractCheckedListenableFuture<T> extends AbstractListenableFuture<T> implements CheckedListenableFuture<T> {
+
+  /**
+   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable,
+   *      java.util.concurrent.Executor)
+   * @param <T>
+   * @param listener
+   * @param exec
+   * @return
+   */
+  @Override
+  public <V> CheckedListenableFuture<V> addListener( Callable<V> listener, ExecutorService executor ) {
+    ExecPair<V> pair = new ExecPair<V>( listener, executor );
+    super.add( pair );
+    return pair.getFuture( );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable)
+   * @param <T>
+   * @param listener
+   * @return
+   */
+  @Override
+  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener ) {
+    return addListener( listener, Threads.currentThreadExecutor( ) );
+  }
+
+  @Override
+  public boolean isCanceled( ) {
+    return false;
+  }
+
+  @Override
+  public boolean set( T value ) {
+    return super.set( value );
+  }
+
+  @Override
+  public boolean setException( Throwable throwable ) {
+    return super.setException( throwable );
+  }
 
 }

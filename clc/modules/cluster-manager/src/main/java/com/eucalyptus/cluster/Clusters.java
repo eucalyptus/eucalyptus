@@ -67,13 +67,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.ClusterCredentials;
 import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -111,5 +106,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
   }
+  
   
 }

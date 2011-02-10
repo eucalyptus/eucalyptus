@@ -165,7 +165,15 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    */
   @Override
   public int compareTo( Service that ) {
-    return this.getName( ).compareTo( that.getName( ) );
+    if( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
+      if( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
+        return this.getName( ).compareTo( that.getName( ) );
+      } else {
+        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
+      }
+    } else {
+      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
+    }
   }
   
   /**

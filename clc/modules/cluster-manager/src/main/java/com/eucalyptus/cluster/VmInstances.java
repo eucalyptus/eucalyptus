@@ -72,10 +72,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.blockstorage.StorageUtil;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -247,7 +249,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-      final StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
+      final ServiceConfiguration sc = StorageUtil.getActiveSc( vm.getPlacement( ) ).getServiceConfiguration( );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( AttachedVolume arg0 ) {

@@ -85,6 +85,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.HasParent;
@@ -113,7 +114,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     super( uri );
     this.parent = parent;
     this.local = local;
-    Exceptions.ifNullArgument( uri );
+    Assertions.assertArgumentNotNull( uri );
     try {
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {

@@ -76,6 +76,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.PersistenceException;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -83,7 +84,8 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.config.Configuration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -167,8 +169,8 @@ public class VmInstance implements HasName<VmInstance> {
     this.placement = placement;
     String p = null;
     try {
-      p = Configuration.getClusterConfiguration( this.placement ).getPartition( );
-    } catch ( EucalyptusCloudException ex ) {
+      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.placement ).getPartition( );
+    } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/
       LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );

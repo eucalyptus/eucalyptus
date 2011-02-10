@@ -68,13 +68,14 @@ package com.eucalyptus.util;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import javax.persistence.PersistenceException;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentState;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
@@ -156,7 +157,7 @@ public class StorageProperties {
 	public static void updateWalrusUrl() {
 		List<WalrusConfiguration> walrusConfigs;
 		try {
-			walrusConfigs = Configuration.getWalrusConfigurations();
+			walrusConfigs = ServiceConfigurations.getConfigurations( WalrusConfiguration.class );
 			if(walrusConfigs.size() > 0) {
 				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
 				WALRUS_URL = walrusConfig.getUri();
@@ -166,7 +167,7 @@ public class StorageProperties {
 				LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
 				StorageProperties.enableSnapshots = false;
 			}
-		} catch (EucalyptusCloudException e) {
+		} catch (PersistenceException e) {
 			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
 			StorageProperties.enableSnapshots = false;
 		}		

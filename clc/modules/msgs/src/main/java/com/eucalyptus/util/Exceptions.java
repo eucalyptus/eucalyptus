@@ -77,6 +77,7 @@ public class Exceptions {
       : 2];
     IllegalArgumentException ex = new IllegalArgumentException( "Illegal argument given to " + ste.toString( ) + ": " + message, t );
     ex.fillInStackTrace( );
+    ex = filterStackTrace( ex );
     return ex;
   }
   
@@ -145,16 +146,6 @@ public class Exceptions {
       ? t
       : ex );
     return false;
-  }
-  
-  public static void ifNullArgument( Object... args ) throws IllegalArgumentException {
-    for ( Object o : args ) {
-      if ( o == null ) {
-        IllegalArgumentException ex = illegalArgument( "The argument to " + Thread.currentThread( ).getStackTrace( )[2].getMethodName( ) + " cannot be null." );
-        LOG.error( ex, ex );
-        throw ex;
-      }
-    }
   }
   
   public static RuntimeException trace( String message ) {

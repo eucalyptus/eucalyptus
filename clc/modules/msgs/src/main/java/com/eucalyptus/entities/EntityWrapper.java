@@ -69,8 +69,11 @@ package com.eucalyptus.entities;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.JDBCException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
@@ -147,8 +150,13 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   private void exceptionCaught( Throwable e ) {
     if( e instanceof JDBCConnectionException || e instanceof IllegalStateException ) {
-      LOG.error( e, e );
+      LOG.error( "EntityWrapper failed because of an underlying JDBC/SQL error: " + e.getCause( ), e );
       PersistenceContexts.handleConnectionError( e );
+    } else if( e instanceof HibernateException || e instanceof PersistenceException ) {
+      LOG.error( "EntityWrapper failed because of an underlying JPA error: " + e.getCause( ), e );
+      PersistenceContexts.handleConnectionError( e );
+    } else {
+      LOG.error( "EntityWrapper failed because of a non-specific error: " + e.getCause( ), e );
     }
   }
 
@@ -158,7 +166,11 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    */
   public void persist( TYPE newObject ) {
-    this.getEntityManager( ).persist( newObject );
+    try {
+      this.getEntityManager( ).persist( newObject );
+    } catch ( RuntimeException ex ) {
+      this.exceptionCaught( ex );
+    }
   }
 
   /**
@@ -198,13 +210,82 @@ public class EntityWrapper<TYPE> {
     return this.getSession( ).get( class1, uuid );
   }
   
+  
+  /**
+   * <table>
+   * <tbody>
+   * <tr valign="top">
+   * <th>Scenario</th>
+   * <th><tt>EntityManager.persist</tt></th>
+   * <th><tt>EntityManager.merge</tt></th>
+   * <th><tt>SessionManager.saveOrUpdate</tt></th>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object passed was never persisted</th>
+   * 
+   * <td>1. Object added to persistence context as new entity<br>
+   * 2. New entity inserted into database at flush/commit</td>
+   * <td>1. State copied to new entity.<br>
+   * 2. New entity added to persistence context<br>
+   * 3. New entity inserted into database at flush/commit<br>
+   * 4. New entity returned</td>
+   * <td>1. Object added to persistence context as new entity<br>
+   * 2. New entity inserted into database at flush/commit</td>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object was previously persisted, but not loaded in this persistence context</th>
+   * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at
+   * flush/commit)</td>
+   * 
+   * <td>2. Existing entity loaded.<br>
+   * 2. State copied from object to loaded entity<br>
+   * 3. Loaded entity updated in database at flush/commit<br>
+   * 4. Loaded entity returned</td>
+   * <td>1. Object added to persistence context<br>
+   * 2. Loaded entity updated in database at flush/commit</td>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object was previously persisted and already loaded in this persistence context</th>
+   * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at flush or
+   * commit time)</td>
+   * 
+   * <td>1. State from object copied to loaded entity<br>
+   * 2. Loaded entity updated in database at flush/commit<br>
+   * 3. Loaded entity returned</td>
+   * <td>1. <tt>NonUniqueObjectException</tt> thrown</td>
+   * </tr>
+   * </tbody>
+   * </table>
+   * 
+   * @param newObject
+   */
   public void merge( TYPE newObject ) {
-    this.getEntityManager( ).merge( newObject );
+    try {
+      this.getEntityManager( ).merge( newObject );
+    } catch ( RuntimeException ex ) {
+      this.exceptionCaught( ex );
+      throw ex;
+    }
   }
 
-  public void mergeAndCommit( TYPE newObject ) {
-    this.getEntityManager( ).merge( newObject );
-    this.commit( );
+  
+  /**
+   * @see EntityWrapper#merge(Object)
+   * @param newObject
+   * @throws PersistenceException
+   */
+  public void mergeAndCommit( TYPE newObject ) throws PersistenceException {
+    try {
+      this.getEntityManager( ).merge( newObject );
+      this.commit( );
+    } catch ( RuntimeException ex ) {
+      this.exceptionCaught( ex );
+      this.rollback( );
+      throw ex;
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      this.rollback( );
+    }
   }
 
   public void delete( Object deleteObject ) {
@@ -226,10 +307,14 @@ public class EntityWrapper<TYPE> {
     if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), tx.getTxUuid( ) ).trace( );
     try {
       this.tx.commit( );
+    } catch ( RuntimeException e ) {
+      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
+      this.exceptionCaught( e );
+      throw e ;
     } catch ( Throwable e ) {
       if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
       this.exceptionCaught( e );
-      throw (RuntimeException) e ;
+      throw new RuntimeException( e );
     }
     if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
   }

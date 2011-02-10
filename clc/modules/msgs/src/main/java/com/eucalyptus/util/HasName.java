@@ -1,5 +1,7 @@
 package com.eucalyptus.util;
 
+import com.google.common.base.Function;
+
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -64,4 +66,11 @@ package com.eucalyptus.util;
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface HasName<T> extends Mappable<T,String> {}
+public interface HasName<T> extends Mappable<T,String> {
+  public final Function<HasName<?>,String> GET_NAME = new Function<HasName<?>,String>() {
+
+    @Override
+    public String apply( HasName<?> arg0 ) {
+      return arg0.getName( );
+    }};
+}

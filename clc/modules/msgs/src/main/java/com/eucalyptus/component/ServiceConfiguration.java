@@ -1,6 +1,7 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
+import com.eucalyptus.config.FullName;
 
 public interface ServiceConfiguration extends Serializable {
   public abstract String getId( );
@@ -31,4 +32,5 @@ public interface ServiceConfiguration extends Serializable {
   
   public abstract Boolean isLocal( );
   
+  public abstract FullName getFullName( );
 }

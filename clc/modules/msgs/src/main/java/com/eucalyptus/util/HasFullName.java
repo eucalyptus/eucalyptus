@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,13 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util.concurrent;
+package com.eucalyptus.util;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.config.FullName;
+import com.google.common.base.Function;
 
-public class GenericFuture<V> extends AbstractCheckedListenableFuture<V> implements CheckedListenableFuture<V> {
+public interface HasFullName<T> extends HasName<T> {
+  public abstract String getPartition( );
+  public abstract FullName getFullName( );
+  public final Function<HasFullName<?>,String> GET_PARTITION = new Function<HasFullName<?>,String>() {
 
+    @Override
+    public String apply( HasFullName<?> arg0 ) {
+      return arg0.getPartition( );
+    }};
+  public final Function<HasFullName<?>,String> GET_FULLNAME = new Function<HasFullName<?>,String>() {
+
+    @Override
+    public String apply( HasFullName<?> arg0 ) {
+      return arg0.getFullName( ).toString( );
+    }};
 }

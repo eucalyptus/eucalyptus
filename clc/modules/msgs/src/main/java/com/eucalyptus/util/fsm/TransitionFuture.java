@@ -70,9 +70,10 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.concurrent.AbstractCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
-public class TransitionFuture<R> extends AbstractListenableFuture<R> implements CheckedListenableFuture<R> {
+public class TransitionFuture<R> extends AbstractCheckedListenableFuture<R> implements CheckedListenableFuture<R> {
     private static Logger LOG = Logger.getLogger( TransitionFuture.class );
     
     public TransitionFuture( ) {
@@ -88,9 +89,6 @@ public class TransitionFuture<R> extends AbstractListenableFuture<R> implements 
     public boolean setException( Throwable exception ) {
       EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
       boolean r = false;
-      if ( exception == null ) {
-        exception = new IllegalArgumentException( "setException(Throwable) was called with a null argument" );
-      }
       if ( !( r = super.setException( exception ) ) ) {
         LOG.error( "Duplicate exception: " + exception.getMessage( ) );
       }

@@ -67,11 +67,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -94,8 +100,18 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
   
+  public static Service getActiveSc( String partition ) throws NoSuchElementException {
+    Service sc;
+    NavigableSet<Service> partScs = Components.lookup( Storage.class ).getServices( partition );
+    sc = partScs.first( );
+    if( !Component.State.ENABLED.equals( sc.getState( ) ) ) {
+      throw new NoSuchElementException( "Failed to find the storage controller to service request for partition: " + partition + ".  This was best candidate: " + sc );
+    }
+    return sc;
+  }
+  
   public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
-    StorageControllerConfiguration scConfig = Configuration.lookupSc( clusterName );
+    ServiceConfiguration scConfig = getActiveSc( clusterName ).getServiceConfiguration( );
     Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
@@ -115,7 +131,7 @@ public class StorageUtil {
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for( String cluster : clusterVolumeMap.keySet( ) ) {
-      StorageControllerConfiguration scConfig = Configuration.lookupSc( cluster );
+      ServiceConfiguration scConfig = getActiveSc( cluster ).getServiceConfiguration( );
       Iterator<String> volumeNames = Iterators.transform( clusterVolumeMap.get( cluster ).iterator( ), new Function<Volume,String>() {
         @Override
         public String apply( Volume arg0 ) {

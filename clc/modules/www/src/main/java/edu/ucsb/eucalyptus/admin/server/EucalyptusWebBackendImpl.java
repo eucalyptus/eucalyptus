@@ -79,10 +79,12 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import javax.persistence.PersistenceException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -97,9 +99,9 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
@@ -1185,7 +1187,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public List<String> getZones(final String sessionId) throws Exception {
 		List<String> zones = new ArrayList<String>();
-		for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
+		for ( ClusterConfiguration cluster : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
 		  zones.add( cluster.getName( ) );
 		}
 		return zones;
@@ -1251,9 +1253,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );
       }
       try {
-        ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
+        ServiceConfiguration scConfig = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cluster.getName( ) );
         reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponentId( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
-      } catch ( EucalyptusCloudException e ) {
+      } catch ( PersistenceException e ) {
+        LOG.error( e.getMessage( ), e );
+      } catch ( NoSuchElementException e ) {
+        LOG.error( e.getMessage( ) );
       }
     }
     return reports;
