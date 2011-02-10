@@ -199,7 +199,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
     File keyDir = new File( directory );
     LOG.info( "creating keys in " + directory );
-    if ( !keyDir.mkdir( ) || !keyDir.exists( ) || !keyDir.canWrite( ) ) {
+    if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
       throw new ServiceRegistrationException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
     }
     return keyDir;
