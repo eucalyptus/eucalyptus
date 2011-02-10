@@ -92,4 +92,8 @@ public class Eucalyptus extends ComponentId {
     return true;
   }
   
+  @Override
+  public boolean isPartitioned( ) {
+    return false;
+  }
 }

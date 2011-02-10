@@ -160,7 +160,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
 
   public FullName getFullName( ) {
-    return new FullName( this.getComponentId(), this.partition, this.name );
+    return new FullName( this.getComponentId(), this.partition != null ? this.partition : this.name, this.name );
   }
   
   @Override

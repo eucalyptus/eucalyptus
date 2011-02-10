@@ -29,26 +29,32 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements ComponentInformation, HasName<ComponentId>, X509Principal, HmacPrincipal {
-  private static Logger LOG = Logger.getLogger( ComponentId.class );
-  private static final String EMPTY_MODEL ="  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n" + 
-  "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" + 
-  "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n" + 
-  "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n" + 
-  "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n" + 
-  "      xsi:schemaLocation=\"\n" + 
-  "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n" + 
-  "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" + 
-  "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" + 
-  "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" + 
-  "</mule>\n";
-  private final String name;
-  private final String capitalizedName;
-  private final String entryPoint;
-  private final Integer port;
-  private final String modelContent;
-  private String uriPattern;
-  private String uriLocal;
-
+  private static Logger       LOG         = Logger.getLogger( ComponentId.class );
+  private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
+                                            +
+                                            "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                                            +
+                                            "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n"
+                                            +
+                                            "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n"
+                                            +
+                                            "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n"
+                                            +
+                                            "      xsi:schemaLocation=\"\n"
+                                            +
+                                            "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n"
+                                            +
+                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" +
+                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
+                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
+                                            "</mule>\n";
+  private final String        name;
+  private final String        capitalizedName;
+  private final String        entryPoint;
+  private final Integer       port;
+  private final String        modelContent;
+  private String              uriPattern;
+  private String              uriLocal;
   
   protected ComponentId( String name ) {
     this.capitalizedName = name;
@@ -57,9 +63,9 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-    this.modelContent = loadModel();
+    this.modelContent = loadModel( );
   }
-
+  
   protected ComponentId( ) {
     this.capitalizedName = this.getClass( ).getSimpleName( );
     this.name = this.capitalizedName.toLowerCase( );
@@ -67,32 +73,32 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-    this.modelContent = loadModel();
+    this.modelContent = loadModel( );
   }
-
+  
   private String loadModel( ) {
     StringWriter out = new StringWriter( );
     try {
-      InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream( this.getServiceModelFileName( ) );
-      if( in == null ) {
+      InputStream in = Thread.currentThread( ).getContextClassLoader( ).getResourceAsStream( this.getServiceModelFileName( ) );
+      if ( in == null ) {
         return EMPTY_MODEL;
       } else {
         IOUtils.copy( in, out );
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        if( LogLevels.EXTREME ) {
+        if ( LogLevels.EXTREME ) {
           LOG.trace( "Loaded model for: " + this );
           LOG.trace( outString );
         }
         return outString;
       }
     } catch ( IOException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw BootstrapException.throwError( "BUG! BUG! Failed to load configuration specified for Component: " + this.name, ex );
     }
   }
-
+  
   public String name( ) {
     return this.name;
   }
@@ -103,12 +109,14 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   }
   
   public abstract Boolean isCloudLocal( );
+  
   public abstract Boolean hasDispatcher( );
+  
   public abstract Boolean isAlwaysLocal( );
+  
   public Boolean hasCredentials( ) {
     return false;
   }
-
   
   /**
    * Get the HTTP service path
@@ -137,13 +145,13 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   public String getLocalEndpointName( ) {
     return this.uriLocal;
   }
-
+  
   public URI getLocalEndpointUri( ) {
     URI uri = URI.create( this.getLocalEndpointName( ) );
     try {
       uri.parseServerAuthority( );
     } catch ( URISyntaxException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
     return uri;
   }
@@ -168,12 +176,16 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
   public String getUriPattern( ) {
     return this.uriPattern;
   }
-
+  
+  public boolean isPartitioned( ) {
+    return !this.isCloudLocal( );
+  }
+  
   @Override
   public final int compareTo( ComponentId that ) {
     return this.name.compareTo( that.name );
   }
-
+  
   @Override
   public final int hashCode( ) {
     final int prime = 31;
@@ -183,7 +195,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
       : this.name.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public final boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -195,82 +207,87 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     } else if ( !this.name.equals( other.name ) ) return false;
     return true;
   }
-
+  
   @Override
   public String toString( ) {
-    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ), this.getLocalEndpointName( ) );
+    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
+                          this.getLocalEndpointName( ) );
   }
-
-  @Override public BigInteger getNumber( ) { throw new RuntimeException( "getNumber is not implemented for component principals." ); }
+  
+  @Override
+  public BigInteger getNumber( ) {
+    throw new RuntimeException( "getNumber is not implemented for component principals." );
+  }
+  
   @Override
   public String getSecretKey( String id ) {
     return null;
   }
-
+  
   @Override
   public void addSecretKey( String key ) throws AuthException {}
-
+  
   @Override
   public void activateSecretKey( String id ) throws AuthException {}
-
+  
   @Override
   public void deactivateSecretKey( String id ) throws AuthException {}
-
+  
   @Override
   public void revokeSecretKey( String id ) throws AuthException {}
-
+  
   @Override
   public String lookupSecretKeyId( String key ) {
     return null;
   }
-
+  
   @Override
   public String getFirstActiveSecretKeyId( ) {
     return null;
   }
-
+  
   @Override
   public List<String> getActiveSecretKeyIds( ) {
     return null;
   }
-
+  
   @Override
   public List<String> getInactiveSecretKeyIds( ) {
     return null;
   }
-
+  
   @Override
   public X509Certificate getX509Certificate( String id ) {
     return null;
   }
-
+  
   @Override
   public void addX509Certificate( X509Certificate cert ) throws AuthException {}
-
+  
   @Override
   public void activateX509Certificate( String id ) throws AuthException {}
-
+  
   @Override
   public void deactivateX509Certificate( String id ) throws AuthException {}
-
+  
   @Override
   public void revokeX509Certificate( String id ) throws AuthException {}
-
+  
   @Override
   public String lookupX509Certificate( X509Certificate cert ) {
     return null;
   }
-
+  
   @Override
   public List<String> getActiveX509CertificateIds( ) {
     return null;
   }
-
+  
   @Override
   public List<String> getInactiveX509CertificateIds( ) {
     return null;
   }
-
+  
   public ChannelPipelineFactory getClientPipeline( ) {
     return new ChannelPipelineFactory( ) {
       
@@ -280,7 +297,7 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
       }
     };
   }
-
+  
   protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
     try {
       return ( ChannelPipelineFactory ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ).newInstance( );
@@ -299,21 +316,21 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
       }
     };
   }
-
+  
   /**
    * @return the entryPoint
    */
   public String getEntryPoint( ) {
     return this.entryPoint;
   }
-
+  
   /**
    * @return the capitalizedName
    */
   public String getCapitalizedName( ) {
     return this.capitalizedName;
   }
-
+  
   public Class<? extends BaseMessage> lookupBaseMessageType( ) {
     try {
       return ComponentMessages.lookup( this.getClass( ) );
