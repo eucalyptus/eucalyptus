@@ -199,7 +199,7 @@ public class X509Download extends HttpServlet {
       
       try {
         sb.append( "\nexport S3_URL=" + SystemConfiguration.getWalrusUrl( ) );
-      } catch ( Exception e ) {
+      } catch ( Throwable e ) {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
       sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
