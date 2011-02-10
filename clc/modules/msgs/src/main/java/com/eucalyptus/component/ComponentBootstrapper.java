@@ -109,7 +109,7 @@ public class ComponentBootstrapper {
   }
 
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) throws BootstrapException {
-    String name = transition.name( ).substring( 10 ).toLowerCase( );
+    String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {

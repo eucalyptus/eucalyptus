@@ -656,7 +656,7 @@ public class Component implements ComponentInformation, HasName<Component> {
         for ( final Component c : Components.list( ) ) {
           if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
             if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
-              Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
+              Threads.lookup( Empyrean.class ).submit( c.getCheckRunner( ) );
             } else if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
               c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
             }
@@ -809,7 +809,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
-    Threads.lookup( Empyrean.class.getName( ) ).submit( transition );
+    Threads.lookup( Empyrean.class ).submit( transition );
     return transitionFuture;
   }
   
@@ -838,7 +838,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
-    Threads.lookup( Empyrean.class.getName( ) ).submit( transition );
+    Threads.lookup( Empyrean.class ).submit( transition );
     return transitionFuture;
   }
 }

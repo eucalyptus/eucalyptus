@@ -211,7 +211,7 @@ public class SystemBootstrapper {
     }
     for ( final Component c : Components.list( ) ) {
       if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
-        Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
+        Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
             try {

@@ -99,6 +99,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.google.common.collect.Lists;
 
 public class Threads {
@@ -106,6 +108,9 @@ public class Threads {
   private final static AtomicInteger                     threadIndex  = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices = new ConcurrentHashMap<String, ThreadPool>( );
   
+  public static ThreadPool lookup( Class<? extends ComponentId> group ) {
+    return lookup( ComponentIds.lookup( group ).name( ) );
+  }
   public static ThreadPool lookup( String groupName ) {
     if ( execServices.containsKey( groupName ) ) {
       LOG.debug( "LOOKUP thread threadpool named: " + groupName  );

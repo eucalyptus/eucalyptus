@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback;
@@ -91,7 +92,7 @@ public class ComponentState {
   private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
-  private Component.State                                 goal = Component.State.ENABLED;
+  private Component.State                                       goal    = Component.State.ENABLED;
   private final NavigableSet<String>                            details = new ConcurrentSkipListSet<String>( );
   
   public ComponentState( Component parent ) {
@@ -127,22 +128,17 @@ public class ComponentState {
     final TransitionAction<Component> startTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( final Component parent, final Completion transitionCallback ) {
-        Threads.lookup( parent.toString() ).getExecutorService( ).submit(  new Runnable() {
-          @Override
-          public void run( ) {
-            try {
-              parent.getBootstrapper( ).start( );
-              if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
-                parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
-              }
-              transitionCallback.fire( );
-            } catch ( Throwable ex ) {
-              LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-              ComponentState.this.details.add( ex.toString( ) );
-              transitionCallback.fireException( ex );
-            }
-          }} 
-        );
+        try {
+          parent.getBootstrapper( ).start( );
+          if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+            parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
+          }
+          transitionCallback.fire( );
+        } catch ( Throwable ex ) {
+          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
+          ComponentState.this.details.add( ex.toString( ) );
+          transitionCallback.fireException( ex );
+        }
       }
     };
     
@@ -307,9 +303,9 @@ public class ComponentState {
   
   public CheckedListenableFuture<Component> transitionSelf( ) {
     try {
-      if( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
+      if ( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
         return this.transition( Transition.READY_CHECK );
-      } else { 
+      } else {
         return this.transition( this.getState( ) );
       }
     } catch ( IllegalStateException ex ) {
@@ -321,22 +317,22 @@ public class ComponentState {
     }
     return Futures.predestinedFuture( this.parent );
   }
-
+  
   /**
    * @return the goal
    */
   public Component.State getGoal( ) {
     return this.goal;
   }
-
+  
   void setGoal( Component.State goal ) {
     this.goal = goal;
   }
-
+  
   public boolean isBusy( ) {
     return this.stateMachine.isBusy( );
   }
-
+  
   public boolean checkTransition( Transition transition ) {
     return this.stateMachine.isLegalTransition( transition );
   }
