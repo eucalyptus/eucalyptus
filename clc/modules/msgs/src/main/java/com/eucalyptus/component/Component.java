@@ -802,6 +802,11 @@ public class Component implements ComponentInformation, HasName<Component> {
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
+    try {
+      transition.call( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+    }
     return transitionFuture;
   }
   
@@ -829,6 +834,11 @@ public class Component implements ComponentInformation, HasName<Component> {
         break;
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
+    }
+    try {
+      transition.call( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
     }
     return transitionFuture;
   }
