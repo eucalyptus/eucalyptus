@@ -241,31 +241,34 @@ public class Component implements ComponentInformation, HasName<Component> {
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
-      this.stateMachine.setGoal( State.DISABLED );
+      this.stateMachine.setGoal( State.ENABLED );
       if ( this.inState( State.LOADED ) ) {
+        final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
         try {
-          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
-          this.stateMachine.transition( Transition.STARTING ).addListener( new Runnable( ) {
+          this.stateMachine.transition( Transition.STARTING ).addListener( new Callable<Component>( ) {
             @Override
-            public void run( ) {
+            public Component call( ) {
               try {
                 Component.this.stateMachine.transition( State.DISABLED );
                 future.set( Component.this );
               } catch ( Throwable ex ) {
-                Exceptions.trace( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
                 future.setException( ex );
+                Exceptions.trace( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
               }
+              return Component.this;
             }
           } );
-          return future;
         } catch ( Throwable ex ) {
-          throw new ServiceRegistrationException( "Failed to start service: " + config + " because of: " + ex.getMessage( ), ex );
+          future.setException( new ServiceRegistrationException( "Failed to start service: " + config + " because of: " + ex.getMessage( ), ex ) );
         }
+        return future;
       } else if ( this.inState( State.NOTREADY ) ) {
         try {
           return this.stateMachine.transition( State.DISABLED );
         } catch ( Throwable ex ) {
-          throw new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex );
+          final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
+          future.setException( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
+          return future;
         }
       } else {
         return Futures.predestinedFuture( this )
@@ -283,27 +286,32 @@ public class Component implements ComponentInformation, HasName<Component> {
     if ( config.isLocal( ) ) {
       this.stateMachine.setGoal( State.ENABLED );
       if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
+        final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
         try {
-          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
-          return this.stateMachine.transition( Transition.READY_CHECK ).addListener( new Callable<Component>( ) {
+          this.stateMachine.transition( Transition.READY_CHECK ).addListener( new Callable<Component>( ) {
             @Override
             public Component call( ) {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
+                future.set( Component.this );
               } catch ( Throwable ex ) {
+                future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
               }
               return Component.this;
             }
           } );
         } catch ( Throwable ex ) {
-          throw new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex );
+          future.setException( new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex ) );
         }
+        return future;
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
           return Component.this.stateMachine.transition( State.ENABLED );
         } catch ( Throwable ex ) {
-          throw  new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex );
+          final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
+          future.setException( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
+          return future;
         }
       } else {
         return Futures.predestinedFuture( this );
