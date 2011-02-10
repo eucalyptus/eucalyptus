@@ -23,6 +23,10 @@ public class Futures {
     return r;
   }
   
+  public static <T> CheckedListenableFuture<T> predestinedFuture( final T initValue ){
+    return new GenericFuture<T>( ) {{set( initValue );}};
+  }
+
   public static <T> CheckedListenableFuture<T> newGenericFuture( ){
     return new GenericFuture<T>();
   }

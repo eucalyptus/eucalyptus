@@ -199,12 +199,15 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else if( State.LOADED.equals( this.getState( ) ) ) {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this )
+;
       } else {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this )
+;
       }
     } else {
-      return new TransitionFuture<Component>( this );
+      return Futures.predestinedFuture( this )
+;
       //TODO:GRZE:ASAP handle loadService
     }
   }
@@ -265,11 +268,13 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this )
+;
       }
     } else {
       this.getBuilder( ).fireStart( config );
-      return new TransitionFuture<Component>( this );
+      return Futures.predestinedFuture( this )
+;
     }
   }
   
@@ -301,11 +306,11 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw  new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this );
       }
     } else {
       this.getBuilder( ).fireEnable( config );
-      return new TransitionFuture<Component>( this );
+      return Futures.predestinedFuture( this );
     }
   }
   
@@ -319,7 +324,8 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     } else {
       this.getBuilder( ).fireDisable( config );
-      return new TransitionFuture<Component>( this );
+      return Futures.predestinedFuture( this )
+;
     }
   }
   
@@ -354,11 +360,13 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this )
+;
       }
     } else {
       this.getBuilder( ).fireStop( config );
-      return new TransitionFuture<Component>( this );
+      return Futures.predestinedFuture( this )
+;
     }
   }
   
@@ -380,7 +388,8 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return new TransitionFuture<Component>( this );
+        return Futures.predestinedFuture( this )
+;
       }
     }
   }
@@ -627,12 +636,6 @@ public class Component implements ComponentInformation, HasName<Component> {
     return this.bootstrapper;
   }
   
-  public void runChecks( ) {
-    if ( this.isAvailableLocally( ) && this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-      this.stateMachine.transitionSelf( );
-    }
-  }
-  
   public static class CheckEvent implements EventListener {
     public static void register( ) {
       ListenerRegistry.getInstance( ).register( ClockTick.class, new CheckEvent( ) );
@@ -644,15 +647,11 @@ public class Component implements ComponentInformation, HasName<Component> {
       if ( event instanceof Hertz ) {
         for ( final Component c : Components.list( ) ) {
           if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
-            if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+            if( !c.stateMachine.isBusy( ) && Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
               Threads.lookup( Empyrean.class.getName( ) ).submit( c.getCheckRunner( ) );
             } else if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-              try {
-                c.enableService( c.getLocalService( ).getServiceConfiguration( ) );
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex );
-              }
-            }//more checks here soon.
+              c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
+            }
           }
         }
       }
@@ -696,12 +695,12 @@ public class Component implements ComponentInformation, HasName<Component> {
     return new Runnable( ) {
       @Override
       public void run( ) {
-        if ( !Component.this.stateMachine.isBusy( ) ) {
-          try {
-            Component.this.runChecks( );
-          } catch ( Throwable ex ) {
-            LOG.debug( "CheckRunner caught an exception: " + ex );
+        try {
+          if ( Component.this.isAvailableLocally( ) && Component.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
+            Component.this.stateMachine.transitionSelf( );
           }
+        } catch ( Throwable ex ) {
+          LOG.debug( "CheckRunner caught an exception: " + ex );
         }
       }
     };

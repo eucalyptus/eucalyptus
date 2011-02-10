@@ -73,16 +73,17 @@ public class ComponentRegistrationHandler {
 
   public static boolean register( final Component component, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     final ServiceBuilder builder = component.getBuilder( );
-    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + name + "@" + hostName + ":" + port );
-    if ( !builder.checkAdd( null, name, hostName, port ) ) {
+    partition = (partition != null ? partition : name);
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
+    if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
     }
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        component.enableTransition( newComponent ); 
-      } catch ( Exception ex ) {
+        component.enableTransition( newComponent ).get( ); 
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
       }
       return true;

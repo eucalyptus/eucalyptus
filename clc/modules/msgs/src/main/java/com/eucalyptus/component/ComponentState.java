@@ -76,6 +76,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -304,12 +305,12 @@ public class ComponentState {
     }
   }
   
-  public void transitionSelf( ) {
+  public CheckedListenableFuture<Component> transitionSelf( ) {
     try {
-      if( State.NOTREADY.equals( this.getState( ) ) ) {//this is a special case of a transition which does not return to itself on a successful check
-        this.transition( State.DISABLED );
+      if( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
+        return this.transition( Transition.READY_CHECK );
       } else { 
-        this.transition( this.getState( ) );
+        return this.transition( this.getState( ) );
       }
     } catch ( IllegalStateException ex ) {
       LOG.error( Exceptions.filterStackTrace( ex ) );
@@ -318,6 +319,7 @@ public class ComponentState {
     } catch ( ExistingTransitionException ex ) {
       LOG.error( Exceptions.filterStackTrace( ex ) );
     }
+    return Futures.predestinedFuture( this.parent );
   }
 
   /**
