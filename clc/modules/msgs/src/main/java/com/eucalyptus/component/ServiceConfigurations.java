@@ -81,119 +81,18 @@ public class ServiceConfigurations {
       db.commit( );
       return configuration;
     } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex );
       db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     } catch ( PersistenceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       db.rollback( );
       throw ex;
     } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       db.rollback( );
       throw new PersistenceException( ex );
     }
   }
-
-  
-  
-//  public static List<ClusterConfiguration> getClusterConfigurations( ) throws EucalyptusCloudException {
-//    EntityWrapper<ClusterConfiguration> db = getEntityWrapper( );
-//    try {
-//      List<ClusterConfiguration> componentList = db.query( new ClusterConfiguration( ) );
-//      for ( ClusterConfiguration cc : componentList ) {
-//        if ( cc.getMinVlan( ) == null ) cc.setMinVlan( 10 );
-//        if ( cc.getMaxVlan( ) == null ) cc.setMaxVlan( 4095 );
-//      }
-//      db.commit( );
-//      return componentList;
-//    } catch ( Exception e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new EucalyptusCloudException( e );
-//    }
-//  }
-
-//  public static List<StorageControllerConfiguration> getStorageControllerConfigurations( ) throws EucalyptusCloudException {
-//    EntityWrapper<StorageControllerConfiguration> db = getEntityWrapper( );
-//    try {
-//      List<StorageControllerConfiguration> componentList = db.query( new StorageControllerConfiguration( ) );
-//      db.commit( );
-//      return componentList;
-//    } catch ( Throwable e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new EucalyptusCloudException( e );
-//    }
-//  }
-
-//  public static List<WalrusConfiguration> getWalrusConfigurations( ) throws EucalyptusCloudException {
-//    EntityWrapper<WalrusConfiguration> db = getEntityWrapper( );
-//    try {
-//      List<WalrusConfiguration> componentList = db.query( new WalrusConfiguration( ) );
-//      db.commit( );
-//      return componentList;
-//    } catch ( Throwable e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new EucalyptusCloudException( e );
-//    }
-//  }
-
-//  public static List<VMwareBrokerConfiguration> getVMwareBrokerConfigurations( ) throws EucalyptusCloudException {
-//    EntityWrapper<VMwareBrokerConfiguration> db = getEntityWrapper( );
-//    try {
-//      List<VMwareBrokerConfiguration> componentList = db.query( new VMwareBrokerConfiguration( ) );
-//      db.commit( );
-//      return componentList;
-//    } catch ( Throwable e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new EucalyptusCloudException( e );
-//    }
-//  }
-
-//  public static List<ArbitratorConfiguration> getArbitratorConfigurations( ) throws EucalyptusCloudException {
-//    EntityWrapper<ArbitratorConfiguration> db = getEntityWrapper( );
-//    try {
-//      List<ArbitratorConfiguration> componentList = db.query( new ArbitratorConfiguration( ) );
-//      db.commit( );
-//      return componentList;
-//    } catch ( Throwable e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new EucalyptusCloudException( e );
-//    }
-//  }
-
-//  public static StorageControllerConfiguration getStorageControllerConfiguration( String scName ) throws EucalyptusCloudException, NoSuchElementException {
-//    List<StorageControllerConfiguration> scs = getConfigurations( StorageControllerConfiguration.class );
-//    for ( StorageControllerConfiguration sc : scs ) {
-//      if ( sc.getName( ).equals( scName ) ) {
-//        return sc;
-//      }
-//    }
-//    throw new NoSuchElementException( StorageControllerConfiguration.class.getSimpleName( ) + " named " + scName );
-//  }
-
-//  public static WalrusConfiguration getWalrusConfiguration( String walrusName ) throws EucalyptusCloudException {
-//    List<WalrusConfiguration> walri = getConfigurations( WalrusConfiguration.class );
-//    for ( WalrusConfiguration w : walri ) {
-//      if ( w.getName( ).equals( walrusName ) ) {
-//        return w;
-//      }
-//    }
-//    throw new NoSuchComponentException( WalrusConfiguration.class.getSimpleName( ) + " named " + walrusName );
-//  }
-
-//  public static ClusterConfiguration getClusterConfiguration( String clusterName ) throws EucalyptusCloudException {
-//    List<ClusterConfiguration> clusters = getConfigurations( ClusterConfiguration.class );
-//    for ( ClusterConfiguration c : clusters ) {
-//      if ( c.getName( ).equals( clusterName ) ) {
-//        return c;
-//      }
-//    }
-//    throw new NoSuchComponentException( ClusterConfiguration.class.getSimpleName( ) + " named " + clusterName );
-//  }
   
 }

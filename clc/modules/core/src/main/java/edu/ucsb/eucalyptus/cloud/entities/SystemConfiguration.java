@@ -68,6 +68,7 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.net.SocketException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -297,11 +298,14 @@ public class SystemConfiguration {
   }
 
   public static String getWalrusUrl() throws EucalyptusCloudException {
-    String walrusHost;
+    String walrusHost = null;
     try {
       walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
     } catch ( Throwable e ) {
-      walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, "Walrus" ).getHostName( );
+      try {
+        walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, "Walrus" ).getHostName( );
+      } catch ( Throwable ex ) {
+      }
     }
     return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
   }
