@@ -300,7 +300,7 @@ public class SystemConfiguration {
     String walrusHost;
     try {
       walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, "Walrus" ).getHostName( );
     }
     return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
