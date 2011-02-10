@@ -81,7 +81,7 @@ public class ComponentRegistrationHandler {
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        component.enableTransition( newComponent ).get( ); 
+        component.enableTransition( newComponent ); 
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }

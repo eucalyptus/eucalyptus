@@ -334,5 +334,9 @@ public class ComponentState {
   public boolean isBusy( ) {
     return this.stateMachine.isBusy( );
   }
+
+  public boolean checkTransition( Transition transition ) {
+    return this.stateMachine.isLegalTransition( transition );
+  }
   
 }

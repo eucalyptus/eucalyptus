@@ -60,7 +60,16 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.inStateListeners.putAll( inStateListeners );
     this.outStateListeners.putAll( outStateListeners );
   }
-  
+
+  public boolean isLegalTransition( T transitionName ) {
+    try {
+      this.lookupTransition( transitionName );
+      return true;
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
+  }
+
   public CheckedListenableFuture<P> startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );

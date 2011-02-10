@@ -117,11 +117,11 @@ public class Component implements ComponentInformation, HasName<Component> {
   public enum Transition {
     INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING;
     public void transit( Component c ) {
-      if ( c.isAvailableLocally( ) ) {
+      if ( c.isAvailableLocally( ) && c.stateMachine.checkTransition( this ) ) {
         for ( int i = 0; i < INIT_RETRIES; i++ ) {
           try {
             EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, this.name( ), c.getName( ) ).info( );
-            c.stateMachine.transition( Transition.this );
+            c.stateMachine.transition( this );
             break;
           } catch ( ExistingTransitionException ex ) {} catch ( Throwable ex ) {
             LOG.error( ex );
@@ -802,11 +802,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
-    try {
-      transition.call( );
-    } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
-    }
+    Threads.lookup( Empyrean.class.getName( ) ).submit( transition );
     return transitionFuture;
   }
   
@@ -835,11 +831,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
-    try {
-      transition.call( );
-    } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
-    }
+    Threads.lookup( Empyrean.class.getName( ) ).submit( transition );
     return transitionFuture;
   }
 }
