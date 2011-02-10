@@ -718,6 +718,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     return new Callable<Component> ( ) {
       @Override
       public Component call( ) throws Exception {
+        EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_ENABLE.toString( ), configuration.getFullName( ).toString( ) ).debug( );
         try {
           transitionFuture.set( Component.this.enableService( configuration ).get( ) );
         } catch ( Throwable ex ) {
@@ -733,6 +734,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     return new Callable<Component>( ) {
       @Override
       public Component call( ) throws ServiceRegistrationException {
+        EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_START.toString( ), configuration.getFullName( ).toString( ) ).debug( );
         try {
           if( subsequentTransition != null ) {
             Component.this.startService( configuration ).addListener( subsequentTransition );
@@ -757,6 +759,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     return new Callable<Component>( ) {
       @Override
       public Component call( ) throws ServiceRegistrationException {
+        EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_LOAD.toString( ), configuration.getFullName( ).toString( ) ).debug( );
         try {
           if( subsequentTransition != null ) {
             Component.this.loadService( configuration ).addListener( subsequentTransition );
