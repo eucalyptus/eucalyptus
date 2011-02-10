@@ -82,14 +82,14 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
           if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
             EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
             try {
-              credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+              credentials = credDb.getUnique( new ClusterCredentials( config.getName( ) ) );
               credDb.commit( );
             } catch ( EucalyptusCloudException e ) {
-              LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
+              LOG.error( "Failed to load credentials for cluster: " + config.getName( ) );
               credDb.rollback( );
               throw e;
             }
-            Cluster newCluster = new Cluster( c, credentials );
+            Cluster newCluster = new Cluster( ( ClusterConfiguration ) config, credentials );//TODO:GRZE:fix the type issue here.
             Clusters.getInstance( ).register( newCluster );
             newCluster.start( );
           } 
