@@ -133,7 +133,7 @@ public class Registration extends HttpServlet {
     String walrusUrl;
     try {
       walrusUrl = SystemConfiguration.getWalrusUrl( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       walrusUrl = "NOT REGISTERED.";
     }
     return walrusUrl;
