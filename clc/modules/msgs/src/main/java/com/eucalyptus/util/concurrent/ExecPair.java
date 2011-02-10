@@ -102,7 +102,7 @@ public class ExecPair<V> implements Runnable {
   public void run( ) {
     try {
       if( this.runnable != null ) {
-        EventRecord.here( callable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
+        EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
         this.executor.submit( this.runnable, null ).get( );
         this.future.set( null );
       } else {
