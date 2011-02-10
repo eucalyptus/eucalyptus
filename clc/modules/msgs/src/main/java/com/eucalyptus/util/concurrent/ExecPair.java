@@ -125,11 +125,14 @@ public class ExecPair<V> implements Runnable {
     return this.future;
   }
   
-  protected Callable<V> getCallable( ) {
-    return this.callable;
-  }
-  
   protected ExecutorService getExecutor( ) {
     return this.executor;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ExecPair:callable=%s:runnable=%s", this.callable, this.runnable );
+  }
+  
+
 }

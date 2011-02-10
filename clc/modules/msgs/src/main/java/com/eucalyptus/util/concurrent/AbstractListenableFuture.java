@@ -75,11 +75,11 @@ public abstract class AbstractListenableFuture<V>
   protected <T> void add( ExecPair<T> pair ) {
     this.listeners.add( pair );
     if( this.listeners.contains( DONE ) ) {
-      EventRecord.here( pair.getCallable( ).getClass( ), EventType.FUTURE, "run(" + pair.getCallable( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
       this.listeners.remove( pair );
       pair.run( );
     } else {
-      EventRecord.here( pair.getCallable( ).getClass( ), EventType.FUTURE, "add(" + pair.getCallable( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).debug( );
     }
   }
   
