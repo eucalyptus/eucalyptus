@@ -78,7 +78,21 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     try {
       if( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         try {
-          Clusters.start( ( ClusterConfiguration ) config );
+          ClusterCredentials credentials = null;//ASAP: fix it.
+          if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
+            EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
+            try {
+              credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
+              credDb.commit( );
+            } catch ( EucalyptusCloudException e ) {
+              LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
+              credDb.rollback( );
+              throw e;
+            }
+            Cluster newCluster = new Cluster( c, credentials );
+            Clusters.getInstance( ).register( newCluster );
+            newCluster.start( );
+          } 
         } catch ( EucalyptusCloudException ex ) {
           LOG.error( ex , ex );
           throw new ServiceRegistrationException( "Registration failed: " + ex.getMessage( ), ex );
@@ -231,7 +245,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       credDb.rollback( );
     }
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
-    Clusters.stop( cluster.getName( ) );
+    Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
+    clusterInstance.stop( );
+    Clusters.getInstance( ).deregister( config.getName( ) );
     String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
     File keyDir = new File( directory );
     if ( keyDir.exists( ) ) {

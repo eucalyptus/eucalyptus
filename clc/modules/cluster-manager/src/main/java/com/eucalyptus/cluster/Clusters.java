@@ -89,28 +89,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return singleton;
   }
     
-  public static Cluster start( ClusterConfiguration c ) throws EucalyptusCloudException {
-    String clusterName = c.getName( );
-    if ( Clusters.getInstance( ).contains( clusterName ) ) {
-      return Clusters.getInstance( ).lookup( clusterName );
-    } else {
-      ClusterCredentials credentials = null;//ASAP: fix it.
-      EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
-      try {
-        credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
-        credDb.rollback( );
-      } catch ( EucalyptusCloudException e ) {
-        LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
-        credDb.rollback( );
-        throw e;
-      }
-      Cluster newCluster = new Cluster( c, credentials );
-      Clusters.getInstance( ).register( newCluster );
-      newCluster.start( );
-      return newCluster;
-    }
-  }
-
   public boolean hasNetworking( ) {
     return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
       @Override
@@ -132,12 +110,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     for ( Cluster c : this.listValues( ) )
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
-  }
-  
-  public static void stop( String name ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( name );
-    cluster.stop( );
-    Clusters.getInstance( ).deregister( name );
   }
   
 }
