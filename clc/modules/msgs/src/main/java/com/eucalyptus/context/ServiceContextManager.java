@@ -170,7 +170,7 @@ public class ServiceContextManager {
   }
   
   static boolean loadContext( ) {
-    List<ComponentId> components = ComponentIds.listEnabled( );
+    List<ComponentId> components = ComponentIds.listLocallyRynning( );
     LOG.info( "The following components have been identified as active: " );
     for ( ComponentId c : components ) {
       LOG.info( "-> " + c );
@@ -341,8 +341,8 @@ public class ServiceContextManager {
   }
   
   private static MuleContext createContext( ) throws ServiceInitializationException {
-    List<ComponentId> components = ComponentIds.listEnabled( );
-    if ( checkStateUnchanged( ComponentIds.listEnabled( ) ) && context.getReference( ) != null ) {
+    List<ComponentId> components = ComponentIds.listLocallyRynning( );
+    if ( checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) && context.getReference( ) != null ) {
       return context.getReference( );
     } else {
       LOG.info( "The following components have been identified as active: " );
@@ -375,7 +375,7 @@ public class ServiceContextManager {
   }
   
   public static boolean check( ) {
-    if ( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+    if ( !checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) ) {
       ServiceContextManager.restart( );
     }
     return true;

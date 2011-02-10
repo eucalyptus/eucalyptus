@@ -76,14 +76,14 @@ public class ComponentIds {
   private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
   private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
   
-  public static List<ComponentId> listEnabled( ) {
+  public static List<ComponentId> listLocallyRynning( ) {
     List<ComponentId> components = Lists.newArrayList( );
       for ( Component comp : Components.list( ) ) {
         if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getIdentity( ).isCloudLocal( ) ) {
           components.add( comp.getIdentity( ) );
         } else if ( comp.getIdentity( ).isAlwaysLocal( ) ) {
           components.add( comp.getIdentity( ) );
-        } else if ( comp.getIdentity( ).hasDispatcher( ) ) {
+        } else if ( comp.isRunningLocally( ) ) {
           components.add( comp.getIdentity( ) );
         }
     }
