@@ -34,6 +34,8 @@ public class ServiceConfigurations {
       db.rollback( );
       throw ex;
     } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      db.rollback( );
       throw new PersistenceException( ex );
     }
   }
@@ -48,18 +50,21 @@ public class ServiceConfigurations {
       T conf = type.newInstance( );
       conf.setPartition( partition );
       componentList = db.query( conf );
-      db.commit( );
       if( componentList.isEmpty( ) ) {
         throw new NoSuchElementException( "Failed to lookup registration for " + type.getSimpleName( ) + " in partition: " + partition ); 
       }
+      db.commit( );
       return componentList;
     } catch ( NoSuchElementException ex ) {
+      db.rollback( );
       throw ex;
     } catch ( PersistenceException ex ) {
       LOG.error( ex , ex );
       db.rollback( );
       throw ex;
     } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      db.rollback( );
       throw new PersistenceException( ex );
     }
   }
@@ -76,7 +81,7 @@ public class ServiceConfigurations {
       db.commit( );
       return configuration;
     } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex );
+      LOG.trace( ex );
       db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     } catch ( PersistenceException ex ) {
