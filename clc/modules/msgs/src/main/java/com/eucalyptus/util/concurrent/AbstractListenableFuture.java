@@ -103,7 +103,7 @@ public abstract class AbstractListenableFuture<V>
   protected void done( ) {
     this.listeners.add( DONE );
     while( this.listeners.peek( ) != DONE ) {
-      this.listeners.peek( ).run( );
+      this.listeners.poll( ).run( );
     }
   }
   
