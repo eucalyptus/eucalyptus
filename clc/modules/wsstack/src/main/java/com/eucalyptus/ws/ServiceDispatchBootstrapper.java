@@ -142,9 +142,22 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       for ( final ServiceConfiguration s : comp.list( ) ) {
         if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
           try {
-            comp.enableTransition( s ).get( );
+            comp.startService( s ).addListener( new Runnable( ) {
+              @Override
+              public void run( ) {
+                try {
+                  comp.enableService( s );
+                } catch ( ServiceRegistrationException ex ) {
+                  LOG.error( ex , ex );
+                } catch ( Throwable ex ) {
+                  Exceptions.trace( "enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+                }
+              }
+            } );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
           } catch ( Throwable ex ) {
-            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }
