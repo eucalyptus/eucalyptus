@@ -78,7 +78,7 @@ import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 
 @Provides( HttpService.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
+@RunDuring( Bootstrap.Stage.UserCredentialsInit )
 @DependsLocal( Eucalyptus.class )
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {  
