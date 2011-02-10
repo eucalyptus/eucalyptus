@@ -329,14 +329,14 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   public WalrusConfiguration( ) {
   }
   public WalrusConfiguration( String name, String hostName, Integer port ) {
-    super( ComponentIds.lookup(Walrus.class).name(), name, hostName, port, DEFAULT_SERVICE_PATH );
+    super( "walrus", name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Walrus.class);
   }
   @Override
   public FullName getFullName( ) {
-    return new FullName( this.getComponentId(), this.getComponentId().name(), this.name );
+    return new FullName( this.getComponentId(), "walrus", this.name );
   }
 }
 @Entity
@@ -349,14 +349,14 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   public EucalyptusConfiguration( ) {
   }
   public EucalyptusConfiguration( String name, String hostName, Integer port ) {
-    super( ComponentIds.lookup(Eucalyptus.class).name(), name, hostName, port, DEFAULT_SERVICE_PATH );
+    super( "eucalyptus", name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Eucalyptus.class);
   }
   @Override
   public FullName getFullName( ) {
-    return new FullName( "eucalyptus", "eucalyptus", this.name );
+    return new FullName( this.getComponentId(), "eucalyptus", this.name );
   }
 }
 

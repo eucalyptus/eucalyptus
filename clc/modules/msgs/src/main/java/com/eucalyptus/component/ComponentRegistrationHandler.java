@@ -80,10 +80,8 @@ public class ComponentRegistrationHandler {
     }
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
-      final GenericFuture<Component> v = Futures.newGenericFuture( );
       try {
-        builder.getComponent( ).loadService( newComponent ).addListener( component.enableTransition( newComponent ) ); 
-        v.get( );
+        component.enableTransition( newComponent ).get( ); 
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }

@@ -23,7 +23,7 @@ public class Futures {
     return r;
   }
   
-  public static <T> GenericFuture<T> newGenericFuture( ){
+  public static <T> CheckedListenableFuture<T> newGenericFuture( ){
     return new GenericFuture<T>();
   }
 

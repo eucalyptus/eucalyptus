@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -278,20 +279,18 @@ public class Component implements ComponentInformation, HasName<Component> {
       this.stateMachine.setGoal( State.ENABLED );
       if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
-          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( this );
-          this.stateMachine.transition( Transition.READY_CHECK ).addListener( new Runnable( ) {
+          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
+          return this.stateMachine.transition( Transition.READY_CHECK ).addListener( new Callable<Component>( ) {
             @Override
-            public void run( ) {
+            public Component call( ) {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
-                future.set( Component.this );
               } catch ( Throwable ex ) {
-                future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
               }
+              return Component.this;
             }
           } );
-          return future;
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex );
         }
@@ -329,7 +328,7 @@ public class Component implements ComponentInformation, HasName<Component> {
     if ( config.isLocal( ) ) {
       if ( State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
-          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( this );
+          final CheckedListenableFuture<Component> future = new TransitionFuture<Component>( );
           this.stateMachine.transition( State.DISABLED ).addListener( new Runnable( ) {
             @Override
             public void run( ) {
@@ -715,12 +714,36 @@ public class Component implements ComponentInformation, HasName<Component> {
     }};
 
   
-  public Callable<Component> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    final Callable<Component> enableRunner = new Callable<Component> ( ) {
+  private Callable<Component> makeEnableCallable( final ServiceConfiguration configuration, final CheckedListenableFuture<Component> transitionFuture ) {
+    return new Callable<Component> ( ) {
+      @Override
+      public Component call( ) throws Exception {
+        try {
+          transitionFuture.set( Component.this.enableService( configuration ).get( ) );
+        } catch ( Throwable ex ) {
+          transitionFuture.setException( ex );
+          LOG.error( ex );
+        }
+        return Component.this;
+      }
+    };
+  }
+
+  private Callable<Component> makeStartCallable( final ServiceConfiguration configuration, final CheckedListenableFuture<Component> transitionFuture, final Callable<Component> subsequentTransition ) {
+    return new Callable<Component>( ) {
       @Override
       public Component call( ) throws ServiceRegistrationException {
         try {
-          Component.this.enableService( configuration );
+          if( subsequentTransition != null ) {
+            Component.this.startService( configuration ).addListener( subsequentTransition );
+          } else {
+            try {
+              transitionFuture.set( Component.this.startService( configuration ).get( ) );
+            } catch ( Throwable ex ) {
+              transitionFuture.setException( ex );
+              LOG.error( ex );
+            }
+          }
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex, ex );
           throw ex;
@@ -728,28 +751,82 @@ public class Component implements ComponentInformation, HasName<Component> {
         return Component.this;
       }
     };
+  }
+  
+  private Callable<Component> makeLoadCallable( final ServiceConfiguration configuration, final CheckedListenableFuture<Component> transitionFuture, final Callable<Component> subsequentTransition ) {
+    return new Callable<Component>( ) {
+      @Override
+      public Component call( ) throws ServiceRegistrationException {
+        try {
+          if( subsequentTransition != null ) {
+            Component.this.loadService( configuration ).addListener( subsequentTransition );
+          } else {
+            try {
+              transitionFuture.set( Component.this.loadService( configuration ).get( ) );
+            } catch ( Throwable ex ) {
+              transitionFuture.setException( ex );
+              LOG.error( ex );
+            }
+          }
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
+        return Component.this;
+      }
+    };
+  }
+
+  public CheckedListenableFuture<Component> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+    final CheckedListenableFuture<Component> transitionFuture = Futures.newGenericFuture( );
+    Callable<Component> transition = null;
     switch ( this.getState( ) ) {
-      case NOTREADY:
-      case DISABLED:
-        return enableRunner;
       case LOADED:
       case STOPPED:
-        return new Callable<Component>( ) {
-          @Override
-          public Component call( ) throws ServiceRegistrationException {
-            try {
-              Component.this.startService( configuration ).addListener( enableRunner );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex, ex );
-              throw ex;
-            }
-            return Component.this;
-          }
-        };
+        transition = makeStartCallable( configuration, null, makeEnableCallable( configuration, transitionFuture ) );
+        break;
+      case INITIALIZED:
+        transition = makeLoadCallable( configuration, null, 
+                                       makeStartCallable( configuration, null, 
+                                                          makeEnableCallable( configuration, transitionFuture ) ) );
+        break;
+      case DISABLED:
       case ENABLED:
-        return noTransition;
+      case NOTREADY:
+        transition = noTransition;
+        transitionFuture.set( this );
+        break;
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
     }
+    return transitionFuture;
+  }
+  
+  public CheckedListenableFuture<Component> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+    final CheckedListenableFuture<Component> transitionFuture = Futures.newGenericFuture( );
+    Callable<Component> transition = null;
+    switch ( this.getState( ) ) {
+      case NOTREADY:
+      case DISABLED:
+        transition = makeEnableCallable( configuration, transitionFuture );
+        break;
+      case LOADED:
+      case STOPPED:
+        transition = makeStartCallable( configuration, null, 
+                                        makeEnableCallable( configuration, transitionFuture ) );
+        break;
+      case INITIALIZED:
+        transition = makeLoadCallable( configuration, null, 
+                                       makeStartCallable( configuration, null, 
+                                                          makeEnableCallable( configuration, transitionFuture ) ) );
+        break;
+      case ENABLED:
+        transition = noTransition;
+        transitionFuture.set( this );
+        break;
+      default:
+        throw new IllegalStateException( "Failed to find transition for current component state: " + this.toString( ) );
+    }
+    return transitionFuture;
   }
 }

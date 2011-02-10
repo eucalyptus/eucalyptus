@@ -237,6 +237,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       } else {
         return configs;
       }
+    } catch ( NoSuchElementException ex ) {
+      throw ex;
     } catch ( RuntimeException ex ) {
       LOG.error( ex, ex );
       db.rollback( );
