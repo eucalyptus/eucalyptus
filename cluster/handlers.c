@@ -959,6 +959,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     sem_mypost(VNET);
   }
   
+  
   if (!ret && strcmp(dst, "0.0.0.0")) {
     // everything worked, update instance cache
 
@@ -1514,6 +1515,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		  unlock_exit(1);
 		}
 		bzero(myInstance, sizeof(ccInstance));
+		snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
 	      }
 	      snprintf(originalPublicIp, 24, "%s", myInstance->ccnet.publicIp);
 
@@ -1548,13 +1550,27 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      }
 
 	      // check for network instance IP inconsistency
-	      if (strcmp(originalPublicIp, myInstance->ccnet.publicIp) ) {
-		logprintfl(EUCADEBUG, "refresh_instances(): instId=%s, publicIP reported by NC (%s) differs from publicIp assigned at CC (%s), updating.\n", myInstance->instanceId, ncOutInsts[j]->ncnet.publicIp, myInstance->ccnet.publicIp);
-		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+	      logprintfl(EUCADEBUG, "refresh_instances(): checking for differing IPs: instanceId=%s publicIp=%s originalPublicIp=%s\n", myInstance->instanceId, myInstance->ccnet.publicIp, originalPublicIp);
+	      // cases
+	      // 1.) local CC cache has no IP info for VM, NC VM has no IP info
+	      //     - do nothing
+	      // 2.) local CC cache has no IP info, NC VM has IP info
+	      //     - ingress NC info, kick_network
+	      // 3.) local CC cache has IP info, NC VM has no IP info
+	      //     - send ncAssignAddress
+	      // 4.) local CC cache has IP info, NC VM has different IP info
+	      //     - ingress NC info, kick_network
+	      // 5.) local CC cache has IP info, NC VM has same IP info
+	      //     - do nothing
+	      if (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && !strcmp(originalPublicIp, "0.0.0.0")) { // case 2
+		config->kick_network = 1;
+	      } else if ( (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && strcmp(originalPublicIp, "0.0.0.0")) && strcmp(myInstance->ccnet.publicIp, originalPublicIp)) { // case 4
+		config->kick_network = 1;
+	      } else if (strcmp(originalPublicIp, "0.0.0.0") && !strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) { // case 3
+		snprintf(myInstance->ccnet.publicIp, 24, "%s", originalPublicIp);
+		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, originalPublicIp);
 		if (rc) {
-		  logprintfl(EUCAERROR, "refresh_instance(): could not update publicIP (%s) of instance (%s) at NC (%s)\n", myInstance->ccnet.publicIp, myInstance->instanceId, resourceCacheStage->resources[i].ncURL);
-		} else {
-		  config->kick_network = 1;
+		  
 		}
 	      }
 	      
@@ -1789,7 +1805,8 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   dst->ccnet.vlan = src->ncnet.vlan;
   dst->ccnet.networkIndex = src->ncnet.networkIndex;
   strncpy(dst->ccnet.privateMac, src->ncnet.privateMac, 24);
-  if (strcmp(src->ncnet.publicIp, "0.0.0.0") || dst->ccnet.publicIp[0] == '\0') strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
+  //  if (strcmp(src->ncnet.publicIp, "0.0.0.0") || dst->ccnet.publicIp[0] == '\0') strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
+  strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
   if (strcmp(src->ncnet.privateIp, "0.0.0.0") || dst->ccnet.privateIp[0] == '\0') strncpy(dst->ccnet.privateIp, src->ncnet.privateIp, 24);
 
   for (i=0; i < src->groupNamesSize && i < 64; i++) {
@@ -3576,10 +3593,12 @@ int maintainNetworkState() {
   cloudIp = vnetconfig->cloudIp;
   for (i=0; i<16; i++) {
     int j;
-    logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
-    for (j=0; j<8; j++) {
-      if (strlen(config->services[i].uris[j])) {
-	logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+    if (strlen(config->services[i].type)) {
+      logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+      for (j=0; j<8; j++) {
+	if (strlen(config->services[i].uris[j])) {
+	  logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+	}
       }
     }
   }
