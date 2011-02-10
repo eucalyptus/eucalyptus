@@ -115,6 +115,9 @@ public class ExecPair<V> implements Runnable {
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       this.future.setException( ex.getCause( ) );
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      this.future.setException( ex.getCause( ) );
     }
   }
   
