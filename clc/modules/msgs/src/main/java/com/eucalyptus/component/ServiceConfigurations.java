@@ -19,11 +19,6 @@ public class ServiceConfigurations {
     return new EntityWrapper<T>( "eucalyptus_config" );
   }
   
-  //  public static StorageControllerConfiguration lookupSc( final String requestedZone ) throws EucalyptusCloudException {
-  //    return getStorageControllerConfiguration( requestedZone );
-  //  }
-  //  
-
   public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {
     if( ComponentConfiguration.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
@@ -43,7 +38,7 @@ public class ServiceConfigurations {
     }
   }
 
-  public static <T extends ServiceConfiguration> List<T> getPartitionConfigurations( Class<T> type, String partition ) throws PersistenceException {
+  public static <T extends ServiceConfiguration> List<T> getPartitionConfigurations( Class<T> type, String partition ) throws PersistenceException, NoSuchElementException {
     if( ComponentConfiguration.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
@@ -51,7 +46,7 @@ public class ServiceConfigurations {
     List<T> componentList;
     try {
       T conf = type.newInstance( );
-      conf.setName( partition );
+      conf.setPartition( partition );
       componentList = db.query( conf );
       db.commit( );
       if( componentList.isEmpty( ) ) {
