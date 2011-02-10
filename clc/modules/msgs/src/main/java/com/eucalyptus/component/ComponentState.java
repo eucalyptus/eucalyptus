@@ -91,7 +91,7 @@ public class ComponentState {
   private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
-  private Component.State                                 goal = Component.State.DISABLED;
+  private Component.State                                 goal = Component.State.ENABLED;
   private final NavigableSet<String>                            details = new ConcurrentSkipListSet<String>( );
   
   public ComponentState( Component parent ) {
