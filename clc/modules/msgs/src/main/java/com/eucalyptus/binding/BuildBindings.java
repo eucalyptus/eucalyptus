@@ -112,7 +112,7 @@ public class BuildBindings extends Task {
         }
         runPreBindingGenerators( path );
         runBindingCompiler( );
-        runPostBindingGenerators( path );
+//        runPostBindingGenerators( path );
       }
     } catch ( FileNotFoundException e2 ) {
       System.setOut( oldOut );
@@ -124,45 +124,45 @@ public class BuildBindings extends Task {
     
   }
   
-  private void runPostBindingGenerators( Path path ) {
-    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
-    AntClassLoader loader = this.getProject( ).createClassLoader( path );
-    try {
-      Thread.currentThread( ).setContextClassLoader( loader );
-      //        System.err.print( "class path: " + loader.getClasspath( ) );
-      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
-      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
-      for ( FileSet fs : this.classFileSets ) {
-        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-          try {
-            if ( !classFileName.endsWith( "class" ) ) continue;
-            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-            if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
-              for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
-                gen.processClass( c );
-              }
-            }
-          } catch ( ClassNotFoundException e ) {
-            error( e );
-          }
-        }
-      }
-    } catch ( ClassNotFoundException e1 ) {
-      error( e1 );
-    } finally {
-      try {
-        for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
-          gen.close( );
-        }
-      } catch ( Throwable e ) {
-        error( e );
-      }
-      loader.cleanup( );
-      System.gc( );
-      Thread.currentThread( ).setContextClassLoader( old );
-    }
-  }
+//  private void runPostBindingGenerators( Path path ) {
+//    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+//    AntClassLoader loader = this.getProject( ).createClassLoader( path );
+//    try {
+//      Thread.currentThread( ).setContextClassLoader( loader );
+//      //        System.err.print( "class path: " + loader.getClasspath( ) );
+//      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+//      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+//      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
+//      for ( FileSet fs : this.classFileSets ) {
+//        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+//          try {
+//            if ( !classFileName.endsWith( "class" ) ) continue;
+//            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+//            if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
+//              for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
+//                gen.processClass( c );
+//              }
+//            }
+//          } catch ( ClassNotFoundException e ) {
+//            error( e );
+//          }
+//        }
+//      }
+//    } catch ( ClassNotFoundException e1 ) {
+//      error( e1 );
+//    } finally {
+//      try {
+//        for ( BindingGenerator gen : BindingGenerator.getPostGenerators( ) ) {
+//          gen.close( );
+//        }
+//      } catch ( Throwable e ) {
+//        error( e );
+//      }
+//      loader.cleanup( );
+//      System.gc( );
+//      Thread.currentThread( ).setContextClassLoader( old );
+//    }
+//  }
   
   private void runBindingCompiler( ) {
     try {

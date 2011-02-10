@@ -10,11 +10,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.crypto.Hmacs;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Handles;
@@ -27,6 +24,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.ClusterCredentials;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DescribeClustersType;
@@ -43,6 +41,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG = Logger.getLogger( ClusterBuilder.class );
+  private static String         CLUSTER_KEY_FSTRING = "cc-%s";
+  private static String         NODE_KEY_FSTRING    = "nc-%s";
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     if ( !testClusterCredentialsDirectory( name ) ) {
@@ -104,77 +104,105 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public Component getComponent( ) {
     return Components.lookup( com.eucalyptus.component.id.Cluster.class );
   }
-  private static String         CLUSTER_KEY_FSTRING = "cc-%s";
-  private static String         NODE_KEY_FSTRING    = "nc-%s";
   
   @Override
   public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     ClusterConfiguration config = super.add( partition, name, host, port );
+    /** generate the cluster/node keys **/
+    KeyPair clusterKp;
+    X509Certificate clusterX509;
+    KeyPair nodeKp;
+    X509Certificate nodeX509;
     try {
-      /** generate the Component keys **/
-      String ccAlias = String.format( CLUSTER_KEY_FSTRING, config.getName( ) );
-      String ncAlias = String.format( NODE_KEY_FSTRING, config.getName( ) );
-      String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
-      File keyDir = new File( directory );
-      LOG.info( "creating keys in " + directory );
-      if ( !keyDir.mkdir( ) && !keyDir.exists( ) ) {
-        throw new EucalyptusCloudException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
-      }
-      FileWriter out = null;
-      try {
-        KeyPair clusterKp = Certs.generateKeyPair( );
-        X509Certificate clusterX509 = Certs.generateServiceCertificate( clusterKp, "cc-" + config.getName( ) );
-        PEMFiles.write( directory + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
-        PEMFiles.write( directory + File.separator + "cluster-cert.pem", clusterX509 );
-        
-        KeyPair nodeKp = Certs.generateKeyPair( );
-        X509Certificate nodeX509 = Certs.generateServiceCertificate( nodeKp, "nc-" + config.getName( ) );
-        PEMFiles.write( directory + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
-        PEMFiles.write( directory + File.separator + "node-cert.pem", nodeX509 );
-        
-        X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
-        String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
-        PEMFiles.write( directory + File.separator + "cloud-cert.pem", systemX509 );
-        out = new FileWriter( directory + File.separator + "vtunpass" );
-        out.write( hexSig );
-        out.flush( );
-        out.close( );
-        
-        EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-        try {
-          List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
-          for ( ClusterCredentials ccert : ccCreds ) {
-            credDb.delete( ccert );
-          }
-          credDb.commit( );
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-          credDb.rollback( );
-        }
-        credDb = Authentication.getEntityWrapper( );
-        try {          
-          ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
-          componentCredentials.setClusterCertificate( X509CertHelper.fromCertificate( clusterX509 ) );
-          componentCredentials.setNodeCertificate( X509CertHelper.fromCertificate( nodeX509 ) );
-          credDb.add( componentCredentials );
-          credDb.commit( );
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-          credDb.rollback( );
-        }
-      } catch ( Exception eee ) {
-        throw new EucalyptusCloudException( eee );
-      } finally {
-        if ( out != null ) try {
-          out.close( );
-        } catch ( IOException e ) {
-          LOG.error( e );
-        }
-      }
-    } catch ( EucalyptusCloudException e ) {
-      throw new ServiceRegistrationException( e.getMessage( ), e );
+      clusterKp = Certs.generateKeyPair( );
+      clusterX509 = Certs.generateServiceCertificate( clusterKp, String.format( CLUSTER_KEY_FSTRING, config.getName( ) ) );
+      nodeKp = Certs.generateKeyPair( );
+      nodeX509 = Certs.generateServiceCertificate( nodeKp, String.format( NODE_KEY_FSTRING, config.getName( ) ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      throw new ServiceRegistrationException( "Failed to generate credentials for cluster: " + config, ex );
+    }
+    File keyDir = ClusterBuilder.makeKeyDir( config );
+    try {
+      ClusterBuilder.writeClusterKeyFiles( config, keyDir, clusterKp, clusterX509, nodeKp, nodeX509 );
+      ClusterBuilder.storeClusterCredentials( config, clusterX509, nodeX509 );
+    } catch ( ServiceRegistrationException ex ) {
+      ClusterBuilder.removeKeyDirectory( keyDir );
+      throw ex;
+    } catch ( Throwable ex ) {
+      ClusterBuilder.removeKeyDirectory( keyDir );
+      LOG.error( ex , ex );
+      throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d", partition, name, host, port ), ex );  
     }
     return config;
+  }
+
+  private static void writeClusterKeyFiles( ClusterConfiguration config, File keyDir, KeyPair clusterKp, X509Certificate clusterX509, KeyPair nodeKp, X509Certificate nodeX509 ) throws ServiceRegistrationException {
+    X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+    FileWriter out = null;
+    try {
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-cert.pem", clusterX509 );        
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-cert.pem", nodeX509 );
+      
+      String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cloud-cert.pem", systemX509 );
+      out = new FileWriter( keyDir.getAbsolutePath( ) + File.separator + "vtunpass" );
+      out.write( hexSig );
+      out.flush( );
+      out.close( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      ClusterBuilder.removeKeyDirectory( keyDir );      
+      throw new ServiceRegistrationException( "Failed to write cluster credentials to disk: " + config, ex );
+    } finally {
+      if ( out != null ) try {
+        out.close( );
+      } catch ( IOException e ) {
+        LOG.error( e, e );
+      }
+  }
+  }
+
+  private static void removeKeyDirectory( File keyDir ) {
+    for( File f : keyDir.listFiles( ) ) {
+      if( f.isFile( ) && !f.delete( ) ) {
+        LOG.error( "Failed to delete file after error in cluster registration: " + f.getAbsolutePath( ) );
+      }
+    }
+    if( !keyDir.delete( ) ) {
+      LOG.error( "Failed to delete stale key directory after error in cluster registration: " + keyDir.getAbsolutePath( ) );
+    }
+  }
+
+  private static void storeClusterCredentials( ClusterConfiguration config, X509Certificate clusterX509, X509Certificate nodeX509 ) throws ServiceRegistrationException {
+    EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
+    try {
+      List<ClusterCredentials> ccCreds = credDb.query( new ClusterCredentials( config.getName( ) ) );
+      for ( ClusterCredentials ccert : ccCreds ) {
+        credDb.delete( ccert );
+      }
+      ClusterCredentials componentCredentials = new ClusterCredentials( config.getName( ) );
+      componentCredentials.setClusterCertificate( X509CertHelper.fromCertificate( clusterX509 ) );
+      componentCredentials.setNodeCertificate( X509CertHelper.fromCertificate( nodeX509 ) );
+      credDb.add( componentCredentials );
+      credDb.commit( );
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
+      credDb.rollback( );
+      throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + config, e );
+    }
+  }
+
+  private static File makeKeyDir( ClusterConfiguration config ) throws ServiceRegistrationException {
+    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
+    File keyDir = new File( directory );
+    LOG.info( "creating keys in " + directory );
+    if ( !keyDir.mkdir( ) || !keyDir.exists( ) || !keyDir.canWrite( ) ) {
+      throw new ServiceRegistrationException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
+    }
+    return keyDir;
   }
   
   @Override

@@ -83,9 +83,9 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.entities.ClusterCredentials;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.config.ClusterCredentials;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -825,7 +825,7 @@ public class DASManager implements LogicalStorageManager {
 		}
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-			EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
+			EntityWrapper<ClusterCredentials> credDb = EntityWrapper.get( ClusterCredentials.class );
 			try {
 				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
 				PublicKey ncPublicKey = X509CertHelper.toCertificate(credentials.getNodeCertificate()).getPublicKey();
