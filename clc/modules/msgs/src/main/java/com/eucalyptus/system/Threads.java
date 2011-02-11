@@ -132,12 +132,12 @@ public class Threads {
   }
   
   public static Thread newThread( Runnable r, String name ) {
-    LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass( ).getCanonicalName( ) );
+    LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
   }
   
   public static Thread newThread( Runnable r ) {
-    LOG.debug( "CREATE new thread using: " + r.getClass( ).getCanonicalName( ) );
+    LOG.debug( "CREATE new thread using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r );
   }
   
@@ -200,7 +200,7 @@ public class Threads {
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
-        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ).getCanonicalName( ) + " [" + r.toString( ) + "]" );
+        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
         while ( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
@@ -208,7 +208,7 @@ public class Threads {
           if ( this.pool instanceof ThreadPoolExecutor ) {
             ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
             for ( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
-              LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ).getCanonicalName( ) );
+              LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
             }
           }
         }
@@ -242,7 +242,7 @@ public class Threads {
     
     @Override
     public Thread newThread( Runnable r ) {
-      return new Thread( this.group, r, this.group.getName( ) + "." + r.getClass( ).getCanonicalName( ) + "#" + Threads.threadIndex.incrementAndGet( ) );
+      return new Thread( this.group, r, this.group.getName( ) + "." + r.getClass( ) + "#" + Threads.threadIndex.incrementAndGet( ) );
     }
     
     /**
@@ -304,7 +304,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable)
      */
     public <T> Future<T> submit( Callable<T> task ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task );
     }
     
@@ -316,7 +316,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable, java.lang.Object)
      */
     public <T> Future<T> submit( Runnable task, T result ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task, result );
     }
     
@@ -326,7 +326,7 @@ public class Threads {
      * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable)
      */
     public Future<?> submit( Runnable task ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ).getCanonicalName( ) );
+      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task );
     }
     
