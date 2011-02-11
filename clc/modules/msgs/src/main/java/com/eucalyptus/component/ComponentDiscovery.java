@@ -76,11 +76,15 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
     if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
          && !Modifier.isInterface( candidate.getModifiers( ) ) && !Any.class.equals( candidate ) ) {
       try {
+		LOG.info( "Found ComponentId of type: " + candidate.getCanonicalName() );
         ComponentId id = ( ComponentId ) candidate.newInstance( );
         ComponentIds.register( id );
+		LOG.info( "-> Registering ComponentId of type: " + candidate.getCanonicalName() );
         Components.create( id );
+		
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
+		LOG.info( "Error occurred while trying to register ComponentId of type: " + ex.getMessage(), ex );
       }
       return true;
     } else {

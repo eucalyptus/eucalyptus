@@ -96,7 +96,7 @@ public class FalseDataGenerator
 						new Long(diskIoMegs));
 				System.out.println("Generating:" + i);
 				if (isLocal) {
-					listener.receiveEvent(event);
+					listener.fireEvent(event);
 				} else {
 					queueSender.send(event);
 				}

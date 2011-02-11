@@ -30,7 +30,7 @@ for FILE in $FILES; do
   export CLASSPATH=${FILE}:${CLASSPATH}
 done
 CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
-
+echo -e "${CLASSPATH//:/\n}"
 java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} \
 	-Deuca.home=${EUCALYPTUS} \
 	-Deuca.lib.dir=${EUCALYPTUS} \

@@ -2,10 +2,11 @@ package com.eucalyptus.reporting.storage;
 
 import java.util.*;
 
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
-import com.eucalyptus.reporting.event.*;
-import com.eucalyptus.reporting.event.EventListener;
+import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
@@ -88,13 +89,13 @@ public class FalseDataGenerator
 		}
 
 		@Override
-		public void addEventListener(EventListener el)
+		public void addEventListener(EventListener<Event> el)
 		{
 			// empty
 		}
 
 		@Override
-		public void removeEventListener(EventListener el)
+		public void removeEventListener(EventListener<Event> el)
 		{
 			// empty
 		}

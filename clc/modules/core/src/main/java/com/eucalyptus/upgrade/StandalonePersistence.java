@@ -195,8 +195,8 @@ public class StandalonePersistence {
     newLibDir = getAndCheckLibDirectory( eucaHome );
   }
   
-  private static void setupConfigurations( ) {
-    ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
+  static void setupConfigurations( ) {
+	ServiceJarDiscovery.doSingleDiscovery( new ComponentDiscovery( ) );
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {

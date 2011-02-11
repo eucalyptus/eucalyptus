@@ -119,7 +119,40 @@
   <target name="build-gwt">
     <ant dir="modules/www" inheritall="false" target="builder" />
   </target>
-	<target name="jar" depends="bind">
+  <target name="build-test">
+    <ant dir="." inheritall="false" target="build-test-all" />
+    <ant dir="." inheritall="false" target="bind" />
+    <ant dir="." inheritall="false" target="jar" />
+	</target>
+  <target name="build-test-all">
+    <ant dir="." inheritall="false" target="build-test-nogwt" />
+    <ant dir="." inheritall="false" target="build-test-gwt" />
+  </target>
+  <target name="build-test-nogwt">
+		<ant dir="modules/msgs" inheritall="false" target="builder-test" />
+		<ant dir="modules/mysql" inheritall="false" target="builder-test" />
+		<ant dir="modules/ldap" inheritall="false" target="builder-test" />
+		<ant dir="modules/authentication" inheritall="false" target="builder-test" />
+		<ant dir="modules/configuration" inheritall="false" target="builder-test" />
+		<ant dir="modules/core" inheritall="false" target="builder-test" />
+		<ant dir="modules/wsstack" inheritall="false" target="builder-test" />
+		<ant dir="modules/component" inheritall="false" target="builder-test" />
+		<ant dir="modules/cloud" inheritall="false" target="builder-test" />
+		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
+    <ant dir="modules/cluster-manager" inheritall="false" target="builder-test" />
+    <ant dir="modules/notifications" inheritall="false" target="builder-test" />
+		<ant dir="modules/storage-common" inheritall="false" target="builder-test" />
+		<ant dir="modules/walrus" inheritall="false" target="builder-test" />
+		<ant dir="modules/storage-controller" inheritall="false" target="builder-test" />
+		<ant dir="modules/dns" inheritall="false" target="builder-test" />
+		<ant dir="modules/www" inheritall="false" target="builder-test" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="builder-test" />
+		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
+	</target>
+  <target name="build-test-gwt">
+    <ant dir="modules/www" inheritall="false" target="builder-test" />
+  </target>
+	<target name="jar">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
 		<ant dir="modules/ldap" inheritall="false" target="jar" />
@@ -158,9 +191,9 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
-		<delete>
+		<!--delete>
 			<fileset dir="modules" includes="**/*JiBX*" />
-		</delete>
+		</delete-->
 		<delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
 		<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
 		<bindings>

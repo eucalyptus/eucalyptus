@@ -84,6 +84,23 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     ServiceJarDiscovery.runDiscovery( );
   }
   
+  public static void doSingleDiscovery( ServiceJarDiscovery s ) {
+	    File libDir = new File( BaseDirectory.LIB.toString( ) );
+	    for ( File f : libDir.listFiles( ) ) {
+	      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+	           && !f.getName( ).matches( ".*-ext-.*" ) ) {
+	        LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
+	        try {
+	          ServiceJarDiscovery.processFile( f );
+	        } catch ( Throwable e ) {
+	          LOG.error( e.getMessage( ) );
+	          continue;
+	        }
+	      }
+	    }
+	    ServiceJarDiscovery.runDiscovery( s );
+	  }
+
   public static void checkUniqueness( Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
       
