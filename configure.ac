@@ -4,30 +4,32 @@
 
 # Usage:
 #   configure   [--with-axis2c=<dir>]
-#		[--with-axis2=<dir>]
-#		[--with-libvirt=<dir>]
-#		[--with-interface-theme=<name>]
-#		[--enable-appliance-store]
+#               [--with-axis2=<dir>]
+#               [--with-libvirt=<dir>]
+#               [--with-interface-theme=<name>]
+#               [--enable-appliance-store]
 #               [--enable-debug]
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
-	m4_esyscmd([cat VERSION| tr -d '\n']),
-	support@open.eucalyptus.com)
+        m4_esyscmd([cat VERSION| tr -d '\n']),
+        support@open.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_BUILD
 EUCA_VERSION="`cat VERSION`"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
-	TOP=`pwd`
+        TOP=`pwd`
 else
-	TOP=${srcdir}
+        TOP=${srcdir}
 fi
 
 # variables we'll need later on
+APACHE2_MODULE_DIR=""
 AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
@@ -50,18 +52,24 @@ CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
 
 # Arguments checking
+AC_ARG_WITH(apache2-module-dir,
+        [  --with-apache2-module-dir=<dir>      where Apache modules are installed],
+        [APACHE2_MODULE_DIR="${withval}"])
+AC_ARG_WITH(axis2,
+        [  --with-axis2=<dir>                   where axis2 is installed],
+        [AXIS2_HOME="${withval}"])
 AC_ARG_WITH(axis2c,
         [  --with-axis2c=<dir>                  where axis2c is installed],
         [AXIS2C_HOME="${withval}"])
 AC_ARG_WITH(axis2c-services,
         [  --with-axis2c-services=<dir>         where axis2c services are installed],
         [AXIS2C_SERVICES="${withval}"])
-AC_ARG_WITH(axis2,
-        [  --with-axis2=<dir>                   where axis2 is installed],
-        [AXIS2_HOME="${withval}"])
 AC_ARG_WITH(libvirt,
         [  --with-libvirt=<dir>                 where libvirt is installed],
         [LIBVIRT_HOME="${withval}"])
+AC_ARG_WITH(wsdl2c-sh,
+        [  --with-wsdl2c-sh=<file>              where WSDL2C.sh is installed],
+        [WSDL2C="${withval}"])
 AC_ARG_WITH(interface-theme,
         [  --with-interface-theme=<name>        the theme to be used],
         [INTERFACE_THEME="${withval}"])
@@ -80,26 +88,46 @@ AC_ARG_ENABLE(debug,
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
-	AXIS2C_SERVICES="${AXIS2C_HOME}/services"
+        AXIS2C_SERVICES="${AXIS2C_HOME}/services"
+fi
+
+# If we didn't specify the location of Apache modules, assume mod_axis2
+# resides within AXIS2C_HOME
+if test -z "$APACHE2_MODULE_DIR"; then
+        APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
-	if test -d "${AXIS2C_HOME}"/include ; then
-		for x in `ls ${AXIS2C_HOME}/include`; do
-			INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
-		done
-		LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
-	fi
-	if test -d ${AXIS2C_HOME}/modules/rampart ; then
-		LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
-	fi
+        if test -d "${AXIS2C_HOME}"/include ; then
+                for x in `ls ${AXIS2C_HOME}/include`; do
+                        INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
+                done
+        fi
+        if test -d "${AXIS2C_HOME}"/lib ; then
+                LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
+        fi
+        if test -d ${AXIS2C_HOME}/modules/rampart ; then
+                LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+        fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
-	if test -d "${LIBVIRT_HOME}"/include ; then
-		INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
-		LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
-	fi
+        if test -d "${LIBVIRT_HOME}"/include ; then
+                INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
+                LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
+        fi
+fi
+if test -n "${VDDK_HOME}" ; then
+        if test -d "${VDDK_HOME}"/include/ ; then
+                # Using tarball direct from VMware
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
+                AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
+                      [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
+        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
+                # Using installed tarball
+                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
+                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
+        fi
 fi
 
 
@@ -110,26 +138,23 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
 
-# let's search for WSDL2C.sh
-# we cannot use AC_PROG_PATH because WSDL2C.sh is not executable
-#AC_PATH_PROG([WSDL2C], WSDL2C.sh,,$AXIS2C_HOME/bin/tools/wsdl2c:$PATH)
-WSDL2C=$AXIS2C_HOME/bin/tools/wsdl2c/WSDL2C.sh
-ALT_WSDL2C=$AXIS2C_HOME/WSDL2C.sh
-AC_CHECK_FILE($WSDL2C,[HAVE_WSDL2C=yes])
-AC_CHECK_FILE($ALT_WSDL2C,[HAVE_ALT_WSDL2C=yes])
-# check if we found either of the possible WSDL2Cs
-if test -z "$HAVE_WSDL2C$HAVE_ALT_WSDL2C" ; then
-    AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+if test -z "$WSDL2C"; then
+        # let's search for WSDL2C.sh
+        AC_PATH_PROG([WSDL2C], WSDL2C.sh,,${AXIS2C_HOME}/bin/tools/wsdl2c:$PATH)
 fi
-# made it here: we found one! -- set WSDL2C if the default location is wrong
-if test -n "$HAVE_ALT_WSDL2C" ; then
-    WSDL2C=$ALT_WSDL2C
+## HACK:  Sometimes WSDL2C.sh isn't executable for some reason.  We call sh on
+## it directly, so look for a non-executable file just in case.
+if test -z "$WSDL2C" && test -f ${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh; then
+        WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 fi
-
+# check if we found WSDL2C.sh
+if test -z "$WSDL2C" ; then
+        AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+fi
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
-	AC_MSG_ERROR([JAVA_HOME is not defined!])
+        AC_MSG_ERROR([JAVA_HOME is not defined!])
 fi
 
 AC_PATH_PROG([ANT], ant,,$ANT_HOME/bin:$PATH)
@@ -137,32 +162,32 @@ AC_PATH_PROG([JAVA], java,,$JAVA_HOME/bin)
 
 # Check the version of java and ant
 if test -z "$ANT" ; then
-	AC_MSG_ERROR([Cannot find ant!])
+        AC_MSG_ERROR([Cannot find ant!])
 fi
 if test -z "$JAVA" ; then
-	AC_MSG_ERROR([Cannot find java!])
+        AC_MSG_ERROR([Cannot find java!])
 fi
 java_version=`$JAVA -version 2>&1 | grep "java version" | \
-	sed -e 's/.*java version "\(.*\)".*/\1/'`
+        sed -e 's/.*java version "\(.*\)".*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
-	AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
+        AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
 fi
 
 # now let's test we have jni.h
 if test ! -e $JAVA_HOME/include/jni.h ; then
-	AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
+        AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
 fi
 
 ant_version=`$ANT -version 2>&1 | grep "Ant version" | \
-	sed -e 's/.*Ant version \([[0-9.]]*\).*/\1/'`
+        sed -e 's/.*Ant version \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $ant_version ">=" $ant_min_version`
 if test $goodversion -eq 0; then
-	AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
+        AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
 fi
 # some version of ant picks up the wrong java
 java_version=`$ANT -diagnostics 2>&1 | grep ^java.version | \
-	sed -e 's/java.* \([[0-9.]]*\).*/\1/'`
+        sed -e 's/java.* \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         AC_MSG_ERROR([ANT is using the wrong java (version less than $java_min_version)])
@@ -225,10 +250,10 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs 
-		tools/eucalyptus-cc:tools/eucalyptus-cc.in
-		tools/eucalyptus-nc:tools/eucalyptus-nc.in
-		tools/euca_conf:tools/euca_conf.in
-		tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
+                tools/eucalyptus-cc:tools/eucalyptus-cc.in
+                tools/eucalyptus-nc:tools/eucalyptus-nc.in
+                tools/euca_conf:tools/euca_conf.in
+                tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
@@ -238,6 +263,7 @@ AC_SUBST(ANT)
 AC_SUBST(RM)
 AC_SUBST(WSDL2C)
 AC_SUBST(JAVA_HOME)
+AC_SUBST(APACHE2_MODULE_DIR)
 AC_SUBST(AXIS2C_HOME)
 AC_SUBST(AXIS2C_SERVICES)
 AC_SUBST(AXIS2_HOME)

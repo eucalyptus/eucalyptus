@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = -lcurl -lssl
+STORAGE_LIBS = ${LIBS} -lcurl -lssl -lcrypto
 
 all: storage.o storage-windows.o walrus.o Wclient 
 
@@ -22,7 +22,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
-.c.o: 
+.c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
