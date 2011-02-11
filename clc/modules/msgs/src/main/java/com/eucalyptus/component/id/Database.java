@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Database extends ComponentId {
@@ -106,4 +107,8 @@ public class Database extends ComponentId {
     return true;
   }
 
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Eucalyptus.LIST;
+  }
 }

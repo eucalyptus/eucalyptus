@@ -69,6 +69,9 @@ import org.apache.log4j.Logger;
 @Deprecated
 public class Services {
   private static Logger LOG = Logger.getLogger( Services.class );
+//  public static ServiceEndpoint lookup( ServiceConfiguration config ) {
+//    
+//  }
   public static ServiceEndpoint lookupByName( Class<? extends ComponentId> type, String name ) {
     return lookupByName( ComponentIds.lookup( type ), name );
   }

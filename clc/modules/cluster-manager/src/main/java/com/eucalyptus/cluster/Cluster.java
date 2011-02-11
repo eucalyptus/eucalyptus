@@ -88,7 +88,6 @@ import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Services;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.FullName;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.event.ClockTick;
@@ -101,6 +100,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
@@ -372,7 +372,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   @Override
   public String toString( ) {
     StringBuilder buf = new StringBuilder( );
-    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " conf=" ).append( this.configuration ).append( '\n' );
+    buf.append( "Cluster " ).append( this.configuration ).append( '\n' );
     buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getServiceEndpoint( ) ).append( '\n' );
     for ( NodeInfo node : this.nodeMap.values( ) ) {
       buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " node=" ).append( node ).append( '\n' );

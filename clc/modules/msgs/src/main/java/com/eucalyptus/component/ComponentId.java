@@ -9,6 +9,7 @@ import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
@@ -22,13 +23,16 @@ import com.eucalyptus.auth.principal.credential.HmacPrincipal;
 import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class ComponentId implements ComponentInformation, HasName<ComponentId>, X509Principal, HmacPrincipal {
+public abstract class ComponentId implements HasName<ComponentId> {
   private static Logger       LOG         = Logger.getLogger( ComponentId.class );
   private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
                                             +
@@ -48,6 +52,13 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
                                             "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
                                             "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
                                             "</mule>\n";
+  protected static final List<Class<? extends ComponentId>> getList( final Class<? extends ComponentId> id ) {
+    List<Class<? extends ComponentId>> hi = new ArrayList<Class<? extends ComponentId>>( ) {{
+      this.add( id );
+    }}; 
+    return hi;
+  }
+
   private final String        name;
   private final String        capitalizedName;
   private final String        entryPoint;
@@ -108,6 +119,23 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return this.name;
   }
   
+  public boolean isPartitioned( ) {
+    return !this.isCloudLocal( );
+  }
+  
+  public FullName makeFullName( String partition, String name, String... parts ) {
+    if( this.isPartitioned( ) ) {
+      return new ComponentFullName( this, partition, name, parts );
+    } else {
+      return new ComponentFullName( this, this.getName( ), name, parts );
+    }
+  }
+  
+  private static final List<Class<? extends ComponentId>> EMPTY = Lists.newArrayList( );
+  public List<Class<? extends ComponentId>> serviceDependencies( ) { 
+    return EMPTY;
+  }
+
   public abstract Boolean isCloudLocal( );
   
   public abstract Boolean hasDispatcher( );
@@ -118,175 +146,6 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     return false;
   }
   
-  /**
-   * Get the HTTP service path
-   */
-  public URI makeRemoteUri( String hostName, Integer port ) {
-    String uri;
-    try {
-      uri = String.format( this.getUriPattern( ), hostName, port );
-    } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), hostName, port, this.getLocalEndpointName( ).replaceAll( "RequestQueue", "Internal" ) );
-    }
-    try {
-      URI u = new URI( uri );
-      u.parseServerAuthority( );
-      return u;
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      return URI.create( uri );
-    }
-  }
-  
-  public Integer getPort( ) {
-    return this.port;
-  }
-  
-  public String getLocalEndpointName( ) {
-    return this.uriLocal;
-  }
-  
-  public URI getLocalEndpointUri( ) {
-    URI uri = URI.create( this.getLocalEndpointName( ) );
-    try {
-      uri.parseServerAuthority( );
-    } catch ( URISyntaxException ex ) {
-      LOG.error( ex, ex );
-    }
-    return uri;
-  }
-  
-  public String getServiceModel( ) {
-    return this.modelContent;
-  }
-  
-  public Reader getServiceModelAsReader( ) {
-    return new StringReader( this.modelContent );
-  }
-  
-  public String getServiceModelFileName( ) {
-    return String.format( "%s-model.xml", this.getName( ) );
-  }
-  
-  @Override
-  public List<X509Certificate> getAllX509Certificates( ) {
-    return Lists.newArrayList( SystemCredentialProvider.getCredentialProvider( this.getClass( ) ).getCertificate( ) );
-  }
-  
-  public String getUriPattern( ) {
-    return this.uriPattern;
-  }
-  
-  public boolean isPartitioned( ) {
-    return !this.isCloudLocal( );
-  }
-  
-  @Override
-  public final int compareTo( ComponentId that ) {
-    return this.name.compareTo( that.name );
-  }
-  
-  @Override
-  public final int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.name == null )
-      ? 0
-      : this.name.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public final boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    ComponentId other = ( ComponentId ) obj;
-    if ( this.name == null ) {
-      if ( other.name != null ) return false;
-    } else if ( !this.name.equals( other.name ) ) return false;
-    return true;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
-                          this.getLocalEndpointName( ) );
-  }
-  
-  @Override
-  public BigInteger getNumber( ) {
-    throw new RuntimeException( "getNumber is not implemented for component principals." );
-  }
-  
-  @Override
-  public String getSecretKey( String id ) {
-    return null;
-  }
-  
-  @Override
-  public void addSecretKey( String key ) throws AuthException {}
-  
-  @Override
-  public void activateSecretKey( String id ) throws AuthException {}
-  
-  @Override
-  public void deactivateSecretKey( String id ) throws AuthException {}
-  
-  @Override
-  public void revokeSecretKey( String id ) throws AuthException {}
-  
-  @Override
-  public String lookupSecretKeyId( String key ) {
-    return null;
-  }
-  
-  @Override
-  public String getFirstActiveSecretKeyId( ) {
-    return null;
-  }
-  
-  @Override
-  public List<String> getActiveSecretKeyIds( ) {
-    return null;
-  }
-  
-  @Override
-  public List<String> getInactiveSecretKeyIds( ) {
-    return null;
-  }
-  
-  @Override
-  public X509Certificate getX509Certificate( String id ) {
-    return null;
-  }
-  
-  @Override
-  public void addX509Certificate( X509Certificate cert ) throws AuthException {}
-  
-  @Override
-  public void activateX509Certificate( String id ) throws AuthException {}
-  
-  @Override
-  public void deactivateX509Certificate( String id ) throws AuthException {}
-  
-  @Override
-  public void revokeX509Certificate( String id ) throws AuthException {}
-  
-  @Override
-  public String lookupX509Certificate( X509Certificate cert ) {
-    return null;
-  }
-  
-  @Override
-  public List<String> getActiveX509CertificateIds( ) {
-    return null;
-  }
-  
-  @Override
-  public List<String> getInactiveX509CertificateIds( ) {
-    return null;
-  }
   
   public ChannelPipelineFactory getClientPipeline( ) {
     return new ChannelPipelineFactory( ) {
@@ -337,5 +196,96 @@ public abstract class ComponentId implements ComponentInformation, HasName<Compo
     } catch ( NoSuchElementException ex ) {
       return AnonymousMessage.class;
     }
+  }
+
+  public FullName getMyFullName( ServiceConfiguration conf ) {
+    return this.makeFullName( conf.getPartition( ), conf.getName( ) );
+  }
+
+  public Integer getPort( ) {
+    return this.port;
+  }
+  
+  public String getLocalEndpointName( ) {
+    return this.uriLocal;
+  }
+  
+  public URI getLocalEndpointUri( ) {
+    URI uri = URI.create( this.getLocalEndpointName( ) );
+    try {
+      uri.parseServerAuthority( );
+    } catch ( URISyntaxException ex ) {
+      LOG.error( ex, ex );
+    }
+    return uri;
+  }
+  
+  public final String getServiceModel( ) {
+    return this.modelContent;
+  }
+  
+  public final Reader getServiceModelAsReader( ) {
+    return new StringReader( this.modelContent );
+  }
+  
+  public String getServiceModelFileName( ) {
+    return String.format( "%s-model.xml", this.getName( ) );
+  }
+  
+  public String getUriPattern( ) {
+    return this.uriPattern;
+  }
+  
+  /**
+   * Get the HTTP service path
+   */
+  public final URI makeRemoteUri( String hostName, Integer port ) {
+    String uri;
+    try {
+      uri = String.format( this.getUriPattern( ), hostName, port );
+    } catch ( MissingFormatArgumentException e ) {
+      uri = String.format( this.getUriPattern( ), hostName, port, this.getLocalEndpointName( ).replaceAll( "RequestQueue", "Internal" ) );
+    }
+    try {
+      URI u = new URI( uri );
+      u.parseServerAuthority( );
+      return u;
+    } catch ( URISyntaxException e ) {
+      LOG.error( e, e );
+      return URI.create( uri );
+    }
+  }
+  
+  @Override
+  public final int compareTo( ComponentId that ) {
+    return this.name.compareTo( that.name );
+  }
+  
+  @Override
+  public final int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.name == null )
+      ? 0
+      : this.name.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public final boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( obj == null ) return false;
+    if ( getClass( ) != obj.getClass( ) ) return false;
+    ComponentId other = ( ComponentId ) obj;
+    if ( this.name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !this.name.equals( other.name ) ) return false;
+    return true;
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
+                          this.getLocalEndpointName( ) );
   }
 }

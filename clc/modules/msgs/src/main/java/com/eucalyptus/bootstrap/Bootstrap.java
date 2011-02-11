@@ -69,7 +69,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Resource;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
@@ -189,7 +188,6 @@ public class Bootstrap {
     
     private List<Bootstrapper> bootstrappers     = Lists.newArrayList( );
     private List<Bootstrapper> skipBootstrappers = Lists.newArrayList( );
-    private List<Resource>     resources         = Lists.newArrayList( );
     
     public List<Bootstrapper> getBootstrappers( ) {
       return this.bootstrappers;
@@ -276,10 +274,6 @@ public class Bootstrap {
       return buf.append( "\n" ).toString( );
     }
         
-    public List<Resource> getResources( ) {
-      return this.resources;
-    }
-    
   }
   
   private static Boolean loading      = false;

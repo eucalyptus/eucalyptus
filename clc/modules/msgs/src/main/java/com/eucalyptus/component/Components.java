@@ -77,6 +77,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
@@ -118,7 +119,7 @@ public class Components {
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
-  private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {
+  private static <T extends HasName<T>> Class getRealType( Class<T> maybeSubclass ) {
     Class type = null;
     for ( Class c : componentInformation.keySet( ) ) {
       if ( c.isAssignableFrom( maybeSubclass ) ) {
@@ -143,16 +144,16 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> boolean contains( Class<T> type, String name ) {
+  public static <T extends HasName<T>> boolean contains( Class<T> type, String name ) {
     return Components.lookupMap( type ).containsKey( name );
   }
   
-  private static <T extends ComponentInformation> void remove( T componentInfo ) {
+  private static <T extends HasName<T>> void remove( T componentInfo ) {
     Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     infoMap.remove( componentInfo.getName( ) );
   }
   
-  private static <T extends ComponentInformation> void put( T componentInfo ) {
+  private static <T extends HasName<T>> void put( T componentInfo ) {
     Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     if ( infoMap.containsKey( componentInfo.getName( ) ) ) {
       throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Duplicate information for component '" + componentInfo.getName( ) + "': "
@@ -162,18 +163,18 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> void deregister( T componentInfo ) {
+  public static <T extends HasName<T>> void deregister( T componentInfo ) {
     remove( componentInfo );
-    if ( componentInfo instanceof Component ) {
+    if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
       EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.toString( ) ).info( );
     } else {
       EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
     }
   }
   
-  static <T extends ComponentInformation> void register( T componentInfo ) {
+  static <T extends HasName<T>> void register( T componentInfo ) {
     if ( !contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
-      if ( componentInfo instanceof Component ) {
+      if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
         EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.toString( ) ).info( );
       } else {
         EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
@@ -182,7 +183,7 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
+  public static <T extends HasName<T>> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
       try {
         ComponentId compId = ComponentIds.lookup( name );

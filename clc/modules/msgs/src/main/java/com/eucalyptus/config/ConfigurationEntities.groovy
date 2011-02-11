@@ -102,13 +102,14 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasFullName<ComponentConfiguration> {
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Column( name = "config_component_partition" )
   String partition;
   @Column( name = "config_component_name" )
@@ -160,7 +161,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   }
 
   public FullName getFullName( ) {
-    return new FullName( this.getComponentId(), this.partition != null ? this.partition : this.name, this.name );
+    return this.getComponentId().makeFullName( this.partition != null ? this.partition : this.name, this.name );
   }
   
   @Override
@@ -189,7 +190,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return true;
   }
 
-  public int compareTo(ComponentConfiguration that) {
+  public int compareTo(ServiceConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
     return (partition + name).compareTo( that.partition + that.name );
   }
@@ -336,7 +337,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   }
   @Override
   public FullName getFullName( ) {
-    return new FullName( this.getComponentId(), "walrus", this.name );
+    return this.getComponentId().makeFullName( "walrus", this.name );
   }
 }
 @Entity
@@ -356,7 +357,7 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   }
   @Override
   public FullName getFullName( ) {
-    return new FullName( this.getComponentId(), "eucalyptus", this.name );
+    return this.getComponentId().makeFullName( "eucalyptus", this.name );
   }
 }
 

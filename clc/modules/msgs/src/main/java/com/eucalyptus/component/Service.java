@@ -1,4 +1,4 @@
-  /*******************************************************************************
+/*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
@@ -63,43 +63,52 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.NetworkUtil;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class Service implements ComponentInformation, Comparable<Service>, HasParent<Component> {
+public class Service implements ComponentInformation, HasParent<Component>, HasFullName<Service> {
   public static String               LOCAL_HOSTNAME = "@localhost";
-  private final Component            parent;
   private final String               name;
-  private final ServiceCredentials   keys;
   private final ServiceEndpoint      endpoint;
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
-  private final Component.State      state = State.ENABLED/**ASAP:FIXME:GRZE**/;
-
+  private final ComponentId          id;
+  private final Component.State      state          = State.ENABLED/** ASAP:FIXME:GRZE **/
+                                                    ;
+  private final FullName             fullName;
+  
   public final ServiceId getServiceId( ) {
-    return new ServiceId() {{
-      this.setUuid( serviceConfiguration.getId( ) );
-      this.setPartition( serviceConfiguration.getPartition( ) ); 
-      this.setName( serviceConfiguration.getName( ) );
-      this.setType( parent.getName( ) );
-      this.setUri( serviceConfiguration.getUri( ) );
-    }};
+    return new ServiceId( ) {
+      {
+        this.setUuid( serviceConfiguration.getId( ) );
+        this.setPartition( serviceConfiguration.getPartition( ) );
+        this.setName( serviceConfiguration.getName( ) );
+        this.setType( serviceConfiguration.getComponentId( ).getName( ) );
+        this.setUri( serviceConfiguration.getUri( ) );
+      }
+    };
   }
   
-  public Service( Component parent, ServiceConfiguration serviceConfig ) {
-    this.parent = parent;
+  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
+    this.id = id;
     this.serviceConfiguration = serviceConfig;
-    if ( "cluster".equals( parent.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
-      this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+    this.fullName = this.id.getMyFullName( this.serviceConfiguration );
+    if ( "cluster".equals( id.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
+      this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
+      URI uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       this.endpoint = new ServiceEndpoint( this, false, uri );
     } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.parent.getIdentity( ).getLocalEndpointUri( );
-      this.name = parent.getName( ) + LOCAL_HOSTNAME;
+      URI uri = this.id.getLocalEndpointUri( );
+      this.name = id.getName( ) + LOCAL_HOSTNAME;
       this.endpoint = new ServiceEndpoint( this, true, uri );
     } else {
       Boolean local = false;
@@ -114,24 +123,27 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
       }
       URI uri = null;
       if ( !local ) {
-        this.name = parent.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.parent.getIdentity( ).makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
+        this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
+        uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
       } else {
-        this.name = parent.getName( ) + LOCAL_HOSTNAME;
-        uri = this.parent.getIdentity( ).getLocalEndpointUri( );
+        this.name = id.getName( ) + LOCAL_HOSTNAME;
+        uri = this.id.getLocalEndpointUri( );
       }
       this.endpoint = new ServiceEndpoint( this, local, uri );
     }
-    this.keys = new ServiceCredentials( this );//TODO: integration with JAAS
-    this.dispatcher = DispatcherFactory.build( parent, this );
+    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
   }
   
   public Boolean isLocal( ) {
     return this.endpoint.isLocal( );
   }
   
-  public ServiceCredentials getCredentials( ) {
-    return this.keys;
+  public KeyPair getKeys( ) {
+    return SystemCredentialProvider.getCredentialProvider( this.id ).getKeyPair( );
+  }
+  
+  public X509Certificate getCertificate( ) {
+    return SystemCredentialProvider.getCredentialProvider( this.id ).getCertificate( );
   }
   
   public URI getUri( ) {
@@ -165,8 +177,8 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    */
   @Override
   public int compareTo( Service that ) {
-    if( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
+    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
+      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
         return this.getName( ).compareTo( that.getName( ) );
       } else {
         return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
@@ -187,7 +199,7 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    * @return the parent
    */
   public Component getParent( ) {
-    return this.parent;
+    return Components.lookup( this.id );
   }
   
   /**
@@ -196,26 +208,41 @@ public class Service implements ComponentInformation, Comparable<Service>, HasPa
    */
   @Override
   public String toString( ) {
-    return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s", 
-                          this.parent.getIdentity( ), this.name, this.endpoint, 
-                          this.parent.getIdentity( ), this.name, this.serviceConfiguration, 
-                          this.parent.getIdentity( ), this.name, this.keys );
+    return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s",
+                          this.id, this.name, this.endpoint,
+                          this.id, this.name, this.serviceConfiguration );
   }
-
+  
   /**
    * @return the state
    */
   public Component.State getState( ) {
-    if( this.serviceConfiguration.isLocal( ) ) {
-      return this.parent.getState( );
+    if ( this.serviceConfiguration.isLocal( ) ) {
+      return this.getParent( ).getState( );
     } else {
       return this.state;
     }
   }
-
-  /**ASAP:FIXME:GRZE**/
+  
+  /** ASAP:FIXME:GRZE **/
   public List<String> getDetails( ) {
     return Arrays.asList( this.toString( ).split( "\n" ) );
   }
-
+  
+  /**
+   * TODO: DOCUMENT
+   * 
+   * @see com.eucalyptus.util.HasFullName#getPartition()
+   * @return
+   */
+  @Override
+  public String getPartition( ) {
+    return this.fullName.getPartition( );
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return this.fullName;
+  }
+  
 }

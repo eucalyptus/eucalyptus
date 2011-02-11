@@ -87,6 +87,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.async.Callback;
@@ -102,10 +103,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.eucalyptus.empyrean.ServiceInfoType;
 
-/**
- * TODO: DOCUMENT. yes pls.
- */
-public class Component implements ComponentInformation, HasName<Component> {
+public class Component implements HasName<Component> {
   private static Logger LOG = Logger.getLogger( Component.class );
   
   public enum State {
@@ -173,7 +171,7 @@ public class Component implements ComponentInformation, HasName<Component> {
   public void initService( ) throws ServiceRegistrationException {
     if ( this.enabled.get( ) ) {
       ServiceConfiguration config = this.getBuilder( ).toConfiguration( this.getIdentity( ).getLocalEndpointUri( ) );
-      Service service = new Service( this, config );
+      Service service = new Service( this.getIdentity( ), config );
       this.setupService( service );
       
     } else {
@@ -189,25 +187,22 @@ public class Component implements ComponentInformation, HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    Service service = new Service( this, config );
+    Service service = new Service( this.getIdentity( ), config );
     this.setupService( service );
-    if ( service.isLocal( ) ) { 
-      if( State.INITIALIZED.equals( this.getState( ) ) ) {
+    if ( service.isLocal( ) ) {
+      if ( State.INITIALIZED.equals( this.getState( ) ) ) {
         try {
           return this.stateMachine.transition( Transition.LOADING );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
         }
-      } else if( State.LOADED.equals( this.getState( ) ) ) {
-        return Futures.predestinedFuture( this )
-;
+      } else if ( State.LOADED.equals( this.getState( ) ) ) {
+        return Futures.predestinedFuture( this );
       } else {
-        return Futures.predestinedFuture( this )
-;
+        return Futures.predestinedFuture( this );
       }
     } else {
-      return Futures.predestinedFuture( this )
-;
+      return Futures.predestinedFuture( this );
       //TODO:GRZE:ASAP handle loadService
     }
   }
@@ -271,13 +266,11 @@ public class Component implements ComponentInformation, HasName<Component> {
           return future;
         }
       } else {
-        return Futures.predestinedFuture( this )
-;
+        return Futures.predestinedFuture( this );
       }
     } else {
       this.getBuilder( ).fireStart( config );
-      return Futures.predestinedFuture( this )
-;
+      return Futures.predestinedFuture( this );
     }
   }
   
@@ -302,7 +295,8 @@ public class Component implements ComponentInformation, HasName<Component> {
             }
           } );
         } catch ( Throwable ex ) {
-          future.setException( new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ), ex ) );
+          future.setException( new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ),
+                                                                 ex ) );
         }
         return future;
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
@@ -332,8 +326,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     } else {
       this.getBuilder( ).fireDisable( config );
-      return Futures.predestinedFuture( this )
-;
+      return Futures.predestinedFuture( this );
     }
   }
   
@@ -368,13 +361,11 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return Futures.predestinedFuture( this )
-;
+        return Futures.predestinedFuture( this );
       }
     } else {
       this.getBuilder( ).fireStop( config );
-      return Futures.predestinedFuture( this )
-;
+      return Futures.predestinedFuture( this );
     }
   }
   
@@ -386,7 +377,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       Service service = this.services.remove( remove.getName( ) );
       if ( config.isLocal( ) ) {
         if ( State.STOPPED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
-          this.stopService( config ); 
+          this.stopService( config );
         }
         this.localService.set( null );
         try {
@@ -396,8 +387,7 @@ public class Component implements ComponentInformation, HasName<Component> {
           throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
         }
       } else {
-        return Futures.predestinedFuture( this )
-;
+        return Futures.predestinedFuture( this );
       }
     }
   }
@@ -453,11 +443,10 @@ public class Component implements ComponentInformation, HasName<Component> {
    * Get the name of this component. This is the proper short name; e.g., 'eucalyptus', 'walrus',
    * etc, as used in the META-INF descriptor file.
    * 
-   * @see com.eucalyptus.component.ComponentInformation#getName()
    * @return Component name
    */
   public String getName( ) {
-    return this.name;
+    return this.getIdentity( ).name( );
   }
   
   public String getRegistryKey( String hostName ) {
@@ -545,17 +534,21 @@ public class Component implements ComponentInformation, HasName<Component> {
   
   public NavigableSet<Service> getServices( String partition ) throws NoSuchElementException {
     NavigableSet<Service> partitionServices = Sets.newTreeSet( );
-    for( Service s : this.services.values( ) ) {
-      if( partition.equals( s.getServiceConfiguration( ).getPartition( ) ) ) {
+    for ( Service s : this.services.values( ) ) {
+      if ( partition.equals( s.getServiceConfiguration( ).getPartition( ) ) ) {
         partitionServices.add( s );
       }
     }
-    if( partitionServices.isEmpty( ) ) {
+    if ( partitionServices.isEmpty( ) ) {
       throw new NoSuchElementException( "No services were found in partition: " + partition + " for component " + this.getIdentity( ) );
     }
     return partitionServices;
   }
-
+  
+//  public Service lookupService( FullName fullName ) {
+//    
+//  }
+//  
   /**
    * Lookup the {@link Service} instance of this {@link Component} registered as {@code name}
    * 
@@ -655,9 +648,9 @@ public class Component implements ComponentInformation, HasName<Component> {
       if ( event instanceof Hertz ) {
         for ( final Component c : Components.list( ) ) {
           if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
-            if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+            if ( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
               Threads.lookup( Empyrean.class ).submit( c.getCheckRunner( ) );
-            } else if( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
+            } else if ( Component.State.ENABLED.equals( c.stateMachine.getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
               c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
             }
           }
@@ -713,16 +706,17 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     };
   }
-  private final Callable<Component> noTransition = new Callable<Component>() {
-
-    @Override
-    public Component call( ) throws Exception {
-      return Component.this;
-    }};
-
+  
+  private final Callable<Component> noTransition = new Callable<Component>( ) {
+                                                   
+                                                   @Override
+                                                   public Component call( ) throws Exception {
+                                                     return Component.this;
+                                                   }
+                                                 };
   
   private Callable<Component> makeEnableCallable( final ServiceConfiguration configuration, final CheckedListenableFuture<Component> transitionFuture ) {
-    return new Callable<Component> ( ) {
+    return new Callable<Component>( ) {
       @Override
       public Component call( ) throws Exception {
         EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_ENABLE.toString( ), configuration.getFullName( ).toString( ) ).debug( );
@@ -736,14 +730,14 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     };
   }
-
+  
   private Callable<Component> makeStartCallable( final ServiceConfiguration configuration, final CheckedListenableFuture<Component> transitionFuture, final Callable<Component> subsequentTransition ) {
     return new Callable<Component>( ) {
       @Override
       public Component call( ) throws ServiceRegistrationException {
         EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_START.toString( ), configuration.getFullName( ).toString( ) ).debug( );
         try {
-          if( subsequentTransition != null ) {
+          if ( subsequentTransition != null ) {
             Component.this.startService( configuration ).addListener( subsequentTransition );
           } else {
             try {
@@ -768,7 +762,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       public Component call( ) throws ServiceRegistrationException {
         EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_LOAD.toString( ), configuration.getFullName( ).toString( ) ).debug( );
         try {
-          if( subsequentTransition != null ) {
+          if ( subsequentTransition != null ) {
             Component.this.loadService( configuration ).addListener( subsequentTransition );
           } else {
             try {
@@ -786,7 +780,7 @@ public class Component implements ComponentInformation, HasName<Component> {
       }
     };
   }
-
+  
   public CheckedListenableFuture<Component> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<Component> transitionFuture = Futures.newGenericFuture( );
     Callable<Component> transition = null;
@@ -796,8 +790,8 @@ public class Component implements ComponentInformation, HasName<Component> {
         transition = makeStartCallable( configuration, null, makeEnableCallable( configuration, transitionFuture ) );
         break;
       case INITIALIZED:
-        transition = makeLoadCallable( configuration, null, 
-                                       makeStartCallable( configuration, null, 
+        transition = makeLoadCallable( configuration, null,
+                                       makeStartCallable( configuration, null,
                                                           makeEnableCallable( configuration, transitionFuture ) ) );
         break;
       case DISABLED:
@@ -823,12 +817,12 @@ public class Component implements ComponentInformation, HasName<Component> {
         break;
       case LOADED:
       case STOPPED:
-        transition = makeStartCallable( configuration, null, 
+        transition = makeStartCallable( configuration, null,
                                         makeEnableCallable( configuration, transitionFuture ) );
         break;
       case INITIALIZED:
-        transition = makeLoadCallable( configuration, null, 
-                                       makeStartCallable( configuration, null, 
+        transition = makeLoadCallable( configuration, null,
+                                       makeStartCallable( configuration, null,
                                                           makeEnableCallable( configuration, transitionFuture ) ) );
         break;
       case ENABLED:

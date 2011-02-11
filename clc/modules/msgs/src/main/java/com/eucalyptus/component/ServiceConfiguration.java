@@ -1,17 +1,14 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
-import com.eucalyptus.config.FullName;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 
-public interface ServiceConfiguration extends Serializable {
+public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration> {
   public abstract String getId( );
-  
-  public abstract String getName( );
   
   public abstract void setName( String name );
   
-  public abstract String getPartition( );
-
   public abstract void setPartition( String partition );
 
   public abstract String getHostName( );
@@ -31,6 +28,4 @@ public interface ServiceConfiguration extends Serializable {
   public abstract String getUri( );
   
   public abstract Boolean isLocal( );
-  
-  public abstract FullName getFullName( );
-}
+  }
