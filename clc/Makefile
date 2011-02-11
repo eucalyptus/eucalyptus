@@ -45,12 +45,13 @@ build: deps extras
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-# this causes problems for pbuilder, should be handled by configure and build.xml already 
-#	@if test ! -e deps/cloud-lib.tar.gz; then \
-#		echo "Cannot find java deps, please run 'make deps' in the 'clc/' subdirectory."; exit 1; fi
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) bind
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" \
+		$(ANT) build-nogwt
+	@ANT_OPTS="-Xmx64m -XX:MaxPermSize=64m" \ 
+		$(ANT) build-gwt
+	@ANT_OPTS="-Xmx64m -XX:MaxPermSize=64m" \
+		$(ANT) build-bind
+	$(ANT) jar
 	@make -C modules/storage-controller/native
 	@make -C modules/bootstrap
 

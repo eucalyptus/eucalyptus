@@ -88,14 +88,13 @@
 	<!--================================== build targets ==================================-->
   <target name="build">
     <ant dir="." inheritall="false" target="build-all" />
-    <ant dir="." inheritall="false" target="bind" />
     <ant dir="." inheritall="false" target="jar" />
 	</target>
   <target name="build-all">
-    <ant dir="." inheritall="false" target="build-nogwt" />
-    <ant dir="." inheritall="false" target="build-gwt" />
+    <ant dir="." inheritall="false" target="build-nowww" />
+    <ant dir="." inheritall="false" target="build-www" />
   </target>
-  <target name="build-nogwt">
+  <target name="build-nowww">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
@@ -113,14 +112,13 @@
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
-		<ant dir="modules/www" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
-		<ant dir="modules/reporting" inheritall="false" target="builder" />
 	</target>
-  <target name="build-gwt">
+  <target name="build-www">
     <ant dir="modules/www" inheritall="false" target="builder" />
+    <ant dir="modules/reporting" inheritall="false" target="builder" />
   </target>
-	<target name="jar" depends="bind">
+	<target name="jar" depends="build-bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/euare-common" inheritall="false" target="jar" />
 		<ant dir="modules/mysql" inheritall="false" target="jar" />
@@ -150,7 +148,7 @@
 		</uptodate>
 		<echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
 	</target>
-	<target name="bind" depends="shouldBind" unless="bind.notRequired">
+	<target name="build-bind" depends="shouldBind" unless="bind.notRequired">
 		<echo message="[BINDING] Running binding compiler." />
 		<path id="bindingclasspath">
 			<dirset dir="modules">
@@ -160,6 +158,7 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
+    <touch file="${bind.timestamp}"/>
 		<delete>
 			<fileset dir="modules" includes="**/*JiBX*" />
 		</delete>
@@ -192,8 +191,8 @@
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
+    <ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
 	</target>
@@ -209,7 +208,7 @@
 	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
 	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
 	<property name="euca.bin.dir" value="${euca.home}/usr/sbin" />
-	<target name="install">
+	<target name="install" depends="build-all,jar">
 		<!-- copy libraries over -->
 		<mkdir dir="${DESTDIR}${euca.lib.dir}" />
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
