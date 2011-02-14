@@ -828,7 +828,7 @@ retry:
 	} else {
 	  char manifestURL[1024];
 	  snprintf(manifestURL, 1024, "%s.manifest.xml", url);
-	  e = http_get(manifestURL, tmp_digest_path);
+	  e = http_get_timeout(manifestURL, tmp_digest_path, 10, 4);
 	}
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size_b = (long long)mystat.st_size;
@@ -874,7 +874,7 @@ retry:
         if (strstr(url, "services/Walrus")) {
 	  e = walrus_image_by_manifest_url (url, file_path, 1);
 	} else {
-	  e = http_get(url, file_path);
+	  e = http_get_timeout(url, file_path, 10, 4);
 	}
 
         /* for KVM, convert partition into disk */
