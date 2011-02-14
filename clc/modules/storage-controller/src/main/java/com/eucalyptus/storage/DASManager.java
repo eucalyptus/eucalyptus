@@ -156,8 +156,16 @@ public class DASManager implements LogicalStorageManager {
 			String dasDevice = DASInfo.getStorageInfo().getDASDevice();
 			if(dasDevice != null) {
 				try {
-					String returnValue = getVolumeGroup(dasDevice);
-					if(returnValue.length() > 0) {
+					boolean volumeGroupFound = false;
+					try {
+						String returnValue = getVolumeGroup(dasDevice);
+						if(returnValue.length() > 0) {
+							volumeGroupFound = true;
+						}
+					} catch(ExecutionException e) {
+						LOG.warn(e);
+					}
+					if(volumeGroupFound) {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
 						Matcher m = volumeGroupPattern.matcher(returnValue);
 						if(m.find()) 
@@ -165,14 +173,22 @@ public class DASManager implements LogicalStorageManager {
 						else
 							throw new EucalyptusCloudException("Not a volume group: " + dasDevice);
 					} else {
-						returnValue = getPhysicalVolume(dasDevice);
-						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+						boolean physicalVolumeGroupFound = false;
+						try {
+							returnValue = getPhysicalVolume(dasDevice);
+							if(returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+								physicalVolumeGroupFound = true;
+							}
+						} catch(ExecutionException e) {
+							LOG.warn(e);
+						}
+						if(!physicalVolumeGroupFound) {
 							returnValue = createPhysicalVolume(dasDevice);
 							if(returnValue.length() == 0) {
 								throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
 							}
 						}
-						//PV is initialized at this point.
+						//PV should be initialized at this point.
 						returnValue = getPhysicalVolumeVerbose(dasDevice);
 						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
 							volumeGroup = "vg-" + Hashes.getRandom(10);
@@ -358,9 +374,13 @@ public class DASManager implements LogicalStorageManager {
 
 	//creates a logical volume (and a new physical volume and volume group)
 	public void createLogicalVolume(String lvName, int size) throws EucalyptusCloudException, ExecutionException {
-		String returnValue = createLogicalVolume(volumeGroup, lvName, size);
-		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + volumeGroup);
+		if(volumeGroup != null) {
+			String returnValue = createLogicalVolume(volumeGroup, lvName, size);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + volumeGroup);
+			}
+		} else {
+			throw new EucalyptusCloudException("Volume group is null! This should never happen");
 		}
 	}
 
@@ -1070,24 +1090,24 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void checkReady() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 }
