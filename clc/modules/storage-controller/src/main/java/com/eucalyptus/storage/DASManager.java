@@ -157,8 +157,9 @@ public class DASManager implements LogicalStorageManager {
 			if(dasDevice != null) {
 				try {
 					boolean volumeGroupFound = false;
+					String returnValue = null;
 					try {
-						String returnValue = getVolumeGroup(dasDevice);
+						returnValue = getVolumeGroup(dasDevice);
 						if(returnValue.length() > 0) {
 							volumeGroupFound = true;
 						}
