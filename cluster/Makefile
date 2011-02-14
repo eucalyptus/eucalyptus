@@ -45,15 +45,15 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 server: $(SERVICE_SO)
 
 $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o  ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
-	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
+	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
 
 $(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
-	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o  ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
+	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o $(WSSECLIBS) $(CC_LIBS)
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
