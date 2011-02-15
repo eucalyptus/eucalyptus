@@ -267,7 +267,7 @@ public class Component implements HasName<Component> {
   }
   
   public Boolean isRunningLocally( ) {
-    return State.ENABLED.equals( this.getState( ) ) && this.serviceRegistry.hasLocalService( );
+    return State.ENABLED.equals( this.getState( ) );// && this.serviceRegistry.hasLocalService( );
   }
   
   /**
