@@ -470,6 +470,7 @@ public class Component implements HasName<Component> {
               try {
                 DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
                 Component.this.stateMachine.transition( State.STOPPED );
+                Component.this.serviceRegistry.deregister( config );
                 future.set( Component.this );
               } catch ( Throwable ex ) {
                 Exceptions.trace( new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex ) );
