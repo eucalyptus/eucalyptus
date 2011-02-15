@@ -99,6 +99,7 @@ public class PersistenceContexts {
   }
   
   public static void handleConnectionError( Throwable cause ) {
+    LOG.error( cause, cause );
     touchDatabase( );
   }
   
