@@ -283,9 +283,9 @@ int instNetParamsSet(ccInstance *inst, void *in) {
   }
 
   if (ret) {
-    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   } else {
-    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   }
 
   return(0);
