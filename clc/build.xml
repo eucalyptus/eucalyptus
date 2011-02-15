@@ -92,7 +92,7 @@
         </fileset>
       </classpath>
   </taskdef>
-  <loadfile property="modules" srcfile="build.order"/>
+  <loadfile property="modules" srcfile="modules/build.order"/>
   <macrodef name="call-module-target">
     <attribute name="target"/>
     <sequential>
