@@ -201,5 +201,7 @@ int copy_file (const char * src, const char * dst);
 long long file_size (const char * file_path);
 char * strduplc (const char * s);
 char * xpath_content (const char * xml, const char * xpath);
+int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
+int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 
 #endif

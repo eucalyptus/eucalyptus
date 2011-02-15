@@ -2686,17 +2686,42 @@ int initialize(ncMetadata *ccMeta) {
     if (ccMeta != NULL) {
       int i;
       sem_mywait(CONFIG);
-      memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
+      // TODO: should copy on every message, as soon as info is sent on every message
+      //      memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
+      
       for (i=0; i<16; i++) {
 	int j;
-	//	if (strlen(config->services[i].type)) {
+	if (strlen(ccMeta->services[i].type)) {
+	  memcpy(&(config->services[i]), &(ccMeta->services[i]), sizeof(serviceInfoType));
+	}
+	if (strlen(config->services[i].type)) {
 	  logprintfl(EUCADEBUG, "initialize(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
 	  for (j=0; j<8; j++) {
 	    if (strlen(config->services[i].uris[j])) {
 	      logprintfl(EUCADEBUG, "initialize(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
 	    }
 	  }
-	  //	}
+
+	  // search for this CCs serviceInfoType
+	  if (!strcmp(config->services[i].type, "cluster")) {
+	    char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+	    int port, done;
+	    snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+	    rc = tokenize_uri(uri, uriType, host, &port, path);
+	    if (strlen(host)) {
+	      done=0;
+	      for (j=0; j<32 && !done; j++) {
+		uint32_t hostip;
+		hostip = dot2hex(host);
+		if (hostip == vnetconfig->localIps[j]) {
+		  // found a match, update local serviceInfoType
+		  memcpy(&(config->ccStatus.serviceId), &(config->services[i]), sizeof(serviceInfoType));
+		  done++;
+		}
+	      }
+	    }
+	  }
+	}
       }
       sem_mypost(CONFIG);
     }
@@ -3566,6 +3591,22 @@ int init_config(void) {
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
   ccChangeState(ENABLED);
+  config->ccStatus.localEpoch = 0;
+  snprintf(config->ccStatus.details, 1024, "ERRORS=0");
+  snprintf(config->ccStatus.serviceId.type, 32, "cluster");
+  snprintf(config->ccStatus.serviceId.name, 32, "self");
+  config->ccStatus.serviceId.urisLen=0;
+  for (i=0; i<32 && config->ccStatus.serviceId.urisLen < 8; i++) {
+    if (vnetconfig->localIps[i]) {
+      char *host;
+      host = hex2dot(vnetconfig->localIps[i]);
+      if (host) {
+	snprintf(config->ccStatus.serviceId.uris[config->ccStatus.serviceId.urisLen], 512, "http://%s:8774/axis2/services/EucalyptusCC", host);
+	config->ccStatus.serviceId.urisLen++;
+	free(host);
+      } 
+    }
+  }
   snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
   
@@ -3779,7 +3820,7 @@ int reconfigureNetworkFromCLC() {
 
   while(fgets(buf, 1024, FH)) {
     start = buf;
-    logprintfl(EUCADEBUG, "LINE: %s\n", buf);
+    //    logprintfl(EUCADEBUG, "LINE: %s\n", buf);
     tok = strchr(buf, '\n');
     if (tok) {
       *tok='\0';
@@ -3796,43 +3837,43 @@ int reconfigureNetworkFromCLC() {
       dgroup = strtok_r(NULL, " ", &save);
       if (dgroup) {
 	while((tok = strtok_r(NULL, " ", &save))) {
-	  logprintfl(EUCADEBUG, "\tTOK: %s\n", tok);
+	  //	  logprintfl(EUCADEBUG, "\tTOK: %s\n", tok);
 	  if (tok && !strcmp(tok, "-P")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "PROTOCOL: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "PROTOCOL: %s\n", tok);
 	      protocol = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-p")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "PORTRANGE: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "PORTRANGE: %s\n", tok);
 	      snprintf(range, 1024, "%s", tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-t")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "TYPERANGE: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "TYPERANGE: %s\n", tok);
 	      snprintf(range, 1024, "%s", tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-o")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "DGROUP: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "DGROUP: %s\n", tok);
 	      sgroup = malloc(sizeof(char *));
 	      sgroup[0] = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-u")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "DUSER: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "DUSER: %s\n", tok);
 	      suser = malloc(sizeof(char *));
 	      suser[0] = strdup(tok);
 	    }
 	  } else if (tok && !strcmp(tok, "-s")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
-	      logprintfl(EUCADEBUG, "SNET: %s\n", tok);
+	      //	      logprintfl(EUCADEBUG, "SNET: %s\n", tok);
 	      snet = malloc(sizeof(char *));
 	      snet[0] = strdup(tok);
 	      snetset=1;
@@ -3856,10 +3897,10 @@ int reconfigureNetworkFromCLC() {
 	  snet[0] = malloc(sizeof(char) * 16);
 	  snprintf(snet[0], 16, "%d.%d.%d.%d", a, b, c, d);
 	  */
-	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d snet=%s\n", protocol, minport, maxport, snet[0]);
+	  //	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d snet=%s\n", protocol, minport, maxport, snet[0]);
 	  snetLen = 1;
 	} else {
-	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
+	  //	  logprintfl(EUCADEBUG, "protocol=%s minport=%d maxport=%d suser=%s sgroup=%s\n", protocol, minport, maxport, suser[0], sgroup[0]);
 	  susergroupLen = 1;
 	}
 	

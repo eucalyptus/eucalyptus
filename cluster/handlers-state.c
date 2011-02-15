@@ -96,6 +96,7 @@ extern vnetConfig *vnetconfig;
 
 int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
+  serviceStatusType *myStatus=NULL;
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -105,8 +106,30 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   logprintfl(EUCAINFO, "DescribeServices(): called\n");
   logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
+  // TODO: for now, return error if list of services is passed in as parameter
+  if (serviceIdsLen > 0) {
+    logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
+    *outStatusesLen = 0;
+    *outStatuses = NULL;
+    return(1);
+  }
+
+  *outStatusesLen = 1;
+  *outStatuses = malloc(sizeof(serviceStatusType));
+  if (!*outStatuses) {
+    logprintfl(EUCAFATAL, "DescribeServices(): out of memory!\n");
+    unlock_exit(1);
+  }
+
+  myStatus = *outStatuses;
+  snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState);
+  snprintf(myStatus->details, 1024, "%s", config->ccStatus.details);
+  myStatus->localEpoch = config->ccStatus.localEpoch;
+  memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
+
   // go through input service descriptions and match with self and node states
 
+  /*
   *outStatusesLen = serviceIdsLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
   for (i=0; i<serviceIdsLen; i++) {
@@ -117,10 +140,10 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
     snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
     (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
     memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
-  }
-  
+  }  
+  */
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
-  return(ret);
+  return(0);
 }
 
 int doStartService(ncMetadata *ccMeta) {
