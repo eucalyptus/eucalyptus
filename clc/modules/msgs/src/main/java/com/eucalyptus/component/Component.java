@@ -111,10 +111,10 @@ public class Component implements HasName<Component> {
   private static Logger               LOG     = Logger.getLogger( Component.class );
   private final ComponentId           identity;
   private final ServiceRegistry       serviceRegistry;
-  private final AtomicBoolean         enabled = new AtomicBoolean( false );
-  private final AtomicBoolean         local   = new AtomicBoolean( false );
   private final ComponentBootstrapper bootstrapper;
   private final ComponentState        stateMachine;
+  private final AtomicBoolean         enabled = new AtomicBoolean( false );
+  private final AtomicBoolean         local   = new AtomicBoolean( false );
   
   public enum State {
     BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
@@ -695,8 +695,8 @@ public class Component implements HasName<Component> {
     }
     
     public Service getLocalService( ) {
-      Service ret = null;
-      if ( ( ret = this.localService.get( ) ) == null ) {
+      Service ret = this.localService.get( );
+      if ( ret == null ) {
         throw new NoSuchElementException( "Attempt to access a local service reference when none exists" );
       } else {
         return ret;
@@ -753,11 +753,12 @@ public class Component implements HasName<Component> {
      *           {@link FullName}
      */
     public Service deregister( FullName fullName ) throws NoSuchElementException {
-      Service ret = null;
-      if ( ( ret = this.services.remove( fullName ) ) == null ) {
+      Service ret = this.services.remove( fullName );
+      if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
+      } else if( ret.getServiceConfiguration( ).isLocal( ) ) {
+        this.localService.compareAndSet( ret, null );
       }
-      this.localService.compareAndSet( ret, null );
       return ret;
     }
     
