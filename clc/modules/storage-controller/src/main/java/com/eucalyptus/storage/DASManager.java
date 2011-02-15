@@ -191,7 +191,7 @@ public class DASManager implements LogicalStorageManager {
 						}
 						//PV should be initialized at this point.
 						returnValue = getPhysicalVolumeVerbose(dasDevice);
-						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+						if(returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
 							volumeGroup = "vg-" + Hashes.getRandom(10);
 							returnValue = createVolumeGroup(dasDevice, volumeGroup);
 							if(returnValue.length() == 0) {
