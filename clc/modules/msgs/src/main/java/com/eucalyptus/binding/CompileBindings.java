@@ -187,7 +187,7 @@ public class CompileBindings extends Task {
   
   private void runBindingCompiler( ) {
     try {
-      Compile compiler = new Compile( true, true, false, false, false );
+      Compile compiler = new Compile( true, false, false, false, false );
       compiler.compile( paths( ), bindings( ) );
     } catch ( Throwable e ) {
       error( e );
