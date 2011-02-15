@@ -124,7 +124,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    final ClusterConfiguration config = super.add( partition, name, host, port );
+    ClusterConfiguration config = super.add( partition, name, host, port );
     File keyDir = ClusterBuilder.makeKeyDir( config );
     try {
       X509Certificate clusterX509;
@@ -154,7 +154,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       try {
         final String clusterCert = X509CertHelper.fromCertificate( clusterX509 );
         final String nodeCert = X509CertHelper.fromCertificate( nodeX509 );
-        Transactions.one( config, new Tx<ClusterConfiguration>( ) {
+        config = Transactions.one( config, new Tx<ClusterConfiguration>( ) {
           
           @Override
           public void fire( ClusterConfiguration t ) throws Throwable {
@@ -206,7 +206,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
   }
   
-  private static void removeKeyDirectory( final ClusterConfiguration config ) {
+  private static void removeKeyDirectory( final ServiceConfiguration config ) {
     try {
       String otherClusters = Iterables.transform( ClusterBuilder.lookupPartition( config ), HasFullName.GET_FULLNAME ).toString( );
       LOG.info( String.format( "There still exist clusters within the partition=%s so the keys will not be removed.", config.getPartition( ), otherClusters ) );
@@ -231,7 +231,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     }
   }
   
-  private static List<ClusterConfiguration> lookupPartition( final ClusterConfiguration config ) throws NoSuchElementException {
+  private static List<ClusterConfiguration> lookupPartition( final ServiceConfiguration config ) throws NoSuchElementException {
     EntityWrapper<ClusterConfiguration> db = EntityWrapper.get( ClusterConfiguration.class );
     try {
       Example ex = Example.create( new ClusterConfiguration( ) {

@@ -227,7 +227,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
     } catch ( IllegalStateException ex ) {
       LOG.error( ex, ex );
     } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex );
     }
   }
   
