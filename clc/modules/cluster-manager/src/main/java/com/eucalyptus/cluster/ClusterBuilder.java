@@ -43,6 +43,8 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.google.common.collect.Iterables;
 
 @DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
@@ -122,7 +124,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration config = super.add( partition, name, host, port );
+    final ClusterConfiguration config = super.add( partition, name, host, port );
     File keyDir = ClusterBuilder.makeKeyDir( config );
     try {
       X509Certificate clusterX509;
@@ -150,9 +152,16 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       }
       
       try {
-        config.setClusterCertificate( X509CertHelper.fromCertificate( clusterX509 ) );
-        config.setNodeCertificate( X509CertHelper.fromCertificate( nodeX509 ) );
-        EntityWrapper.get( config ).mergeAndCommit( config );
+        final String clusterCert = X509CertHelper.fromCertificate( clusterX509 );
+        final String nodeCert = X509CertHelper.fromCertificate( nodeX509 );
+        Transactions.one( config, new Tx<ClusterConfiguration>( ) {
+          
+          @Override
+          public void fire( ClusterConfiguration t ) throws Throwable {
+            config.setClusterCertificate( clusterCert );
+            config.setNodeCertificate( nodeCert );
+          }
+        } );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + config, ex );
       }
@@ -265,7 +274,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       ServiceConfigurations.getPartitionConfigurations( StorageControllerConfiguration.class, partition );
       throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
     } catch ( PersistenceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return true;
     } catch ( NoSuchElementException ex ) {
       return true;
@@ -299,7 +308,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     
     return super.remove( config );
   }
-
+  
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
@@ -324,9 +333,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }
-
+    
   }
-
+  
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Disabling cluster: " + config );
@@ -349,7 +358,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       LOG.error( ex, ex );
     }
   }
-
+  
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
     super.fireCheck( config );
