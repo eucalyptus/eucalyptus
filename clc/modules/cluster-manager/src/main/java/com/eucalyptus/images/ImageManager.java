@@ -224,6 +224,7 @@ public class ImageManager {
         db.rollback( );
         throw new EucalyptusCloudException( "Failed to find ramdisk image: " + ramdiskId );
       }
+      db = new EntityWrapper<ImageInfo>( );
       // Check ramdisk permission
       resourceAccount = Permissions.getAccountByUserId( ramdiskInfo.getImageOwnerId( ) );
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, ramdiskId, resourceAccount, action, requestUser ) ) {
