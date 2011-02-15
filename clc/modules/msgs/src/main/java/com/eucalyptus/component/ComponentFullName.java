@@ -85,10 +85,9 @@ public class ComponentFullName implements FullName {
     this.name = name;
     this.pathParts = ImmutableList.of( pathParts );
     StringBuilder b = new StringBuilder( );
-    b.append( "arn:aws:euca:" ).append( partition );
-    b.append( ":" );
+    b.append( "arn:aws:euca:" ).append( partition ).append( ":" );
     if( componentType != null ) {
-      b.append( componentType );
+      b.append( componentType.name( ) );
     }
     b.append( ":" ).append( name );
     for( String pathPart : pathParts ) {
