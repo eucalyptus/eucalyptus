@@ -71,6 +71,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -557,7 +559,9 @@ public class SANManager implements LogicalStorageManager {
 
 	@Override
 	public void checkReady() throws EucalyptusCloudException {
-		connectionManager.checkConnection();		
+		if (Component.State.ENABLED.equals(Components.lookup("storage").getState())) {
+			connectionManager.checkConnection();
+		}
 	}
 
 	@Override
