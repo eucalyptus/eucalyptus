@@ -260,6 +260,10 @@ public class Component implements HasName<Component> {
     }
   }
   
+  public Boolean hasLocalService( ) {
+    return this.serviceRegistry.hasLocalService( );
+  }
+  
   public Boolean isRunningLocally( ) {
     return State.ENABLED.equals( this.getState( ) ) && this.serviceRegistry.hasLocalService( );
   }
@@ -322,7 +326,7 @@ public class Component implements HasName<Component> {
     if ( this.enabled.get( ) ) {
       ServiceConfiguration config = this.getBuilder( ).toConfiguration( this.getComponentId( ).getLocalEndpointUri( ) );
       Service service = new Service( this.getComponentId( ), config );
-      this.setupService( service );
+      this.serviceRegistry.register( service );
     } else {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." );
     }
@@ -337,7 +341,7 @@ public class Component implements HasName<Component> {
    */
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this.getComponentId( ), config );
-    this.setupService( service );
+    this.serviceRegistry.register( service );
     if ( service.isLocal( ) ) {
       if ( State.INITIALIZED.equals( this.getState( ) ) ) {
         try {

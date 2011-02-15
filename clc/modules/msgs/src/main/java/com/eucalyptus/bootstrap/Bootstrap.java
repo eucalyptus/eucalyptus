@@ -496,7 +496,7 @@ public class Bootstrap {
   
   public static int INIT_RETRIES = 5;
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.isAvailableLocally( ) && component.getStateMachine( ).checkTransition( transition ) ) {
+    if ( component.getStateMachine( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ) ).info( );

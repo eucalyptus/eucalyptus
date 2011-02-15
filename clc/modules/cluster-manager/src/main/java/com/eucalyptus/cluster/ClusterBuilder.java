@@ -8,6 +8,7 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
@@ -261,9 +262,12 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
-      ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, name );
+      ServiceConfigurations.getPartitionConfigurations( StorageControllerConfiguration.class, partition );
       throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( PersistenceException ex ) {
+      LOG.error( ex , ex );
+      return true;
+    } catch ( NoSuchElementException ex ) {
       return true;
     }
   }

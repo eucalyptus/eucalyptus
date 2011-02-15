@@ -127,8 +127,8 @@ public class SystemBootstrapper {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            SystemBootstrapper.out.print( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).info( );
+            SystemBootstrapper.out.println( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.STDOUT, string ).info( );
           }
         }
       }
@@ -136,8 +136,8 @@ public class SystemBootstrapper {
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            SystemBootstrapper.err.print( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).error( );
+            SystemBootstrapper.err.println( string );
+            EventRecord.caller( SystemBootstrapper.class, EventType.STDERR, string ).error( );
           }
         }
       }
@@ -183,8 +183,10 @@ public class SystemBootstrapper {
       throw t;
     }
     /** ASAP:FIXME:GRZE **/
-    for ( Component c : Components.list( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.LOADING );
+    for ( final Component c : Components.list( ) ) {
+      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
+        Bootstrap.applyTransition( c, Component.Transition.LOADING );
+      }
     }
     return true;
   }

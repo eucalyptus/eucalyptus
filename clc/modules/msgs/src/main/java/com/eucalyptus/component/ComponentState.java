@@ -130,7 +130,7 @@ public class ComponentState {
       public void leave( final Component parent, final Completion transitionCallback ) {
         try {
           parent.getBootstrapper( ).start( );
-          if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+          if ( parent.getBuilder( ) != null && parent.hasLocalService( ) ) {
             parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
           }
           transitionCallback.fire( );
@@ -272,6 +272,9 @@ public class ComponentState {
   }
   
   public CheckedListenableFuture<Component> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    if( !this.parent.isAvailableLocally( ) ) {
+      throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + " because it is not available locally." );
+    }
     try {
       return this.stateMachine.startTransition( transition );
     } catch ( IllegalStateException ex ) {
@@ -334,7 +337,7 @@ public class ComponentState {
   }
   
   public boolean checkTransition( Transition transition ) {
-    return this.stateMachine.isLegalTransition( transition );
+    return this.parent.isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
 }

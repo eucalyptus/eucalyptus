@@ -232,5 +232,7 @@ public enum EventType {
   SNAPSHOT_CREATE,
   SNAPSHOT_DELETE, 
   FUTURE,
-  CALLBACK, 
+  CALLBACK,
+  STDOUT,
+  STDERR
 }

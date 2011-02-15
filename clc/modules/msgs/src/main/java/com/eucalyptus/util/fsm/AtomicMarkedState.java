@@ -180,9 +180,14 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.state.set( tr.getFromState( ), false );
-      this.currentTransition.set( null );
-      this.fireInListeners( tr.getFromState( ) );
+      if( !this.state.getReference( ).equals( tr.getFromState( ) ) ) {
+        this.state.set( tr.getFromState( ), false );
+        this.currentTransition.set( null );
+        this.fireInListeners( tr.getFromState( ) );
+      } else {
+        this.state.set( tr.getFromState( ), false );
+        this.currentTransition.set( null );
+      }
     }
   }
   
