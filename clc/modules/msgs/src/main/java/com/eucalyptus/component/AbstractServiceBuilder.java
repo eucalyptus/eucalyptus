@@ -22,7 +22,10 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       this.lookupByName( name );
       return true;
-    } catch ( Exception e ) {
+    } catch ( ServiceRegistrationException e ) {
+      throw e;
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
       return false;
     }
   }
