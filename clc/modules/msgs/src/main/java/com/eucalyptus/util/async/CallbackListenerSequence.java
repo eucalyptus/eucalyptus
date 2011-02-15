@@ -87,11 +87,11 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
     EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).debug( );
     for ( Callback<R> cb : this.successCallbacks ) {
       try {
-        EventRecord.here( this.getClass( ), EventType.CALLBACK, cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).debug( );
+        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).debug( );
         cb.fire( response );
       } catch ( Throwable t ) {
-        LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".apply( " + t.getMessage( ) + " )" );
-        LOG.error( t, t );
+        this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".apply( " + t.getMessage( ) + " )" );
+        this.LOG.error( t, t );
       }
     }
   }
@@ -106,11 +106,11 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
     EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fireException(" + t.getClass( ).getName( ) + ")" ).debug( );
     for ( Callback.Checked<R> cb : this.failureCallbacks ) {
       try {
-        EventRecord.here( this.getClass( ), EventType.CALLBACK, cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).debug( );
+        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).debug( );
         cb.fireException( t );
       } catch ( Throwable t2 ) {
-        LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".failure( " + t.getMessage( ) + " )" );
-        LOG.error( t2, t2 );
+        this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".failure( " + t.getMessage( ) + " )" );
+        this.LOG.error( t2, t2 );
       }
     }
   }

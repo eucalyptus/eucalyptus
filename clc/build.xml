@@ -85,19 +85,20 @@
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
-  <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
-    <classpath>
-        <fileset dir="${deps.lib.dir}">
-          <include name="**/groovy*.jar" />
-        </fileset>
-      </classpath>
-  </taskdef>
+  <path id="groovy-classpath">
+      <fileset dir="${deps.lib.dir}">
+        <include name="**/*.jar" />
+      </fileset>
+  </path>
+  <taskdef name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
   <loadfile property="modules" srcfile="modules/build.order"/>
   <macrodef name="call-module-target">
     <attribute name="target"/>
     <sequential>
       <property name="antTarget" value="@{target}"/>
-      <groovy src="modules/module-inc.groovy"/>
+      <groovy maxmemory="1024m" src="modules/module-inc.groovy" classpathref="groovy-classpath">
+      	<jvmarg value="-XX:MaxPermSize=512m"/>
+      </groovy>
     </sequential>
   </macrodef>
 	<!--================================== build targets ==================================-->
