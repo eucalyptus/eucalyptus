@@ -130,7 +130,7 @@ public class ComponentState {
       public void leave( final Component parent, final Completion transitionCallback ) {
         try {
           parent.getBootstrapper( ).start( );
-          if ( parent.getBuilder( ) != null && parent.hasLocalService( ) ) {
+          if ( parent.hasLocalService( ) ) {
             parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
           }
           transitionCallback.fire( );
@@ -148,12 +148,12 @@ public class ComponentState {
         try {
           if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             parent.getBootstrapper( ).check( );
-            if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+            if ( parent.hasLocalService( ) ) {
               parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
             }
           }
           parent.getBootstrapper( ).enable( );
-          if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+          if ( parent.hasLocalService( ) ) {
             parent.getBuilder( ).fireEnable( parent.getLocalService( ).getServiceConfiguration( ) );
           }
           transitionCallback.fire( );
@@ -185,7 +185,7 @@ public class ComponentState {
       public void leave( Component parent, Completion transitionCallback ) {
         try {
           parent.getBootstrapper( ).stop( );
-          if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+          if ( parent.getLocalService( ) != null ) {
             parent.getBuilder( ).fireStop( parent.getLocalService( ).getServiceConfiguration( ) );
           }
           transitionCallback.fire( );
@@ -203,7 +203,7 @@ public class ComponentState {
         try {
           if ( State.LOADED.ordinal( ) < ComponentState.this.stateMachine.getState( ).ordinal( ) ) {
             parent.getBootstrapper( ).check( );
-            if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+            if ( parent.getLocalService( ) != null ) {
               parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
             }
           }
@@ -214,7 +214,7 @@ public class ComponentState {
           if ( State.ENABLED.equals( ComponentState.this.stateMachine.getState( ) ) ) {
             try {
               parent.getBootstrapper( ).disable( );
-              if ( parent.getBuilder( ) != null && parent.getLocalService( ) != null ) {
+              if ( parent.hasLocalService( ) ) {
                 parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
               }
             } catch ( ServiceRegistrationException ex1 ) {
