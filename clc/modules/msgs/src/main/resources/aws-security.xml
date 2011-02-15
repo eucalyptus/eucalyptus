@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
 
     <mapping name="DeleteSecurityGroupResponse"
              class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType"

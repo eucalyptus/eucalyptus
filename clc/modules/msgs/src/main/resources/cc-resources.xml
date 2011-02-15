@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
   <mapping class="edu.ucsb.eucalyptus.msgs.ResourceType" abstract="true">
     <structure name="instanceType" field="instanceType" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
     <value name="maxInstances" field="maxInstances" usage="optional" />

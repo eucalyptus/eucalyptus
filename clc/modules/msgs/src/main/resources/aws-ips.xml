@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
     <!--2008-02-01-->
     <mapping name="AllocateAddress" class="edu.ucsb.eucalyptus.msgs.AllocateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>

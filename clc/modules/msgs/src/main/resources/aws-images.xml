@@ -64,7 +64,7 @@
   -->
 
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
 
   <mapping name="RegisterImageResponse" class="edu.ucsb.eucalyptus.msgs.RegisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

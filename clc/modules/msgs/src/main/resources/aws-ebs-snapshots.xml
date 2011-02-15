@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
     <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Snapshot" ordered="false">
         <value name="snapshotId" field="snapshotId" usage="required"/>
         <value name="volumeId" field="volumeId" usage="required"/>

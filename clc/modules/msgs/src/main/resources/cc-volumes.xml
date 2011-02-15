@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
   <mapping class="edu.ucsb.eucalyptus.msgs.AttachedVolume" abstract="true">
     <value name="volumeId" field="volumeId" usage="required" />
     <value name="remoteDev" field="remoteDevice" usage="required" />

@@ -505,7 +505,7 @@ public class Bootstrap {
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex );
         }
         try {
           TimeUnit.MILLISECONDS.sleep( 500 );

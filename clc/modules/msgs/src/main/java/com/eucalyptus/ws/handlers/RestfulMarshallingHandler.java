@@ -108,7 +108,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     try {
       this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
     } catch ( BindingException ex ) {
-      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
+      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
     }
   }
   
@@ -172,7 +172,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else {
           try {
-            OMElement omMsg = this.binding.toOM( httpResponse.getMessage( ), this.namespace );/**<--- wtf is this second arg doing here? should be the fast path. TODO **/
+            OMElement omMsg = this.binding.toOM( httpResponse.getMessage( ) );/**<--- wtf is this second arg doing here? should be the fast path. TODO **/
             omMsg.serialize( byteOut );
           } catch ( Throwable e ) {
             LOG.debug( e );
