@@ -81,7 +81,7 @@ public class ComponentRegistrationHandler {
     } else if( component.getComponentId( ).isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
     } else if( partition == null ) {
-      LOG.error( "BUG: Provided partition is null.  Using the service name as the parition name for the time being." );
+      LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );

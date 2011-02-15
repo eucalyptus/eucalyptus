@@ -316,7 +316,6 @@ public class ComponentState {
     } catch ( NoSuchElementException ex ) {
       LOG.error( Exceptions.filterStackTrace( ex ) );
     } catch ( ExistingTransitionException ex ) {
-      LOG.error( Exceptions.filterStackTrace( ex ) );
     }
     return Futures.predestinedFuture( this.parent );
   }

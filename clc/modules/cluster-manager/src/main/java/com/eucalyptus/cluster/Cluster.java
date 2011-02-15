@@ -240,7 +240,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public X509Certificate getNodeCertificate( ) {
-    return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
+    return X509CertHelper.toCertificate( this.configuration.getNodeCertificate( ) );
   }
   
   @Override
