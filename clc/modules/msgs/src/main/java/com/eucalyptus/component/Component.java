@@ -305,17 +305,6 @@ public class Component implements HasName<Component> {
   public NavigableSet<Service> lookupServices( String partition ) {
     return this.serviceRegistry.lookupPartition( partition );
   }
-
-  /**
-   * @param config
-   * @param service
-   * @return
-   * @throws ServiceRegistrationException
-   */
-  private Service setupService( Service service ) throws ServiceRegistrationException {
-    this.serviceRegistry.register( service );
-    return service;
-  }
   
   /**
    * Builds a Service instance for this component using the local default
@@ -365,6 +354,11 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
+      try {
+        this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
+      } catch ( NoSuchElementException ex1 ) {
+        this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
+      }
       this.stateMachine.setGoal( State.ENABLED );
       if ( this.inState( State.LOADED ) ) {
         final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
