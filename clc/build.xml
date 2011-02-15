@@ -85,60 +85,31 @@
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
+  <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+    <classpath>
+        <fileset dir="${deps.lib.dir}">
+          <include name="**/groovy*.jar" />
+        </fileset>
+      </classpath>
+  </taskdef>
+  <loadfile property="modules" srcfile="build.order"/>
+  <macrodef name="call-module-target">
+    <attribute name="target"/>
+    <sequential>
+      <property name="antTarget" value="@{target}"/>
+      <groovy src="modules/module-inc.groovy"/>
+    </sequential>
+  </macrodef>
 	<!--================================== build targets ==================================-->
 	<target name="build">
 		<ant dir="." inheritall="false" target="build-all" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
 	<target name="build-all">
-		<ant dir="." inheritall="false" target="build-nowww" />
-		<ant dir="." inheritall="false" target="build-www" />
-	</target>
-	<target name="build-nowww">
-		<ant dir="modules/msgs" inheritall="false" target="builder" />
-		<ant dir="modules/euare-common" inheritall="false" target="builder" />
-		<ant dir="modules/mysql" inheritall="false" target="builder" />
-		<ant dir="modules/authentication" inheritall="false" target="builder" />
-		<ant dir="modules/configuration" inheritall="false" target="builder" />
-		<ant dir="modules/core" inheritall="false" target="builder" />
-		<ant dir="modules/wsstack" inheritall="false" target="builder" />
-		<ant dir="modules/euare" inheritall="false" target="builder" />
-		<ant dir="modules/component" inheritall="false" target="builder" />
-		<ant dir="modules/cloud" inheritall="false" target="builder" />
-		<ant dir="modules/reporting" inheritall="false" target="builder" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
-		<ant dir="modules/notifications" inheritall="false" target="builder" />
-		<ant dir="modules/storage-common" inheritall="false" target="builder" />
-		<ant dir="modules/walrus" inheritall="false" target="builder" />
-		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
-		<ant dir="modules/dns" inheritall="false" target="builder" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
-	</target>
-	<target name="build-www">
-		<ant dir="modules/www" inheritall="false" target="builder" />
-		<ant dir="modules/reporting" inheritall="false" target="builder" />
+		<call-module-target target="builder"/>
 	</target>
 	<target name="jar" depends="build-bind">
-		<ant dir="modules/msgs" inheritall="false" target="jar" />
-		<ant dir="modules/euare-common" inheritall="false" target="jar" />
-		<ant dir="modules/mysql" inheritall="false" target="jar" />
-		<ant dir="modules/authentication" inheritall="false" target="jar" />
-		<ant dir="modules/euare" inheritall="false" target="jar" />
-		<ant dir="modules/cloud" inheritall="false" target="jar" />
-		<ant dir="modules/configuration" inheritall="false" target="jar" />
-		<ant dir="modules/component" inheritall="false" target="jar" />
-		<ant dir="modules/core" inheritall="false" target="jar" />
-		<ant dir="modules/wsstack" inheritall="false" target="jar" />
-		<ant dir="modules/reporting" inheritall="false" target="jar" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="jar" />
-		<ant dir="modules/notifications" inheritall="false" target="jar" />
-		<ant dir="modules/storage-common" inheritall="false" target="jar" />
-		<ant dir="modules/walrus" inheritall="false" target="jar" />
-		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
-		<ant dir="modules/dns" inheritall="false" target="jar" />
-		<ant dir="modules/www" inheritall="false" target="jar" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
-		<ant dir="modules/reporting" inheritall="false" target="jar" />
+		<call-module-target target="jar"/>
 	</target>
 	<target name="shouldBind">
 		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
@@ -158,7 +129,6 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
-		<touch file="${bind.timestamp}"/>
 		<delete>
 			<fileset dir="modules" includes="**/*JiBX*" />
 		</delete>
@@ -174,26 +144,7 @@
 	<!--================================== clean targets ==================================-->
 	<target name="clean">
 		<delete file="${bind.timestamp}"/>
-		<ant dir="modules/msgs" inheritall="false" target="clean" />
-		<ant dir="modules/euare-common" inheritall="false" target="clean" />
-		<ant dir="modules/mysql" inheritall="false" target="clean" />
-		<ant dir="modules/cloud" inheritall="false" target="clean" />
-		<ant dir="modules/authentication" inheritall="false" target="clean" />
-		<ant dir="modules/euare" inheritall="false" target="clean" />
-		<ant dir="modules/configuration" inheritall="false" target="clean" />
-		<ant dir="modules/component" inheritall="false" target="clean" />
-		<ant dir="modules/core" inheritall="false" target="clean" />
-		<ant dir="modules/wsstack" inheritall="false" target="clean" />
-		<ant dir="modules/reporting" inheritall="false" target="clean" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
-		<ant dir="modules/notifications" inheritall="false" target="clean" />
-		<ant dir="modules/storage-common" inheritall="false" target="clean" />
-		<ant dir="modules/walrus" inheritall="false" target="clean" />
-		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
-		<ant dir="modules/dns" inheritall="false" target="clean" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
-		<ant dir="modules/www" inheritall="false" target="clean" />
-		<ant dir="modules/reporting" inheritall="false" target="clean" />
+		<call-module-target target="clean"/>
 		<delete dir="${target.dir}" />
 	</target>
 	<target name="distclean" depends="clean">
@@ -241,27 +192,7 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
-		<ant dir="modules/msgs" inheritall="false" target="install" />
-		<ant dir="modules/euare-common" inheritall="false" target="install" />
-		<ant dir="modules/mysql" inheritall="false" target="install" />
-		<ant dir="modules/cloud" inheritall="false" target="install" />
-		<ant dir="modules/authentication" inheritall="false" target="install" />
-		<ant dir="modules/euare" inheritall="false" target="install" />
-		<ant dir="modules/configuration" inheritall="false" target="install" />
-		<ant dir="modules/component" inheritall="false" target="install" />
-		<ant dir="modules/core" inheritall="false" target="install" />
-		<ant dir="modules/wsstack" inheritall="false" target="install" />
-		<ant dir="modules/storage-common" inheritall="false" target="install" />
-		<ant dir="modules/reporting" inheritall="false" target="install" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
-		<ant dir="modules/notifications" inheritall="false" target="install" />
-		<ant dir="modules/walrus" inheritall="false" target="install" />
-		<ant dir="modules/storage-controller" inheritall="false" target="install" />
-		<ant dir="modules/dns" inheritall="false" target="install" />
-		<ant dir="modules/www" inheritall="false" target="install" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
-		<ant dir="modules/reporting" inheritall="false" target="install" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
+		<call-module-target target="install"/>
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">
@@ -301,5 +232,9 @@
 		<mkdir dir="${deps.lib.dir}" />
 		<!--===========  download the dependency libraries  ===========-->
 		<get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz" />
+	</target>
+	<target name="test-for">
+    <call-module-target target="builder"/>
+		<call-module-target target="clean"/>
 	</target>
 </project>
