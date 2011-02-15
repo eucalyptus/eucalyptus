@@ -78,13 +78,13 @@
 		</filterchain>
 	</loadfile>
 	<!--================================== other vars ==================================-->
-	<property name="jvm.heap" value="256m" />
 	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
 	<property name="deps.dir" value="deps" />
 	<property name="deps.lib.dir" value="lib" />
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
+  <property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
 	<!--================================== build targets ==================================-->
   <target name="build">
     <ant dir="." inheritall="false" target="build-all" />
@@ -140,35 +140,64 @@
 		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
 	</target>
-	<target name="shouldBind">
-		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
-			<srcfiles dir="modules">
-				<include name="**/*.java"/>
-			</srcfiles>
-		</uptodate>
-		<echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
-	</target>
-	<target name="build-bind" depends="shouldBind" unless="bind.notRequired">
-		<echo message="[BINDING] Running binding compiler." />
-		<path id="bindingclasspath">
-			<dirset dir="modules">
-				<include name="**/build" />
-			</dirset>
-			<fileset dir="lib">
-				<include name="**/*.jar" />
-			</fileset>
-		</path>
-		<delete>
-			<fileset dir="modules" includes="**/*JiBX*" />
-		</delete>
-		<delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
-		<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
-		<bindings>
-			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
-			<bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
-		</bindings>
-		<touch file="${bind.timestamp}"/>
-	</target>
+  
+	<target name="build-bind" depends="generate-bind,compile-bind"/>
+	
+	<target name="shouldGenerateBinding">
+    <uptodate property="generate.bind.notRequired" targetfile="${bind.msgs}">
+      <srcfiles dir="modules">
+        <include name="**/*.java"/>
+        <include name="**/*.groovy"/>
+      </srcfiles>
+    </uptodate>
+    <echo message="[BINDING] Up-to-date check shows generate.bind.notRequred=${generate.bind.notRequired}." />
+  </target>
+  <target name="generate-bind" depends="shouldGenerateBinding" unless="generate.bind.notRequired">
+    <echo message="[BINDING] Running binding generator." />
+    <path id="bindingclasspath">
+      <dirset dir="modules">
+        <include name="**/build" />
+      </dirset>
+      <fileset dir="lib">
+        <include name="**/*.jar" />
+      </fileset>
+    </path>
+    <delete>
+      <fileset dir="modules" includes="**/*JiBX*" />
+    </delete>
+    <delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
+    <taskdef name="generate-bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
+    <generate-bindings>
+      <classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+    </generate-bindings>
+  </target>
+
+	<target name="shouldCompileBinding">
+    <uptodate property="compile.bind.notRequired" targetfile="${bind.timestamp}}">
+      <srcfiles dir="modules">
+        <include name="**/*.class"/>
+        <include name="**/*-binding.xml"/>
+      </srcfiles>
+    </uptodate>
+    <echo message="[BINDING] Up-to-date check shows compile.bind.notRequred=${compile.bind.notRequired}." />
+  </target>
+	<target name="compile-bind" depends="shouldCompileBinding" unless="compile.bind.notRequired">
+    <echo message="[BINDING] Running binding compiler." />
+    <path id="bindingclasspath">
+      <dirset dir="modules">
+        <include name="**/build" />
+      </dirset>
+      <fileset dir="lib">
+        <include name="**/*.jar" />
+      </fileset>
+    </path>
+    <taskdef name="compile-bindings" classname="com.eucalyptus.binding.CompileBindings" classpathref="bindingclasspath" />
+    <compile-bindings>
+      <classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+      <bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
+    </compile-bindings>
+    <touch file="${bind.timestamp}"/>
+  </target>
 
 	<!--================================== clean targets ==================================-->
 	<target name="clean">

@@ -18,23 +18,15 @@ import org.jibx.binding.Compile;
 
 public class BuildBindings extends Task {
   private List<FileSet> classFileSets   = null;
-  private List<FileSet> bindingFileSets = null;
-  private List<String>  bindings        = null;
   
   @Override
   public void init( ) throws BuildException {
     super.init( );
     this.classFileSets = new ArrayList<FileSet>( );
-    this.bindingFileSets = new ArrayList<FileSet>( );
-    this.bindings = new ArrayList<String>( );
   }
   
   public void addClassFileSet( FileSet classFiles ) {
     this.classFileSets.add( classFiles );
-  }
-  
-  public void addBindingFileSet( FileSet bindings ) {
-    this.bindingFileSets.add( bindings );
   }
   
   private String[] paths( ) {
@@ -52,31 +44,11 @@ public class BuildBindings extends Task {
     return dirs.toArray( new String[] {} );
   }
   
-  private String[] bindings( ) {
-    List<String> bindings = new ArrayList<String>( );
-    boolean addMsgs = true;
-    for ( FileSet fs : this.bindingFileSets ) {
-      final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
-      for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-        final String bindingFilePath = dirName + File.separator + b;
-        log( "Found binding: " + bindingFilePath );
-        if ( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
-          addMsgs = false;
-        }
-        bindings.add( bindingFilePath );
-      }
-    }
-    if ( addMsgs ) {
-      bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
-    }
-    return bindings.toArray( new String[] {} );
-  }
-  
   PrintStream oldOut = System.out, oldErr = System.err;
   public void error( Throwable e ) {
     e.printStackTrace( System.err );
-    System.setOut( oldOut );
-    System.setErr( oldErr );
+    System.setOut( this.oldOut );
+    System.setErr( this.oldErr );
     e.printStackTrace( System.err );
     log( "ERROR See clc/bind.log for additional information: " + e.getMessage( ) );
     System.exit( -1 );
@@ -90,8 +62,6 @@ public class BuildBindings extends Task {
       System.setErr( buildLog );
       if ( this.classFileSets.isEmpty( ) ) {
         throw new BuildException( "No classes were provided to bind." );
-      } else if ( this.bindingFileSets.isEmpty( ) ) {
-        throw new BuildException( "No bindings were provided to bind." );
       } else {
         try {
           System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
@@ -111,34 +81,20 @@ public class BuildBindings extends Task {
           path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
         }
         runPreBindingGenerators( path );
-        runBindingCompiler( );
-//        runPostBindingGenerators( path );
       }
     } catch ( FileNotFoundException e2 ) {
-      System.setOut( oldOut );
-      System.setErr( oldErr );
+      System.setOut( this.oldOut );
+      System.setErr( this.oldErr );
     } finally {
-      System.setOut( oldOut );
-      System.setErr( oldErr );
+      System.setOut( this.oldOut );
+      System.setErr( this.oldErr );
     }
     
-  }
-  
-  private void runBindingCompiler( ) {
-    try {
-      Compile compiler = new Compile( true, true, false, false, false );
-      compiler.compile( paths( ), bindings( ) );
-    } catch ( Throwable e ) {
-      error( e );
-    }
-  }
-  
+  }  
   private void runPreBindingGenerators( Path path ) {
-    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
     AntClassLoader loader = this.getProject( ).createClassLoader( path );
+    loader.setThreadContextLoader( );
     try {
-      Thread.currentThread( ).setContextClassLoader( loader );
-      //        System.err.print( "class path: " + loader.getClasspath( ) );
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
       loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
@@ -167,9 +123,8 @@ public class BuildBindings extends Task {
       } catch ( Throwable e ) {
         error( e );
       }
+      loader.resetThreadContextLoader( );
       loader.cleanup( );
-      System.gc( );
-      Thread.currentThread( ).setContextClassLoader( old );
     }
   }
   
