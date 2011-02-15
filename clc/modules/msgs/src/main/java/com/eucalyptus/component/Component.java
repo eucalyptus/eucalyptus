@@ -748,6 +748,7 @@ public class Component implements HasName<Component> {
             }
           }
         } catch ( ServiceRegistrationException ex ) {
+          transitionFuture.setException( ex );
           LOG.error( ex, ex );
           throw ex;
         }
@@ -773,6 +774,7 @@ public class Component implements HasName<Component> {
             }
           }
         } catch ( ServiceRegistrationException ex ) {
+          transitionFuture.setException( ex );
           LOG.error( ex, ex );
           throw ex;
         }
