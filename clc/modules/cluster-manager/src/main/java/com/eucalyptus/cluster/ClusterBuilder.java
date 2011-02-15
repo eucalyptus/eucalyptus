@@ -305,7 +305,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
-    
+    ClusterBuilder.removeKeyDirectory( config );
     return super.remove( config );
   }
   
