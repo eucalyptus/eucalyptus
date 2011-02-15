@@ -102,6 +102,7 @@ public class Binding {
   private final String       name;
   private IBindingFactory    bindingFactory;
   private Map<String, Class> elementToClassMap = Maps.newHashMap( );
+  private Map<String, String> classToElementMap = Maps.newHashMap( );
   protected Binding( final String name ) throws BindingException {
     this.name = name;
   }
@@ -116,11 +117,12 @@ public class Binding {
   public IBindingFactory seed( final Class seed ) throws BindingException {
     try {
       this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
-      String[] mappedClasses = bindingFactory.getMappedClasses( );
+      String[] mappedClasses = this.bindingFactory.getMappedClasses( );
       for ( int i = 0; i < mappedClasses.length; i++ ) {
-        if ( bindingFactory.getElementNames( )[i] != null ) {
+        if ( this.bindingFactory.getElementNames( )[i] != null ) {
           try {
-            elementToClassMap.put( bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
+            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
+            this.classToElementMap.put( mappedClasses[i], this.bindingFactory.getElementNames( )[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }
@@ -154,7 +156,7 @@ public class Binding {
     
     final OMFactory factory = HoldMe.getOMFactory( );
     final IMarshallable mrshable = ( IMarshallable ) param;
-    final int index = mrshable.JiBX_getIndex( );
+    final String fqName = mrshable.JiBX_getName( );
     if( this.bindingFactory == null ) {
       LOG.error( "Binding factory is empty" );
       throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
@@ -163,7 +165,7 @@ public class Binding {
       LOG.error( "Binding factory's element namespace is empty" );
       throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
     }
-    final String origNs = this.bindingFactory.getElementNamespaces( )[index];
+    final String origNs = this.classToElementMap.get( fqName );
     final String useNs = altNs != null ? altNs : origNs;
     final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
     final OMElement retVal;

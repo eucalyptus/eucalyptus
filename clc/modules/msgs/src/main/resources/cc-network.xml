@@ -28,7 +28,6 @@
 
 <binding force-classes="true">
   <!-- TODO: change name space to reflect change of API -->
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
     <value name="privateMacAddress" field="macAddress" />
     <value name="privateIp" field="ipAddress" />

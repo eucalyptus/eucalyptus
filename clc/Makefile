@@ -47,7 +47,7 @@ build: deps extras
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
 	@$(ANT) generate-bind
-	@$(ANT) compile-bind
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind
 	@$(ANT) jar
 	@make -C modules/storage-controller/native
 	@make -C modules/bootstrap

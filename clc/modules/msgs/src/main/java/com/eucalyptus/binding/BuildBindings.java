@@ -97,7 +97,7 @@ public class BuildBindings extends Task {
     try {
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
+//      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
       for ( FileSet fs : this.classFileSets ) {
         for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
           try {

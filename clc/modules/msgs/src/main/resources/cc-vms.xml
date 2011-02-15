@@ -64,7 +64,6 @@
   -->
 
 <binding force-classes="true">
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
   <mapping class="edu.ucsb.eucalyptus.cloud.VmKeyInfo" abstract="true">
     <value name="keyName" field="value" usage="required" />
   </mapping>

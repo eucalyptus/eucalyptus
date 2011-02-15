@@ -173,9 +173,9 @@
   </target>
 
 	<target name="shouldCompileBinding">
-    <uptodate property="compile.bind.notRequired" targetfile="${bind.timestamp}}">
+    <uptodate property="compile.bind.notRequired" targetfile="${bind.timestamp}">
       <srcfiles dir="modules">
-        <include name="**/*.class"/>
+        <include name="*/build/**"/>
         <include name="**/*-binding.xml"/>
       </srcfiles>
     </uptodate>
@@ -184,7 +184,7 @@
 	<target name="compile-bind" depends="shouldCompileBinding" unless="compile.bind.notRequired">
     <echo message="[BINDING] Running binding compiler." />
     <path id="bindingclasspath">
-      <dirset dir="modules">
+      <dirset dir="${project.basedir}/modules">
         <include name="**/build" />
       </dirset>
       <fileset dir="lib">

@@ -64,7 +64,6 @@
   -->
 
 <binding force-classes="true">
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
   <mapping class="edu.ucsb.eucalyptus.msgs.AttachedVolume" abstract="true">
     <value name="volumeId" field="volumeId" usage="required" />
     <value name="remoteDev" field="remoteDevice" usage="required" />

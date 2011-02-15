@@ -65,7 +65,6 @@
 
 
 <binding force-classes="true">
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
   <mapping class="com.eucalyptus.empyrean.EmpyreanMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
   </mapping>
