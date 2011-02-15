@@ -85,6 +85,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
@@ -108,7 +109,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   private final AtomicBoolean                running;
   @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
-  private final ExecutorService              workers;
+  private ThreadPool workers;
   
   public ServiceEndpoint( Service parent, Boolean local, URI uri ) {
     super( uri );

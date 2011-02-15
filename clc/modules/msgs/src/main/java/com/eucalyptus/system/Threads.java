@@ -105,19 +105,22 @@ import com.google.common.collect.Lists;
 
 public class Threads {
   private static Logger                                  LOG          = Logger.getLogger( Threads.class );
+  private final static String PREFIX = "Eucalyptus.";
   private final static AtomicInteger                     threadIndex  = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices = new ConcurrentHashMap<String, ThreadPool>( );
   
   public static ThreadPool lookup( Class<? extends ComponentId> group ) {
     return lookup( ComponentIds.lookup( group ).name( ) );
   }
-  public static ThreadPool lookup( String groupName ) {
+  
+  public static ThreadPool lookup( String threadGroupName ) {
+    String groupName = PREFIX + threadGroupName;
     if ( execServices.containsKey( groupName ) ) {
-      LOG.debug( "LOOKUP thread threadpool named: " + groupName  );
+      LOG.debug( "LOOKUP thread threadpool named: " + groupName );
       return execServices.get( groupName );
     } else {
       ThreadPool f = new ThreadPool( groupName );
-      if ( execServices.putIfAbsent( groupName, f ) != null ) {
+      if ( execServices.putIfAbsent( f.getName( ), f ) != null ) {
         LOG.warn( "SHUTDOWN:" + f.getName( ) + " Freeing duplicate thread pool..." );
         f.free( );
       }
@@ -143,9 +146,31 @@ public class Threads {
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
     private final ThreadGroup group;
+    private final String      prefix     = "Eucalyptus.";
     private final String      name;
     private ExecutorService   pool;
     private Integer           numThreads = -1;
+    
+    private ThreadPool( String groupPrefix, Integer threadCount ) {
+      this( groupPrefix );
+      this.numThreads = threadCount;
+    }
+    
+    private ThreadPool( String groupPrefix ) {
+      this.name = groupPrefix;
+      this.group = new ThreadGroup( this.name );
+      this.pool = Executors.newCachedThreadPool( );
+      Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+        @Override
+        public void run( ) {
+          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
+          if ( ThreadPool.this.pool != null ) {
+            ThreadPool.this.free( );
+          }
+        }
+      } );
+      
+    }
     
     public ThreadPool limitTo( Integer numThreads ) {
       if ( this.numThreads.equals( numThreads ) ) {
@@ -185,19 +210,20 @@ public class Threads {
         return this.pool;
       } else {
         synchronized ( this ) {
-          if ( this.pool == null && numThreads == -1 ) {
+          if ( this.pool == null && this.numThreads == -1 ) {
             this.pool = Executors.newCachedThreadPool( this );
           } else {
             this.pool = Executors.newFixedThreadPool( this.numThreads );
           }
         }
-        return this.pool;
+        return this;
       }
     }
     
     private static final Runnable[] EMPTY = new Runnable[] {};
     
     public List<Runnable> free( ) {
+      execServices.remove( this.getName( ) );
       List<Runnable> ret = Lists.newArrayList( );
       for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
@@ -217,27 +243,6 @@ public class Threads {
         LOG.error( e, e );
       }
       return ret;
-    }
-    
-    private ThreadPool( String groupPrefix, Integer threadCount ) {
-      this( groupPrefix );
-      this.numThreads = threadCount;
-    }
-    
-    private ThreadPool( String groupPrefix ) {
-      this.name = "Eucalyptus." + groupPrefix;
-      this.group = new ThreadGroup( this.name );
-      this.pool = Executors.newCachedThreadPool( );
-      Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
-        @Override
-        public void run( ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
-          if ( ThreadPool.this.pool != null ) {
-            ThreadPool.this.free( );
-          }
-        }
-      } );
-      
     }
     
     @Override
@@ -387,9 +392,10 @@ public class Threads {
   public static ExecutorService currentThreadExecutor( ) {
     return new AbstractExecutorService( ) {
       private final Lock      lock         = new ReentrantLock( );
-      private final Condition termination  = lock.newCondition( );
+      private final Condition termination  = this.lock.newCondition( );
       private int             runningTasks = 0;
       private boolean         shutdown     = false;
+      
       public void execute( Runnable command ) {
         startTask( );
         try {
@@ -401,21 +407,21 @@ public class Threads {
       
       /*@Override*/
       public boolean isShutdown( ) {
-        lock.lock( );
+        this.lock.lock( );
         try {
-          return shutdown;
+          return this.shutdown;
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
       
       /*@Override*/
       public void shutdown( ) {
-        lock.lock( );
+        this.lock.lock( );
         try {
-          shutdown = true;
+          this.shutdown = true;
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
       
@@ -428,18 +434,18 @@ public class Threads {
       
       /*@Override*/
       public boolean isTerminated( ) {
-        lock.lock( );
+        this.lock.lock( );
         try {
-          return shutdown && runningTasks == 0;
+          return this.shutdown && this.runningTasks == 0;
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
       
       /*@Override*/
       public boolean awaitTermination( long timeout, TimeUnit unit ) throws InterruptedException {
         long nanos = unit.toNanos( timeout );
-        lock.lock( );
+        this.lock.lock( );
         try {
           for ( ;; ) {
             if ( isTerminated( ) ) {
@@ -447,11 +453,11 @@ public class Threads {
             } else if ( nanos <= 0 ) {
               return false;
             } else {
-              nanos = termination.awaitNanos( nanos );
+              nanos = this.termination.awaitNanos( nanos );
             }
           }
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
       
@@ -462,14 +468,14 @@ public class Threads {
        *           if the executor has been previously shutdown
        */
       private void startTask( ) {
-        lock.lock( );
+        this.lock.lock( );
         try {
           if ( isShutdown( ) ) {
             throw new RejectedExecutionException( "Executor already shutdown" );
           }
-          runningTasks++;
+          this.runningTasks++;
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
       
@@ -477,14 +483,14 @@ public class Threads {
        * Decrements the running task count.
        */
       private void endTask( ) {
-        lock.lock( );
+        this.lock.lock( );
         try {
-          runningTasks--;
+          this.runningTasks--;
           if ( isTerminated( ) ) {
-            termination.signalAll( );
+            this.termination.signalAll( );
           }
         } finally {
-          lock.unlock( );
+          this.lock.unlock( );
         }
       }
     };

@@ -133,7 +133,7 @@ public class ServiceContextManager {
   }
   
   public static final void restart( ) {
-    ctxMgmtThreadPool.getExecutorService( ).submit( new Callable<MuleContext>( ) {
+    ctxMgmtThreadPool.submit( new Callable<MuleContext>( ) {
       @Override
       public MuleContext call( ) throws Exception {
         try {
