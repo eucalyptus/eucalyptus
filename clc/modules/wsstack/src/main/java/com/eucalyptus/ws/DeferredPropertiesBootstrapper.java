@@ -92,7 +92,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 	@Override
 	public boolean start( ) throws Exception {
 		for ( Component comp : Components.list( ) ) {
-			for ( ServiceConfiguration s : comp.list( ) ) {
+			for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
 				if(!s.isLocal()) {
 					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponentId().name());
 					for ( ConfigurableProperty prop : props ) {

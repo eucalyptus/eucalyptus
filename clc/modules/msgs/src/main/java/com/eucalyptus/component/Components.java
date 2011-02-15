@@ -99,14 +99,14 @@ public class Components {
     List<Component> components = Lists.newArrayList( );
     if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
       for ( Component comp : Components.list( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( comp.getComponentId( ).isCloudLocal( ) ) {
           components.add( comp );
         }
       }
     }
     for ( Component comp : Components.list( ) ) {
       if ( comp.isRunningLocally( ) ) {
-        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( !comp.getComponentId( ).isCloudLocal( ) ) {
           components.add( comp );
         }
       }
@@ -210,15 +210,6 @@ public class Components {
     return Components.lookup( Component.class, componentId.getName( ) );
   }
 
-  public static Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
-    for( Service s : Components.lookup( config.getComponentId( ) ).getServices( ) ) {
-      if( s.getServiceConfiguration( ).equals( config ) ) {
-        return s;
-      }
-    }
-    throw new NoSuchElementException( "Failed to find service corresponding to " + config.toString( ) );
-  }
-
   public static boolean contains( String componentName ) {
     return Components.contains( Component.class, componentName );
   }
@@ -247,14 +238,14 @@ public class Components {
             buf.append( "-> Builder:            "
                         + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
             buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".disable" )
+                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".disable" )
                         + "/"
-                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".remote" ) ).append( "\n" );
+                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".remote" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( Service s : comp.getServices( ) ) {
+            for ( Service s : comp.lookupServices( ) ) {
               buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
               buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
                           + s.getDispatcher( ).getAddress( ) ).append( "\n" );
@@ -370,8 +361,8 @@ public class Components {
             final StringBuilder buf = new StringBuilder( );
             buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
                                        comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getIdentity( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getIdentity( ).name( ) ) ) ) ).append( "\n" );
+                                       System.getProperty( String.format( "euca.%s.disable", comp.getComponentId( ).name( ) ) ),
+                                       System.getProperty( String.format( "euca.%s.remote", comp.getComponentId( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),

@@ -311,7 +311,7 @@ public class ClusterEndpoint implements Startable {
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
+      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupService( "walrus" ).getUri( ).toASCIIString( ) ) );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
     }

@@ -152,15 +152,7 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
 
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    try {
-      if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
-        return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );      
-      } else {
-        return new RemoteConfiguration( null, this.getComponent( ).getIdentity( ), uri );
-      }
-    } catch ( Exception e ) {
-      return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );
-    }
+    return ServiceConfigurations.uriToServiceConfiguration( this.getComponent( ), uri );
   }
 
   @Override

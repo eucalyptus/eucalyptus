@@ -143,10 +143,10 @@ public class Configuration {
     List<ComponentInfoType> listConfigs = reply.getRegistered( );
     if ( DescribeComponentsType.class.equals( request.getClass( ) ) ) {
       for ( Component c : Components.list( ) ) {
-        if( c.getServices( ).isEmpty( ) ) {
-          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", c.getIdentity( ).name( ).toUpperCase( ) ), c.getIdentity( ).name( ).toUpperCase( ), "", c.getState( ).toString( ), "" ) );
+        if( c.lookupServices( ).isEmpty( ) ) {
+          listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", c.getComponentId( ).name( ).toUpperCase( ) ), c.getComponentId( ).name( ), "", c.getState( ).toString( ), "" ) );
         } else {
-          for ( Service s : c.getServices( ) ) {
+          for ( Service s : c.lookupServices( ) ) {
             ServiceConfiguration conf = s.getServiceConfiguration( );
             listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
               ? conf.getPartition( )
@@ -164,7 +164,7 @@ public class Configuration {
     } else {
       for ( ServiceConfiguration conf : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
         try {
-          Service s = Components.lookup( conf );
+          Service s = Components.lookup( conf.getComponentId( ) ).lookupService( conf );
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
         } catch ( NoSuchElementException ex ) {
           LOG.error( ex, ex );

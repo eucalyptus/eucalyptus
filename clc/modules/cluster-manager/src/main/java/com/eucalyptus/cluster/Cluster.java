@@ -85,8 +85,8 @@ import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
-import com.eucalyptus.component.Services;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.entities.VmType;
@@ -216,7 +216,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   private FullName getFullName( ) {
     return this.fullName;
   }
-
+  
   public Boolean isReady( ) {
     return this.hasClusterCert && this.hasNodeCert && Bootstrap.isFinished( );
   }
@@ -232,7 +232,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ServiceEndpoint getServiceEndpoint( ) {
-    return Services.lookupByHost( com.eucalyptus.component.id.Cluster.class, this.getHostName( ) );
+    return Components.lookup( com.eucalyptus.component.id.Cluster.class ).lookupService( this.configuration ).getEndpoint( );
   }
   
   public X509Certificate getClusterCertificate( ) {

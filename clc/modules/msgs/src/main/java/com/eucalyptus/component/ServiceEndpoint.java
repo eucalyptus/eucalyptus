@@ -325,6 +325,6 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   }
 
   public ChannelPipelineFactory getPipelineFactory( ) {
-    return this.getParent( ).getParent( ).getIdentity( ).getClientPipeline( );
+    return this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( );
   }
 }

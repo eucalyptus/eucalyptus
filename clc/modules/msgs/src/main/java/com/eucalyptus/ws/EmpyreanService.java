@@ -102,7 +102,7 @@ public class EmpyreanService {
     for( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component c = Components.lookup( serviceInfo.getType( ) );
-        for( Service service : c.getServices( ) ) {
+        for( Service service : c.lookupServices( ) ) {
           String partition = service.getServiceConfiguration( ).getPartition( );
           String name = service.getServiceConfiguration( ).getName( );
           if( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {

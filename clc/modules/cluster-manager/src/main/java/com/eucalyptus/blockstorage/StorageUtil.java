@@ -102,7 +102,7 @@ public class StorageUtil {
   
   public static Service getActiveSc( String partition ) throws NoSuchElementException {
     Service sc;
-    NavigableSet<Service> partScs = Components.lookup( Storage.class ).getServices( partition );
+    NavigableSet<Service> partScs = Components.lookup( Storage.class ).lookupServices( partition );
     sc = partScs.first( );
     if( !Component.State.ENABLED.equals( sc.getState( ) ) ) {
       throw new NoSuchElementException( "Failed to find the storage controller to service request for partition: " + partition + ".  This was best candidate: " + sc );

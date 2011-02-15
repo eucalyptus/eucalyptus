@@ -16,7 +16,7 @@ public class StopComponentEvent extends LifecycleEvent{
     } catch ( URISyntaxException e ) {
       LOG.fatal( "Failed to construct a valid URL from a component configuration", e );
     }
-    return new StopComponentEvent( new LocalConfiguration( null, config.getComponentId( ), uri ), config.getComponentId(), true );
+    return new StopComponentEvent( new LocalConfiguration( config.getComponentId( ), config.getPartition( ), config.getName( ), uri ), config.getComponentId(), true );
   }
   public static StopComponentEvent getRemote( ServiceConfiguration  config ) {
     return new StopComponentEvent( config, config.getComponentId( ), false );

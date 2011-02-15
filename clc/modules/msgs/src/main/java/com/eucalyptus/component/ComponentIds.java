@@ -79,12 +79,12 @@ public class ComponentIds {
   public static List<ComponentId> listLocallyRynning( ) {
     List<ComponentId> components = Lists.newArrayList( );
       for ( Component comp : Components.list( ) ) {
-        if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getIdentity( ).isCloudLocal( ) ) {
-          components.add( comp.getIdentity( ) );
-        } else if ( comp.getIdentity( ).isAlwaysLocal( ) ) {
-          components.add( comp.getIdentity( ) );
+        if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
+          components.add( comp.getComponentId( ) );
+        } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
+          components.add( comp.getComponentId( ) );
         } else if ( comp.isRunningLocally( ) ) {
-          components.add( comp.getIdentity( ) );
+          components.add( comp.getComponentId( ) );
         }
     }
     return components;

@@ -90,7 +90,7 @@ public class VmReplyTransform {
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
       for( String instId : allocToken.getInstanceIds() ) {
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Components.lookup( Dns.class ).isLocal( ) ) );
+        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( ) );
       }
 
     reply.setRsvInfo( reservation );

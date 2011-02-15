@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -77,6 +78,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterables;
@@ -461,7 +463,7 @@ public class Bootstrap {
 
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     for( Component c : Components.list( ) ) {
-      Component.Transition.INITIALIZING.transit( c );
+      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
 
     LOG.info( LogUtil.header( "Initial component configuration:" ) );
@@ -476,7 +478,7 @@ public class Bootstrap {
     Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-        if( ( comp.isAvailableLocally( ) && comp.getIdentity( ).isAlwaysLocal( ) ) || ( eucalyptusComp.isLocal( ) && comp.getIdentity( ).isCloudLocal( ) ) ){
+        if( ( comp.isAvailableLocally( ) && comp.getComponentId( ).isAlwaysLocal( ) ) || ( eucalyptusComp.isLocal( ) && comp.getComponentId( ).isCloudLocal( ) ) ){
           try {
             comp.initService( );
           } catch ( ServiceRegistrationException ex ) {
@@ -492,4 +494,26 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
   }
   
+  public static int INIT_RETRIES = 5;
+  public static void applyTransition( Component component, Component.Transition transition ) {
+    if ( component.isAvailableLocally( ) && component.getStateMachine( ).checkTransition( transition ) ) {
+      for ( int i = 0; i < INIT_RETRIES; i++ ) {
+        try {
+          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ) ).info( );
+          component.getStateMachine( ).transition( transition );
+          break;
+        } catch ( ExistingTransitionException ex ) {
+          LOG.error( ex );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+        }
+        try {
+          TimeUnit.MILLISECONDS.sleep( 500 );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        }
+      }
+    }
+
+  }
 }

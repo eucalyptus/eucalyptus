@@ -16,7 +16,7 @@ public class EnableComponentEvent extends LifecycleEvent {
     } catch ( URISyntaxException e ) {
       LOG.fatal( "Failed to construct a valid URL from a component configuration", e );
     }
-    return new EnableComponentEvent( new LocalConfiguration( config.getPartition( ), config.getComponentId( ), uri ), config.getComponentId(), true );
+    return new EnableComponentEvent( new LocalConfiguration( config.getComponentId( ), config.getPartition( ), config.getName( ), uri ), config.getComponentId(), true );
   }
   public static EnableComponentEvent getRemote( ServiceConfiguration config ) {
     return new EnableComponentEvent( config, config.getComponentId( ), false );

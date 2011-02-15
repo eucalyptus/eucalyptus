@@ -64,16 +64,26 @@
 package com.eucalyptus.component;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.concurrent.GenericFuture;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
 
-  public static boolean register( final Component component, String partition, String name, String hostName, Integer port ) throws ServiceRegistrationException {
+  public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     final ServiceBuilder builder = component.getBuilder( );
-    partition = (partition != null ? partition : name);
+    String partition = part;
+    if( !component.getComponentId( ).isPartitioned( ) ) {
+      partition = name;
+    } else if( component.getComponentId( ).isCloudLocal( ) ) {
+      partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
+    } else if( partition == null ) {
+      LOG.error( "BUG: Provided partition is null.  Using the service name as the parition name for the time being." );
+      partition = name;
+    }
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
@@ -84,12 +94,14 @@ public class ComponentRegistrationHandler {
       try {
         component.enableTransition( newComponent ).get( ); 
       } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        builder.remove( newComponent );
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
+        throw Exceptions.filterStackTrace( ex );
       }
       return true;
     } catch ( Throwable e ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed." );
-      LOG.info( e.getMessage( ) );
+      e = Exceptions.filterStackTrace( e );
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed because of: " + e.getMessage( ) );
       LOG.error( e, e );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
     }

@@ -178,9 +178,6 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     if ( obj == null ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) obj;
-//    if ( hostName == null ) {
-//      if ( other.hostName != null ) return false;
-//    } else if ( !hostName.equals( other.hostName ) ) return false;
     if ( name == null ) {
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
@@ -225,37 +222,29 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   ComponentId c;
   
-  public EphemeralConfiguration( String partition, String name, ComponentId c, URI uri ) {
+  public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
     super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
-    this.uri = uri;
-    this.c = c;
-  }  
   public ComponentId getComponentId() {
     return c;
-  }
-  public Component lookup() {
-    return Components.lookup(this.getComponentId( ));
   }
   public String getUri() {
     return this.uri.toASCIIString( );
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c, uri );
+  public LocalConfiguration( ComponentId c, String partition, String name, URI uri ) {
+    super( c, partition, name, uri );
   }
   public Boolean isLocal() {
     return true;
   }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c, uri );
+  public RemoteConfiguration( ComponentId c, String partition, String name, URI uri ) {
+    super( c, partition, name, uri );
   }
   public Boolean isLocal() {
     return false;

@@ -139,7 +139,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getIdentity( ).getPort( ) ) ) );
+    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getComponentId( ).getPort( ) ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -161,7 +161,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        ServiceConfiguration config = new BogoConfig( comp.getIdentity( ), component.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
+        ServiceConfiguration config = new BogoConfig( comp.getComponentId( ), component.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );

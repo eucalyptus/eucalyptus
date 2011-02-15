@@ -85,6 +85,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -339,9 +340,9 @@ public class VmInstance implements HasName<VmInstance> {
     }
   }
   
-  public String getByKey( String path ) {
+  public String getByKey( String pathArg ) {
     Map<String, String> m = getMetadataMap( );
-    if ( path == null ) path = "";
+    String path = ( pathArg != null ) ? pathArg : "";
     LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
     if ( m.containsKey( path + "/" ) ) path += "/";
     return m.get( path ).replaceAll( "\n*\\z", "" );
@@ -520,7 +521,8 @@ public class VmInstance implements HasName<VmInstance> {
    }
    
 
-  public RunningInstancesItemType getAsRunningInstanceItemType( boolean dns ) {
+  public RunningInstancesItemType getAsRunningInstanceItemType( ) {
+    boolean dns = Components.lookup( Dns.class ).isLocal( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );

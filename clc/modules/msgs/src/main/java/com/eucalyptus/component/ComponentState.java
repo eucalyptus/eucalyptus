@@ -243,14 +243,14 @@ public class ComponentState {
     final TransitionListener<Component> addPipelines = Transitions.createListener( new Predicate<Component>( ) {
       @Override
       public boolean apply( Component arg0 ) {
-        PipelineRegistry.getInstance( ).enable( arg0.getIdentity( ) );
+        PipelineRegistry.getInstance( ).enable( arg0.getComponentId( ) );
         return true;
       }
     } );
     final TransitionListener<Component> removePipelines = Transitions.createListener( new Predicate<Component>( ) {
       @Override
       public boolean apply( Component arg0 ) {
-        PipelineRegistry.getInstance( ).disable( arg0.getIdentity( ) );
+        PipelineRegistry.getInstance( ).disable( arg0.getComponentId( ) );
         return true;
       }
     } );

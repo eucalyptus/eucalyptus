@@ -126,7 +126,7 @@ public class SystemBootstrapper {
       }
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
-          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             SystemBootstrapper.out.print( string );
             EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).info( );
           }
@@ -135,7 +135,7 @@ public class SystemBootstrapper {
             );
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
-          if( string.replaceAll("\\s*","").length( ) > 2 ) {
+          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             SystemBootstrapper.err.print( string );
             EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).error( );
           }
@@ -184,11 +184,7 @@ public class SystemBootstrapper {
     }
     /** ASAP:FIXME:GRZE **/
     for ( Component c : Components.list( ) ) {
-      try {
-        Component.Transition.LOADING.transit( c );
-      } catch ( Throwable ex ) {
-        LOG.error( ex );
-      }
+      Bootstrap.applyTransition( c, Component.Transition.LOADING );
     }
     return true;
   }
@@ -210,18 +206,15 @@ public class SystemBootstrapper {
       throw t;
     }
     for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
+      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
         Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
-            try {
-              Component.Transition.STARTING.transit( c );
-              Component.Transition.READY_CHECK.transit( c );
-              Component.Transition.ENABLING.transit( c );
-            } catch ( Throwable ex ) {
-              LOG.error( ex , ex );
-            }
-          }} );
+            Bootstrap.applyTransition( c, Component.Transition.STARTING );
+            Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
+            Bootstrap.applyTransition( c, Component.Transition.ENABLING );
+          }
+        } );
       }
     }
     try {
@@ -359,9 +352,9 @@ public class SystemBootstrapper {
     for ( Component c : Components.list( ) ) {
       if ( c.isAvailableLocally( ) ) {
         banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getIdentity( ).toString( );
+        banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
-        for ( Service s : c.getServices( ) ) {
+        for ( Service s : c.lookupServices( ) ) {
           if ( s.isLocal( ) ) {
             banner += prefix + c.getName( ) + SEP + s.toString( );
           }
