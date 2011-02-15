@@ -540,10 +540,10 @@ public class Cluster implements HasName<Cluster>, EventListener {
       this.nextState( );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
-      if ( State.STARTING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 5 ) ) {
-        this.updateVolatiles( );
-      } else if ( State.RUNNING_ADDRS.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
+      if ( State.RUNNING_ADDRS.ordinal( ) >= this.stateMachine.getState( ).ordinal( ) ) {
         this.nextState( );
+      } else if ( State.RUNNING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
+        this.updateVolatiles( );
       }
     }
   }
