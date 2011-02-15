@@ -158,8 +158,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
           
           @Override
           public void fire( ClusterConfiguration t ) throws Throwable {
-            config.setClusterCertificate( clusterCert );
-            config.setNodeCertificate( nodeCert );
+            t.setClusterCertificate( clusterCert );
+            t.setNodeCertificate( nodeCert );
           }
         } );
       } catch ( Throwable ex ) {
