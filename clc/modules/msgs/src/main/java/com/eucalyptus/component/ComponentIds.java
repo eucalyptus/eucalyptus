@@ -78,23 +78,24 @@ public class ComponentIds {
   
   public static List<ComponentId> listLocallyRynning( ) {
     List<ComponentId> components = Lists.newArrayList( );
-      for ( Component comp : Components.list( ) ) {
-        if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
-          components.add( comp.getComponentId( ) );
-        } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
-          components.add( comp.getComponentId( ) );
-        } else if ( comp.isRunningLocally( ) ) {
-          components.add( comp.getComponentId( ) );
-        }
+    for ( Component comp : Components.list( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
+        components.add( comp.getComponentId( ) );
+      } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
+        components.add( comp.getComponentId( ) );
+      } else if ( comp.isRunningLocally( ) ) {
+        components.add( comp.getComponentId( ) );
+      }
     }
+    LOG.trace( "Found the following running components: " + components );
     return components;
   }
-
+  
   @SuppressWarnings( "unchecked" )
   public static List<ComponentId> list( ) {
     return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
   }
-
+  
   public final static ComponentId lookup( final Class compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );

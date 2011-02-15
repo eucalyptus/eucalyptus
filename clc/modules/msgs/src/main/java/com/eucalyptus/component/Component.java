@@ -78,6 +78,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -414,6 +416,7 @@ public class Component implements HasName<Component> {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
                 future.set( Component.this );
+                ServiceContextManager.restart( );
               } catch ( Throwable ex ) {
                 future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
@@ -428,7 +431,9 @@ public class Component implements HasName<Component> {
         return future;
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
-          return Component.this.stateMachine.transition( State.ENABLED );
+          CheckedListenableFuture<Component> ret = Component.this.stateMachine.transition( State.ENABLED );
+          ServiceContextManager.restart( );
+          return ret;
         } catch ( Throwable ex ) {
           final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
           future.setException( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
@@ -447,7 +452,9 @@ public class Component implements HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DISABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     if ( config.isLocal( ) ) {
       try {
-        return this.stateMachine.transition( State.DISABLED );
+        CheckedListenableFuture<Component> ret = this.stateMachine.transition( State.DISABLED );
+        ServiceContextManager.restart( );
+        return ret;        
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
       }
