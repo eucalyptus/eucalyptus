@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,32 +67,30 @@ package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callbacks;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.SystemState.Reason;
+import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.eucalyptus.records.EventRecord;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -188,7 +186,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              Callbacks.newClusterRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -206,7 +204,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newClusterRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
+                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
               }
             }
           }
@@ -226,7 +224,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       VmInstances.cleanUpAttachedVolumes( vm );
 
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newClusterRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
@@ -240,33 +238,33 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       LOG.error( e, e );
     }
   }
-
+  
+  private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
+    public boolean apply( AttachedVolume arg0 ) {
+      return true;
+    }
+  };
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-    if ( !vm.getVolumes( ).isEmpty( ) ) {
-      try {
-        StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
-        for ( AttachedVolume volume : vm.getVolumes( ) ) {
+    try {
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      final StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
+      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        @Override
+        public boolean apply( AttachedVolume arg0 ) {
           try {
-            ServiceDispatcher.lookup( Component.storage, sc.getHostName( ) ).send( new DetachStorageVolumeType(
-                                                                                                                cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
-                                                                                                                volume.getVolumeId( ) ) );
-            vm.getVolumes( ).remove( volume );
+            vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+            Dispatcher scDispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
+            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            return true;
           } catch ( Throwable e ) {
-            LOG.error( "Failed sending Detach Storage Volume for: " + volume.getVolumeId( )
+            LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
                        + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+            return false;
           }
         }
-      } catch ( Exception ex ) {
-        LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " +
-                   "The the following volumes are attached: " + Iterables.transform( vm.getVolumes( ), new Function<AttachedVolume, String>( ) {
-                     
-                     @Override
-                     public String apply( AttachedVolume arg0 ) {
-                       return arg0.getVolumeId( );
-                     }
-                   } ) );
-      }
+      } );
+    } catch ( Exception ex ) {
+      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " );
     }
   }
 

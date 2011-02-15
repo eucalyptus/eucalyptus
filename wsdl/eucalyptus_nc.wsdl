@@ -361,6 +361,7 @@
         <!-- reported by NC -->
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
+	    <xs:element minOccurs="0" name="createImageStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>

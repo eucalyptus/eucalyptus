@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -68,11 +68,13 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.id.Any;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ldap.LdapConfiguration;
 
 @RunDuring( Bootstrap.Stage.DatabaseInit )
-@Provides( Component.any )
-@DependsLocal( Component.eucalyptus )
+@Provides( Any.class )
+@DependsLocal( Eucalyptus.class )
 public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger               LOG         = Logger.getLogger( LdapBootstrapper.class );
   private static Bootstrapper singleton;
@@ -92,7 +94,7 @@ public class LdapBootstrapper extends Bootstrapper implements DatabaseBootstrapp
   private void startServiceResource( ) throws IOException {
     this.getResource( ).initialize( );
     try {
-      this.getResource( ).start( Component.eucalyptus.name( ) + "-openldap", SERVICE_OPTIONS );
+      this.getResource( ).start( "eucalyptus-openldap", SERVICE_OPTIONS );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       LOG.fatal( "Failed to initialize " + slapd.getClass( ).getSimpleName( ) + " options." );

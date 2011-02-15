@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,6 +67,8 @@ import org.apache.log4j.Logger;
 import org.mortbay.jetty.Server;
 import org.mortbay.xml.XmlConfiguration;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -75,9 +77,9 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 
-@Provides( Component.jetty )
+@Provides( HttpService.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-@DependsLocal( Component.eucalyptus )
+@DependsLocal( Eucalyptus.class )
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {  
   private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
@@ -188,7 +190,9 @@ public class HttpServerBootstrapper extends Bootstrapper {
           for ( int i = 0; i < 10 && !jettyServer.isStopped( ) && jettyServer.isStopping( ); i++ ) {
             try {
               TimeUnit.MILLISECONDS.sleep( 500 );
-            } catch ( InterruptedException e ) {}
+            } catch ( InterruptedException e ) {
+              Thread.currentThread( ).interrupt( );
+            }
           }
           jettyServer.destroy( );
         } catch ( Exception e ) {

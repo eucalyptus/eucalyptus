@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -305,7 +305,8 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
-	adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
     axutil_date_time_t * dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
     adb_instanceType_set_launchTime(instance, env, dt);
     adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);

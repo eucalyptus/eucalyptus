@@ -52,7 +52,7 @@
 #  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 #  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 #  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-#  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 #  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 #  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 #  ANY SUCH LICENSES OR RIGHTS.
@@ -113,9 +113,15 @@ export EUCALYPTUS
 
 create_httpd_config() {
 	IPS="all"
-	
+
 	# let's configure the common parts for both CC and NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd.conf |sed "s|EUCALYPTUS|$EUCALYPTUS|"|sed "s|AXIS2C_HOME|$AXIS2C_HOME|"|sed "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" |sed "s|EUCA_USER|$EUCA_USER|" >  $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+        sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+            -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
+            -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
+            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
+            -e "s|EUCA_USER|$EUCA_USER|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
 
 	# load authz if we have it (ubuntu needs it)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
@@ -123,7 +129,12 @@ create_httpd_config() {
 	fi
 
 	# let's configure the NC
-	cat $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf |sed "s|\(Listen\).*|\1 $NC_PORT|"|sed "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|"|sed "s|\(Allow from\).*|\1 $IPS|"|sed "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" >  $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+        sed -e "s|\(Listen\).*|\1 $NC_PORT|" \
+            -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
+            -e "s|\(Allow from\).*|\1 $IPS|" \
+            -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
 }
 
 # crude way to start the axis2c services
@@ -341,6 +352,15 @@ fi
 if [ -z "${HTTPD}" ]; then
 	echo "apache2/httpd daemon not found!"
 	exit 1
+fi
+
+if [ -z "${APACHE2_MODULE_DIR}" ]; then
+        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
+fi
+
+if [ ! -d "$APACHE2_MODULE_DIR" ]; then
+        echo "Cannot find APACHE2_MODULE_DIR?"
+        exit 1
 fi
 
 # set the library path correctly

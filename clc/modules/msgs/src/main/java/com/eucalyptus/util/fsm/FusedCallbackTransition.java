@@ -32,7 +32,7 @@ public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T 
    */
   @Override
   public final void leave( P parent, final Callback.Completion transitionCallback ) {
-    Callbacks.newRequest( msgFactory.newInstance( ), channelFactory ).then( new Callback.Completion( ) {
+    Callbacks.newRequest( msgFactory.newInstance( ) ).then( new Callback.Completion( ) {
       
       @Override
       public void fire( ) {

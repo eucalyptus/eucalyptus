@@ -53,7 +53,7 @@
   ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
@@ -151,7 +151,7 @@
 			<jvmarg value="-Xss1024k" />
 			<arg line="-war ${gwt.war.build.dir}" />
 			<arg line="-draftCompile"/>
-			<arg line="-style PRETTY"/> <!-- PRETTY for non-obfuscated Javascript -->
+			<arg line="-style DETAILED"/> <!-- PRETTY for non-obfuscated Javascript -->
 			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
 		</java>
 		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />

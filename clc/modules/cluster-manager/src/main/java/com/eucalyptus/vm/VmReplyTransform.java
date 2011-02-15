@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,14 +63,17 @@
  */
 package com.eucalyptus.vm;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.*;
-
-import java.util.*;
-
-import com.eucalyptus.bootstrap.Component;
+import java.util.ArrayList;
+import java.util.List;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.cloud.Network;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 
 public class VmReplyTransform {
 
@@ -87,7 +90,7 @@ public class VmReplyTransform {
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
       for( String instId : allocToken.getInstanceIds() ) {
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Component.dns.isLocal( ) ) );
+        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Components.lookup( Dns.class ).isLocal( ) ) );
       }
 
     reply.setRsvInfo( reservation );

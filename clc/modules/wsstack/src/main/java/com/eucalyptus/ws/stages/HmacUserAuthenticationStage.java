@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -79,7 +79,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
   }
 
   @Override
-  public String getStageName( ) {
+  public String getName( ) {
     return "hmac-user-authentication";
   }
 
@@ -89,9 +89,9 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 
-  public static class Internal extends HmacUserAuthenticationStage {
-    public Internal(){
-      super(true);
-    }
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
   }
+
 }

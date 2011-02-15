@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -76,6 +76,7 @@ permission notice:
 #include "ipc.h"
 #include "walrus.h"
 #include "euca_auth.h"
+#include <http.h>
 #include <data.h>
 #include <misc.h>
 #include <storage.h>
@@ -827,7 +828,7 @@ retry:
 	} else {
 	  char manifestURL[1024];
 	  snprintf(manifestURL, 1024, "%s.manifest.xml", url);
-	  e = http_get(manifestURL, tmp_digest_path);
+	  e = http_get_timeout(manifestURL, tmp_digest_path, 10, 4);
 	}
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size_b = (long long)mystat.st_size;
@@ -873,7 +874,7 @@ retry:
         if (strstr(url, "services/Walrus")) {
 	  e = walrus_image_by_manifest_url (url, file_path, 1);
 	} else {
-	  e = http_get(url, file_path);
+	  e = http_get_timeout(url, file_path, 10, 4);
 	}
 
         /* for KVM, convert partition into disk */

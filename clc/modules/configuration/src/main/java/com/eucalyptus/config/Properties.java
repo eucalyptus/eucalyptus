@@ -10,11 +10,6 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.msgs.DescribePropertiesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribePropertiesType;
-import edu.ucsb.eucalyptus.msgs.ModifyPropertyValueResponseType;
-import edu.ucsb.eucalyptus.msgs.ModifyPropertyValueType;
-import edu.ucsb.eucalyptus.msgs.Property;
 
 public class Properties {
   

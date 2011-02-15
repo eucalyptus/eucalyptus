@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,8 +64,10 @@ package com.eucalyptus.system;
 
 import java.io.File;
 import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 public enum BaseDirectory {
   HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
@@ -97,11 +99,12 @@ public enum BaseDirectory {
   
   public void create( ) {
     final File dir = new File( this.toString( ) );
-    if ( dir.exists( ) ) {
-      return;
+    if ( !dir.exists( ) ) { 
+      EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
+      if( dir.mkdirs( ) ) {
+        this.assertPermissions( ); 
+      }
     }
-    EventRecord.here( BaseDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
-    dir.mkdirs( );
   }
   public String getChildPath( String... args ) {
     String ret = this.toString( );
@@ -109,5 +112,17 @@ public enum BaseDirectory {
       ret += File.separator + s;
     }
     return ret;
+  }
+  private void assertPermissions( ) {
+    try {
+      GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOGG.error( ex , ex );
+    }
+    try {
+      GroovyUtil.exec( "chmod +rwX " + this.toString( ) );
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOGG.error( ex , ex );
+    }
   }
 }

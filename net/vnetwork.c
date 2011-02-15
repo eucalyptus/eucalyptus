@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -288,7 +288,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	rc = vnetSetMetadataRedirect(vnetconfig, network, slashnet);
+	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -359,14 +359,17 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
   return(0);
 }
 
-int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet) {
-  char cmd[256];
-  int rc;
+int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256], *network=NULL;
+  int rc, slashnet;
 
-  if (!vnetconfig || !network) {
+  if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetSetMetadataRedirect(): bad input params\n");
     return(1);
   }
+
+  network = hex2dot(vnetconfig->nw);
+  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
 
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
@@ -380,6 +383,8 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig, char *network, int slashnet)
     snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
   }
   rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  
+  if (network) free(network);
 
   return(0);
 }
@@ -892,7 +897,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
   if (destVlan < 0) {
-    logprintfl(EUCAERROR,"vnetTableRule(): no vlans associated with network %s/%s\n", destUserName, destName);
+    logprintfl(EUCAERROR,"vnetTableRule(): no vlans associated with active network %s/%s\n", destUserName, destName);
     return(1);
   }
   
@@ -904,7 +909,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   if (sourceNetName) {
     srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
     if (srcVlan < 0) {
-      logprintfl(EUCAWARN,"vnetTableRule(): cannot locate source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
+      logprintfl(EUCAWARN,"vnetTableRule(): cannot locate active source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
       return(0);
     } else {
       tmp = hex2dot(vnetconfig->networks[srcVlan].nw);
@@ -934,7 +939,11 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   
   if (minPort && maxPort) {
     if (protocol && (!strcmp(protocol, "tcp") || !strcmp(protocol, "udp")) ) {
-      snprintf(newrule, 1024, "%s --dport %d:%d", rule, minPort, maxPort);
+      if (minPort != maxPort) {
+	snprintf(newrule, 1024, "%s -m %s --dport %d:%d", rule, protocol, minPort, maxPort);
+      } else {
+	snprintf(newrule, 1024, "%s -m %s --dport %d", rule, protocol, minPort);
+      }
       strcpy(rule, newrule);
     }
   }
@@ -974,6 +983,10 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   done=0;
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (!strcmp(vnetconfig->users[i].userName, user) && !strcmp(vnetconfig->users[i].netName, network)) {
+      if (!vnetconfig->networks[i].active) {
+	// network exists, but is inactive
+	return(-1 * i);
+      }
       return(i);
     }
   }

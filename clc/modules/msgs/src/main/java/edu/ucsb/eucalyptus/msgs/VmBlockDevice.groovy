@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -83,8 +83,6 @@ public class DeleteVolumeType extends BlockVolumeMessage {
   String volumeId;
 }
 public class DeleteVolumeResponseType extends BlockVolumeMessage {
-
-  boolean _return;
 }
 public class DescribeVolumesType extends BlockVolumeMessage {
 
@@ -132,8 +130,6 @@ public class DeleteSnapshotType extends BlockSnapshotMessage {
   String snapshotId;
 }
 public class DeleteSnapshotResponseType extends BlockSnapshotMessage {
-
-  boolean _return;
 }
 public class DescribeSnapshotsType extends BlockSnapshotMessage {
 
@@ -222,4 +218,35 @@ public class Snapshot extends EucalyptusData {
   String ownerId;
   String volumeSize = "n/a";
   String description;
+}
+//TODO:ADDED
+public class ModifySnapshotAttributeType extends BlockSnapshotMessage {
+  String snapshotId;
+  ArrayList<VolumePermissionType> removeVolumePermission = new ArrayList<VolumePermissionType>();
+  ArrayList<VolumePermissionType> addVolumePermission = new ArrayList<VolumePermissionType>();
+  public ModifySnapshotAttributeType() {  }
+}
+public class VolumePermissionType extends EucalyptusData {
+  String userId;
+  String group;
+  public CreateVolumePermissionItemType() {  }
+}
+public class ModifySnapshotAttributeResponseType extends BlockSnapshotMessage {
+  public ModifySnapshotAttributeResponseType() {  }
+}
+public class DescribeSnapshotAttributeResponseType extends BlockSnapshotMessage {
+  String snapshotId;
+  ArrayList<VolumePermissionType> createVolumePermission = new ArrayList<VolumePermissionType>();
+  public DescribeSnapshotAttributeResponseType() {  }
+}
+public class DescribeSnapshotAttributeType extends BlockSnapshotMessage {
+  String snapshotId;
+  public DescribeSnapshotAttributeType() {  }
+}
+public class ResetSnapshotAttributeResponseType extends BlockSnapshotMessage {
+  public ResetSnapshotAttributeResponseType() {  }
+}
+public class ResetSnapshotAttributeType extends BlockSnapshotMessage {
+  String snapshotId;
+  public ResetSnapshotAttributeType() {  }
 }

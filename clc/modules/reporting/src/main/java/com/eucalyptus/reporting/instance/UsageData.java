@@ -1,75 +1,79 @@
 package com.eucalyptus.reporting.instance;
 
-import java.io.Serializable;
-
-import javax.persistence.*;
-
 /**
  * <p>UsageData represents usage of resources (like disk bandwidth, etc)
- * by some instance over some period. UsageData is immutable because there
- * can be multiple references to one UsageData.
+ * by an instance over some period. UsageData is immutable.
+ * 
+ * <p>Null values for a field indicate unknown usage, not zero usage.
  * 
  * @author tom.werges
  */
-@Embeddable
 public class UsageData
-	implements Serializable
 {
-	//NOTE: hibernate can modify final fields using reflection
-	@Column(name="total_network_io_megs", nullable=false)
 	private final Long networkIoMegs;
-	@Column(name="total_disk_io_megs", nullable=false)
 	private final Long diskIoMegs;
 
+	public UsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
+	{
+		this.networkIoMegs = totalNetworkIoMegs;
+		this.diskIoMegs = totalDiskIoMegs;
+	}
+
+	public Long getNetworkIoMegs()
+	{
+		return this.networkIoMegs;
+	}
+
+	public Long getDiskIoMegs()
+	{
+		return this.diskIoMegs;
+	}
+
 	/**
-	 * For hibernate usage only; don't extend this class
+	 * Sum the numeric fields of two UsageData objects. If either operand is null
+	 * for any field then the resultant field is null.
 	 */
-	protected UsageData()
-	{
-		//NOTE: hibernate will override these despite finality
-		this.networkIoMegs = null;
-		this.diskIoMegs = null;
-	}
-
-	public UsageData(long totalNetworkIoMegs, long totalDiskIoMegs)
-	{
-		this.networkIoMegs = new Long(totalNetworkIoMegs);
-		this.diskIoMegs = new Long(totalDiskIoMegs);
-	}
-
-	public long getNetworkIoMegs()
-	{
-		assert this.networkIoMegs != null; //hibernate notNullable
-		return this.networkIoMegs.longValue();
-	}
-
-	public long getDiskIoMegs()
-	{
-		assert this.diskIoMegs != null; //hibernate notNullable
-		return this.diskIoMegs.longValue();
-	}
-
 	public UsageData sum(UsageData other)
 	{
-		long sumNetworkIoMegs = this.getNetworkIoMegs()
-					+ other.getNetworkIoMegs();
+		final Long sumNetworkIoMegs =
+			(this.networkIoMegs==null || other.networkIoMegs==null)
+			? null
+			: new Long(other.networkIoMegs.longValue() + this.networkIoMegs.longValue());
 
-		long sumDiskIoMegs = this.getDiskIoMegs()
-					+ other.getDiskIoMegs();
+		final Long sumDiskIoMegs =
+			(this.diskIoMegs==null || other.diskIoMegs==null)
+			? null
+			: new Long(other.diskIoMegs.longValue() + this.diskIoMegs.longValue());
 
 		return new UsageData(sumNetworkIoMegs, sumDiskIoMegs);
 	}
 
+	/**
+	 * Subtract the numeric fields of one UsageData from another. If either 
+	 * operand is null for any field then the resultant field is null.
+	 */
 	public UsageData subtractFrom(UsageData other)
 	{
-		long subtractedNetworkIoMegs = other.getNetworkIoMegs()
-					- this.getNetworkIoMegs();
+		final Long subtractedNetworkIoMegs =
+			(this.networkIoMegs==null || other.networkIoMegs==null)
+			? null
+			: new Long(other.networkIoMegs.longValue() - this.networkIoMegs.longValue());
 
-		long subtractedDiskIoMegs = other.getDiskIoMegs()
-					- this.getDiskIoMegs();
+		final Long subtractedDiskIoMegs =
+			(this.diskIoMegs==null || other.diskIoMegs==null)
+			? null
+			: new Long(other.diskIoMegs.longValue() - this.diskIoMegs.longValue());
 
 		return new UsageData(subtractedNetworkIoMegs, subtractedDiskIoMegs);
 	}
+	
+	
+	/**
+	 * toString() for debugging and logs
+	 */
+	public String toString()
+	{
+		return String.format("[disk:%d,net:%d]", this.diskIoMegs, this.networkIoMegs);
+	}
 
 }
-

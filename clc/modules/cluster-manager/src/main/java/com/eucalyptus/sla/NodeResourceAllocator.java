@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
 import com.eucalyptus.auth.principal.Group;
+import java.util.NoSuchElementException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
@@ -31,7 +32,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
   public void allocate( VmAllocationInfo vmInfo ) throws Exception {
     String clusterName = vmInfo.getRequest( ).getAvailabilityZone( );
     String vmTypeName = vmInfo.getRequest( ).getInstanceType( );
-    final int amount = vmInfo.getRequest( ).getMinCount( );
+    Integer minAmount = vmInfo.getRequest( ).getMinCount( );
+    Integer maxAmount = vmInfo.getRequest( ).getMaxCount( );
     Context ctx = Contexts.lookup( );
     if ( ctx.getGroups( ).isEmpty( ) ) {
       throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
@@ -40,7 +42,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         ? clusterName
         : "default";
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
-      int remaining = amount;
+      int remaining = maxAmount;
       int available = 0;
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
         @Override
@@ -48,8 +50,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
           return arg0.getName( );
         }
       } ) );
-      if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + amount + "): vm instances." );
+      if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
+        throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
         List<ResourceToken> tokens = Lists.newArrayList( );
         for ( ClusterNodeState state : Lists.transform( authorizedClusters, new Function<Cluster, ClusterNodeState>( ) {
@@ -62,7 +64,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
             int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
               ? state.getAvailability( vmTypeName ).getAvailable( )
               : remaining;
-            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getName( ), vmTypeName, tryAmount );
+            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUser( ).getName( ), vmTypeName, tryAmount, maxAmount );
             remaining -= token.getAmount( );
             tokens.add( token );
           } catch ( Throwable t ) {
@@ -70,10 +72,10 @@ public class NodeResourceAllocator implements ResourceAllocator {
               for ( ResourceToken token : tokens ) {
                 Clusters.getInstance( ).lookup( token.getCluster( ) ).getNodeState( ).releaseToken( token );
               }
-              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + amount + "): vm instances." );
+              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
             } else {
               LOG.error( t, t );
-              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + amount + "): vm instances." );
+              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
             }
           }
         }

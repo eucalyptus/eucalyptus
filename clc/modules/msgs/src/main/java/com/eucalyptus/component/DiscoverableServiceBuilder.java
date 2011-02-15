@@ -8,5 +8,5 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DiscoverableServiceBuilder {
-  com.eucalyptus.bootstrap.Component[] value() default {com.eucalyptus.bootstrap.Component.any};
+  Class[] value();
 }

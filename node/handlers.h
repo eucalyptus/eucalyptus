@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -295,6 +295,17 @@ struct bundling_params_t {
 	char * ncBundleUploadCmd;
   	char * ncCheckBucketCmd;
   	char * ncDeleteBundleCmd;
+};
+
+// bundling structure
+struct createImage_params_t {
+	ncInstance * instance;
+        char *volumeId;
+        char *remoteDev;
+	char * workPath; // work directory path
+	char * diskPath; // disk file path
+	char * eucalyptusHomePath; 
+	long long sizeMb; // diskPath size
 };
 
 #endif /* INCLUDE */

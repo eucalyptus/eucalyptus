@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -107,6 +107,7 @@ extern struct handlers default_libvirt_handlers;
 const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
 const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
 const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
+const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
 const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 // a NULL-terminated array of available handlers
@@ -219,6 +220,8 @@ void change_state(	ncInstance *instance,
     case CRASHED:
     case BUNDLING_SHUTDOWN:
     case BUNDLING_SHUTOFF:
+    case CREATEIMAGE_SHUTDOWN:
+    case CREATEIMAGE_SHUTOFF:
         instance->stateCode = EXTANT;
 	instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
@@ -269,7 +272,7 @@ refresh_instance_info(	struct nc_state_t *nc,
 	    return;
 
     /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF)
+    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
@@ -278,7 +281,10 @@ refresh_instance_info(	struct nc_state_t *nc,
     if (dom == NULL) { /* hypervisor doesn't know about it */
       if (now==BUNDLING_SHUTDOWN) {
 	logprintfl (EUCAINFO, "detected disappearance of bundled domain %s\n", instance->instanceId);
-	change_state (instance, BUNDLING_SHUTOFF);
+        change_state (instance, BUNDLING_SHUTOFF);
+      } else if (now==CREATEIMAGE_SHUTDOWN) {
+	logprintfl (EUCAINFO, "detected disappearance of createImage domain %s\n", instance->instanceId);
+        change_state (instance, CREATEIMAGE_SHUTOFF);
       } else if (now==RUNNING ||
             now==BLOCKED ||
             now==PAUSED ||
@@ -340,7 +346,8 @@ refresh_instance_info(	struct nc_state_t *nc,
         }
         break;
     case BUNDLING_SHUTDOWN:
-      logprintfl (EUCADEBUG, "hypervisor state for bundling domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
+    case CREATEIMAGE_SHUTDOWN:
+      logprintfl (EUCADEBUG, "hypervisor state for bundle/createImage domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
       break;
     default:
         logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
@@ -488,6 +495,8 @@ monitoring_thread (void *arg)
                 instance->state!=SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTDOWN &&
 		instance->state!=BUNDLING_SHUTOFF &&
+                instance->state!=CREATEIMAGE_SHUTDOWN &&
+                instance->state!=CREATEIMAGE_SHUTOFF &&
                 instance->state!=TEARDOWN) {
 	      
 	      if (FP && !strcmp(instance->stateName, "Extant")) {
@@ -513,9 +522,11 @@ monitoring_thread (void *arg)
 		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
 		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-            if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF) 
-		&& (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
-            
+	    if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
+                && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
+            if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
+                && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
+
             /* ok, it's been condemned => destroy the files */
             if (!nc_state.save_instance_files) {
 				logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);

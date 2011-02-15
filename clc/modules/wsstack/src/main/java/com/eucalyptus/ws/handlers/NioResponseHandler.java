@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -158,7 +158,7 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
         if( o instanceof Throwable ) {
           LOG.error( "Caught exception in asynchronous response handler.", (Throwable) o );
         } else {
-          LOG.debug( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
+          LOG.trace( this.getClass( ).getSimpleName( ) + " Got response of: " + LogUtil.dumpObject( o ) );
         }
       }
       this.ready.signalAll( );
@@ -181,7 +181,7 @@ public class NioResponseHandler extends SimpleChannelHandler implements Response
           LOG.debug( "Waiting for response." );
         } catch ( InterruptedException e ) {
           LOG.debug( e, e );
-          Thread.currentThread( ).interrupted( );
+          Thread.currentThread( ).interrupt( );
         }
       }
       EventRecord.here( NioResponseHandler.class, EventType.MSG_SERVICED, this.response.get().getClass( ).toString( ) ).debug( );

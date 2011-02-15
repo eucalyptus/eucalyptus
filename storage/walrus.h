@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -64,5 +64,5 @@ int walrus_object_by_path (const char * path, const char * outfile, const int do
 int walrus_image_by_manifest_url (const char * url, const char * outfile, const int do_compress);
 int walrus_image_by_manifest_path (const char * manifest_path, const char * outfile, const int do_compress);
 int walrus_verify_digest (const char * url, const char * digest_path);
-int http_get (const char * url, const char * outfile);
+//int http_get (const char * url, const char * outfile);
 #endif /* WALRUS_H */

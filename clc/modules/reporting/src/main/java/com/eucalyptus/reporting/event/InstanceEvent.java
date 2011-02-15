@@ -27,6 +27,7 @@ package com.eucalyptus.reporting.event;
  * 
  * @author tom.werges
  */
+@SuppressWarnings("serial")
 public class InstanceEvent
 	implements Event
 {
@@ -34,20 +35,23 @@ public class InstanceEvent
 	private String instanceId;
 	private String instanceType;
 	private String userId;
+	private String accountId;
 	private String clusterName;
 	private String availabilityZone;
-	private Long cumulativeNetworkIoMegs;
-	private Long cumulativeDiskIoMegs;
+	private Long   cumulativeNetworkIoMegs;
+	private Long   cumulativeDiskIoMegs;
 	
 
 	public InstanceEvent(String uuid, String instanceId, String instanceType,
-			String userId, String clusterName, String availabilityZone,
-			Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
+			String userId, String accountId, String clusterName,
+			String availabilityZone, Long cumulativeNetworkIoMegs,
+			Long cumulativeDiskIoMegs)
 	{
 		this.uuid = uuid;
 		this.instanceId = instanceId;
 		this.instanceType = instanceType;
 		this.userId = userId;
+		this.accountId = accountId;
 		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
 		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
@@ -74,6 +78,11 @@ public class InstanceEvent
 		return userId;
 	}
 
+	public String getAccountId()
+	{
+		return accountId;
+	}
+	
 	public String getClusterName()
 	{
 		return clusterName;

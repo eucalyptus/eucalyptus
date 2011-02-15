@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -68,10 +68,9 @@ import java.util.TimerTask;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Component;
-import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.empyrean.Empyrean;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
@@ -118,15 +117,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     try {
       long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
       ListenerRegistry.getInstance( ).fireEvent( new ClockTick().setMessage( sign * System.currentTimeMillis( ) ) );
-    } catch ( EventVetoedException e ) {
+    } catch ( EventFailedException e ) {
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }    
   }
 
   public static class Dummy implements EventListener{
-    @Override
-    public void advertiseEvent( Event event ) {}
     @Override
     public void fireEvent( Event event ) {}
   }
@@ -137,7 +134,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
 //    System.exit( -2 );
   }
 
-  @Provides( Component.bootstrap )
+  @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.Final )
   public static class SystemClockBootstrapper extends Bootstrapper {
 
@@ -189,9 +186,8 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread().setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        long sign = (long) (Math.pow(-1f,(float)(++phase%2)));
-        ListenerRegistry.getInstance( ).fireEvent( new Hertz().setMessage( sign * System.currentTimeMillis( ) ) );
-      } catch ( EventVetoedException e ) {
+        ListenerRegistry.getInstance( ).fireEvent( new Hertz() );
+      } catch ( EventFailedException e ) {
       } catch ( Throwable t ) {
         LOG.error( t, t );
       }    

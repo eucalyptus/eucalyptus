@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import javax.persistence.*;
 
+@SuppressWarnings("serial")
 @Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
@@ -19,11 +20,17 @@ public class InstanceAttributes
 	private String instanceType;
 	@Column(name="user_id")
 	private String userId;
+	@Column(name="account_id")
+	private String accountId;
 	@Column(name="cluster_name")
 	private String clusterName;
 	@Column(name="availability_zone")
 	private String availabilityZone;
 
+	/**
+	 * This ctor is for internal use but must be made protected for Hibernate;
+	 * do not extend.
+	 */
 	protected InstanceAttributes()
 	{
 		//NOTE: hibernate will overwrite these
@@ -35,13 +42,15 @@ public class InstanceAttributes
 		this.availabilityZone = null;
 	}
 
-	public InstanceAttributes(String uuid, String instanceId, String instanceType,
-				String userId, String clusterName, String availabilityZone)
+	InstanceAttributes(String uuid, String instanceId, String instanceType,
+				String accountId, String userId, String clusterName,
+				String availabilityZone)
 	{
 		this.uuid = uuid;
 		this.instanceId = instanceId;
 		this.instanceType = instanceType;
 		this.userId = userId;
+		this.accountId = accountId;
 		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
 	}
@@ -64,6 +73,12 @@ public class InstanceAttributes
 	public String getUserId()
 	{
 		return this.userId;
+	}
+
+	
+	public String getAccountId()
+	{
+		return accountId;
 	}
 
 	public String getClusterName()

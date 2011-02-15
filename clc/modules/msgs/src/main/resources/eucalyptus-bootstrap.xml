@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
@@ -55,13 +54,14 @@
   ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk  grze@eucalyptus.com
   -->
+
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
   xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
@@ -71,23 +71,19 @@
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
   <mule:configuration>
-    <mule:default-threading-profile doThreading="true" maxThreadsActive="32" poolExhaustedAction="RUN" />
+    <mule:default-threading-profile doThreading="true" maxThreadsActive="16"
+      poolExhaustedAction="RUN" />
   </mule:configuration>
-   <euca:connector name="eucaws" />
-  <!--vm:connector name="internal-async" queueEvents="false" >
-    <vm:queueProfile persistent="false" maxOutstandingMessages="128"/>
-  </vm:connector--> 
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />  
+  <euca:connector name="eucaws" />
+  <vm:connector name="internal-async" queueEvents="false">
+    <vm:queueProfile persistent="false" maxOutstandingMessages="256" />
+  </vm:connector>
+  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
-  <endpoint name="EucalyptusRequestQueueEndpoint" address="vm://EucalyptusRequestQueue" synchronous="false" />
-  <endpoint name="WalrusRequestQueueEndpoint" address="vm://WalrusRequestQueue" synchronous="false" />
-  <endpoint name="StorageRequestQueueEndpoint" address="vm://StorageRequestQueue" synchronous="false" />
-  <endpoint name="VMwareBrokerRequestQueueEndpoint" address="vm://VMwareBrokerRequestQueue" synchronous="false" />
-  <endpoint name="ComponentRequestQueueEndpoint" address="vm://ComponentRequestQueue" synchronous="false" />
-  <endpoint name="ConfigurationRequestQueueEndpoint" address="vm://ConfigurationRequestQueue" synchronous="false" />
   <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" synchronous="false" />
-  <endpoint name="PropertiesRequestQueueEndpoint" address="vm://PropertiesRequestQueue" synchronous="false" />
-  <endpoint name="ManagementRequestQueueEndpoint" address="vm://ManagementRequestQueue" synchronous="false" />
+  #foreach( $component in $components )
+      <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" synchronous="false" />
+  #end 
   <model name="eucalyptus-bootstrap">
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -105,47 +101,24 @@
       <component class="com.eucalyptus.ws.util.RequestQueue" />
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="WalrusRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.WalrusRequestType" />
+          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
+          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
         </filtering-router>
+        #foreach( $component in $components )
         <filtering-router>
-          <outbound-endpoint ref="StorageRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.StorageRequestType" />
+          <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
+          <payload-type-filter expectedType="${component.lookupBaseMessageType().getCanonicalName()}" />
         </filtering-router>
+        #end
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EmpyreanMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="PropertiesRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.PropertiesMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ManagementRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ManagementMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ConfigurationRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ConfigurationMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VMwareBrokerRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VMwareBrokerRequestType" />
-        </filtering-router>
-        <!-- this must ALWAYS be the last outbound endpoint. -->
-        <filtering-router>
-          <outbound-endpoint ref="EucalyptusRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ComponentRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ComponentMessageType" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BaseMessage" />
         </filtering-router>
       </outbound>
     </service>
   </model>
+  <spring:beans>
+    <spring:import resource="classpath:empyrean-model.xml" />
+  </spring:beans>
+
 </mule>

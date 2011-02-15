@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,38 +63,28 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.List;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
-import com.eucalyptus.ws.stages.QueryBindingStage;
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.stages.WalrusOutboundStage;
 import com.eucalyptus.ws.stages.WalrusPOSTUserAuthenticationStage;
 import com.eucalyptus.ws.stages.WalrusRESTBindingStage;
-import com.eucalyptus.ws.stages.WalrusUserAuthenticationStage;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.WalrusProperties;
 
 
+@ComponentPart( Walrus.class )
 public class WalrusRESTPostPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPostPipeline.class );
+  private final UnrollableStage auth = new WalrusPOSTUserAuthenticationStage( );
+  private final UnrollableStage bind = new WalrusRESTBindingStage( );
+  private final UnrollableStage out = new WalrusOutboundStage();
 
 	@Override
-	protected void addStages( List<UnrollableStage> stages ) {
-		stages.add( new WalrusPOSTUserAuthenticationStage());
-		stages.add( new WalrusRESTBindingStage());
-		stages.add( new WalrusOutboundStage());
-	}
-
-	@Override
-	protected boolean checkAccepts( HttpRequest message ) {
+	public boolean checkAccepts( HttpRequest message ) {
 		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
 		(message.getHeader(HttpHeaders.Names.HOST)!=null && 
 				message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
@@ -103,8 +93,16 @@ public class WalrusRESTPostPipeline extends FilteredPipeline {
 	}
 
 	@Override
-	public String getPipelineName( ) {
+	public String getName( ) {
 		return "walrus-rest";
 	}
+
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    auth.unrollStage( pipeline );
+    bind.unrollStage( pipeline );
+    out.unrollStage( pipeline );
+    return pipeline;
+  }
 
 }

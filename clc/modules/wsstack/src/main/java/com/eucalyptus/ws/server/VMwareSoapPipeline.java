@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,33 +63,33 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.List;
-import java.util.Set;
-
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
-import com.eucalyptus.ws.stages.BindingStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.stages.VMwareBrokerAuthenticationStage;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.VMwareBrokerBindingHandler;
+import com.eucalyptus.ws.handlers.wssecurity.VMwareWsSecHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
 
 public class VMwareSoapPipeline extends FilteredPipeline {
-
+  private static Logger LOG = Logger.getLogger( VMwareSoapPipeline.class );
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
     return message.getUri( ).endsWith( "/services/VMwareBroker" ) && message.getHeaderNames().contains( "SOAPAction" );
   }
 
   @Override
-  public String getPipelineName( ) {
+  public String getName( ) {
     return "vmware-broker-soap";
   }
 
   @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new VMwareBrokerAuthenticationStage( ) );
-    stages.add( new BindingStage( ) );
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
+    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+    pipeline.addLast( "ws-security", new VMwareWsSecHandler( ) );
+    pipeline.addLast( "binding", new VMwareBrokerBindingHandler( ) );
+    return null;
   }
 
 }

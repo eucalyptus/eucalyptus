@@ -7,6 +7,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback.Checked;
+import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.concurrent.MoreExecutors;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -20,6 +21,10 @@ public class Futures {
     Runnable r;
     future.addListener( r = new BasicCallbackProcessor( future, listener ), MoreExecutors.sameThreadExecutor( ) );
     return r;
+  }
+  
+  public static <T> GenericFuture<T> newGenericFuture( ){
+    return new GenericFuture<T>();
   }
 
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {
@@ -45,10 +50,11 @@ public class Futures {
       }
       if ( reply != null ) {
         try {
-          EventRecord.caller( this.callback.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
+          EventRecord.caller( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).trace( );
           this.callback.fire( reply );
         } catch ( Throwable t ) {
           LOG.error( t, t );
+          failure = t;
         }
       } else if ( failure != null ) {
         this.doFail( failure );
@@ -59,7 +65,7 @@ public class Futures {
     }
     
     private final void doFail( Throwable failure ) {
-      if ( this.callback instanceof Callback.Checked ) {
+      if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
         try {
           if ( ( failure instanceof ExecutionException ) && failure.getCause( ) != null ) {
             failure = failure.getCause( );

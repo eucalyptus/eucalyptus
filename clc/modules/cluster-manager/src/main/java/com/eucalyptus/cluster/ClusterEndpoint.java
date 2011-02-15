@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -65,7 +65,6 @@ package com.eucalyptus.cluster;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -75,21 +74,15 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -111,28 +104,6 @@ public class ClusterEndpoint implements Startable {
   
   public void start( ) throws MuleException {
     Clusters.getInstance( );
-  }
-  
-  public void networkChange( Network net ) {
-    try {
-      Network existingNet = Networks.getInstance( ).lookup( net.getName( ) );
-      List<PacketFilterRule> rules = Lists.newArrayList( );
-      
-      if ( net.getRules( ).isEmpty( ) ) {
-        for ( PacketFilterRule pf : existingNet.getRules( ) )
-          rules.add( PacketFilterRule.revoke( pf ) );
-        existingNet.setRules( net.getRules( ) );
-      } else {
-        existingNet.setRules( net.getRules( ) );
-        rules.addAll( existingNet.getRules( ) );
-      }
-      ConfigureNetworkCallback configureNetwork = new ConfigureNetworkCallback( existingNet.getUserName( ), rules );
-      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        Callbacks.newClusterRequest( configureNetwork.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
-      }
-    } catch ( NoSuchElementException e ) {
-      LOG.error( "Changed network rules not applied to inactive network: " + net.getName( ) );
-    }
   }
   
   public void enqueue( VmAllocationInfo vmAllocInfo ) {

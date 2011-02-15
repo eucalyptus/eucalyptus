@@ -1,15 +1,16 @@
 package com.eucalyptus.component.event;
 
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.Event;
 
-public class LifecycleEvent extends Event {
+public class LifecycleEvent implements Event {
   private ServiceConfiguration configuration;
-  private String                 name;
+  private ComponentId            identity;
   private boolean                local;
-  public LifecycleEvent( ServiceConfiguration configuration, String name, boolean local ) {
+  public LifecycleEvent( ServiceConfiguration configuration, ComponentId compId, boolean local ) {
     this.configuration = configuration;
-    this.name = name;
+    this.identity = compId;
     this.local = local;
   }
 
@@ -17,8 +18,8 @@ public class LifecycleEvent extends Event {
     return configuration;
   }
   
-  public com.eucalyptus.bootstrap.Component getPeer( ) {
-    return this.getConfiguration( ).getComponent( );
+  public ComponentId getIdentity( ) {
+    return this.identity;
   }
 
   public boolean isLocal( ) {
@@ -27,8 +28,7 @@ public class LifecycleEvent extends Event {
   
   @Override
   public String toString( ) {
-    return String.format( "LifecycleEvent [name=%s, configuration=%s, local=%s, getCause()=%s, getFail()=%s, isVetoed()=%s]", name, configuration, local,
-                          getCause( ), getFail( ), isVetoed( ) );
+    return String.format( "LifecycleEvent [componentId=%s, configuration=%s, local=%s]", identity, configuration, local );
   }
 
 }

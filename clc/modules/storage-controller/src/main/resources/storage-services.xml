@@ -55,7 +55,7 @@
   ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  ~   THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
@@ -76,10 +76,10 @@
 
     <euca:endpoint name="StorageControllerWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:${euca.ws.port}/services/Storage"/>
+                   address="http://127.0.0.1:8773/services/Storage"/>
     <euca:endpoint name="StorageInternalWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:${euca.ws.port}/internal/StorageInternal"
+                   address="http://127.0.0.1:8773/internal/StorageInternal"
                    synchronous="true"/>
 
     <endpoint name="StorageWS" address="vm://Storage" synchronous="false"/>

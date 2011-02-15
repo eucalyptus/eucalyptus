@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,33 +64,31 @@
 package com.eucalyptus.ws.server;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 
+@ComponentPart( Eucalyptus.class )
 public class EucalyptusQueryPipeline extends FilteredPipeline {
   private static Logger LOG = Logger.getLogger( EucalyptusQueryPipeline.class );
+  private final UnrollableStage auth = new HmacUserAuthenticationStage( );
+  private final UnrollableStage bind = new QueryBindingStage( );
 
   @Override
-  protected void addStages( List<UnrollableStage> stages ) {
-    stages.add( new HmacUserAuthenticationStage( ) );
-    stages.add( new QueryBindingStage( ) );
-  }
-
-  @Override
-  protected boolean checkAccepts( HttpRequest message ) {
+  public boolean checkAccepts( HttpRequest message ) {
     if ( message instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
@@ -132,40 +130,15 @@ public class EucalyptusQueryPipeline extends FilteredPipeline {
   }
 
   @Override
-  public String getPipelineName( ) {
+  public String getName( ) {
     return "eucalyptus-query";
   }
 
-  public enum RequiredQueryParams {
-    SignatureVersion,
-    Version
-  }
-  
-  public enum OperationParameter {
-
-    Operation, Action;
-    private static String patterh = buildPattern();
-
-    private static String buildPattern()
-    {
-      StringBuilder s = new StringBuilder();
-      for ( OperationParameter op : OperationParameter.values() ) s.append( "(" ).append( op.name() ).append( ")|" );
-      s.deleteCharAt( s.length() - 1 );
-      return s.toString();
-    }
-
-    public static String toPattern()
-    {
-      return patterh;
-    }
-
-    public static String getParameter( Map<String,String> map )
-    {
-      for( OperationParameter op : OperationParameter.values() )
-        if( map.containsKey( op.toString() ) )
-          return map.get( op.toString() );
-      return null;
-    }
+  @Override
+  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    auth.unrollStage( pipeline );
+    bind.unrollStage( pipeline );
+    return pipeline;
   }
 
 }

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -74,6 +74,7 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -84,7 +85,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import com.eucalyptus.records.EventRecord;
 
-@Provides( com.eucalyptus.bootstrap.Component.any )
+@Provides( Any.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class DeferredPropertiesBootstrapper extends Bootstrapper {
 	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
@@ -93,7 +94,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 		for ( Component comp : Components.list( ) ) {
 			for ( ServiceConfiguration s : comp.list( ) ) {
 				if(!s.isLocal()) {
-					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponent().name());
+					List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet(s.getComponentId().name());
 					for ( ConfigurableProperty prop : props ) {
 						ConfigurableProperty addProp = null;
 						if (prop instanceof SingletonDatabasePropertyEntry) {

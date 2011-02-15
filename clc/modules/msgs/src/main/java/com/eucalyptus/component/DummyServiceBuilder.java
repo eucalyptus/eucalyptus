@@ -42,14 +42,16 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
 
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
+    String partition = "bootstrap".equals( this.component.getName( ) ) ? this.component.getName( ) : "eucalyptus"; 
     try {
+      
       if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( null, this.component.getPeer( ), uri );      
+        return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
       } else {
-        return new RemoteConfiguration( null, this.component.getPeer( ), uri );      
+        return new RemoteConfiguration( partition, this.component.getIdentity( ), uri );      
       }
     } catch ( Throwable t ) {
-      return new LocalConfiguration( null, this.component.getPeer( ), uri );      
+      return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
     }
   }
 

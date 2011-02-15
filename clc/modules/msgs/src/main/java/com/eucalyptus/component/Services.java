@@ -51,7 +51,7 @@
  * PATENTED MATERIAL IN THIS SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED
  * THE PARTY DISCOVERING IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF
  * CALIFORNIA, SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE
- * REMEDY, WHICH IN THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ * REMEDY, WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
  * REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED,
  * OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH ANY
  * SUCH LICENSES OR RIGHTS.
@@ -69,17 +69,22 @@ import org.apache.log4j.Logger;
 @Deprecated
 public class Services {
   private static Logger LOG = Logger.getLogger( Services.class );
-  public static ServiceEndpoint lookupByName( com.eucalyptus.bootstrap.Component type, String name ) {
+  public static ServiceEndpoint lookupByName( Class<? extends ComponentId> type, String name ) {
+    return lookupByName( ComponentIds.lookup( type ), name );
+  }
+  public static ServiceEndpoint lookupByName( ComponentId type, String name ) {
     return Components.lookup( type ).lookupServiceByName( name ).getEndpoint( );
   }
-  
-  public static ServiceEndpoint lookupByHost( com.eucalyptus.bootstrap.Component type, String name ) {
+  public static ServiceEndpoint lookupByHost( Class<? extends ComponentId> type, String name ) {
+    return lookupByHost( ComponentIds.lookup( type ), name );
+  }  
+  public static ServiceEndpoint lookupByHost( ComponentId type, String name ) {
     return Components.lookup( type ).lookupServiceByHost( name ).getEndpoint( );
   }
   
-  public static Boolean isRunningLocally( com.eucalyptus.bootstrap.Component type ) {
+  public static Boolean isRunningLocally( ComponentId type ) {
     try {
-      Components.lookup( type ).lookupServiceByHost( "localhost" );
+      Components.lookup( type ).isRunningLocally( );
       return true;
     } catch ( NoSuchElementException ex ) {
       LOG.trace( ex, ex );

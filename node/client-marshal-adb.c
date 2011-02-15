@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -117,12 +117,6 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
     if ((p = strchr (node_name, '/')) != NULL) *p = '\0'; // if there is no port
 
     logprintfl (EUCADEBUG, "DEBUG: requested URI %s\n", uri);
-
-    // see if we should redirect to the VMware broker
-    if (strstr (uri, "VMwareBroker")) {
-      uri = "http://localhost:8773/services/VMwareBroker";
-      logprintfl (EUCADEBUG, "DEBUG: redirecting request to %s\n", uri);
-    }
 
     // TODO: what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)uri);

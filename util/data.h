@@ -52,7 +52,7 @@ permission notice:
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -216,15 +216,20 @@ typedef struct ncInstance_t {
     char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
     int retries;
     
-    /* state as reported to CC & CLC */
-    char stateName[CHAR_BUFFER_SIZE];  /* as string */
+    // state as reported to CC & CLC
+    char stateName[CHAR_BUFFER_SIZE];  // as string
     char bundleTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+    char createImageTaskStateName[CHAR_BUFFER_SIZE];  /* as string */
+
     int stateCode; /* as int */
 
     // state as NC thinks of it
     instance_states state;
     bundling_progress bundleTaskState;
     int bundlePid, bundleBucketExists, bundleCanceled;
+  
+    createImage_progress createImageTaskState;
+    int createImagePid, createImageCanceled;
 
     char keyName[CHAR_BUFFER_SIZE*4];
     char privateDnsName[CHAR_BUFFER_SIZE];
@@ -232,7 +237,8 @@ typedef struct ncInstance_t {
     int launchTime; // timestamp of RunInstances request arrival
     int expiryTime;
     int bootTime; // timestamp of STAGING->BOOTING transition
-	int bundlingTime; // timestamp of ->BUNDLING transition
+    int bundlingTime; // timestamp of ->BUNDLING transition
+    int createImageTime; // timestamp of ->CREATEIMAGE transition
     int terminationTime; // timestamp of when resources are released (->TEARDOWN transition)
     
     virtualMachine params;

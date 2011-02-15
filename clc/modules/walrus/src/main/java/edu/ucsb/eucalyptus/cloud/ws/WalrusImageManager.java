@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -83,13 +83,12 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.EucaKeyStore;
+import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -144,12 +143,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.bootstrap.Component;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -240,7 +239,7 @@ public class WalrusImageManager {
 								}
 							}
 							if(!verified) {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							}
@@ -275,7 +274,7 @@ public class WalrusImageManager {
 						}
 						if(!signatureVerified) {
 							try {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
+								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							} catch(Exception ex) {
@@ -316,7 +315,7 @@ public class WalrusImageManager {
 					byte[] iv;
 					try {
 						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(
-								Component.eucalyptus ).getPrivateKey();
+								Eucalyptus.class ).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));
@@ -409,32 +408,45 @@ public class WalrusImageManager {
 					}
 
 					try {
-						X509Certificate cert = user.getX509Certificate( );
-						PublicKey publicKey = cert.getPublicKey();
-						sigVerifier.initVerify(publicKey);
-						sigVerifier.update((machineConfiguration + image).getBytes());
-						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+	          for(User u:Users.listAllUsers( )) {
+	            for (X509Certificate cert : u.getAllX509Certificates()) {
+	              if(cert != null)
+	                signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
+	              if(signatureVerified)
+	                break;
+	            }
+	          }
+	          if(!signatureVerified) {
+	            X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+	            if(cert != null)
+	              signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
+	          }
+//					  X509Certificate cert = user.getX509Certificate( );
+//						PublicKey publicKey = cert.getPublicKey();
+//						sigVerifier.initVerify(publicKey);
+//						sigVerifier.update((machineConfiguration + image).getBytes());
+//						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("signature verification");
 					}
 
-					//check if Eucalyptus signed it
-					if(!signatureVerified) {
-						try {
-							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getCertificate();
-							PublicKey publicKey = cert.getPublicKey();
-							sigVerifier.initVerify(publicKey);
-							sigVerifier.update((machineConfiguration + image).getBytes());
-							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-						} catch(Exception ex) {
-							db.rollback();
-							LOG.error(ex, ex);
-							throw new DecryptionFailedException("signature verification");
-						}
+//					//check if Eucalyptus signed it
+//					if(!signatureVerified) {
+//						try {
+//							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+//							PublicKey publicKey = cert.getPublicKey();
+//							sigVerifier.initVerify(publicKey);
+//							sigVerifier.update((machineConfiguration + image).getBytes());
+//							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+//						} catch(Exception ex) {
+//							db.rollback();
+//							LOG.error(ex, ex);
+//							throw new DecryptionFailedException("signature verification");
+//						}
 
-					}
+//					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}
@@ -443,7 +455,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
@@ -602,7 +614,7 @@ public class WalrusImageManager {
 
 					FileInputStream fileInputStream = null;
 					try {
-						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Component.eucalyptus).getPrivateKey();
+						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
 						sigCloud.initSign(pk);
 						sigCloud.update(verificationString.getBytes());

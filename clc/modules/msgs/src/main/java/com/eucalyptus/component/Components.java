@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -62,12 +62,11 @@
  */
 package com.eucalyptus.component;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -75,17 +74,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.DependsRemote;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.records.EventType;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.system.Ats;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Components {
   private static Logger                            LOG                  = Logger
@@ -94,13 +91,32 @@ public class Components {
                                                                           {
                                                                             put( Service.class, new ConcurrentHashMap<String, Service>( ) );
                                                                             put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                           }
                                                                         };
-  public static com.eucalyptus.bootstrap.Component delegate             = com.eucalyptus.bootstrap.Component.eucalyptus;
   
+  public static List<Component> listEnabled( ) {
+    List<Component> components = Lists.newArrayList( );
+    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      for ( Component comp : Components.list( ) ) {
+        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp );
+        }
+      }
+    }
+    for ( Component comp : Components.list( ) ) {
+      if ( comp.isRunningLocally( ) ) {
+        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+          components.add( comp );
+        }
+      }
+    }
+    return components;
+  }
+
   @SuppressWarnings( "unchecked" )
   public static List<Component> list( ) {
-    return new ArrayList( Components.lookup( Component.class ).values( ) );
+    return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
   private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {
@@ -115,7 +131,7 @@ public class Components {
     throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component info type: " + maybeSubclass.getSimpleName( ) );
   }
   
-  private static <T> Map<String, T> lookup( Class type ) {
+  static <T> Map<String, T> lookupMap( Class type ) {
     return ( Map<String, T> ) componentInformation.get( getRealType( type ) );
   }
   
@@ -129,16 +145,16 @@ public class Components {
   }
   
   public static <T extends ComponentInformation> boolean contains( Class<T> type, String name ) {
-    return Components.lookup( type ).containsKey( name );
+    return Components.lookupMap( type ).containsKey( name );
   }
   
   private static <T extends ComponentInformation> void remove( T componentInfo ) {
-    Map<String, T> infoMap = lookup( componentInfo.getClass( ) );
+    Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     infoMap.remove( componentInfo.getName( ) );
   }
   
   private static <T extends ComponentInformation> void put( T componentInfo ) {
-    Map<String, T> infoMap = lookup( componentInfo.getClass( ) );
+    Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     if ( infoMap.containsKey( componentInfo.getName( ) ) ) {
       throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Duplicate information for component '" + componentInfo.getName( ) + "': "
                                            + componentInfo.getClass( ).getSimpleName( ) + " as " + getRealType( componentInfo.getClass( ) ) );
@@ -170,14 +186,15 @@ public class Components {
   public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
       try {
-        Components.create( name, null );
+        ComponentId compId = ComponentIds.lookup( name );
+        Components.create( compId );
         return Components.lookup( type, name );
       } catch ( ServiceRegistrationException ex ) {
         throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
                                           + getRealType( type ).getCanonicalName( ) );
       }
     } else {
-      return ( T ) Components.lookup( type ).get( name );
+      return ( T ) Components.lookupMap( type ).get( name );
     }
   }
   
@@ -185,12 +202,16 @@ public class Components {
     return Components.lookup( Component.class, componentName );
   }
   
-  public static Component lookup( com.eucalyptus.bootstrap.Component component ) throws NoSuchElementException {
-    return Components.lookup( Component.class, component.name( ) );
+  public static <T extends ComponentId> Component lookup( Class<T> componentId ) throws NoSuchElementException {
+    return Components.lookup( ComponentIds.lookup( componentId ) );
   }
-  
+
+  public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
+    return Components.lookup( Component.class, componentId.getName( ) );
+  }
+
   public static Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
-    for( Service s : Components.lookup( config.getComponent( ) ).getServices( ) ) {
+    for( Service s : Components.lookup( config.getComponentId( ) ).getServices( ) ) {
       if( s.getServiceConfiguration( ).equals( config ) ) {
         return s;
       }
@@ -202,12 +223,8 @@ public class Components {
     return Components.contains( Component.class, componentName );
   }
   
-  public static boolean contains( com.eucalyptus.bootstrap.Component component ) {
-    return Components.contains( Component.class, component.name( ) );
-  }
-  
-  public static Component create( String name, URI uri ) throws ServiceRegistrationException {
-    Component c = new Component( name, uri );
+  public static Component create( ComponentId id ) throws ServiceRegistrationException {
+    Component c = new Component( id );
     register( c );
     return c;
   }
@@ -230,13 +247,9 @@ public class Components {
             buf.append( "-> Builder:            "
                         + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
             buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".disable" )
+                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".disable" )
                         + "/"
-                        + System.getProperty( "euca." + comp.getPeer( ).name( ) + ".remote" ) ).append( "\n" );
-            buf.append( "-> Configuration:      "
-                        + ( comp.getConfiguration( ).getResource( ) != null
-                          ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                          : "null" ) ).append( "\n" );
+                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".remote" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
@@ -353,14 +366,10 @@ public class Components {
             final StringBuilder buf = new StringBuilder( );
             buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
                                        comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getPeer( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getPeer( ).name( ) ) ) ) ).append( "\n" );
+                                       System.getProperty( String.format( "euca.%s.disable", comp.getIdentity( ).name( ) ) ),
+                                       System.getProperty( String.format( "euca.%s.remote", comp.getIdentity( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> configuration:        %s",
-                                       comp.getName( ), ( comp.getConfiguration( ).getResource( ) != null
-                                         ? comp.getConfiguration( ).getResource( ).getOrigin( )
-                                         : "null" ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
                                        Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
             return buf.toString( );

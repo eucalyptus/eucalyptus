@@ -11,13 +11,12 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.event.EventVetoedException;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.NetworkUtil;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
-
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
@@ -27,11 +26,11 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       return false;
     }
   }
-  
+
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
-      List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponent( ).name( ) );
+      List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
       for ( ConfigurableProperty prop : props ) {
         ConfigurableProperty addProp = null;
         if ( prop instanceof SingletonDatabasePropertyEntry ) {
@@ -52,13 +51,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = StartComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
   }
-  
+
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     StopComponentEvent e = null;
@@ -68,14 +67,14 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = StopComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
     
     try {
-      List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponent( ).name( ) );
+      List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
       for ( ConfigurableProperty prop : props ) {
         if ( prop instanceof SingletonDatabasePropertyEntry ) {
           //noop
@@ -103,8 +102,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = EnableComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }
@@ -124,8 +123,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       e = DisableComponentEvent.getRemote( config );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponent( ), e );
-    } catch ( EventVetoedException e1 ) {
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+    } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
     }

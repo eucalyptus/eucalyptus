@@ -53,7 +53,7 @@
 *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
 *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
 *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,76 +63,10 @@
  */
 package com.eucalyptus.ws.stages;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.util.HasName;
 
-public interface UnrollableStage {
+public interface UnrollableStage extends HasName<UnrollableStage> {
   public void unrollStage( ChannelPipeline pipeline );
-  public String getStageName();    
-  @ChannelPipelineCoverage( "one" )
-  public
-  static class StageBottomHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
-    private static Logger   LOG = Logger.getLogger( UnrollableStage.StageBottomHandler.class );
-    private UnrollableStage parent;
-  
-    public StageBottomHandler( UnrollableStage parent ) {
-      this.parent = parent;
-    }
-  
-    @Override
-    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        LOG.trace( "END OUTBOUND STAGE: " + parent.getStageName( ) );
-      } else {
-        LOG.trace( "END OUTBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
-      }
-      ctx.sendDownstream( e );
-    }
-  
-    @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        LOG.trace( "START INBOUND STAGE: " + parent.getStageName( ) );
-      } else {
-        LOG.trace( "START INBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
-      }
-      ctx.sendUpstream( e );
-    }
-  }
-  @ChannelPipelineCoverage( "one" )
-  public
-  static class StageTopHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
-    private static Logger   LOG = Logger.getLogger( UnrollableStage.StageTopHandler.class );
-    private UnrollableStage parent;
-  
-    public StageTopHandler( UnrollableStage parent ) {
-      this.parent = parent;
-    }
-  
-    @Override
-    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        LOG.trace( "START OUTBOUND STAGE: " + parent.getStageName( ) );
-      } else {
-        LOG.trace( "START OUTBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
-      }
-      ctx.sendDownstream( e );
-    }
-  
-    @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        LOG.trace( "END INBOUND STAGE: " + parent.getStageName( ) );
-      } else {
-        LOG.trace( "END INBOUND STAGE: " + parent.getStageName( ) + " -- " + e.getClass( ).getSimpleName( ) );
-      }
-      ctx.sendUpstream( e );
-    }
-  }
+  public String getName();    
 }

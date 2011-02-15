@@ -239,7 +239,10 @@ public class DatabaseWrappedUser implements User, WrappedUser {
   @Override
   public boolean checkToken( String testToken ) {
     String token = this.user.getToken( );
-    boolean ret = token.equals( testToken );
+    boolean ret = false;
+    if ( token != null ) {
+      ret = token.equals( testToken );
+    }
     try {
       Transactions.one( this.searchUser, new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) throws Throwable {
@@ -292,5 +295,10 @@ public class DatabaseWrappedUser implements User, WrappedUser {
     sb.append( "user = " ).append( user ).append( ", " );
     sb.append( "]" );
     return sb.toString( );
+  }
+
+  @Override
+  public Boolean isSystem( ) {
+    return false;
   }
 }

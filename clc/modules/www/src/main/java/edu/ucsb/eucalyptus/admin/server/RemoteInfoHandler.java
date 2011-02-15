@@ -53,7 +53,7 @@
  * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
@@ -64,7 +64,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Component;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.component.Components;
@@ -73,6 +72,14 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.config.DeregisterClusterType;
+import com.eucalyptus.config.DeregisterComponentType;
+import com.eucalyptus.config.DeregisterStorageControllerType;
+import com.eucalyptus.config.DeregisterWalrusType;
+import com.eucalyptus.config.RegisterClusterType;
+import com.eucalyptus.config.RegisterComponentType;
+import com.eucalyptus.config.RegisterStorageControllerType;
+import com.eucalyptus.config.RegisterWalrusType;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.VmType;
@@ -90,18 +97,10 @@ import edu.ucsb.eucalyptus.admin.client.StorageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.VmTypeWeb;
 import edu.ucsb.eucalyptus.admin.client.WalrusInfoWeb;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-import edu.ucsb.eucalyptus.msgs.DeregisterClusterType;
-import edu.ucsb.eucalyptus.msgs.DeregisterComponentType;
-import edu.ucsb.eucalyptus.msgs.DeregisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.DeregisterWalrusType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.GetWalrusConfigurationType;
-import edu.ucsb.eucalyptus.msgs.RegisterClusterType;
-import edu.ucsb.eucalyptus.msgs.RegisterComponentType;
-import edu.ucsb.eucalyptus.msgs.RegisterStorageControllerType;
-import edu.ucsb.eucalyptus.msgs.RegisterWalrusType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
@@ -149,7 +148,7 @@ public class RemoteInfoHandler {
       UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
       updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
       updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
-      Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, storageControllerWeb.getHost( ) );
+      Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), storageControllerWeb.getHost( ) );
       try {
         scDispatch.send( updateStorageConfiguration );
       } catch ( Exception e ) {
@@ -164,7 +163,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
       try {
-        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( Component.storage ).isRunningLocally( ) ) {
+        if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isRunningLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }
@@ -197,7 +196,7 @@ public class RemoteInfoHandler {
   
   private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
-    Dispatcher scDispatch = ServiceDispatcher.lookup( Component.storage, c.getHostName( ) );
+    Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), c.getHostName( ) );
     GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
     return getStorageConfigResponse;
   }
@@ -213,7 +212,7 @@ public class RemoteInfoHandler {
       UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
       updateWalrusConfiguration.setName( WalrusProperties.NAME );
       updateWalrusConfiguration.setProperties(convertProps(walrusInfoWeb.getProperties()));
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
+      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
       scDispatch.send( updateWalrusConfiguration );
     }
   }
@@ -222,7 +221,7 @@ public class RemoteInfoHandler {
     List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>( );
     for ( WalrusConfiguration c : Configuration.getWalrusConfigurations( ) ) {
       GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Component.walrus );
+      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
       GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
       walrusList.add( new WalrusInfoWeb( c.getName( ), 
     		  c.getHostName( ), 
