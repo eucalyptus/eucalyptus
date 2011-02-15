@@ -158,7 +158,6 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
-    <touch file="${bind.timestamp}"/>
 		<delete>
 			<fileset dir="modules" includes="**/*JiBX*" />
 		</delete>
