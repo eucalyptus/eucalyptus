@@ -208,9 +208,8 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
    */
   @Override
   public String toString( ) {
-    return String.format( "Service %s name=%s endpoint=%s\nService %s name=%s serviceConfiguration=%s\nService %s name=%s keys=%s",
-                          this.id, this.name, this.endpoint,
-                          this.id, this.name, this.serviceConfiguration );
+    return String.format( "Service %s name=%s endpoint=%s serviceConfiguration=%s\n",
+                          this.id, this.name, this.endpoint, this.serviceConfiguration );
   }
   
   /**
