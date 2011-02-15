@@ -86,15 +86,15 @@
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<!--================================== build targets ==================================-->
-  <target name="build">
-    <ant dir="." inheritall="false" target="build-all" />
-    <ant dir="." inheritall="false" target="jar" />
+	<target name="build">
+		<ant dir="." inheritall="false" target="build-all" />
+		<ant dir="." inheritall="false" target="jar" />
 	</target>
-  <target name="build-all">
-    <ant dir="." inheritall="false" target="build-nowww" />
-    <ant dir="." inheritall="false" target="build-www" />
-  </target>
-  <target name="build-nowww">
+	<target name="build-all">
+		<ant dir="." inheritall="false" target="build-nowww" />
+		<ant dir="." inheritall="false" target="build-www" />
+	</target>
+	<target name="build-nowww">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
@@ -102,22 +102,22 @@
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
-    <ant dir="modules/euare" inheritall="false" target="builder" />
+		<ant dir="modules/euare" inheritall="false" target="builder" />
 		<ant dir="modules/component" inheritall="false" target="builder" />
 		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/reporting" inheritall="false" target="builder" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="builder" />
-    <ant dir="modules/notifications" inheritall="false" target="builder" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
+		<ant dir="modules/notifications" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 	</target>
-  <target name="build-www">
-    <ant dir="modules/www" inheritall="false" target="builder" />
-    <ant dir="modules/reporting" inheritall="false" target="builder" />
-  </target>
+	<target name="build-www">
+		<ant dir="modules/www" inheritall="false" target="builder" />
+		<ant dir="modules/reporting" inheritall="false" target="builder" />
+	</target>
 	<target name="jar" depends="build-bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/euare-common" inheritall="false" target="jar" />
@@ -130,8 +130,8 @@
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="jar" />
-    <ant dir="modules/notifications" inheritall="false" target="jar" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="jar" />
+		<ant dir="modules/notifications" inheritall="false" target="jar" />
 		<ant dir="modules/storage-common" inheritall="false" target="jar" />
 		<ant dir="modules/walrus" inheritall="false" target="jar" />
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
@@ -158,7 +158,7 @@
 				<include name="**/*.jar" />
 			</fileset>
 		</path>
-    <touch file="${bind.timestamp}"/>
+		<touch file="${bind.timestamp}"/>
 		<delete>
 			<fileset dir="modules" includes="**/*JiBX*" />
 		</delete>
@@ -185,13 +185,13 @@
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="clean" />
-    <ant dir="modules/notifications" inheritall="false" target="clean" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
+		<ant dir="modules/notifications" inheritall="false" target="clean" />
 		<ant dir="modules/storage-common" inheritall="false" target="clean" />
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
-    <ant dir="modules/vmware-broker" inheritall="false" target="clean" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
@@ -232,8 +232,8 @@
 		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
-    <mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
-    <chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
+		<mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
+		<chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
@@ -253,15 +253,15 @@
 		<ant dir="modules/wsstack" inheritall="false" target="install" />
 		<ant dir="modules/storage-common" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="install" />
-    <ant dir="modules/notifications" inheritall="false" target="install" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
+		<ant dir="modules/notifications" inheritall="false" target="install" />
 		<ant dir="modules/walrus" inheritall="false" target="install" />
 		<ant dir="modules/storage-controller" inheritall="false" target="install" />
 		<ant dir="modules/dns" inheritall="false" target="install" />
 		<ant dir="modules/www" inheritall="false" target="install" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">
