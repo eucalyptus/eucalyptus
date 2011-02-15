@@ -92,7 +92,9 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
+import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
@@ -121,15 +123,31 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ImageManager {
-  public static Logger LOG                    = Logger.getLogger( ImageManager.class );
-  public static String IMAGE_MACHINE          = "machine";
-  public static String IMAGE_KERNEL           = "kernel";
-  public static String IMAGE_RAMDISK          = "ramdisk";
-  public static String IMAGE_MACHINE_PREFIX   = "emi";
-  public static String IMAGE_KERNEL_PREFIX    = "eki";
-  public static String IMAGE_RAMDISK_PREFIX   = "eri";
-  public static String IMAGE_PLATFORM_DEFAULT = "linux";
-  public static String IMAGE_PLATFORM_WINDOWS = "windows";
+  public static Logger                       LOG                    = Logger.getLogger( ImageManager.class );
+  public static String                       IMAGE_MACHINE          = "machine";
+  public static String                       IMAGE_KERNEL           = "kernel";
+  public static String                       IMAGE_RAMDISK          = "ramdisk";
+  public static String                       IMAGE_MACHINE_PREFIX   = "emi";
+  public static String                       IMAGE_KERNEL_PREFIX    = "eki";
+  public static String                       IMAGE_RAMDISK_PREFIX   = "eri";
+  public static String                       IMAGE_PLATFORM_DEFAULT = "linux";
+  public static String                       IMAGE_PLATFORM_WINDOWS = "windows";
+  
+  private CheckedFunction<String, ImageInfo> resolveImageFunction   = new CheckedFunction<String, ImageInfo>( ) {
+                                                                      @Override
+                                                                      public ImageInfo apply( String imageId ) throws EucalyptusCloudException {
+                                                                        ImageInfo diskInfo = null;
+                                                                        EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+                                                                        try {
+                                                                          diskInfo = db.getUnique( new ImageInfo( imageId ) );
+                                                                          db.commit( );
+                                                                          return diskInfo;
+                                                                        } catch ( EucalyptusCloudException ex ) {
+                                                                          LOG.trace( ex );
+                                                                          throw ex;
+                                                                        }
+                                                                      }
+                                                                    };
   
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     RunInstancesType msg = vmAllocInfo.getRequest( );
@@ -138,7 +156,7 @@ public class ImageManager {
     // First the root image itself
     String imageId = msg.getImageId( );
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    ImageInfo diskInfo = null;          
+    ImageInfo diskInfo = null;
     try {
       diskInfo = db.getUnique( new ImageInfo( imageId ) );
       db.commit( );
@@ -171,7 +189,7 @@ public class ImageManager {
     try {
       defaultKernelId = SystemConfiguration.getSystemConfiguration( ).getDefaultKernel( );
       defaultRamdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
-    } catch ( Exception e1 ) {}    
+    } catch ( Exception e1 ) {}
     if ( !ImageManager.IMAGE_PLATFORM_WINDOWS.equals( diskInfo.getPlatform( ) ) ) {
       // Check kernel image
       final String kernelId = ImageUtil.getImageInfobyId( msg.getKernelId( ), diskInfo.getKernelId( ), defaultKernelId );
@@ -196,9 +214,11 @@ public class ImageManager {
       }
       // Check ramdisk image
       boolean nord = ( ImageUtil.isSet( msg.getKernelId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) )
-          || ( !ImageUtil.isSet( msg.getKernelId( ) ) && ImageUtil.isSet( diskInfo.getKernelId( ) )
-              && !ImageUtil.isSet( diskInfo.getRamdiskId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
-      final String ramdiskId = nord ? null : ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
+                     || ( !ImageUtil.isSet( msg.getKernelId( ) ) && ImageUtil.isSet( diskInfo.getKernelId( ) )
+                          && !ImageUtil.isSet( diskInfo.getRamdiskId( ) ) && !ImageUtil.isSet( msg.getRamdiskId( ) ) );
+      final String ramdiskId = nord
+        ? null
+        : ImageUtil.getImageInfobyId( msg.getRamdiskId( ), diskInfo.getRamdiskId( ), defaultRamdiskId );
       db = new EntityWrapper<ImageInfo>( );
       try {
         ramdiskInfo = db.getUnique( new ImageInfo( ramdiskId ) );
@@ -248,11 +268,11 @@ public class ImageManager {
     ImageUtil.checkStoredImage( kernelInfo );
     ImageUtil.checkStoredImage( diskInfo );
     VirtualBootRecord ref = null;
-    vmType.setRoot( diskInfo.getImageId( ), diskInfo.getImageLocation( ), imgSize*1024 );
-    if( kernelInfo != null ) {
+    vmType.setRoot( diskInfo.getImageId( ), diskInfo.getImageLocation( ), imgSize * 1024 );
+    if ( kernelInfo != null ) {
       vmType.setKernel( kernelInfo.getImageId( ), kernelInfo.getImageLocation( ) );
     }
-    if( ramdiskInfo != null ) {
+    if ( ramdiskInfo != null ) {
       vmType.setRamdisk( ramdiskInfo.getImageId( ), ramdiskInfo.getImageLocation( ) );
     }
     return vmAllocInfo;
@@ -555,9 +575,10 @@ public class ImageManager {
     }
     return reply;
   }
-  public CreateImageResponseType createImage(CreateImageType request) {
+  
+  public CreateImageResponseType createImage( CreateImageType request ) {
     CreateImageResponseType reply = request.getReply( );
     return reply;
   }
-
+  
 }
