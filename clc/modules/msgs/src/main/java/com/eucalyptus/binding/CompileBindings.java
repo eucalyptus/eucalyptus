@@ -202,10 +202,10 @@ public class CompileBindings extends Task {
         }
       }
       Compile compiler = new Compile( true, true, true, false, false, false );
-      compiler.setSkipValidate( true );
-      compiler.compile( this.pathStrings( ), bindings( ) );
+      compiler.compile( paths( ), bindings( ) );
     } catch ( Throwable e ) {
       e.printStackTrace( );
+      throw new RuntimeException( e );
     } finally {
       Thread.currentThread( ).setContextClassLoader( old );
     }
