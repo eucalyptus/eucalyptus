@@ -199,7 +199,8 @@ public class CompileBindings extends Task {
           }
         }
       }
-      Compile compiler = new Compile( true, true, true, false, false, false );
+      Compile compiler = new Compile( true, true, false, false, false, false );
+      compiler.setSkipValidate( true );
       compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
       e.printStackTrace( );
