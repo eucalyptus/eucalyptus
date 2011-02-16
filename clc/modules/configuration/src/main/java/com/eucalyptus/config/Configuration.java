@@ -94,14 +94,22 @@ public class Configuration {
     String partition = request.getPartition( );
     String hostName = request.getHost( );
     Integer port = request.getPort( );
-    reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
+    try {
+      reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
+    } catch ( Throwable ex ) {
+      throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
+    }
     return reply;
   }
   
   public DeregisterComponentResponseType deregisterComponent( DeregisterComponentType request ) throws EucalyptusCloudException {
     Component component = Components.oneWhichHandles( request.getClass( ) );
     DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
-    reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ), request.getName( ) ) );
+    try {
+      reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ), request.getName( ) ) );
+    } catch ( Throwable ex ) {
+      throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
+    }
     return reply;
   }
     
