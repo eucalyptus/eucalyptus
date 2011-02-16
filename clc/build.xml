@@ -141,7 +141,7 @@
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
 	</target>
 
-	<target name="build-bind" depends="generate-bind,compile-bind" />
+	<target name="build-bind" depends="build-all,generate-bind,compile-bind" />
 
 	<target name="shouldGenerateBinding">
 		<uptodate property="generate.bind.notRequired" targetfile="${bind.msgs}">
@@ -190,10 +190,7 @@
 				<include name="**/build" />
 			</dirset>
 			<fileset dir="${project.basedir}/lib">
-				<include name="**/jibx-*.jar" />
-				<include name="**/groovy-*.jar" />
-				<include name="**/google-*.jar" />
-				<include name="**/log4j-*.jar" />
+				<include name="**/*.jar" />
 			</fileset>
 		</path>
 		
