@@ -210,7 +210,7 @@ public class EquallogicProvider implements SANProvider {
 			SANVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
 			EntityWrapper<CHAPUserInfo> dbUser = db.recast(CHAPUserInfo.class);
 			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-			String property = System.getProperty("euca.home") + "," + sanInfo.getSanHost() + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
+			String property = sanInfo.getSanHost() + "," + volumeInfo.getIqn() + "," + BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 			db.commit();
 			return property;
 		} catch(EucalyptusCloudException ex) {
