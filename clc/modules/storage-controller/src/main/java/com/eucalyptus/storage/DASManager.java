@@ -192,10 +192,17 @@ public class DASManager implements LogicalStorageManager {
 						//PV should be initialized at this point.
 						returnValue = getPhysicalVolumeVerbose(dasDevice);
 						if(returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-							volumeGroup = "vg-" + Hashes.getRandom(10);
-							returnValue = createVolumeGroup(dasDevice, volumeGroup);
-							if(returnValue.length() == 0) {
-								throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
+							Matcher m = volumeGroupPattern.matcher(returnValue);
+							if(m.find()) { 
+								volumeGroup = m.group(1).trim();
+							}
+							if((volumeGroup == null) || (volumeGroup.length() == 0)) {
+								volumeGroup = "vg-" + Hashes.getRandom(10);
+								returnValue = createVolumeGroup(dasDevice, volumeGroup);
+								if(returnValue.length() == 0) {
+									throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+								}
 							}
 						} else {
 							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
