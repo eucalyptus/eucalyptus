@@ -292,8 +292,7 @@ public class EucalyptusManagement {
 	public static void deleteImage(String imageId)
 	throws SerializableException
 	{
-		ImageInfo searchImg = new ImageInfo( );
-		searchImg.setImageId( imageId );
+		ImageInfo searchImg = new ImageInfo( imageId );
 		EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
 		List<ImageInfo> imgList= db.query( searchImg );
 

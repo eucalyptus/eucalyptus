@@ -189,18 +189,10 @@ public class ImageInfo implements Image {
     return this.id;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#getArchitecture()
-   * @return
-   */
   public String getArchitecture( ) {
-    return architecture;
+    return this.architecture;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#setArchitecture(java.lang.String)
-   * @param architecture
-   */
   public void setArchitecture( String architecture ) {
     this.architecture = architecture;
   }
@@ -478,7 +470,7 @@ public class ImageInfo implements Image {
    * @return
    */
   public Set<ProductCode> getProductCodes( ) {
-    return productCodes;
+    return this.productCodes;
   }
   
   /**
@@ -501,7 +493,7 @@ public class ImageInfo implements Image {
     
     ImageInfo imageInfo = ( ImageInfo ) o;
     
-    if ( !imageId.equals( imageInfo.imageId ) ) return false;
+    if ( !this.imageId.equals( imageInfo.imageId ) ) return false;
     
     return true;
   }
@@ -512,7 +504,7 @@ public class ImageInfo implements Image {
    */
   @Override
   public int hashCode( ) {
-    return imageId.hashCode( );
+    return this.imageId.hashCode( );
   }
   
   /**
@@ -576,5 +568,14 @@ public class ImageInfo implements Image {
   @Override
   public int compareTo( Image o ) {
     return this.getImageId( ).compareTo( o.getImageId( ) );
+  }
+
+  /**
+   * @see com.eucalyptus.util.HasOwner#getOwner()
+   * @return
+   */
+  @Override
+  public String getOwner( ) {
+    return this.getImageOwnerId( );
   }
 }

@@ -85,6 +85,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
@@ -190,7 +191,7 @@ public class Address implements HasName<Address> {
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     this.cluster = cluster;
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
@@ -201,14 +202,14 @@ public class Address implements HasName<Address> {
     this.userId = userId;
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
   public void init( ) {//Should only EVER be called externally after loading from the db
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     if ( this.userId == null ) {
       this.userId = UNALLOCATED_USERID;
     }
@@ -436,7 +437,7 @@ public class Address implements HasName<Address> {
       try {
         this.transition.bottom( );
       } finally {
-        this.transition = QUIESCENT;
+        this.transition = this.QUIESCENT;
         this.state.set( this.state.getReference( ), false );
       }
     }
@@ -460,15 +461,19 @@ public class Address implements HasName<Address> {
   }
   
   private static void addAddress( Address address ) {
-    Address addr = new Address( address.getName( ), address.getCluster( ) );
+    Address addr = address;
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       addr = db.getUnique( new Address( address.getName( ) ) );
       addr.setUserId( address.getUserId( ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( RuntimeException e ) {
+      db.rollback( );
+      LOG.error( e, e );
+    } catch ( EucalyptusCloudException e ) {
+      addr = new Address( address.getName( ), address.getCluster( ) );
       try {
-        db.add( address );
+        db.add( addr );
         db.commit( );
       } catch ( Throwable e1 ) {
         db.rollback( );
@@ -485,15 +490,15 @@ public class Address implements HasName<Address> {
   }
   
   public String getCluster( ) {
-    return cluster;
+    return this.cluster;
   }
   
   public String getUserId( ) {
-    return userId;
+    return this.userId;
   }
   
   public String getInstanceAddress( ) {
-    return instanceAddress;
+    return this.instanceAddress;
   }
   
   private void setInstanceAddress( String instanceAddress ) {
@@ -509,7 +514,7 @@ public class Address implements HasName<Address> {
   }
   
   public Long getId( ) {
-    return id;
+    return this.id;
   }
   
   public void setId( final Long id ) {
@@ -542,7 +547,7 @@ public class Address implements HasName<Address> {
     if ( this == o ) return true;
     if ( !( o instanceof Address ) ) return false;
     Address address = ( Address ) o;
-    if ( !name.equals( address.name ) ) return false;
+    if ( !this.name.equals( address.name ) ) return false;
     return true;
   }
   

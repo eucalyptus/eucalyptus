@@ -94,6 +94,7 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Lookup;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -133,21 +134,7 @@ public class ImageManager {
   public static String                       IMAGE_PLATFORM_DEFAULT = "linux";
   public static String                       IMAGE_PLATFORM_WINDOWS = "windows";
   
-  private CheckedFunction<String, ImageInfo> resolveImageFunction   = new CheckedFunction<String, ImageInfo>( ) {
-                                                                      @Override
-                                                                      public ImageInfo apply( String imageId ) throws EucalyptusCloudException {
-                                                                        ImageInfo diskInfo = null;
-                                                                        EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-                                                                        try {
-                                                                          diskInfo = db.getUnique( new ImageInfo( imageId ) );
-                                                                          db.commit( );
-                                                                          return diskInfo;
-                                                                        } catch ( EucalyptusCloudException ex ) {
-                                                                          LOG.trace( ex );
-                                                                          throw ex;
-                                                                        }
-                                                                      }
-                                                                    };
+//  private Lookup<ImageInfo> resolveImageFunction   = new Lookup<ImageInfo>( ) {};
   
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     RunInstancesType msg = vmAllocInfo.getRequest( );

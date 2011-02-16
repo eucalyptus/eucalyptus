@@ -6,6 +6,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class Permissions {
@@ -27,6 +28,8 @@ public class Permissions {
       context.getContracts( ).putAll(
           policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser ) );
       return true;
+    } catch ( IllegalContextAccessException e ) {
+      LOG.debug( "Exception trying to identify the current request context requesting resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
     } catch ( AuthException e ) {
       LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );
     } catch ( Throwable e ) {
