@@ -133,15 +133,13 @@
 		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
 		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 	</target>
-	<target name="build-java">
+	<target name="should-build-java">
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${build.dir}" includes="**/*" />
 		</uptodate>
-		<antcall target="do-build-java" />
 	</target>
-	<target name="do-build-java" unless="build.notRequired">
+	<target name="build-java" depends="should-build-java" unless="build.notRequired">
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
@@ -151,15 +149,13 @@
 		<mkdir dir="${src.dir}" />
 		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
 	</target>
-	<target name="build-groovy">
+	<target name="should-build-groovy">
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${build.dir}" includes="**/*" />
 		</uptodate>
-		<antcall target="do-build-groovy" />
 	</target>
-	<target name="do-build-groovy" unless="build.notRequired">
+	<target name="build-groovy" depends="should-build-groovy" unless="build.notRequired">
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
