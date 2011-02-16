@@ -181,21 +181,29 @@
 		</uptodate>
 		<echo message="[BINDING] Up-to-date check shows compile.bind.notRequred=${compile.bind.notRequired}." />
 	</target>
+
 	<target name="compile-bind" depends="shouldCompileBinding" unless="compile.bind.notRequired">
 		<echo message="[BINDING] Running binding compiler." />
+
 		<path id="bindingclasspath">
 			<dirset dir="${project.basedir}/modules">
 				<include name="**/build" />
 			</dirset>
-			<fileset dir="lib">
-				<include name="**/*.jar" />
+			<fileset dir="${project.basedir}/lib">
+				<include name="**/jibx-*.jar" />
+				<include name="**/groovy-*.jar" />
+				<include name="**/google-*.jar" />
+				<include name="**/log4j-*.jar" />
 			</fileset>
 		</path>
+		
 		<taskdef name="compile-bindings" classname="com.eucalyptus.binding.CompileBindings" classpathref="bindingclasspath" />
+		
 		<compile-bindings>
-			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+			<classfileset dir="${project.basedir}/modules" includes="*/build/**/*.class" />
 			<bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
 		</compile-bindings>
+		
 		<touch file="${bind.timestamp}" />
 	</target>
 

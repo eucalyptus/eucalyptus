@@ -121,6 +121,13 @@ public class CompileBindings extends Task {
         }
       }
     }
+    for( File f : new File( "lib" ).listFiles( new FilenameFilter() {
+      @Override
+      public boolean accept( File dir, String name ) {
+        return name.endsWith( ".jar" );
+      }} ) ) {
+      dirs.add( f.getAbsolutePath( ) );
+    }
     return dirs.toArray( new String[] {} );
   }
   
@@ -140,126 +147,80 @@ public class CompileBindings extends Task {
     return bindings.toArray( new String[] {} );
   }
   
-  PrintStream oldOut = System.out, oldErr = System.err;
-  public void error( Throwable e ) {
-    e.printStackTrace( System.err );
-    e.printStackTrace( System.err );
-    System.exit( -1 );
-  }
-  
   public void execute( ) {
-    PrintStream buildLog;
+    Path path = new Path( getProject( ) );
+    for( String p : paths( ) ) {
+      path.add( new Path( getProject( ), p ) );
+    }
+    for( File f : new File( "lib" ).listFiles( new FilenameFilter() {
+      @Override
+      public boolean accept( File dir, String name ) {
+        return name.endsWith( ".jar" );
+      }} ) ) {
+      path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
+    }
+//    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
     try {
-      buildLog = new PrintStream( new FileOutputStream( "bind-compile.log", false ) );
-      if ( this.classFileSets.isEmpty( ) ) {
-        throw new BuildException( "No classes were provided to bind." );
-      } else if ( this.bindingFileSets.isEmpty( ) ) {
-        throw new BuildException( "No bindings were provided to bind." );
-      } else {
-        Path path = new Path( getProject( ) );
-        for ( String p : paths( ) ) {
-          path.add( new Path( getProject( ), p ) );
-        }
-        for ( File f : new File( "lib" ).listFiles( new FilenameFilter( ) {
-          @Override
-          public boolean accept( File dir, String name ) {
-            return name.endsWith( ".jar" );
-          }
-        } ) ) {
-          path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
-        }
-        runBindingCompiler( );
-      }
-    } catch ( FileNotFoundException e2 ) {
-      this.error( e2 );
-    }    
-  }
-  
-  private void runBindingCompiler( ) {
-    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
-    ClassLoader cl = this.getUrlClassLoader( );
-    try {
-      BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
-      BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      Map<String, Class> classes = new TreeMap<String, Class>( ) {
-        {
-          put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
-          put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
-        }
-      };
-      for ( FileSet fs : this.classFileSets ) {
-        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-          try {
-            if ( !classFileName.endsWith( "class" ) ) continue;
-            Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-            if( !( c.getCanonicalName( ) == null ) ) {
-              System.out.println( "Loaded class: " + c );
-              classes.put( c.getName( ), c );
-            }
-          } catch ( ClassNotFoundException e ) {
-            e.printStackTrace( );
-          }
-        }
-      }
-      Compile compiler = new Compile( true, true, true, false, false, false );
-      compiler.compile( paths( ), bindings( ) );
+      AntClassLoader loader = this.getProject( ).createClassLoader( path );
+//      Thread.currentThread( ).setContextClassLoader( loader );
+      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+//      for ( FileSet fs : this.classFileSets ) {
+//        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+//          try {
+//            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+//          } catch ( ClassNotFoundException e ) {
+//            e.printStackTrace( );
+//          }
+//        }
+//      }
+      Compile compiler = new Compile( true, true, false, false, false, false );
+      compiler.compile( paths( ), bindings() );
+    } catch ( ClassNotFoundException e1 ) {
+      e1.printStackTrace( );
+      throw new RuntimeException( e1 );
     } catch ( Throwable e ) {
       e.printStackTrace( );
       throw new RuntimeException( e );
     } finally {
-      Thread.currentThread( ).setContextClassLoader( old );
+//      Thread.currentThread( ).setContextClassLoader( old );
     }
   }
-  /**
-   * TODO: DOCUMENT CompileBindings.java
-   * @return
-   */
-  private String[] pathStrings( ) {
-    List<String> strs = Lists.newArrayList( );
-    for( URL u : this.pathUrls( ) ) {
-      try {
-        strs.add( new File( u.toURI( ) ).getAbsolutePath( ) );
-      } catch ( URISyntaxException ex ) {
-        error( ex );
-      }
-    }
-    return strs.toArray( new String[] {});
-  }
-
-  private ClassLoader getUrlClassLoader( ) {
-    ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), Thread.currentThread( ).getContextClassLoader( ) );
-    return cl;
-  }
-  private URL[] pathUrls( ) {
-    Set<URL> dirUrls = new HashSet<URL>( );
-    for ( FileSet fs : this.classFileSets ) {
-      final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
-      for ( String d : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-        final String buildDir = dirName + File.separator + d.replaceAll( "build/.*", "build" );
-        try {
-          URL buildDirUrl = new File( buildDir ).toURL( );
-          if ( !dirUrls.contains( buildDirUrl ) ) {
-            log( "Found class directory: " + buildDirUrl );
-            dirUrls.add( buildDirUrl );
-          }
-        } catch ( MalformedURLException ex ) {
-          error( ex );
-        }
-      }
-    }
-    for ( File f : new File( this.project.getBaseDir( ).getAbsolutePath( ) + File.separator + "lib" ).listFiles( new FilenameFilter( ) {
-      @Override
-      public boolean accept( File dir, String name ) {
-        return name.endsWith( ".jar" );
-      }
-    } ) ) {
-      try {
-        dirUrls.add( f.toURL( ) );
-      } catch ( MalformedURLException ex ) {
-        error( ex );
-      }
-    }
-    return dirUrls.toArray( new URL[] {} );
-  }
-    
+  
+//  private void runBindingCompiler( Path path ) {
+//    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+//    ClassLoader cl = this.getProject( ).createClassLoader( path );
+//    Thread.currentThread( ).setContextClassLoader( cl );
+//    try {
+//      BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+//      BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+//      Map<String, Class> classes = new TreeMap<String, Class>( ) {
+//        {
+//          put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
+//          put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
+//        }
+//      };
+//      for ( FileSet fs : this.classFileSets ) {
+//        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+//          try {
+//            if ( !classFileName.endsWith( "class" ) ) continue;
+//            Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+//            if( !( c.getCanonicalName( ) == null ) ) {
+//              System.out.println( "Loaded class: " + c );
+//              classes.put( c.getName( ), c );
+//            }
+//          } catch ( ClassNotFoundException e ) {
+//            e.printStackTrace( );
+//          }
+//        }
+//      }
+//      Compile compiler = new Compile( true, true, false, false, false, false );
+//      compiler.compile( paths( ), bindings( ) );
+//    } catch ( Throwable e ) {
+//      e.printStackTrace( );
+//      throw new RuntimeException( e );
+//    } finally {
+//      Thread.currentThread( ).setContextClassLoader( old );
+//    }
+//  }
 }

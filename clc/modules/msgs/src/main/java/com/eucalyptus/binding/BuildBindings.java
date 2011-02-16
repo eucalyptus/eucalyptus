@@ -64,7 +64,8 @@ public class BuildBindings extends Task {
             dirUrls.add( buildDirUrl );
           }
         } catch ( MalformedURLException ex ) {
-          error( ex );
+          ex.printStackTrace( );
+          throw new RuntimeException( ex );
         }
       }
     }
@@ -77,7 +78,8 @@ public class BuildBindings extends Task {
       try {
         dirUrls.add( f.toURL( ) );
       } catch ( MalformedURLException ex ) {
-        error( ex );
+        ex.printStackTrace( );
+        throw new RuntimeException( ex );
       }
     }
     return dirUrls.toArray( new URL[] {} );
@@ -85,21 +87,8 @@ public class BuildBindings extends Task {
   
   PrintStream oldOut = System.out, oldErr = System.err;
   
-  public void error( Throwable e ) {
-    e.printStackTrace( System.err );
-//    System.setOut( this.oldOut );
-//    System.setErr( this.oldErr );
-    e.printStackTrace( System.err );
-    log( "ERROR See clc/bind.log for additional information: " + e.getMessage( ) );
-    System.exit( -1 );
-  }
-  
   public void execute( ) {
     PrintStream buildLog;
-//    try {
-//      buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
-//      System.setOut( buildLog );
-//      System.setErr( buildLog );
     if ( this.classFileSets.isEmpty( ) ) {
       throw new BuildException( "No classes were provided to bind." );
     } else {
@@ -123,14 +112,6 @@ public class BuildBindings extends Task {
       runPreBindingGenerators( pathUrls( ) );
       
     }
-//    } catch ( FileNotFoundException e2 ) {
-//      System.setOut( this.oldOut );
-//      System.setErr( this.oldErr );
-//    } finally {
-//      System.setOut( this.oldOut );
-//      System.setErr( this.oldErr );
-//    }
-    
   }
   
   private void runPreBindingGenerators( URL[] urls ) {
