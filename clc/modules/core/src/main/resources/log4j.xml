@@ -177,12 +177,10 @@
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="exhaustive" />
   </category>
-  <!--
   <category name="com.eucalyptus.entities.EntityWrapper" additivity="false">
     <priority value="${euca.log.exhaustive.db}" />
     <appender-ref ref="exhaustive" />
   </category>
-  -->
   <category name="org.apache.commons.beanutils.converters" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="exhaustive" />
