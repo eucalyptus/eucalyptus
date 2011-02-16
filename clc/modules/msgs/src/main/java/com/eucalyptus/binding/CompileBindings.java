@@ -126,19 +126,15 @@ public class CompileBindings extends Task {
   
   private String[] bindings( ) {
     List<String> bindings = new ArrayList<String>( );
-    boolean addMsgs = true;
-    if ( addMsgs ) {
-      bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
-    }
+    bindings.add( this.getProject( ).getBaseDir( ) + File.separator + "modules/msgs/src/main/resources/msgs-binding.xml" );
     for ( FileSet fs : this.bindingFileSets ) {
       final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String bindingFilePath = dirName + File.separator + b;
         log( "Found binding: " + bindingFilePath );
-        if ( bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
-          addMsgs = false;
+        if ( !bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
+          bindings.add( bindingFilePath );
         }
-        bindings.add( bindingFilePath );
       }
     }
     return bindings.toArray( new String[] {} );
@@ -147,10 +143,7 @@ public class CompileBindings extends Task {
   PrintStream oldOut = System.out, oldErr = System.err;
   public void error( Throwable e ) {
     e.printStackTrace( System.err );
-//    System.setOut( this.oldOut );
-//    System.setErr( this.oldErr );
     e.printStackTrace( System.err );
-    log( "ERROR See clc/bind-compile.log for additional information: " + e.getMessage( ) );
     System.exit( -1 );
   }
   
@@ -158,18 +151,11 @@ public class CompileBindings extends Task {
     PrintStream buildLog;
     try {
       buildLog = new PrintStream( new FileOutputStream( "bind-compile.log", false ) );
-//      System.setOut( buildLog );
-//      System.setErr( buildLog );
       if ( this.classFileSets.isEmpty( ) ) {
         throw new BuildException( "No classes were provided to bind." );
       } else if ( this.bindingFileSets.isEmpty( ) ) {
         throw new BuildException( "No bindings were provided to bind." );
       } else {
-//        try {
-//          System.setProperty( "java.class.path", ( ( AntClassLoader ) CompileBindings.class.getClassLoader( ) ).getClasspath( ) );
-//        } catch ( Exception e ) {
-//          System.err.println( "Failed setting classpath from Ant task" );
-//        }
         Path path = new Path( getProject( ) );
         for ( String p : paths( ) ) {
           path.add( new Path( getProject( ), p ) );
@@ -186,11 +172,7 @@ public class CompileBindings extends Task {
       }
     } catch ( FileNotFoundException e2 ) {
       this.error( e2 );
-    } finally {
-//      System.setOut( this.oldOut );
-//      System.setErr( this.oldErr );
-    }
-    
+    }    
   }
   
   private void runBindingCompiler( ) {
@@ -210,13 +192,14 @@ public class CompileBindings extends Task {
           try {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+            System.out.println( "Loaded class: " + c );
             classes.put( c.getName( ), c );
           } catch ( ClassNotFoundException e ) {
-            error( e );
+            e.printStackTrace( );
           }
         }
       }
-      Compile compiler = new Compile( true, true, false, true, true, false );
+      Compile compiler = new Compile( true, true, true, false, false, false );
       compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
       e.printStackTrace( );
