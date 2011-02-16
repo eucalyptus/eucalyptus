@@ -131,7 +131,7 @@ public class BuildBindings extends Task {
   
   private void runPreBindingGenerators( URL[] urls ) {
     ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
-    ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), old );
+    ClassLoader cl = getUrlClassLoader( );
     Thread.currentThread( ).setContextClassLoader( cl );
     try {
       BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
@@ -167,6 +167,11 @@ public class BuildBindings extends Task {
         error( e );
       }      
     }
+  }
+
+  private ClassLoader getUrlClassLoader( ) {
+    ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), Thread.currentThread( ).getContextClassLoader( ) );
+    return cl;
   }
   
 }

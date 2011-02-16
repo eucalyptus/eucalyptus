@@ -68,6 +68,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.PrintStream;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -78,6 +82,8 @@ import org.apache.tools.ant.Task;
 import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.Path;
 import org.jibx.binding.Compile;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 
 public class CompileBindings extends Task {
@@ -186,12 +192,67 @@ public class CompileBindings extends Task {
   }
   
   private void runBindingCompiler( ) {
+    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    ClassLoader cl = this.getUrlClassLoader( );
     try {
       Compile compiler = new Compile( true, true, true, false, false, false );
-      compiler.compile( paths( ), bindings( ) );
+      compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
       error( e );
+    } finally {
+      Thread.currentThread( ).setContextClassLoader( old );
     }
+  }
+  /**
+   * TODO: DOCUMENT CompileBindings.java
+   * @return
+   */
+  private String[] pathStrings( ) {
+    List<String> strs = Lists.newArrayList( );
+    for( URL u : this.pathUrls( ) ) {
+      try {
+        strs.add( new File( u.toURI( ) ).getAbsolutePath( ) );
+      } catch ( URISyntaxException ex ) {
+        error( ex );
+      }
+    }
+    return strs.toArray( new String[] {});
+  }
+
+  private ClassLoader getUrlClassLoader( ) {
+    ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), Thread.currentThread( ).getContextClassLoader( ) );
+    return cl;
+  }
+  private URL[] pathUrls( ) {
+    Set<URL> dirUrls = new HashSet<URL>( );
+    for ( FileSet fs : this.classFileSets ) {
+      final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
+      for ( String d : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+        final String buildDir = dirName + File.separator + d.replaceAll( "build/.*", "build" );
+        try {
+          URL buildDirUrl = new File( buildDir ).toURL( );
+          if ( !dirUrls.contains( buildDirUrl ) ) {
+            log( "Found class directory: " + buildDirUrl );
+            dirUrls.add( buildDirUrl );
+          }
+        } catch ( MalformedURLException ex ) {
+          error( ex );
+        }
+      }
+    }
+    for ( File f : new File( this.project.getBaseDir( ).getAbsolutePath( ) + File.separator + "lib" ).listFiles( new FilenameFilter( ) {
+      @Override
+      public boolean accept( File dir, String name ) {
+        return name.endsWith( ".jar" );
+      }
+    } ) ) {
+      try {
+        dirUrls.add( f.toURL( ) );
+      } catch ( MalformedURLException ex ) {
+        error( ex );
+      }
+    }
+    return dirUrls.toArray( new URL[] {} );
   }
     
 }
