@@ -236,11 +236,19 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public X509Certificate getClusterCertificate( ) {
-    return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
+    if( this.configuration.getClusterCertificate( ) == null ) {
+      return null;
+    } else {
+      return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
+    }
   }
   
   public X509Certificate getNodeCertificate( ) {
-    return X509CertHelper.toCertificate( this.configuration.getNodeCertificate( ) );
+    if( this.configuration.getNodeCertificate( ) == null ) {
+      return null;
+    } else {
+      return X509CertHelper.toCertificate( this.configuration.getNodeCertificate( ) );
+    }
   }
   
   @Override
@@ -470,13 +478,17 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   private boolean checkCerts( X509Certificate realx509, X509Certificate msgx509 ) {
-    Boolean match = realx509.equals( msgx509 );
-    EventRecord.here( Cluster.class, EventType.CLUSTER_CERT, this.getName( ), realx509.getSubjectX500Principal( ).getName( ), match.toString( ) ).info( );
-    if ( !match ) {
-      LOG.warn( LogUtil.subheader( "EXPECTED CERTIFICATE" ) + realx509 );
-      LOG.warn( LogUtil.subheader( "RECEIVED CERTIFICATE" ) + msgx509 );
+    if( realx509 != null ) {
+      Boolean match = realx509.equals( msgx509 );
+      EventRecord.here( Cluster.class, EventType.CLUSTER_CERT, this.getName( ), realx509.getSubjectX500Principal( ).getName( ), match.toString( ) ).info( );
+      if ( !match ) {
+        LOG.warn( LogUtil.subheader( "EXPECTED CERTIFICATE" ) + realx509 );
+        LOG.warn( LogUtil.subheader( "RECEIVED CERTIFICATE" ) + msgx509 );
+      }
+      return match;
+    } else {
+      return false;
     }
-    return match;
   }
   
   /**

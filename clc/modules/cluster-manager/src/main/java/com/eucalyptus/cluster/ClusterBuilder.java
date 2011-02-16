@@ -160,6 +160,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
           update.setClusterCertificate( clusterCert );
           update.setNodeCertificate( nodeCert );
           db.commit( );
+          return update;
         } catch ( Throwable ex ) {
           LOG.trace( ex, ex );
           db.rollback( );
