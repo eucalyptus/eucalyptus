@@ -154,14 +154,16 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       try {
         final String clusterCert = X509CertHelper.fromCertificate( clusterX509 );
         final String nodeCert = X509CertHelper.fromCertificate( nodeX509 );
-        config = Transactions.one( config, new Tx<ClusterConfiguration>( ) {
-          
-          @Override
-          public void fire( ClusterConfiguration t ) throws Throwable {
-            t.setClusterCertificate( clusterCert );
-            t.setNodeCertificate( nodeCert );
-          }
-        } );
+        EntityWrapper<ClusterConfiguration> db = EntityWrapper.get( ClusterConfiguration.class );
+        try {
+          ClusterConfiguration update = db.getUnique( config );
+          update.setClusterCertificate( clusterCert );
+          update.setNodeCertificate( nodeCert );
+          db.commit( );
+        } catch ( Throwable ex ) {
+          LOG.trace( ex, ex );
+          db.rollback( );
+        }
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + config, ex );
       }
