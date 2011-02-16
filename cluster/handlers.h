@@ -97,7 +97,7 @@ typedef struct instance_t {
   char ownerId[16];
   char keyName[1024];
   
-  netConfig ccnet;
+  netConfig ccnet, ncnet;
   virtualMachine ccvm;
 
   int ncHostIdx;
@@ -121,7 +121,7 @@ typedef struct instance_t {
   long long blkbytes, netbytes;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
@@ -259,6 +259,7 @@ int sem_mypost(int lockno);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
+int syncNetworkState();
 int restoreNetworkState();
 int maintainNetworkState();
 int reconfigureNetworkFromCLC();

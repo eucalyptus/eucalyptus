@@ -2399,7 +2399,7 @@ int instId2mac(char *instId, char *outmac) {
   }
   p += 2;
   if (strlen(p) == 8) {
-    strncat(dst, "d0:0d", 5);
+    strncat(dst, "D0:0D", 5);
     for (i=0; i<4; i++) {
       strncat(dst, ":", 1);
       strncat(dst, p, 2);

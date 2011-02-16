@@ -245,6 +245,69 @@ int validCmp(ccInstance *inst, void *in) {
   return(0);
 }
 
+int instIpSync(ccInstance *inst, void *in) {
+  int ret=0;
+
+  if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+    return(0);
+  }
+
+  logprintfl(EUCADEBUG, "instIpSync(): instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+
+  if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
+    // ccnet is completely empty, make a copy of ncnet
+    logprintfl(EUCADEBUG, "instIpSync(): ccnet is empty, copying ncnet\n");
+    memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
+    return(1);
+  }
+  
+  // IP cases
+  // 1.) local CC cache has no IP info for VM, NC VM has no IP info
+  //     - do nothing
+  // 2.) local CC cache has no IP info, NC VM has IP info
+  //     - ingress NC info, kick_network
+  // 3.) local CC cache has IP info, NC VM has no IP info
+  //     - send ncAssignAddress
+  // 4.) local CC cache has IP info, NC VM has different IP info
+  //     - ingress NC info, kick_network
+  // 5.) local CC cache has IP info, NC VM has same IP info
+  //     - do nothing
+  if ((inst->ccnet.publicIp[0] == '\0' || !strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
+    // case 2
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp is empty, NC publicIp is set\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  } else if (( (inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")) ) && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
+    // case 4
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp and NC publicIp differ\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  }
+
+  // VLAN cases
+  if (inst->ccnet.vlan != inst->ncnet.vlan) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
+  }
+  inst->ccnet.vlan = inst->ncnet.vlan;
+
+  // networkIndex cases
+  if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+  }
+  inst->ccnet.networkIndex = inst->ncnet.networkIndex;
+
+  // mac addr cases
+  if (strcmp(inst->ccnet.privateMac, inst->ncnet.privateMac)) {
+    // problem;
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
+  }
+  snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
+
+  return(ret);
+}
+
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
@@ -285,7 +348,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
   if (ret) {
     logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   } else {
-    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   }
 
   return(0);
