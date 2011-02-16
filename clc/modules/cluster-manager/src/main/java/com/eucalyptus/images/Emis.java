@@ -281,7 +281,7 @@ public class Emis {
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getName( ) );
-    } else if ( kernelId.startsWith( Emis.IMAGE_KERNEL_PREFIX ) ) {
+    } else if ( !kernelId.startsWith( Emis.IMAGE_KERNEL_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
@@ -321,7 +321,7 @@ public class Emis {
         : "UNKNOWN" ) );
     if ( ramdiskId == null ) {
       throw new EucalyptusCloudException( "Unable to determine required ramdisk image for " + bootSet.toString( )  );
-    } else if ( ramdiskId.startsWith( Emis.IMAGE_RAMDISK_PREFIX ) ) {
+    } else if ( !ramdiskId.startsWith( Emis.IMAGE_RAMDISK_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskId );
     }
     return ramdiskId;
