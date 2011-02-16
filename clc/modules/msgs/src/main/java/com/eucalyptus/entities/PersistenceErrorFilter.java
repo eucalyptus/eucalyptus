@@ -181,7 +181,7 @@ public class PersistenceErrorFilter {
   static void exceptionCaught( Throwable e ) {
     if( e instanceof RuntimeException ) {
       Class<? extends Throwable> type = e.getClass( );
-      for ( Class<? extends Throwable> t = type; type != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
+      for ( Class<? extends Throwable> t = type; type != null && type != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
         for( ErrorCategory category : ErrorCategory.values( ) ) {
           if( errorCategorization.containsEntry( category, t ) ) {
             category.handleException( ( RuntimeException ) e );
