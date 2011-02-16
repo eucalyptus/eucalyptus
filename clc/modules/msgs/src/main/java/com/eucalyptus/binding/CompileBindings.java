@@ -75,7 +75,9 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
@@ -195,6 +197,25 @@ public class CompileBindings extends Task {
     ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
     ClassLoader cl = this.getUrlClassLoader( );
     try {
+      BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+      Map<String, Class> classes = new TreeMap<String, Class>( ) {
+        {
+          put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
+          put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
+        }
+      };
+      for ( FileSet fs : this.classFileSets ) {
+        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+          try {
+            if ( !classFileName.endsWith( "class" ) ) continue;
+            Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+            classes.put( c.getName( ), c );
+          } catch ( ClassNotFoundException e ) {
+            error( e );
+          }
+        }
+      }
       Compile compiler = new Compile( true, true, false, true, true, false );
       compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
