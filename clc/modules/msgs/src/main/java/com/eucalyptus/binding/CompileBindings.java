@@ -192,14 +192,16 @@ public class CompileBindings extends Task {
           try {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-            System.out.println( "Loaded class: " + c );
-            classes.put( c.getName( ), c );
+            if( !( c.getCanonicalName( ) == null ) ) {
+              System.out.println( "Loaded class: " + c );
+              classes.put( c.getName( ), c );
+            }
           } catch ( ClassNotFoundException e ) {
             e.printStackTrace( );
           }
         }
       }
-      Compile compiler = new Compile( true, true, false, false, false, false );
+      Compile compiler = new Compile( true, true, true, false, false, false );
       compiler.setSkipValidate( true );
       compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
