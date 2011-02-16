@@ -195,7 +195,7 @@ public class CompileBindings extends Task {
     ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
     ClassLoader cl = this.getUrlClassLoader( );
     try {
-      Compile compiler = new Compile( true, true, true, false, false, false );
+      Compile compiler = new Compile( true, true, false, true, true, false );
       compiler.compile( this.pathStrings( ), bindings( ) );
     } catch ( Throwable e ) {
       error( e );

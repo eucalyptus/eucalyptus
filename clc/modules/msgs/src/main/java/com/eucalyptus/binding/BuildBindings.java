@@ -12,12 +12,14 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
 import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.Path;
 import org.jibx.binding.Compile;
+import com.google.common.collect.Sets;
 
 public class BuildBindings extends Task {
   private List<FileSet> classFileSets = null;
@@ -136,22 +138,22 @@ public class BuildBindings extends Task {
     try {
       BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
-        gen.processClass( BindingGenerator.MSG_TYPE );
-        gen.processClass( BindingGenerator.DATA_TYPE );
-      }
+      Set<Class> classes = new TreeSet<Class>() {{ add( BindingGenerator.MSG_TYPE); add( BindingGenerator.DATA_TYPE); }};
       for ( FileSet fs : this.classFileSets ) {
         for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
           try {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-            if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
-              for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
-                gen.processClass( c );
-              }
-            }
+            classes.add( c );
           } catch ( ClassNotFoundException e ) {
             error( e );
+          }
+        }
+      }
+      for( Class c : classes ) {
+        if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
+          for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
+            gen.processClass( c );
           }
         }
       }
