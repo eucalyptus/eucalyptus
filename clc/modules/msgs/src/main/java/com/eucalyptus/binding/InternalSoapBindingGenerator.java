@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import java.lang.reflect.Modifier;
 import com.google.common.base.Predicate;
@@ -76,13 +78,20 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   public ElemItem peek( ) {
     return this.elemStack.peek( );
   }
+
+  private static Set<String> classNames = new TreeSet<String>();
   
   @Override
   public void processClass( Class klass ) {
-    if ( BindingGenerator.DATA_TYPE.isAssignableFrom( klass ) || BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
-      String mapping = new RootObjectTypeBinding( klass ).process( );
-      out.write( mapping );
-      out.flush( );
+    if( !classNames.contains( klass.getName( ) ) ) {
+      classNames.add( klass.getName( ) );
+      if ( BindingGenerator.DATA_TYPE.isAssignableFrom( klass ) || BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
+        String mapping = new RootObjectTypeBinding( klass ).process( );
+        this.out.write( mapping );
+        this.out.flush( );
+      }
+    } else {
+      System.err.println( "Skipping duplicate class: " + klass );
     }
   }
   

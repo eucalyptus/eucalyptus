@@ -142,7 +142,7 @@ public class CompileBindings extends Task {
     System.setOut( this.oldOut );
     System.setErr( this.oldErr );
     e.printStackTrace( System.err );
-    log( "ERROR See clc/bind-generate.log for additional information: " + e.getMessage( ) );
+    log( "ERROR See clc/bind-compile.log for additional information: " + e.getMessage( ) );
     System.exit( -1 );
   }
   

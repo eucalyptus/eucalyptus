@@ -84,17 +84,17 @@
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
-  <property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
+	<property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
 	<!--================================== build targets ==================================-->
-  <target name="build">
-    <ant dir="." inheritall="false" target="build-all" />
-    <ant dir="." inheritall="false" target="jar" />
+	<target name="build">
+		<ant dir="." inheritall="false" target="build-all" />
+		<ant dir="." inheritall="false" target="jar" />
 	</target>
-  <target name="build-all">
-    <ant dir="." inheritall="false" target="build-nowww" />
-    <ant dir="." inheritall="false" target="build-www" />
-  </target>
-  <target name="build-nowww">
+	<target name="build-all">
+		<ant dir="." inheritall="false" target="build-nowww" />
+		<ant dir="." inheritall="false" target="build-www" />
+	</target>
+	<target name="build-nowww">
 		<ant dir="modules/msgs" inheritall="false" target="builder" />
 		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder" />
@@ -102,22 +102,22 @@
 		<ant dir="modules/configuration" inheritall="false" target="builder" />
 		<ant dir="modules/core" inheritall="false" target="builder" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder" />
-    <ant dir="modules/euare" inheritall="false" target="builder" />
+		<ant dir="modules/euare" inheritall="false" target="builder" />
 		<ant dir="modules/component" inheritall="false" target="builder" />
 		<ant dir="modules/cloud" inheritall="false" target="builder" />
 		<ant dir="modules/reporting" inheritall="false" target="builder" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="builder" />
-    <ant dir="modules/notifications" inheritall="false" target="builder" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
+		<ant dir="modules/notifications" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
 	</target>
-  <target name="build-www">
-    <ant dir="modules/www" inheritall="false" target="builder" />
-    <ant dir="modules/reporting" inheritall="false" target="builder" />
-  </target>
+	<target name="build-www">
+		<ant dir="modules/www" inheritall="false" target="builder" />
+		<ant dir="modules/reporting" inheritall="false" target="builder" />
+	</target>
 	<target name="jar" depends="build-bind">
 		<ant dir="modules/msgs" inheritall="false" target="jar" />
 		<ant dir="modules/euare-common" inheritall="false" target="jar" />
@@ -130,8 +130,8 @@
 		<ant dir="modules/core" inheritall="false" target="jar" />
 		<ant dir="modules/wsstack" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="jar" />
-    <ant dir="modules/notifications" inheritall="false" target="jar" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="jar" />
+		<ant dir="modules/notifications" inheritall="false" target="jar" />
 		<ant dir="modules/storage-common" inheritall="false" target="jar" />
 		<ant dir="modules/walrus" inheritall="false" target="jar" />
 		<ant dir="modules/storage-controller" inheritall="false" target="jar" />
@@ -140,68 +140,68 @@
 		<ant dir="modules/vmware-broker" inheritall="false" target="jar" />
 		<ant dir="modules/reporting" inheritall="false" target="jar" />
 	</target>
-  
-	<target name="build-bind" depends="generate-bind,compile-bind"/>
-	
+
+	<target name="build-bind" depends="generate-bind,compile-bind" />
+
 	<target name="shouldGenerateBinding">
-    <uptodate property="generate.bind.notRequired" targetfile="${bind.msgs}">
-      <srcfiles dir="modules">
-        <include name="**/*.java"/>
-        <include name="**/*.groovy"/>
-      </srcfiles>
-    </uptodate>
-    <echo message="[BINDING] Up-to-date check shows generate.bind.notRequred=${generate.bind.notRequired}." />
-  </target>
-  <target name="generate-bind" depends="shouldGenerateBinding" unless="generate.bind.notRequired">
-    <echo message="[BINDING] Running binding generator." />
-    <path id="bindingclasspath">
-      <dirset dir="modules">
-        <include name="**/build" />
-      </dirset>
-      <fileset dir="lib">
-        <include name="**/*.jar" />
-      </fileset>
-    </path>
-    <delete>
-      <fileset dir="modules" includes="**/*JiBX*" />
-    </delete>
-    <delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
-    <taskdef name="generate-bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
-    <generate-bindings>
-      <classfileset dir="${project.basedir}/modules" includes="*/build/**" />
-    </generate-bindings>
-  </target>
+		<uptodate property="generate.bind.notRequired" targetfile="${bind.msgs}">
+			<srcfiles dir="modules">
+				<include name="**/*.java" />
+				<include name="**/*.groovy" />
+			</srcfiles>
+		</uptodate>
+		<echo message="[BINDING] Up-to-date check shows generate.bind.notRequred=${generate.bind.notRequired}." />
+	</target>
+	<target name="generate-bind" depends="shouldGenerateBinding" unless="generate.bind.notRequired">
+		<echo message="[BINDING] Running binding generator." />
+		<path id="bindingclasspath">
+			<dirset dir="modules">
+				<include name="**/build" />
+			</dirset>
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</path>
+		<delete>
+			<fileset dir="modules" includes="**/*JiBX*" />
+		</delete>
+		<delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
+		<taskdef name="generate-bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
+		<generate-bindings>
+			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+		</generate-bindings>
+	</target>
 
 	<target name="shouldCompileBinding">
-    <uptodate property="compile.bind.notRequired" targetfile="${bind.timestamp}">
-      <srcfiles dir="modules">
-        <include name="*/build/**"/>
-        <include name="**/*-binding.xml"/>
-      </srcfiles>
-    </uptodate>
-    <echo message="[BINDING] Up-to-date check shows compile.bind.notRequred=${compile.bind.notRequired}." />
-  </target>
+		<uptodate property="compile.bind.notRequired" targetfile="${bind.timestamp}">
+			<srcfiles dir="modules">
+				<include name="*/build/**" />
+				<include name="**/*-binding.xml" />
+			</srcfiles>
+		</uptodate>
+		<echo message="[BINDING] Up-to-date check shows compile.bind.notRequred=${compile.bind.notRequired}." />
+	</target>
 	<target name="compile-bind" depends="shouldCompileBinding" unless="compile.bind.notRequired">
-    <echo message="[BINDING] Running binding compiler." />
-    <path id="bindingclasspath">
-      <dirset dir="${project.basedir}/modules">
-        <include name="**/build" />
-      </dirset>
-      <fileset dir="lib">
-        <include name="**/*.jar" />
-      </fileset>
-    </path>
-    <taskdef name="compile-bindings" classname="com.eucalyptus.binding.CompileBindings" classpathref="bindingclasspath" />
-    <compile-bindings>
-      <classfileset dir="${project.basedir}/modules" includes="*/build/**" />
-      <bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
-    </compile-bindings>
-    <touch file="${bind.timestamp}"/>
-  </target>
+		<echo message="[BINDING] Running binding compiler." />
+		<path id="bindingclasspath">
+			<dirset dir="${project.basedir}/modules">
+				<include name="**/build" />
+			</dirset>
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</path>
+		<taskdef name="compile-bindings" classname="com.eucalyptus.binding.CompileBindings" classpathref="bindingclasspath" />
+		<compile-bindings>
+			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+			<bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
+		</compile-bindings>
+		<touch file="${bind.timestamp}" />
+	</target>
 
 	<!--================================== clean targets ==================================-->
 	<target name="clean">
-		<delete file="${bind.timestamp}"/>
+		<delete file="${bind.timestamp}" />
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
 		<ant dir="modules/euare-common" inheritall="false" target="clean" />
 		<ant dir="modules/mysql" inheritall="false" target="clean" />
@@ -213,13 +213,13 @@
 		<ant dir="modules/core" inheritall="false" target="clean" />
 		<ant dir="modules/wsstack" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="clean" />
-    <ant dir="modules/notifications" inheritall="false" target="clean" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="clean" />
+		<ant dir="modules/notifications" inheritall="false" target="clean" />
 		<ant dir="modules/storage-common" inheritall="false" target="clean" />
 		<ant dir="modules/walrus" inheritall="false" target="clean" />
 		<ant dir="modules/storage-controller" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
-    <ant dir="modules/vmware-broker" inheritall="false" target="clean" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
 		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
@@ -260,8 +260,8 @@
 		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
-    <mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
-    <chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
+		<mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
+		<chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
@@ -281,15 +281,15 @@
 		<ant dir="modules/wsstack" inheritall="false" target="install" />
 		<ant dir="modules/storage-common" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-    <ant dir="modules/cluster-manager" inheritall="false" target="install" />
-    <ant dir="modules/notifications" inheritall="false" target="install" />
+		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
+		<ant dir="modules/notifications" inheritall="false" target="install" />
 		<ant dir="modules/walrus" inheritall="false" target="install" />
 		<ant dir="modules/storage-controller" inheritall="false" target="install" />
 		<ant dir="modules/dns" inheritall="false" target="install" />
 		<ant dir="modules/www" inheritall="false" target="install" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 		<ant dir="modules/reporting" inheritall="false" target="install" />
-	<ant dir="modules/vmware-broker" inheritall="false" target="install" />
+		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
 	</target>
 	<!--================================== unzipping target ==================================-->
 	<target name="deps">

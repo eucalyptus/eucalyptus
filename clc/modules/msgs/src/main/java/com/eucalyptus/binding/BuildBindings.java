@@ -5,6 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.PrintStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -17,7 +20,7 @@ import org.apache.tools.ant.types.Path;
 import org.jibx.binding.Compile;
 
 public class BuildBindings extends Task {
-  private List<FileSet> classFileSets   = null;
+  private List<FileSet> classFileSets = null;
   
   @Override
   public void init( ) throws BuildException {
@@ -44,11 +47,44 @@ public class BuildBindings extends Task {
     return dirs.toArray( new String[] {} );
   }
   
+  private URL[] pathUrls( ) {
+    Set<URL> dirUrls = new HashSet<URL>( );
+    for ( FileSet fs : this.classFileSets ) {
+      final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
+      for ( String d : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
+        final String buildDir = dirName + File.separator + d.replaceAll( "build/.*", "build" );
+        try {
+          URL buildDirUrl = new File( buildDir ).toURL( );
+          if ( !dirUrls.contains( buildDirUrl ) ) {
+            log( "Found class directory: " + buildDirUrl );
+            dirUrls.add( buildDirUrl );
+          }
+        } catch ( MalformedURLException ex ) {
+          error( ex );
+        }
+      }
+    }
+    for ( File f : new File( this.project.getBaseDir( ).getAbsolutePath( ) + File.separator + "lib" ).listFiles( new FilenameFilter( ) {
+      @Override
+      public boolean accept( File dir, String name ) {
+        return name.endsWith( ".jar" );
+      }
+    } ) ) {
+      try {
+        dirUrls.add( f.toURL( ) );
+      } catch ( MalformedURLException ex ) {
+        error( ex );
+      }
+    }
+    return dirUrls.toArray( new URL[] {} );
+  }
+  
   PrintStream oldOut = System.out, oldErr = System.err;
+  
   public void error( Throwable e ) {
     e.printStackTrace( System.err );
-    System.setOut( this.oldOut );
-    System.setErr( this.oldErr );
+//    System.setOut( this.oldOut );
+//    System.setErr( this.oldErr );
     e.printStackTrace( System.err );
     log( "ERROR See clc/bind.log for additional information: " + e.getMessage( ) );
     System.exit( -1 );
@@ -56,10 +92,10 @@ public class BuildBindings extends Task {
   
   public void execute( ) {
     PrintStream buildLog;
-    try {
-      buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
-      System.setOut( buildLog );
-      System.setErr( buildLog );
+//    try {
+//      buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
+//      System.setOut( buildLog );
+//      System.setErr( buildLog );
       if ( this.classFileSets.isEmpty( ) ) {
         throw new BuildException( "No classes were provided to bind." );
       } else {
@@ -80,29 +116,35 @@ public class BuildBindings extends Task {
         } ) ) {
           path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
         }
-        runPreBindingGenerators( path );
+        runPreBindingGenerators( pathUrls( ) );
+      
       }
-    } catch ( FileNotFoundException e2 ) {
-      System.setOut( this.oldOut );
-      System.setErr( this.oldErr );
-    } finally {
-      System.setOut( this.oldOut );
-      System.setErr( this.oldErr );
-    }
+//    } catch ( FileNotFoundException e2 ) {
+//      System.setOut( this.oldOut );
+//      System.setErr( this.oldErr );
+//    } finally {
+//      System.setOut( this.oldOut );
+//      System.setErr( this.oldErr );
+//    }
     
-  }  
-  private void runPreBindingGenerators( Path path ) {
-    AntClassLoader loader = this.getProject( ).createClassLoader( path );
-    loader.setThreadContextLoader( );
+  }
+  
+  private void runPreBindingGenerators( URL[] urls ) {
+    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
+    ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), old );
+    Thread.currentThread( ).setContextClassLoader( cl );
     try {
-      BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
-      BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-//      loader.forceLoadClass( "org.jibx.binding.model.JiBX_bindingFactory" );
+      BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
+      for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
+        gen.processClass( BindingGenerator.MSG_TYPE );
+        gen.processClass( BindingGenerator.DATA_TYPE );
+      }
       for ( FileSet fs : this.classFileSets ) {
         for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
           try {
             if ( !classFileName.endsWith( "class" ) ) continue;
-            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
+            Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
             if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
               for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
                 gen.processClass( c );
@@ -116,15 +158,14 @@ public class BuildBindings extends Task {
     } catch ( ClassNotFoundException e1 ) {
       error( e1 );
     } finally {
+      Thread.currentThread( ).setContextClassLoader( old );
       try {
         for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
           gen.close( );
         }
       } catch ( Throwable e ) {
         error( e );
-      }
-      loader.resetThreadContextLoader( );
-      loader.cleanup( );
+      }      
     }
   }
   
