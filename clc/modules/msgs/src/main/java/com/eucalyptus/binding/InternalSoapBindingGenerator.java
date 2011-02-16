@@ -60,19 +60,6 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   
   public InternalSoapBindingGenerator( ) {
     this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.xml" );
-    if ( outFile.exists( ) ) {
-      outFile.delete( );
-    }
-    try {
-      this.out = new PrintWriter( outFile );
-    } catch ( FileNotFoundException e ) {
-      e.printStackTrace( System.err );
-      System.exit( -1 );
-    }
-    this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
-    this.out.write( "<binding xmlns:euca=\"" + ns + "\" name=\"" + bindingName + "\">\n" );
-    this.out.write( "  <namespace uri=\"" + ns + "\" default=\"elements\" prefix=\"euca\"/>\n" );
-    this.out.flush( );
   }
   
   public ElemItem peek( ) {
@@ -83,6 +70,21 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   
   @Override
   public void processClass( Class klass ) {
+    if( this.out == null ) {
+      if ( this.outFile.exists( ) ) {
+        this.outFile.delete( );
+      }
+      try {
+        this.out = new PrintWriter( this.outFile );
+      } catch ( FileNotFoundException e ) {
+        e.printStackTrace( System.err );
+        System.exit( -1 );
+      }
+      this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
+      this.out.write( "<binding xmlns:euca=\"" + this.ns + "\" name=\"" + this.bindingName + "\">\n" );
+      this.out.write( "  <namespace uri=\"" + this.ns + "\" default=\"elements\" prefix=\"euca\"/>\n" );
+      this.out.flush( );
+    }
     if( !classNames.contains( klass.getName( ) ) ) {
       classNames.add( klass.getName( ) );
       if ( BindingGenerator.DATA_TYPE.isAssignableFrom( klass ) || BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
@@ -116,18 +118,18 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
       if ( listType == null ) {
         System.err.printf( "IGNORE: %-70s [type=%s] NO GENERIC TYPE FOR LIST\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType );
         return new NoopTypeBinding( field );        
-      } else if ( typeBindings.containsKey( listType.getCanonicalName( ) ) ) {
-        return new CollectionTypeBinding( field.getName( ), typeBindings.get( listType.getCanonicalName( ) ) );
+      } else if ( this.typeBindings.containsKey( listType.getCanonicalName( ) ) ) {
+        return new CollectionTypeBinding( field.getName( ), this.typeBindings.get( listType.getCanonicalName( ) ) );
       } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( listType ) ) {
         return new CollectionTypeBinding( field.getName( ), new ObjectTypeBinding( field.getName( ), listType ) );
       } else {
         System.err.printf( "IGNORE: %-70s [type=%s] LIST'S GENERIC TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( ) + "."+ field.getName( ), listType.getCanonicalName( ) );
         return new NoopTypeBinding( field );        
       }
-    } else if ( typeBindings.containsKey( itsType.getCanonicalName( ) ) ) {
-      TypeBinding t = typeBindings.get( itsType.getCanonicalName( ) );
+    } else if ( this.typeBindings.containsKey( itsType.getCanonicalName( ) ) ) {
+      TypeBinding t = this.typeBindings.get( itsType.getCanonicalName( ) );
       try {
-        t = typeBindings.get( itsType.getCanonicalName( ) ).getClass( ).newInstance( );
+        t = this.typeBindings.get( itsType.getCanonicalName( ) ).getClass( ).newInstance( );
       } catch ( Exception e ) {}
       return t.value( field.getName( ) );
     } else if ( BindingGenerator.DATA_TYPE.isAssignableFrom( field.getType( ) ) ) {
@@ -156,7 +158,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     @Override
     public String getTypeName( ) {
-      return type.getCanonicalName( );
+      return this.type.getCanonicalName( );
     }
     
     public String process( ) {
@@ -173,7 +175,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
         if( BindingGenerator.MSG_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) || BindingGenerator.DATA_TYPE.isAssignableFrom( this.type.getSuperclass( ) ) ) {
           this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass().getCanonicalName( ) ).end( );
         }
-        for ( Field f : type.getDeclaredFields( ) ) {
+        for ( Field f : this.type.getDeclaredFields( ) ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
             System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
@@ -206,7 +208,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     private TypeBinding reindent( int delta ) {
       InternalSoapBindingGenerator.this.indent += delta;
       INDENT = "";
-      for ( int i = 0; i < indent; i++ ) {
+      for ( int i = 0; i < InternalSoapBindingGenerator.this.indent; i++ ) {
         INDENT += "  ";
       }
       return this;
@@ -284,8 +286,8 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     }
     
     public String toString( ) {
-      String s = buf.toString( );
-      buf = new StringBuilder( buf.capacity( ) );
+      String s = this.buf.toString( );
+      this.buf = new StringBuilder( this.buf.capacity( ) );
       return s;
     }
     
@@ -350,7 +352,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     @Override
     public String toString( ) {
-      return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indent, Boolean.valueOf( children ) );
+      return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indent, Boolean.valueOf( this.children ) );
     }
     
   }
@@ -405,7 +407,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     protected TypeBinding collection( String name ) {
       this.elem( Elem.structure ).attr( "name", name ).attr( "usage", "optional" );
       this.elem( Elem.collection ).attr( "factory", "com.eucalyptus.binding.Binding.listFactory" ).attr( "field", name ).attr( "usage", "required" );
-      this.elem( Elem.structure ).attr( "name", "item" ).attr( "map-as", type.getCanonicalName( ) );
+      this.elem( Elem.structure ).attr( "name", "item" ).attr( "map-as", this.type.getCanonicalName( ) );
       this.end( ).end( ).end( );
       return this;
     }
@@ -435,12 +437,12 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     @Override
     public String getTypeName( ) {
-      return type.getTypeName( );
+      return this.type.getTypeName( );
     }
     
     @Override
     public String toString( ) {
-      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + name );
+      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + this.name );
       String ret = this.type.collection( this.name ).buf.toString( );
       this.type.collection( this.name ).buf = new StringBuilder( );
       return ret;
