@@ -76,12 +76,39 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   
   public static PolicyResourceType extractResourceType( Object classOrInstance ) throws NoSuchElementException {
     Class type = classOrInstance instanceof Class ? (Class) classOrInstance : classOrInstance.getClass( );
+    if( classToPolicyRscType.containsKey( type ) ) {
+      return classToPolicyRscType.get( type );
+    } else {
+      PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromSuperclass( type );
+      if( rscPolicy != null ) {
+        classToPolicyRscType.put( type, rscPolicy );
+        return rscPolicy;
+      } else {
+        throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
+      }
+    }
+  }
+  
+  private static PolicyResourceType extractPolicyResourceTypeFromSuperclass( Class type ) {
     for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if( classToPolicyRscType.containsKey( c ) ) {
         return classToPolicyRscType.get( c );
+      } else {
+        PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromInterfaces( type.getInterfaces( ) );
+        if( rscPolicy != null ) {
+          return rscPolicy;
+        }
       }
     }
-    throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
+    return null;
+  }
+  private static PolicyResourceType extractPolicyResourceTypeFromInterfaces( Class[] interfaces ) {
+    for( Class i : interfaces ) {
+      if( classToPolicyRscType.containsKey( i ) ) {
+        return classToPolicyRscType.get( i );
+      }
+    }
+    return null;
   }
   
   @Override
