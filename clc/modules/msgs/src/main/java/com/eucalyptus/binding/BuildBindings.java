@@ -152,29 +152,29 @@ public class BuildBindings extends Task {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
             classes.put( c.getName( ), c );
+            System.out.println( "Loaded class: " + c );
           } catch ( ClassNotFoundException e ) {
-            error( e );
+            e.printStackTrace( );
           }
         }
       }
-      for ( Class c : classes.values( ) ) {
-        if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
-          for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
-            gen.processClass( c );
-          }
-        }
-      }
-    } catch ( ClassNotFoundException e1 ) {
-      error( e1 );
-    } finally {
-      Thread.currentThread( ).setContextClassLoader( old );
       try {
+        for ( Class c : classes.values( ) ) {
+          if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
+            for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
+              gen.processClass( c );
+            }
+          }
+        }
+      } finally {
         for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
           gen.close( );
         }
-      } catch ( Throwable e ) {
-        error( e );
       }
+    } catch ( Throwable e1 ) {
+      e1.printStackTrace( );
+    } finally {
+      Thread.currentThread( ).setContextClassLoader( old );
     }
   }
   

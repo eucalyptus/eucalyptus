@@ -97,9 +97,14 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   
   @Override
   public void close( ) {
-    this.out.write( "</binding>" );
-    this.out.flush( );
-    this.out.close( );
+    try {
+      this.out.flush( );
+      this.out.write( "</binding>" );
+      this.out.flush( );
+      this.out.close( );
+    } catch ( Throwable ex ) {
+      ex.printStackTrace( );
+    }
   }
   
   public TypeBinding getTypeBinding( Field field ) {
