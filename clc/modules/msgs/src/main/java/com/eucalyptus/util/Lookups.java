@@ -63,6 +63,7 @@
 
 package com.eucalyptus.util;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
@@ -94,40 +95,34 @@ public class Lookups {
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  public <T extends HasOwner> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException {
-    Context ctx = Contexts.lookup( );
-//    lookupFunction.getClass( ).getG
-//    PersistenceException, NoSuchElementException
-//    BaseMessage msg = ctx.getRequest( );
-//    String action = PolicySpec.requestToAction( msg );
-//    User requestUser = ctx.getUser( );
-//    T requestedObject;
-//    Account owningAccount;
-//    PolicyResourceType type;
-//    try {
-//      requestedObject = lookupFunction.lookup( identifier );
-//    } catch ( NoSuchElementException ex ) {
-//    } catch ( Throwable ex ) {
-////      throw new PersistenceException( "Error occurred while attempting to lookup "
-//    }
-//    try {
-////      owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ) ).getAccount( );
-//    } catch ( AuthException ex ) {
-//      throw ex;
-//    }
-//    try {
-//      type = PolicyAnnotationRegistry.extractResourceType( requestedObject );
-//    } catch ( NoSuchElementException ex1 ) {
-//      LOG.error( ex1 , ex1 );
-//    }
-//    if( !Permissions.isAuthorized( type.resource( ), identifier, owningAccount, action, requestUser ) ) {
-//      throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
-//    }
-//    try {
-//    } catch ( NoSuchElementException ex ) {
-//      LOG.error( ex , ex );
-//      throw new AuthException( "Failed to identify the applicable PolicyResourceType for the request object of type " + requestedObject.getClass( ).getName( ) );
-//    }
-    return lookupFunction.lookup( identifier );
+  public static <T extends HasOwner> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+    List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
+    if( lookupTypes.size( ) != 1 ) {
+      throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( ) + " so the policy type for looking up " + identifier + " cannot be determined." );
+    } else {
+      PolicyResourceType type = PolicyAnnotationRegistry.extractResourceType( lookupTypes.get( 0 ) );
+      Context ctx = Contexts.lookup( );
+      User requestUser = ctx.getUser( );
+      String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+
+      try {
+        T requestedObject = lookupFunction.lookup( identifier );
+        if( requestedObject == null ) {
+          throw new NoSuchElementException( "Failed to lookup requested " + type + " with id " + identifier + " using " + lookupFunction.getClass( ) ); 
+        }
+        Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ) ).getAccount( );
+        if( !Permissions.isAuthorized( type.resource( ), identifier, owningAccount, action, requestUser ) ) {
+          throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
+        }
+        return requestedObject;
+      } catch ( NoSuchElementException ex ) {
+        throw ex;
+      } catch ( AuthException ex ) {
+        throw ex;
+      } catch ( Throwable ex ) {
+        throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+      }
+    }
   }
 }

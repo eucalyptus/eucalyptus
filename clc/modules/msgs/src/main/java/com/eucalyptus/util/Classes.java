@@ -61,43 +61,34 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth.policy;
+package com.eucalyptus.util;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import org.codehaus.janino.Java.ThisReference;
-import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.system.Ats;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.concurrent.Callable;
+import com.google.common.collect.Lists;
 
-public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
+public class Classes {
+  public static List<Class> genericsToClasses( Object o ) {
+    List<Class> ret = Lists.newArrayList( );
+    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
+    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericInterfaces( ) ) );
+    return ret;
+  }
   
-  private static final Map<Class,PolicyResourceType> classToPolicyRscType = new HashMap<Class,PolicyResourceType>();
-  
-  public static PolicyResourceType extractResourceType( Object classOrInstance ) throws NoSuchElementException {
-    Class type = classOrInstance instanceof Class ? (Class) classOrInstance : classOrInstance.getClass( );
-    for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
-      if( classToPolicyRscType.containsKey( c ) ) {
-        return classToPolicyRscType.get( c );
+  private static List<Class> processTypeForGenerics( Type... types ) {
+    List<Class> ret = Lists.newArrayList( );
+    for( Type t : types ) {
+      if( t instanceof Class ) {
+        ret.add( ( Class ) t );
+      } else if( t instanceof ParameterizedType ) {
+        ParameterizedType pt = (ParameterizedType) t;
+        for( Type ptType : pt.getActualTypeArguments( ) ) {
+          ret.addAll( processTypeForGenerics( ptType ) );
+        }
       }
     }
-    throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
+    return ret;
   }
-  
-  @Override
-  public boolean processClass( Class candidate ) throws Throwable {
-    if( Ats.from( candidate ).has( PolicyResourceType.class ) ) {
-      PolicyResourceType policyRscType = Ats.from( candidate ).get( PolicyResourceType.class );
-      classToPolicyRscType.put( candidate, policyRscType );
-      return true;
-    } else {
-      return false;
-    }
-  }
-  
-  @Override
-  public Double getPriority( ) {
-    return 1.0d;
-  }
-  
 }

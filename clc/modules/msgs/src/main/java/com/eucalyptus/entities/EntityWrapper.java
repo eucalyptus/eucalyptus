@@ -68,6 +68,7 @@ package com.eucalyptus.entities;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
@@ -152,6 +153,18 @@ public class EntityWrapper<TYPE> {
                                    this.tx.getTxUuid( ) ).trace( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
+  
+  public TYPE lookupAndClose( TYPE example ) throws NoSuchElementException {
+    TYPE ret = null;
+    try {
+      ret = this.getUnique( example );
+      this.commit( );
+    } catch ( EucalyptusCloudException ex ) {
+      this.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+    return ret;
+  }  
   
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
     if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ).trace( );

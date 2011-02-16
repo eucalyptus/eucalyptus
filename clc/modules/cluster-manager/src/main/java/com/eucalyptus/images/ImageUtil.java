@@ -155,16 +155,16 @@ public class ImageUtil {
           }
         }
       } catch ( XPathExpressionException e ) {
-        ImageManager.LOG.error( e, e );
+        LOG.error( e, e );
       }
     } catch ( EucalyptusCloudException e ) {
-      ImageManager.LOG.error( e, e );
+      LOG.error( e, e );
     } catch ( DOMException e ) {
-      ImageManager.LOG.error( e, e );
+      LOG.error( e, e );
     }
     return ancestorIds;
   }
-  public static Long getSize( String userId, String manifestPath ) {
+  public static Long getSize( String manifestPath ) {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
@@ -176,13 +176,13 @@ public class ImageUtil {
         try {
           size = Long.parseLong( rootSize );
         } catch ( NumberFormatException e ) {
-          ImageManager.LOG.error( e, e );
+          LOG.error( e, e );
         }
       } catch ( XPathExpressionException e ) {
-        ImageManager.LOG.error( e, e );
+        LOG.error( e, e );
       }
     } catch ( EucalyptusCloudException e ) {
-      ImageManager.LOG.error( e, e );
+      LOG.error( e, e );
     }
     return size;
   }
@@ -203,15 +203,15 @@ public class ImageUtil {
       } catch ( XPathExpressionException e ) {}
       if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
         "Manifest signature has changed since registration." );
-      ImageManager.LOG.info( "Checking image: " + imgInfo.getImageLocation( ) );
+      LOG.info( "Checking image: " + imgInfo.getImageLocation( ) );
       WalrusUtil.checkValid( imgInfo );
-      ImageManager.LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
+      LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
       try {
         WalrusUtil.triggerCaching( imgInfo );
       } catch ( Exception e ) {}
     } catch ( EucalyptusCloudException e ) {
-      ImageManager.LOG.error( e );
-      ImageManager.LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation( ) );
+      LOG.error( e );
+      LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation( ) );
       //TODO: we need to consider if this is a good semantic or not, it can have ugly side effects
       //        invalidateImageById( imgInfo.getImageId() );
       throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation( ) );
@@ -279,7 +279,7 @@ public class ImageUtil {
     try {
       arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
-      ImageManager.LOG.warn( e.getMessage( ) );
+      LOG.warn( e.getMessage( ) );
     }
     return arch;
   }
@@ -288,7 +288,7 @@ public class ImageUtil {
     try {
       ramdiskId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
-      ImageManager.LOG.warn( e.getMessage( ) );
+      LOG.warn( e.getMessage( ) );
     }
     if ( !isSet( ramdiskId ) ) ramdiskId = null;
     return ramdiskId;
@@ -298,7 +298,7 @@ public class ImageUtil {
     try {
       kernelId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
-      ImageManager.LOG.warn( e.getMessage( ) );
+      LOG.warn( e.getMessage( ) );
     }
     if ( !isSet( kernelId ) ) kernelId = null;
     return kernelId;
@@ -363,7 +363,7 @@ public class ImageUtil {
       db.commit( );
       return true;
     } catch ( EucalyptusCloudException e ) {
-      ImageManager.LOG.warn( e );
+      LOG.warn( e );
       db.rollback( );
       return false;
     }
@@ -391,7 +391,7 @@ public class ImageUtil {
       db.commit( );
     } catch ( Throwable e ) {
       db.commit( );
-      ImageManager.LOG.debug( e, e );
+      LOG.debug( e, e );
     }
     return repList;
   }

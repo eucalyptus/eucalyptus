@@ -78,6 +78,6 @@ public interface Lookup<T extends HasOwner> {
    * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    */
-  public <S extends T> S lookup( String identifier );
+  public T lookup( String identifier );
   
 }
