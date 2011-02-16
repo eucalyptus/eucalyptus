@@ -288,7 +288,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
     Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
     clusterInstance.stop( );
-//    Clusters.getInstance( ).deregister( config.getName( ) );
     super.fireStop( config );
   }
   
@@ -317,14 +316,12 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
-          Clusters.getInstance( ).register( newCluster );
           newCluster.start( );
         } else {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
           } catch ( NoSuchElementException ex ) {
             Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            Clusters.getInstance( ).enable( newCluster.getName( ) );
             newCluster.start( );
           }
         }
@@ -345,7 +342,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).disable( newCluster.getName( ) );
             newCluster.stop( );
           } catch ( NoSuchElementException ex ) {
             Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );

@@ -67,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -282,7 +283,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ClusterConfiguration getConfiguration( ) {
-    return configuration;
+    return this.configuration;
   }
   
   public RegisterClusterType getWeb( ) {
@@ -297,35 +298,37 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ClusterState getState( ) {
-    return state;
+    return this.state;
   }
   
   public ClusterNodeState getNodeState( ) {
-    return nodeState;
+    return this.nodeState;
   }
   
   public void start( ) {
+    Clusters.getInstance( ).register( this );
     this.getServiceEndpoint( ).start( );
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public void stop( ) {
-    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
+    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
     this.getServiceEndpoint( ).stop( );
+    Clusters.getInstance( ).registerDisabled( this );
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( configuration == null )
+    result = prime * result + ( ( this.configuration == null )
       ? 0
-      : configuration.hashCode( ) );
-    result = prime * result + ( ( state == null )
+    : this.configuration.hashCode( ) );
+    result = prime * result + ( ( this.state == null )
       ? 0
-      : state.hashCode( ) );
+      : this.state.hashCode( ) );
     return result;
   }
   
@@ -335,17 +338,17 @@ public class Cluster implements HasName<Cluster>, EventListener {
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     Cluster other = ( Cluster ) obj;
-    if ( configuration == null ) {
+    if ( this.configuration == null ) {
       if ( other.configuration != null ) return false;
-    } else if ( !configuration.equals( other.configuration ) ) return false;
-    if ( state == null ) {
+    } else if ( !this.configuration.equals( other.configuration ) ) return false;
+    if ( this.state == null ) {
       if ( other.state != null ) return false;
-    } else if ( !state.equals( other.state ) ) return false;
+    } else if ( !this.state.equals( other.state ) ) return false;
     return true;
   }
   
   public String getUri( ) {
-    return configuration.getUri( );
+    return this.configuration.getUri( );
   }
   
   public String getHostName( ) {
@@ -510,11 +513,11 @@ public class Cluster implements HasName<Cluster>, EventListener {
         //TODO: retry.
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
-            Callbacks.newRequest( factory.newInstance( ) ).then( cb )
+            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
                      .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
                      .getResponse( ).get( );
           } else {
-            Callbacks.newRequest( factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
           }
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {

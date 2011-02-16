@@ -88,6 +88,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * Java entry point from eucalyptus-bootstrap
@@ -143,6 +144,7 @@ public class SystemBootstrapper {
       }
             );
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
+      Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
