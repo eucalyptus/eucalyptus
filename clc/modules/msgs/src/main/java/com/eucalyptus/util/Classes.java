@@ -80,7 +80,7 @@ public class Classes {
   private static List<Class> processTypeForGenerics( Type... types ) {
     List<Class> ret = Lists.newArrayList( );
     for( Type t : types ) {
-      if( t instanceof Class ) {
+      if( t instanceof Class && t != Object.class ) {
         ret.add( ( Class ) t );
       } else if( t instanceof ParameterizedType ) {
         ParameterizedType pt = (ParameterizedType) t;
