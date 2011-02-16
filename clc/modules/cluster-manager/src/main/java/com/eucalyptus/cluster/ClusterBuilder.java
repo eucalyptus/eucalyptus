@@ -124,14 +124,14 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration config = super.add( partition, name, host, port );
-    File keyDir = ClusterBuilder.makeKeyDir( config );
+    ClusterConfiguration prelimConfig = this.newInstance( partition, name, host, port );
+    File keyDir = ClusterBuilder.makeKeyDir( prelimConfig );
     try {
       X509Certificate clusterX509;
       X509Certificate nodeX509;
       
       try {
-        List<ClusterConfiguration> otherConfigs = ClusterBuilder.lookupPartition( config );
+        List<ClusterConfiguration> otherConfigs = ClusterBuilder.lookupPartition( prelimConfig );
         ClusterConfiguration otherConfig = otherConfigs.get( 0 );
         clusterX509 = X509CertHelper.toCertificate( otherConfig.getClusterCertificate( ) );
         nodeX509 = X509CertHelper.toCertificate( otherConfig.getNodeCertificate( ) );
@@ -141,44 +141,36 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         KeyPair nodeKp;
         try {
           clusterKp = Certs.generateKeyPair( );
-          clusterX509 = Certs.generateServiceCertificate( clusterKp, String.format( CLUSTER_KEY_FSTRING, config.getName( ) ) );
+          clusterX509 = Certs.generateServiceCertificate( clusterKp, String.format( CLUSTER_KEY_FSTRING, prelimConfig.getName( ) ) );
           nodeKp = Certs.generateKeyPair( );
-          nodeX509 = Certs.generateServiceCertificate( nodeKp, String.format( NODE_KEY_FSTRING, config.getName( ) ) );
-          ClusterBuilder.writeClusterKeyFiles( config, keyDir, clusterKp, clusterX509, nodeKp, nodeX509 );
+          nodeX509 = Certs.generateServiceCertificate( nodeKp, String.format( NODE_KEY_FSTRING, prelimConfig.getName( ) ) );
+          ClusterBuilder.writeClusterKeyFiles( prelimConfig, keyDir, clusterKp, clusterX509, nodeKp, nodeX509 );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          throw new ServiceRegistrationException( "Failed to generate credentials for cluster: " + config, ex );
+          throw new ServiceRegistrationException( "Failed to generate credentials for cluster: " + prelimConfig, ex );
         }
       }
       
       try {
         final String clusterCert = X509CertHelper.fromCertificate( clusterX509 );
         final String nodeCert = X509CertHelper.fromCertificate( nodeX509 );
-        EntityWrapper<ClusterConfiguration> db = EntityWrapper.get( ClusterConfiguration.class );
-        try {
-          ClusterConfiguration update = db.getUnique( config );
-          update.setClusterCertificate( clusterCert );
-          update.setNodeCertificate( nodeCert );
-          db.commit( );
-          return update;
-        } catch ( Throwable ex ) {
-          LOG.trace( ex, ex );
-          db.rollback( );
-        }
+        prelimConfig.setClusterCertificate( clusterCert );
+        prelimConfig.setNodeCertificate( nodeCert );
       } catch ( Throwable ex ) {
-        throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + config, ex );
+        throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + prelimConfig, ex );
       }
-      
+      ServiceConfigurations.getInstance( ).store( prelimConfig );      
+
     } catch ( ServiceRegistrationException ex ) {
-      ClusterBuilder.removeKeyDirectory( config );
+      ClusterBuilder.removeKeyDirectory( prelimConfig );
       throw ex;
     } catch ( Throwable ex ) {
-      ClusterBuilder.removeKeyDirectory( config );
+      ClusterBuilder.removeKeyDirectory( prelimConfig );
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
                                                              partition, name, host, port ), ex );
     }
-    return config;
+    return prelimConfig;
   }
   
   private static void writeClusterKeyFiles( ClusterConfiguration config, File keyDir, KeyPair clusterKp, X509Certificate clusterX509, KeyPair nodeKp, X509Certificate nodeX509 ) throws ServiceRegistrationException {

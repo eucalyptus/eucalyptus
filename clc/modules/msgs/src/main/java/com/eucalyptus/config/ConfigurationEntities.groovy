@@ -164,28 +164,6 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return this.getComponentId().makeFullName( this.partition != null ? this.partition : this.name, this.name );
   }
   
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( hostName == null ) ? 0 : hostName.hashCode( ) );
-    result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
-    return result;
-  }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ComponentConfiguration other = ( ComponentConfiguration ) obj;
-    if ( name == null ) {
-      if ( other.name != null ) return false;
-    } else if ( !name.equals( other.name ) ) return false;
-    if ( partition == null ) {
-      if ( other.partition != null ) return false;
-    } else if ( !partition.equals( other.partition ) ) return false;
-    return true;
-  }
 
   public int compareTo(ServiceConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
@@ -197,6 +175,29 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
                           this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.name == null )
+      ? 0
+      : this.name.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( obj == null ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    ComponentConfiguration other = ( ComponentConfiguration ) obj;
+    if ( name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !name.equals( other.name ) ) return false;
+    return true;
+  }
+
 }
 /**
  * @deprecated do not even think of using this.
