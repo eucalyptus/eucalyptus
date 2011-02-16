@@ -118,11 +118,21 @@ public class Emis {
     }
     
     public boolean hasKernel( ) {
-      return this.getKernel( ) != null;
+      try {
+        this.getKernel( );
+        return false;
+      } catch ( NoSuchElementException ex ) {
+        return false;
+      }
     }
     
     public boolean hasRamdisk( ) {
-      return this.getRamdisk( ) != null;
+      try {
+        this.getRamdisk( );
+        return false;
+      } catch ( NoSuchElementException ex ) {
+        return false;
+      }
     }
     
     public boolean isLinux( ) {
