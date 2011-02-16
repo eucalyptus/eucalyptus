@@ -127,6 +127,9 @@ public class CompileBindings extends Task {
   private String[] bindings( ) {
     List<String> bindings = new ArrayList<String>( );
     boolean addMsgs = true;
+    if ( addMsgs ) {
+      bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
+    }
     for ( FileSet fs : this.bindingFileSets ) {
       final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
@@ -137,9 +140,6 @@ public class CompileBindings extends Task {
         }
         bindings.add( bindingFilePath );
       }
-    }
-    if ( addMsgs ) {
-      bindings.add( "modules/msgs/src/main/resources/msgs-binding.xml" );
     }
     return bindings.toArray( new String[] {} );
   }
