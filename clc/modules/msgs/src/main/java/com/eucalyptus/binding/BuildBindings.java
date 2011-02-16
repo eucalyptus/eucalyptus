@@ -11,7 +11,9 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
@@ -98,29 +100,29 @@ public class BuildBindings extends Task {
 //      buildLog = new PrintStream( new FileOutputStream( "bind.log", false ) );
 //      System.setOut( buildLog );
 //      System.setErr( buildLog );
-      if ( this.classFileSets.isEmpty( ) ) {
-        throw new BuildException( "No classes were provided to bind." );
-      } else {
-        try {
-          System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
-        } catch ( Exception e ) {
-          System.err.println( "Failed setting classpath from Ant task" );
-        }
-        Path path = new Path( getProject( ) );
-        for ( String p : paths( ) ) {
-          path.add( new Path( getProject( ), p ) );
-        }
-        for ( File f : new File( "lib" ).listFiles( new FilenameFilter( ) {
-          @Override
-          public boolean accept( File dir, String name ) {
-            return name.endsWith( ".jar" );
-          }
-        } ) ) {
-          path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
-        }
-        runPreBindingGenerators( pathUrls( ) );
-      
+    if ( this.classFileSets.isEmpty( ) ) {
+      throw new BuildException( "No classes were provided to bind." );
+    } else {
+      try {
+        System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
+      } catch ( Exception e ) {
+        System.err.println( "Failed setting classpath from Ant task" );
       }
+      Path path = new Path( getProject( ) );
+      for ( String p : paths( ) ) {
+        path.add( new Path( getProject( ), p ) );
+      }
+      for ( File f : new File( "lib" ).listFiles( new FilenameFilter( ) {
+        @Override
+        public boolean accept( File dir, String name ) {
+          return name.endsWith( ".jar" );
+        }
+      } ) ) {
+        path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
+      }
+      runPreBindingGenerators( pathUrls( ) );
+      
+    }
 //    } catch ( FileNotFoundException e2 ) {
 //      System.setOut( this.oldOut );
 //      System.setErr( this.oldErr );
@@ -138,19 +140,24 @@ public class BuildBindings extends Task {
     try {
       BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      Set<Class> classes = new TreeSet<Class>() {{ add( BindingGenerator.MSG_TYPE); add( BindingGenerator.DATA_TYPE); }};
+      Map<String, Class> classes = new TreeMap<String, Class>( ) {
+        {
+          put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
+          put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
+        }
+      };
       for ( FileSet fs : this.classFileSets ) {
         for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
           try {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-            classes.add( c );
+            classes.put( c.getName( ), c );
           } catch ( ClassNotFoundException e ) {
             error( e );
           }
         }
       }
-      for( Class c : classes ) {
+      for ( Class c : classes.values( ) ) {
         if ( BindingGenerator.MSG_TYPE.isAssignableFrom( c ) || BindingGenerator.DATA_TYPE.isAssignableFrom( c ) ) {
           for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
             gen.processClass( c );
@@ -167,10 +174,10 @@ public class BuildBindings extends Task {
         }
       } catch ( Throwable e ) {
         error( e );
-      }      
+      }
     }
   }
-
+  
   private ClassLoader getUrlClassLoader( ) {
     ClassLoader cl = URLClassLoader.newInstance( this.pathUrls( ), Thread.currentThread( ).getContextClassLoader( ) );
     return cl;
