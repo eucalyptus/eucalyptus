@@ -110,11 +110,11 @@ public class Emis {
     }
     
     public ImageInfo getRamdisk( ) {
-      throw new NoSuchElementException( this + " does not have a kernel." );
+      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
     }
     
     public ImageInfo getKernel( ) {
-      throw new NoSuchElementException( this + " does not have a kernel." );
+      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
     }
     
     public boolean hasKernel( ) {
