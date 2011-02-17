@@ -1854,6 +1854,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		GetObjectResponseType reply = (GetObjectResponseType) request
 		.getReply();
+    User user = request.getUser( );
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 		String userId = request.getUserId();
@@ -1889,7 +1890,7 @@ public class WalrusManager {
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
-						if (objectInfo.canRead(userId)) {
+						if (objectInfo.canRead(user)) {
 							String objectName = objectInfo.getObjectName();
 							DefaultHttpResponse httpResponse = new DefaultHttpResponse(
 									HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -2122,6 +2123,7 @@ public class WalrusManager {
 
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
+    User user = request.getUser( );
 		String userId = request.getUserId();
 		Status status = new Status();
 
@@ -2142,7 +2144,7 @@ public class WalrusManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 
-						if (objectInfo.canRead(userId)) {
+						if (objectInfo.canRead(user)) {
 							String etag = objectInfo.getEtag();
 							String objectName = objectInfo.getObjectName();
 							if (byteRangeEnd == -1)
@@ -2297,6 +2299,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		CopyObjectResponseType reply = (CopyObjectResponseType) request
 		.getReply();
+		User user = request.getUser( );
 		String userId = request.getUserId();
 		String sourceBucket = request.getSourceBucket();
 		String sourceKey = request.getSourceObject();
@@ -2328,7 +2331,7 @@ public class WalrusManager {
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo sourceObjectInfo = objectInfos.get(0);
-				if (sourceObjectInfo.canRead(userId)) {
+				if (sourceObjectInfo.canRead(user)) {
 					if (copyIfMatch != null) {
 						if (!copyIfMatch.equals(sourceObjectInfo.getEtag())) {
 							db.rollback();

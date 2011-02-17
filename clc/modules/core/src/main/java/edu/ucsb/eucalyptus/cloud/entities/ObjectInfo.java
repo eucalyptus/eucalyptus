@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.UserManagement;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -296,6 +297,10 @@ public class ObjectInfo implements Comparable {
         }
 
         return false;
+    }
+
+    public boolean canRead(User user) {
+      return user.isSystemAdmin()||user.isSystemInternal()||this.canRead(user.getName());
     }
 
     public boolean canRead(String userId) {
