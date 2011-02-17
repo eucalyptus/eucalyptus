@@ -174,7 +174,7 @@ public class CompileBindings extends Task {
 //          }
 //        }
 //      }
-      Compile compiler = new Compile( true, true, false, false, false, false );
+      Compile compiler = new Compile( false, false, false, false, false, false );
       compiler.compile( paths( ), bindings() );
     } catch ( ClassNotFoundException e1 ) {
       e1.printStackTrace( );

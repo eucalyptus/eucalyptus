@@ -144,10 +144,14 @@ public class SystemBootstrapper {
       }
             );
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
-      Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
-      Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
-      Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
-      Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
+      try {
+        Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
+        Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
+        Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
+        Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {

@@ -60,6 +60,21 @@ typedef struct {
 } java_home_t;
 #define GETARG(a,x) (a->x##_arg)
 static int debug = 0;
+#define checkE \
+  if (env->ExceptionOccurred() != 0) { \
+  fprintf(stderr, "Unexpected exception "); \
+  env->ExceptionDescribe(); env->ExceptionClear(); }
+
+#define __die_jni(condition,format,...) do { \
+	if(condition) {\
+		fprintf(stderr,"[error:%04d] ", __LINE__);\
+		fprintf(stderr, format "\n", ##__VA_ARGS__ ); \
+		if((*env)->ExceptionCheck(env) != 0){ \
+			(*env)->ExceptionDescribe(env); \
+			(*env)->ExceptionClear(env); \
+		}\
+		exit(1);} \
+	} while(0)
 #define __die(condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
 #define __fail(format,...) __die(1,format,##__VA_ARGS__)
 #define __abort(r,condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); return r;} } while(0)

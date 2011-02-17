@@ -12,7 +12,7 @@ public class EventRecord extends EucalyptusMessage {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    return new LogFileRecord( eventClass, eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, msg.getUserId( ) != null ? msg.getUserId( ) : "unknown", msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
