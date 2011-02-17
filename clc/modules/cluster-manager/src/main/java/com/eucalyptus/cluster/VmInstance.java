@@ -337,11 +337,7 @@ public class VmInstance implements HasName<VmInstance> {
   private void store( ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ),
-                                                                    this.getOwnerId( ), this.getOwnerId( ), /**
-                                                                     * 
-                                                                     * TODO:ASAP:GRZE update w/
-                                                                     * account!
-                                                                     **/
+                                                                    this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
                                                                     this.placement, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
@@ -444,7 +440,7 @@ public class VmInstance implements HasName<VmInstance> {
   public BundleTask resetBundleTask( ) {
     BundleTask oldTask = this.bundleTask.getReference( );
     this.bundleTask.set( null, false );
-    EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
+    EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
     return oldTask;
   }
   
@@ -474,7 +470,7 @@ public class VmInstance implements HasName<VmInstance> {
           return; //already finished, wait and timeout the state along with the instance.
         } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
           this.getBundleTask( ).setState( next.name( ) );
-          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                              this.getBundleTask( ).getState( ) ).info( );
           this.getBundleTask( ).setUpdateTime( new Date( ) );
         } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
@@ -490,7 +486,7 @@ public class VmInstance implements HasName<VmInstance> {
     if ( this.getBundleTask( ) != null ) {
       this.bundleTask.set( this.getBundleTask( ), true );
       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else {
@@ -502,12 +498,12 @@ public class VmInstance implements HasName<VmInstance> {
     if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
           && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
                  && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       this.resetBundleTask( );
       return true;
@@ -816,7 +812,7 @@ public class VmInstance implements HasName<VmInstance> {
     return String
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
+                          this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes );
   }

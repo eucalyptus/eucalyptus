@@ -158,7 +158,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( DescribeInstancesType msg ) throws EucalyptusCloudException {
     DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     try {
-      reply.setReservationSet( SystemState.handle( msg.getUserId( ), msg.getInstancesSet( ), msg.isAdministrator( ) ) );
+      reply.setReservationSet( SystemState.handle( msg.getUserErn( ), msg.getInstancesSet( ), msg.isAdministrator( ) ) );
     } catch ( Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );
@@ -410,7 +410,7 @@ public class VmControl {
         }
         LOG
            .info( EventRecord
-                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserId( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
+                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserErn( ).toString( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
         BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
         request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );

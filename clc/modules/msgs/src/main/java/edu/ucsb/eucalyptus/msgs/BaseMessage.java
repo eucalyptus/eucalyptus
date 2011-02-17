@@ -49,7 +49,7 @@ public class BaseMessage {
   
   public BaseMessage( BaseMessage copy ) {
     this( );
-    this.userId = copy.getUserId( );
+    this.setUserId( copy.getUserId( ) );
     this.effectiveUserId = copy.getEffectiveUserId( );
     this.correlationId = copy.getCorrelationId( );
   }

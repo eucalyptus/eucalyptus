@@ -342,7 +342,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
         try {
           VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
-                     .withDetails( vm.getOwner( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                     .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                      .withDetails( "type", Address.this.isSystemOwned( )
                        ? "SYSTEM"
                        : "USER" )
@@ -397,7 +397,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
-                   .withDetails( vm.getOwner( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                   .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                    .withDetails( "type", Address.this.isSystemOwned( )
                      ? "SYSTEM"
                      : "USER" )

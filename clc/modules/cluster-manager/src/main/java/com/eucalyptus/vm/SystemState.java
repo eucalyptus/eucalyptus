@@ -83,6 +83,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
@@ -101,6 +102,7 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callbacks;
@@ -267,7 +269,7 @@ public class SystemState {
     try {
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      String ownerId = runVm.getOwnerId( );
+      FullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
       if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
@@ -358,12 +360,12 @@ public class SystemState {
   
   private static String ALT_PREFIX      = "i-";
   
-  public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
+  public static ArrayList<ReservationInfoType> handle( FullName userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
+      if ( ( !isAdmin && !userId.equals( v.getOwner( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
+        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
       rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
@@ -373,7 +375,7 @@ public class SystemState {
         if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
         if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
+          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
           rsvMap.put( reservation.getReservationId( ), reservation );
         }
         rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
