@@ -94,7 +94,7 @@ public class Ats {
   
   public static Ats from( Object o ) {
     if ( o instanceof AnnotatedElement ) {
-      return new Ats( ( Class ) o );
+      return new Ats( ( AnnotatedElement ) o );
     } else {
       return new Ats( o.getClass( ) );
     }
