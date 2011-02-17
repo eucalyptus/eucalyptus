@@ -94,7 +94,7 @@ typedef struct instance_t {
   char state[16];
   time_t ts;
   
-  char ownerId[16];
+  char ownerId[48];
   char keyName[1024];
   
   netConfig ccnet;
