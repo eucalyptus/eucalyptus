@@ -4,6 +4,8 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.google.common.collect.Maps;
@@ -56,7 +58,12 @@ public class Webifier {
     if ( info.containsKey( USER_INFO_PROJECT_PI ) ) {
       uif.setProjectPIName( info.get( USER_INFO_PROJECT_PI ) );
     }
-    
+    for ( AccessKey k : user.getKeys( ) ) {
+      if ( k.isActive( ) ) {
+        uif.setQueryId( k.getId( ) );
+        uif.setSecretKey( k.getKey( ) );
+      }
+    }
     return uif;
   }
   
@@ -90,6 +97,12 @@ public class Webifier {
       info.put( USER_INFO_PROJECT_PI, uif.getProjectPIName( ) );
     }
     user.setInfo( info );
+    if ( uif.getPassword( ) != null ) {
+      String hashed = Crypto.generateHashedPassword( uif.getPassword( ) );
+      if ( !hashed.equals( user.getPassword( ) ) ) {
+        user.setPassword( hashed );
+      }
+    }
   }
   
 }
