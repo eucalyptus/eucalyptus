@@ -80,6 +80,7 @@ public class UserInfoWeb implements IsSerializable
 {
     /** these come from com.eucalyptus.auth.UserInfo.class **/
     private String userName;
+    private String accountName;
     private String realName;
     private String email;
     private String telephoneNumber;
@@ -103,9 +104,10 @@ public class UserInfoWeb implements IsSerializable
     
 	// displayUserRecordPage relies on empty strings and isAdministrator set
     public UserInfoWeb() {
+      this.accountName = "";
       this.userName = "";
       this.realName = "";
-      this.email = "";
+      this.email = BOGUS_ENTRY;
       this.password = "";
       this.telephoneNumber = "";
       this.affiliation = "";
@@ -114,15 +116,17 @@ public class UserInfoWeb implements IsSerializable
       this.administrator = false;
 	}
 
-    public UserInfoWeb( String userName )
+    public UserInfoWeb( String userName, String accountName )
     {
         this.userName = userName;
+        this.accountName = accountName;
     }
 
     // this sets all the mandatory fields in UserInfoWeb
-    public UserInfoWeb( String userName, String realName, String email, String password)
+    public UserInfoWeb( String userName, String accountName, String realName, String email, String password)
     {
         this.userName = userName;
+        this.accountName = accountName;
         this.realName = realName;
         this.email = email;
         this.password = password;
@@ -130,6 +134,14 @@ public class UserInfoWeb implements IsSerializable
         this.confirmed = false;
     }
 
+    public String getAccountName() {
+      return this.accountName;
+    }
+    
+    public void setAccountName(String accountName) {
+      this.accountName = accountName;
+    }
+    
     public String getUserName()
     {
         return userName;

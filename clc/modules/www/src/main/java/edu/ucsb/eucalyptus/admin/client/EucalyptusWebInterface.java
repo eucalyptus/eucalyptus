@@ -357,7 +357,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 label_box.setStyleName("euca-greeting-pending");
                 EucalyptusWebBackend.App.getInstance().getNewSessionID(
                         login_box.getText(),
-                        GWTUtils.md5(pass_box.getText()),
+                        pass_box.getText(),
                         new AsyncCallback() {
                             public void onSuccess( Object result )
                             {
@@ -653,6 +653,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         }
 
+        final String accountName = userToEdit.getAccountName( );
         ClickHandler SignupEucaButtonListener = new ClickHandler() {
             public void onClick( ClickEvent event )
             {
@@ -749,6 +750,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					}
                     final UserInfoWeb userToSave = new UserInfoWeb(
                             userName_box.getText(),
+                            accountName,
                             realName_box.getText(),
                             emailAddress_box.getText(),
                             encryptedPassword);
@@ -962,8 +964,10 @@ public class EucalyptusWebInterface implements EntryPoint {
                     label_box.setText( "Checking with the server..." );
                     label_box.setStyleName("euca-greeting-pending");
 
+                    //TODO(wenye): fix the account name
                     UserInfoWeb user = new UserInfoWeb(
                             username_box.getText(),
+                            "",
                             "", // don't care about real name
                             email_box.getText(),
                             null ); // null => reset requested

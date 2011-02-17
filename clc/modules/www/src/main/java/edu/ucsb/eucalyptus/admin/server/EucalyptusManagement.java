@@ -80,7 +80,9 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
@@ -148,9 +150,14 @@ public class EucalyptusManagement {
     return ret;
 	}
 
-	public static UserInfoWeb getWebUser( String userName ) throws SerializableException {
-	  //return EucalyptusManagement.getWebUserByExample( new UserInfo( userName ) );
-	  return null;
+	public static UserInfoWeb getWebUser( String userName, String accountName ) throws SerializableException {
+	  try {
+	    Account account = Accounts.lookupAccountByName( accountName );
+	    User user = account.lookupUserByName( userName );
+	    return Webifier.toWeb( user );
+	  } catch ( Exception e ) {
+	    throw new SerializableException( "Can not find user " + userName + " in account " + accountName );
+	  }
 	}
 
   public static UserInfoWeb getWebUserByEmail( String emailAddress ) throws SerializableException {

@@ -83,12 +83,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private void eusureSystemAdminExist( ) throws Exception {
     try {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
-      User user = account.lookupUserByName( User.ACCOUNT_ADMIN );
-      if ( user != null ) {
-        user.createToken( );
-        user.createPassword( );
-        return;
-      }
+      account.lookupUserByName( User.ACCOUNT_ADMIN );
     } catch ( AuthException e ) {
       // Order matters.
       Account system = Accounts.addSystemAccount( );
@@ -96,7 +91,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       admin.createKey( );
       admin.createToken( );
       admin.createConfirmationCode( );
-      admin.setPassword( User.ACCOUNT_ADMIN );
+      admin.createPassword( );
       LOG.warn( "System admin does not exist. Adding it now.", e );
     }
   }
