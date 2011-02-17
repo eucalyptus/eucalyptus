@@ -151,7 +151,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   @Override
   public void processClass( Class klass ) {
     if ( BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
-      System.out.println( "JSONifying " + klass.getCanonicalName( ) );
+//      System.out.println( "JSONifying " + klass.getCanonicalName( ) );
       RequestInfo.get( klass );
     }
   }
@@ -390,8 +390,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         for ( Field f : getRecursiveFields( this.requestInfo.getParent( ), this.requestInfo.getRequest( ) ) ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
-                               f.getType( ).getCanonicalName( ) );
+//            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+//                               f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
