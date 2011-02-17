@@ -35,7 +35,7 @@ public class BundleCallback extends MessageCallback<BundleInstanceType,BundleIns
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
         vm.clearPendingBundleTask( );
-        EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).getUserErn( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
+        EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).getUserErn( ).toString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
       } catch ( NoSuchElementException e1 ) {
       }
     }

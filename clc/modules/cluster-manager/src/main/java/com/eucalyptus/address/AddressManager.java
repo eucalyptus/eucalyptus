@@ -134,8 +134,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getInstanceId( ) );
+    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
+    final VmInstance vm = VmInstances.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
@@ -199,7 +199,7 @@ public class AddressManager {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !request.isAdministrator( ) ) {
