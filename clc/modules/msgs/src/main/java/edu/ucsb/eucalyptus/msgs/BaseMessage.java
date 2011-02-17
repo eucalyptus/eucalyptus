@@ -70,7 +70,11 @@ public class BaseMessage {
   }
 
   public String getUserId( ) {
-    return this.user.getId( );
+    if( this.user == null ) {
+      return "unknown";
+    } else {
+      return this.user.getId( );
+    }
   }
   
   public Boolean get_return( ) {
