@@ -99,7 +99,7 @@ public interface FullName {
   public abstract boolean equals( Object obj );
 
   public class create {
-    enum part { VENDOR, REGION, NAMESPACE, RELATIVEID }
+    enum part { VENDOR, REGION, NAMESPACE, RELATIVEID, DONE }
     private Map<part,String> partMap = Maps.newHashMap( );
     private part current = part.VENDOR;
     private final StringBuilder buf;
@@ -108,9 +108,9 @@ public interface FullName {
       return new create( name );
     }
     public create region( String region ) {
-      if( this.current.ordinal( ) - 1 == part.REGION.ordinal( ) ) {
+      if( this.current.ordinal( ) == part.REGION.ordinal( ) ) {
         this.buf.append( region ).append( SEP );
-        this.current = part.REGION;
+        this.current = part.NAMESPACE;
         this.partMap.put( part.REGION, region == null || region.length( ) == 0 ? FullName.EMPTY : region );
       } else {
         throw new IllegalStateException( "Attempt to set region when the current part is: " + this.current );
@@ -118,9 +118,9 @@ public interface FullName {
       return this;
     }
     public create namespace( String namespace ) {
-      if( this.current.ordinal( ) - 1 == part.NAMESPACE.ordinal( ) ) {
+      if( this.current.ordinal( ) == part.NAMESPACE.ordinal( ) ) {
         this.buf.append( namespace ).append( SEP );
-        this.current = part.NAMESPACE;
+        this.current = part.RELATIVEID;
         this.partMap.put( part.NAMESPACE, namespace == null || namespace.length( ) == 0 ? FullName.EMPTY : namespace );
       } else {
         throw new IllegalStateException( "Attempt to set namespace when the current part is: " + this.current );
@@ -131,13 +131,14 @@ public interface FullName {
       return relativeId( );
     }
     public FullName relativeId( String... relativePath ) {
-      if( this.current.ordinal( ) - 1 == part.RELATIVEID.ordinal( ) ) {
+      if( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
         StringBuilder rId = new StringBuilder();
         for( String s : relativePath ) {
           rId.append( relativePath ).append( SEP_PATH );
         }
         this.buf.append( rId.toString( ) );
         this.partMap.put( part.RELATIVEID, rId.toString( ) );
+        this.current = part.DONE;
       } else {
         throw new IllegalStateException( "Attempt to set relative path when the current part is: " + this.current );
       }
