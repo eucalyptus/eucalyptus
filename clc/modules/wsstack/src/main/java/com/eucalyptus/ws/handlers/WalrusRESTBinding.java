@@ -129,6 +129,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
@@ -219,7 +220,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 			Binding binding;
 
-			if(!(msg instanceof EucalyptusErrorMessageType)) {
+			if(!(msg instanceof EucalyptusErrorMessageType)||!(msg instanceof ExceptionResponseType)) {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( super.getNamespace( ) ) );
 				if(putQueue != null) {
 					putQueue = null;
