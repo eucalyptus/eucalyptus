@@ -45,9 +45,9 @@ public interface Account extends HasId, BasePrincipal, Serializable {
     @Override public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
     @Override public Group addGroup( String groupName, String path ) throws AuthException { throw new AuthException( AuthException.SYSTEM_MODIFICATION ); }
     @Override public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
-    @Override public Group lookupGroupByName( String groupName ) throws AuthException { throw new AuthException( AuthException.SYSTEM_MODIFICATION );/** TODO:GRZE:YE really what goes here? **/ }
+    @Override public Group lookupGroupByName( String groupName ) throws AuthException { throw new AuthException( AuthException.SYSTEM_MODIFICATION ); }
     @Override public User lookupUserByName( String userName ) throws AuthException { if( User.SYSTEM.getName( ).equals( userName ) ) { return User.SYSTEM; } else { throw new AuthException( AuthException.SYSTEM_MODIFICATION ); } }
-    @Override public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException { /** TODO:GRZE:YE is there an allow all? **/ return null; }
-    @Override public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException { /** TODO:GRZE:YE is there an unlimited? **/ return null; }
+    @Override public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException { return Lists.newArrayList( ); }
+    @Override public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException { return Lists.newArrayList( ); }
   };
 }

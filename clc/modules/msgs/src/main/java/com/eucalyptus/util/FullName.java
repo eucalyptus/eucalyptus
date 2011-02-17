@@ -63,9 +63,20 @@
 
 package com.eucalyptus.util;
 
+import java.util.Map;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 public interface FullName {
+
+  public final static String EMPTY      = "";
+  public final static String SEP_PATH   = "/";
+  public final static String SEP        = ":";
+  public final static String PREFIX     = "arn:aws:";
+  public final static String UNKNOWN_ID = "d00d";
+  public final static String SYSTEM_ID  = Integer.toString( 0xC0FFEE, 2 );
+  
+  public abstract String getUniqueId( );
   
   public abstract String getVendor( );
   
@@ -86,5 +97,88 @@ public interface FullName {
   public abstract int hashCode( );
   
   public abstract boolean equals( Object obj );
+
+  public class create {
+    enum part { NIHIL, VENDOR, REGION, NAMESPACE, RELATIVEID }
+    private Map<part,String> partMap = Maps.newHashMap( );
+    private part current = part.NIHIL;
+    private final StringBuilder buf;
+    create( String name ) { this.buf = new StringBuilder( ); this.buf.append( PREFIX ).append( SEP ).append( name ).append( SEP ); this.current = part.REGION; }
+    public static create vendor( String name ) {
+      return new create( name );
+    }
+    public create region( String region ) {
+      if( this.current.ordinal( ) > part.REGION.ordinal( ) ) {
+        this.buf.append( region ).append( SEP );
+        this.current = part.REGION;
+        this.partMap.put( part.REGION, region == null || region.length( ) == 0 ? FullName.EMPTY : region );
+      } else {
+        throw new IllegalStateException( "Attempt to set region when the current part is: " + this.current );
+      }
+      return this;
+    }
+    public create namespace( String namespace ) {
+      if( this.current.ordinal( ) > part.NAMESPACE.ordinal( ) ) {
+        this.buf.append( namespace ).append( SEP );
+        this.current = part.NAMESPACE;
+        this.partMap.put( part.NAMESPACE, namespace == null || namespace.length( ) == 0 ? FullName.EMPTY : namespace );
+      } else {
+        throw new IllegalStateException( "Attempt to set namespace when the current part is: " + this.current );
+      }
+      return this;
+    }
+    public FullName end( String... region ) {
+      if( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
+        StringBuilder rId = new StringBuilder();
+        for( String s : region ) {
+          rId.append( region ).append( SEP_PATH );
+        }
+        this.buf.append( rId.toString( ) );
+        this.partMap.put( part.RELATIVEID, rId.toString( ) );
+      } else {
+        throw new IllegalStateException( "Attempt to set relative path when the current part is: " + this.current );
+      }
+      return new FullName() {
+        @Override public String getUniqueId( ) {
+          return create.this.buf.toString( );
+        }
+
+        @Override
+        public String getVendor( ) {
+          return create.this.partMap.get( part.VENDOR );
+        }
+
+        @Override
+        public String getRegion( ) {
+          return create.this.partMap.get( part.REGION );
+        }
+
+        @Override
+        public String getNamespace( ) {
+          return create.this.partMap.get( part.NAMESPACE );
+        }
+
+        @Override
+        public String getRelativeId( ) {
+          return create.this.partMap.get( part.RELATIVEID );
+        }
+
+        @Override
+        public String getPartition( ) {
+          return create.this.partMap.get( part.REGION );
+        }
+
+        @Override
+        public String getName( ) {
+          return create.this.buf.toString( );
+        }
+
+        @Override
+        public ImmutableList<String> getPathParts( ) {
+          return ImmutableList.of( create.this.partMap.get( part.RELATIVEID ).split( SEP_PATH ) );
+        }};
+    }
   
+  }
+
 }

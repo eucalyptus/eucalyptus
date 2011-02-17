@@ -27,12 +27,13 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class ComponentId implements HasName<ComponentId> {
+public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
   private static Logger       LOG         = Logger.getLogger( ComponentId.class );
   private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
                                             +
@@ -119,6 +120,16 @@ public abstract class ComponentId implements HasName<ComponentId> {
     return this.name;
   }
   
+  @Override
+  public FullName getFullName( ) {
+    return new ComponentFullName( this, this.getPartition( ), this.name );
+  }
+
+  @Override
+  public String getPartition( ) {
+    return this.isPartitioned( ) ? FullName.UNKNOWN_ID : this.name;
+  }
+
   public boolean isPartitioned( ) {
     return !this.isCloudLocal( );
   }

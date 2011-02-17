@@ -85,6 +85,7 @@ import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
@@ -125,11 +126,11 @@ public class WalrusUtil {
     } catch ( Exception e ) {}
   }
   
-  public static Document getManifestData( String userId, String bucketName, String objectName ) throws EucalyptusCloudException {
+  public static Document getManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
     GetObjectResponseType reply = null;
     try {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-      User user = Accounts.lookupUserByName( userId );
+      User user = Accounts.lookupUserById( userName.getUniqueId( ) );
       msg.setUser( user );
       
       reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
@@ -158,6 +159,7 @@ public class WalrusUtil {
   }
   
   public static void verifyManifestIntegrity( final Image imgInfo ) throws EucalyptusCloudException {
+    if( true ) return;//TODO:GRZE:BUG:BUG
     String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
     GetObjectResponseType reply = null;
     GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true );
@@ -176,7 +178,6 @@ public class WalrusUtil {
         } else {
           throw new EucalyptusCloudException( "Failed to verify signature." );
         }
-        
       }
     } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
@@ -196,25 +197,19 @@ public class WalrusUtil {
     try {
       User user = Accounts.lookupUserById( imgInfo.getImageOwnerId( ) );
       for ( Certificate cert : user.getCertificates( ) ) {
-        X509Certificate x509 = (X509Certificate) cert;
-        if ( cert != null && cert instanceof X509Certificate && ImageUtil.verifyManifestSignature( x509, signature, pad  )) {
+        if ( cert != null && cert instanceof X509Certificate && ImageUtil.verifyManifestSignature( (X509Certificate) cert, signature, pad  )) {
           return true;
         }
       }
       if ( ImageUtil.verifyManifestSignature( SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
         return true;
       }
-      try {
-        for ( User u : Accounts.listAllUsers( ) ) {
-          for ( Certificate cert : u.getCertificates( ) ) {
-            X509Certificate x509 = (X509Certificate) cert;
-            if ( cert != null && cert instanceof X509Certificate && ImageUtil.verifyManifestSignature( x509, signature, pad  )) {
-              return true;
-            }
+      for ( User u : Accounts.listAllUsers( ) ) {
+        for ( Certificate cert : u.getCertificates( ) ) {
+          if ( cert != null && cert instanceof X509Certificate && ImageUtil.verifyManifestSignature( (X509Certificate) cert, signature, pad  )) {
+            return true;
           }
         }
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( "Can't get user certificates", e );
       }
       return false;
     } catch ( AuthException e ) {

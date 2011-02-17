@@ -9,6 +9,8 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.util.FullName;
 
 public class Accounts {
   private static final Logger LOG = Logger.getLogger( Accounts.class );
@@ -99,6 +101,18 @@ public class Accounts {
       }
     }
     throw new AuthException( "No active access key for " + user );
+  }
+
+  /**
+   * @deprecated TEMPORARY
+   */
+  @Deprecated
+  public static FullName lookupUserFullNameById( String userId ) {
+    try {
+      return UserFullName.get( Accounts.lookupUserById( userId ) );
+    } catch ( AuthException ex ) {
+      throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
+    }
   }
   
 }

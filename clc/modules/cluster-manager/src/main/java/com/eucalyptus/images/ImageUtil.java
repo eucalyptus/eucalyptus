@@ -92,6 +92,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -143,7 +144,7 @@ public class ImageUtil {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup( Eucalyptus.class ).name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup( Eucalyptus.class ).getFullName( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       NodeList ancestors = null;
       try {
@@ -169,7 +170,7 @@ public class ImageUtil {
     Long size = 0l;
     try {
       String[] imagePathParts = manifestPath.split( "/" );
-      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup( Eucalyptus.class ).name( ), imagePathParts[0], imagePathParts[1] );
+      Document inputSource = WalrusUtil.getManifestData( ComponentIds.lookup( Eucalyptus.class ).getFullName( ), imagePathParts[0], imagePathParts[1] );
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       String rootSize = "0";
       try {
@@ -193,7 +194,7 @@ public class ImageUtil {
       Document inputSource = null;
       try {
         String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
-        inputSource = WalrusUtil.getManifestData( imgInfo.getImageOwnerId( ), imagePathParts[0], imagePathParts[1] );
+        inputSource = WalrusUtil.getManifestData( imgInfo.getOwner( ), imagePathParts[0], imagePathParts[1] );
       } catch ( EucalyptusCloudException e ) {
         throw e;
       }
@@ -381,7 +382,7 @@ public class ImageUtil {
     }
   }
   
-  public static Document getManifestDocument( String[] imagePathParts, String userName ) throws EucalyptusCloudException {
+  public static Document getManifestDocument( String[] imagePathParts, FullName userName ) throws EucalyptusCloudException {
     Document inputSource = null;
     try {
       inputSource = WalrusUtil.getManifestData( userName, imagePathParts[0], imagePathParts[1] );

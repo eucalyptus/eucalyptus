@@ -63,37 +63,47 @@
 
 package com.eucalyptus.component;
 
+import java.util.Arrays;
 import java.util.List;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class ComponentFullName implements FullName {
-  public final static String VENDOR = "euca";
-  private final ComponentId componentId;
-  private final String partition;
-  private final String name;
-  private final String qName;
-  private final ImmutableList<String> pathParts; 
+  public final static String          VENDOR = "euca";
+  private final ComponentId           componentId;
+  private final String                partition;
+  private final String                name;
+  private final String                qName;
+  private final ImmutableList<String> pathParts;
+  private final String universalId;
+  private final String relativeId;
   
-  ComponentFullName( ComponentId componentType, String partition, String name, String... pathParts ) {
+  ComponentFullName( ComponentId componentType, String partition, String name, String... pathPartsArray ) {
     Assertions.assertArgumentNotNull( componentType );
     Assertions.assertArgumentNotNull( partition );
     Assertions.assertArgumentNotNull( name );
     this.componentId = componentType;
     this.partition = partition;
     this.name = name;
-    this.pathParts = ImmutableList.of( pathParts );
-    StringBuilder b = new StringBuilder( );
-    b.append( "arn:aws:euca:" ).append( partition ).append( ":" );
-    if( componentType != null ) {
-      b.append( componentType.name( ) );
+    List<String> temp = Lists.newArrayList( );
+    if ( componentType != null ) {
+      temp.add( componentType.name( ) );
+    } else {
+      temp.add( ComponentIds.lookup( Eucalyptus.class ).name( ) );
     }
-    b.append( ":" ).append( name );
-    for( String pathPart : pathParts ) {
-      b.append( "/" ).append( pathPart );
+    temp.add( name );
+    temp.addAll( Arrays.asList( pathPartsArray ) );
+    this.pathParts = ImmutableList.copyOf( temp );
+    this.universalId = new StringBuilder( ).append( PREFIX ).append( SEP ).append( VENDOR ).append( SEP ).append( partition ).append( SEP ).append( FullName.SYSTEM_ID ).append( SEP ).toString( );
+    StringBuilder rId = new StringBuilder( );
+    for ( String pathPart : pathParts ) {
+      rId.append( SEP_PATH ).append( pathPart );
     }
-    this.qName = b.toString( );
+    this.relativeId = rId.toString( );
+    this.qName = this.universalId + this.relativeId;
   }
   
   @Override
@@ -108,12 +118,12 @@ public class ComponentFullName implements FullName {
   
   @Override
   public final String getNamespace( ) {
-    return this.componentId.getName( );
+    return FullName.SYSTEM_ID;
   }
   
   @Override
   public final String getRelativeId( ) {
-    return this.getName( );
+    return this.relativeId;
   }
   
   @Override
@@ -160,7 +170,7 @@ public class ComponentFullName implements FullName {
     if ( !this.getClass( ).equals( obj.getClass( ) ) ) {
       return false;
     }
-
+    
     ComponentFullName that = ( ComponentFullName ) obj;
     if ( this.name == null ) {
       if ( that.name != null ) {
@@ -178,5 +188,10 @@ public class ComponentFullName implements FullName {
     }
     return true;
   }
-    
+
+  @Override
+  public String getUniqueId( ) {
+    return this.qName;
+  }
+  
 }

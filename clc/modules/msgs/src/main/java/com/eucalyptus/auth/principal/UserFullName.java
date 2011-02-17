@@ -61,8 +61,121 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util;
+package com.eucalyptus.auth.principal;
 
-public interface HasOwner<T> extends HasFullName<T> {
-  public abstract FullName getOwner( );
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.FullName;
+import com.google.common.collect.ImmutableList;
+
+public class UserFullName implements FullName {
+  private static Logger               LOG    = Logger.getLogger( UserFullName.class );
+  public final static String          VENDOR = "euare";
+  private final String                accountId;
+  private final String                userId;
+  private final String                name;
+  private final String                universalId;
+  private final String                relativeId;
+  private final String                qName;
+  private final ImmutableList<String> pathParts;
+  
+  UserFullName( User user ) {
+    Assertions.assertArgumentNotNull( user );
+    String aId = FullName.UNKNOWN_ID;
+    try {
+      aId = user.getAccount( ).getId( );
+    } catch ( AuthException ex ) {
+      LOG.error( ex, ex );
+    }
+    this.accountId = aId;
+    this.userId = user.getId( );
+    this.name = user.getName( );
+    this.pathParts = ImmutableList.of( "user", this.name );
+    this.universalId = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );
+    this.relativeId = new StringBuilder( ).append( "user" ).append( SEP ).append( this.name ).toString( );
+    this.qName = this.universalId + this.relativeId;
+  }
+  
+  @Override
+  public final String getVendor( ) {
+    return VENDOR;
+  }
+  
+  @Override
+  public final String getRegion( ) {
+    return EMPTY;
+  }
+  
+  @Override
+  public final String getNamespace( ) {
+    return this.accountId;
+  }
+  
+  @Override
+  public final String getRelativeId( ) {
+    return this.relativeId;
+  }
+  
+  @Override
+  public final String getPartition( ) {
+    return this.accountId;
+  }
+  
+  @Override
+  public final String getName( ) {
+    return this.name;
+  }
+  
+  @Override
+  public ImmutableList<String> getPathParts( ) {
+    return this.pathParts;
+  }
+  
+  @Override
+  public String toString( ) {
+    return this.qName;
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.userId == null )
+      ? 0
+      : this.userId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    UserFullName other = ( UserFullName ) obj;
+    if ( this.userId == null ) {
+      if ( other.userId != null ) {
+        return false;
+      }
+    } else if ( !this.userId.equals( other.userId ) ) {
+      return false;
+    }
+    return true;
+  }
+  
+  @Deprecated
+  public static FullName get( User user ) {
+    return new UserFullName( user );
+  }
+
+  @Override
+  public String getUniqueId( ) {
+    return this.userId;
+  }
 }

@@ -118,8 +118,8 @@ public class AddressManager {
     Addresses.updateAddressingMode( );
     boolean isAdmin = request.isAdministrator( );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( isAdmin || address.getUserId( ).equals( request.getUserId( ) ) ) {
-        reply.getAddressesSet( ).add( address.getDescription( isAdmin ) );
+      if ( isAdmin || address.getOwner( ).equals( request.getUserErn( ) ) ) {
+        reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
       }
     }
     if ( isAdmin ) {

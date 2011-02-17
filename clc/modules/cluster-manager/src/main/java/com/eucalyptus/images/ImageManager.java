@@ -209,7 +209,7 @@ public class ImageManager {
     }
     String userName = request.getUserId( );
     // FIXME: wrap this manifest junk in a helper class.
-    Document inputSource = ImageUtil.getManifestDocument( imagePathParts, userName );
+    Document inputSource = ImageUtil.getManifestDocument( imagePathParts, request.getUserErn( ) );
     XPath xpath = XPathFactory.newInstance( ).newXPath( );
     String arch = ImageUtil.extractArchitecture( inputSource, xpath );
     imageInfo.setArchitecture( ( arch == null )

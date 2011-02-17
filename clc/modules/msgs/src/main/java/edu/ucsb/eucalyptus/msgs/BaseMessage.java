@@ -15,8 +15,10 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.util.FullName;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
@@ -282,4 +284,7 @@ public class BaseMessage {
     return this.user;
   }
 
+  public FullName getUserErn( ) {
+    return UserFullName.get( this.user );
+  }
 }

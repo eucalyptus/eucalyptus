@@ -111,7 +111,7 @@ public class Lookups {
         if( requestedObject == null ) {
           throw new NoSuchElementException( "Failed to lookup requested " + type + " with id " + identifier + " using " + lookupFunction.getClass( ) ); 
         }
-        Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ) ).getAccount( );
+        Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
         if( !Permissions.isAuthorized( type.resource( ), identifier, owningAccount, action, requestUser ) ) {
           throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
         }
