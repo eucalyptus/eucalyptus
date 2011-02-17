@@ -72,7 +72,7 @@ public interface FullName {
   public final static String EMPTY      = "";
   public final static String SEP_PATH   = "/";
   public final static String SEP        = ":";
-  public final static String PREFIX     = "arn:aws:";
+  public final static String PREFIX     = "arn:aws";
   public final static String UNKNOWN_ID = "d00d";
   public final static String SYSTEM_ID  = Integer.toString( 0xC0FFEE, 2 );
   

@@ -93,7 +93,7 @@ public class UserFullName implements FullName {
     this.name = user.getName( );
     this.pathParts = ImmutableList.of( "user", this.name );
     this.universalId = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );
-    this.relativeId = new StringBuilder( ).append( "user" ).append( SEP ).append( this.name ).toString( );
+    this.relativeId = new StringBuilder( ).append( "user" ).append( SEP_PATH ).append( this.name ).toString( );
     this.qName = this.universalId + this.relativeId;
   }
   
