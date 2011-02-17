@@ -79,6 +79,8 @@ permission notice:
 #include <errno.h> // errno
 #include <sys/time.h> // gettimeofday
 #include <limits.h>
+#include <euca_auth.h>
+#include <openssl/md5.h>
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -1710,6 +1712,27 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path) {
       snprintf(path, strlen(start)+1, "%s", start);
     }
   }
+  return(0);
+}
+
+int hash_b64enc_string(const char *in, char **out) {
+  unsigned char *md5ret=NULL;
+  unsigned char hash[17];
+
+  if (!in || !out) {
+    return(1);
+  }
+  *out = NULL;
+
+  bzero(hash, 17);
+  md5ret = MD5((const unsigned char *)in, strlen(in), hash);
+  if (md5ret) {
+    *out = base64_enc(hash, 16);
+    if (*out == NULL) {
+      return(1);
+    }
+  }
 
   return(0);
 }
+

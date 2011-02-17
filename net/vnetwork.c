@@ -639,16 +639,24 @@ int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
 int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[256];
   int rc, runcount;
+  char *hashChain=NULL, userNetString[MAX_PATH];
   
   if (param_check("vnetDeleteChain", vnetconfig, userName, netName)) return(1);
+
+  snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
+  rc = hash_b64enc_string(userNetString, &hashChain);
+  if (rc) {
+    logprintfl(EUCAERROR, "vnetDeleteChain(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    return(1);
+  }
   
   rc = check_chain(vnetconfig, userName, netName);
   logprintfl(EUCADEBUG, "vnetDeleteChain(): params: userName=%s, netName=%s, rc=%d\n", SP(userName), SP(netName), rc);
   if (!rc) {
-    snprintf(cmd, 256, "-D FORWARD -j %s-%s", userName, netName);
+    snprintf(cmd, 256, "-D FORWARD -j %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
-      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot remove link to chain %s-%s\n", cmd, userName, netName);
+      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot remove link to chain %s\n", cmd, hashChain);
     }
     runcount=0;
     while(!rc && runcount < 10) {
@@ -657,16 +665,16 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
       runcount++;
     }
     
-    snprintf(cmd, 256, "-F %s-%s", userName, netName);
+    snprintf(cmd, 256, "-F %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
-      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot flush chain %s-%s\n", cmd, userName, netName);
+      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot flush chain %s\n", cmd, hashChain);
     }
     
-    snprintf(cmd, 256, "-X %s-%s", userName, netName);
+    snprintf(cmd, 256, "-X %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
-      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot remove chain %s-%s\n", cmd, userName, netName);
+      logprintfl(EUCAERROR, "vnetDeleteChain(): '%s' failed; cannot remove chain %s\n", cmd, hashChain);
     }
     runcount=0;
     while(!rc && runcount < 10) {
@@ -682,21 +690,30 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
 int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[256];
   int rc, ret, count;
+  char *hashChain=NULL, userNetString[MAX_PATH];
   
   if (param_check("vnetCreateChain", vnetconfig, userName, netName)) return(1);
+
+  snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
+  rc = hash_b64enc_string(userNetString, &hashChain);
+  if (rc) {
+    logprintfl(EUCAERROR, "vnetCreateChain(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    return(1);
+  }
 
   ret = 0;
   rc = check_chain(vnetconfig, userName, netName);
   if (rc) {
-    snprintf(cmd, 256, "-N %s-%s", userName, netName);
+    //      snprintf(cmd, 256, "-N %s-%s", userName, netName);
+    snprintf(cmd, 256, "-N %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
-      logprintfl(EUCAERROR, "vnetCreateChain(): '%s' failed; cannot create chain %s-%s\n", cmd, userName, netName);
+      logprintfl(EUCAERROR, "vnetCreateChain(): '%s' failed; cannot create chain %s\n", cmd, hashChain);
       ret=1;
     }
   }    
   if (!ret) {
-    snprintf(cmd, 256, "-D FORWARD -j %s-%s", userName, netName);
+    snprintf(cmd, 256, "-D FORWARD -j %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     count=0;
     while(!rc && count < 10) {
@@ -704,14 +721,17 @@ int vnetCreateChain(vnetConfig *vnetconfig, char *userName, char *netName) {
       count++;
     }
 
-
-    snprintf(cmd, 256, "-A FORWARD -j %s-%s", userName, netName);
+    //    snprintf(cmd, 256, "-A FORWARD -j %s-%s", userName, netName);
+    snprintf(cmd, 256, "-A FORWARD -j %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
-      logprintfl(EUCAERROR, "vnetCreateChain(): '%s' failed; cannot link to chain %s-%s\n", cmd, userName, netName);
+      logprintfl(EUCAERROR, "vnetCreateChain(): '%s' failed; cannot link to chain %s\n", cmd, hashChain);
       ret=1;
     }
   }
+
+  if (hashChain) free(hashChain);
+
   return(ret);
 }
 
@@ -816,8 +836,17 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
 int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[256];
   int rc;
+  char *hashChain=NULL, userNetString[MAX_PATH];
+  
+  snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
+  rc = hash_b64enc_string(userNetString, &hashChain);
+  if (rc) {
+    logprintfl(EUCAERROR, "vnetFlushTable(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    return(1);
+  }
+
   if ((userName && netName) && !check_chain(vnetconfig, userName, netName)) {
-    snprintf(cmd, 256, "-F %s-%s", userName, netName);
+    snprintf(cmd, 256, "-F %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     return(rc);
   }
@@ -891,9 +920,17 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   int i, rc, done, destVlan, srcVlan, slashnet;
   char rule[1024], newrule[1024], srcNet[32], dstNet[32];
   char *tmp;
-
+  char *hashChain=NULL, userNetString[MAX_PATH];
+  
   //  logprintfl(EUCADEBUG, "vnetTableRule(): input: %s,%s,%s,%s,%s,%s,%d,%d\n",destUserName, destName, sourceUserName, sourceNet,sourceNetName,protocol,minPort,maxPort);
   if (param_check("vnetTableRule", vnetconfig, type, destUserName, destName, sourceNet, sourceUserName, sourceNetName)) return(1);
+
+  snprintf(userNetString, MAX_PATH, "%s%s", destUserName, destName);
+  rc = hash_b64enc_string(userNetString, &hashChain);
+  if (rc) {
+    logprintfl(EUCAERROR, "vnetTablRule(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    return(1);
+  }
   
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
   if (destVlan < 0) {
@@ -922,10 +959,10 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   
   
   if (!strcmp(type, "firewall-open")) {
-    snprintf(rule, 1024, "-A %s-%s", destUserName, destName);
+    snprintf(rule, 1024, "-A %s", hashChain);
     //    snprintf(rule, 1024, "iptables -A %s-%s", destUserName, destName);
   } else if (!strcmp(type, "firewall-close")) {
-    snprintf(rule, 1024, "-D %s-%s", destUserName, destName);
+    snprintf(rule, 1024, "-D %s", hashChain);
     //    snprintf(rule, 1024, "iptables -D %s-%s", destUserName, destName);
   }
   
@@ -970,7 +1007,7 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
-  strncpy(vnetconfig->users[vlan].userName, user, 32);
+  strncpy(vnetconfig->users[vlan].userName, user, 48);
   strncpy(vnetconfig->users[vlan].netName, network, 32);
   if (uuid) strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
@@ -2657,7 +2694,16 @@ int vnetLoadIPTables(vnetConfig *vnetconfig) {
 int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[MAX_PATH];
   int rc;
-  snprintf(cmd, MAX_PATH, "-L %s-%s -n", userName, netName);
+  char *hashChain=NULL, userNetString[MAX_PATH];
+
+  snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
+  rc = hash_b64enc_string(userNetString, &hashChain);
+  if (rc) {
+    logprintfl(EUCAERROR, "check_chain(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    return(1);
+  }
+
+  snprintf(cmd, MAX_PATH, "-L %s -n", hashChain);
   rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
   return(rc);
 }

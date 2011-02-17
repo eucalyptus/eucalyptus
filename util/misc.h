@@ -203,5 +203,6 @@ char * strduplc (const char * s);
 char * xpath_content (const char * xml, const char * xpath);
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
+int hash_b64enc_string(const char *in, char **out);
 
 #endif

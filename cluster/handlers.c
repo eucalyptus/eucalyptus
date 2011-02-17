@@ -1683,7 +1683,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->uuid, src->uuid, 48);
   strncpy(dst->instanceId, src->instanceId, 16);
   strncpy(dst->reservationId, src->reservationId, 16);
-  strncpy(dst->ownerId, src->userId, 16);
+  strncpy(dst->ownerId, src->userId, 48);
   strncpy(dst->amiId, src->imageId, 16);
   strncpy(dst->kernelId, src->kernelId, 16);
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
@@ -4032,7 +4032,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     if (ramdiskURL) strncpy(out->ramdiskURL, ramdiskURL, 512);
     
     if (state) strncpy(out->state, state, 16);
-    if (ownerId) strncpy(out->ownerId, ownerId, 16);
+    if (ownerId) strncpy(out->ownerId, ownerId, 48);
     if (reservationId) strncpy(out->reservationId, reservationId, 16);
     if (keyName) strncpy(out->keyName, keyName, 1024);
     out->ts = ts;
