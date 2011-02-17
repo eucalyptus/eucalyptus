@@ -124,6 +124,7 @@ public class DatabaseAccountProxy implements Account {
     UserEntity newUser = new UserEntity( userName );
     newUser.setPath( path );
     newUser.setEnabled( enabled );
+    newUser.setPasswordExpires( System.currentTimeMillis( ) + 1000 * 60 * 60 * 24 * 365L );
     if ( skipRegistration ) {
       newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     } else {
