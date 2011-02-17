@@ -113,6 +113,7 @@ import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
@@ -217,7 +218,7 @@ public class SystemState {
       } catch ( Exception e ) {}
     }
   }
-  public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
+  public static ArrayList<String> getAncestors( BaseMessage parentMsg, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
@@ -225,8 +226,7 @@ public class SystemState {
       String objectName = imagePathParts[1];
       GetObjectResponseType reply = null;
       try {
-        GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-        msg.setUserId( userId );
+        GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true ).regardingUserRequest( parentMsg );
 
         reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }

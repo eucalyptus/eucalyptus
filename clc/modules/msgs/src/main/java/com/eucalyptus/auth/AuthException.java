@@ -41,6 +41,7 @@ public class AuthException extends BaseException {
   public static final String DELETE_SYSTEM_ACCOUNT = "Can not delete system account";
   public static final String ACCESS_DENIED = "Access to the resource is denied";
   public static final String QUOTA_EXCEEDED = "Resource quota is exceeded";
+  public static final String SYSTEM_MODIFICATION = "It is not possible to modify the SYSTEM user or account.";
   
   public AuthException( ) {
     super( );

@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import java.lang.reflect.Modifier;
+import javax.persistence.Transient;
+import com.eucalyptus.system.Ats;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -176,10 +178,12 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
           this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass().getCanonicalName( ) ).end( );
         }
         for ( Field f : this.type.getDeclaredFields( ) ) {
-          TypeBinding tb = getTypeBinding( f );
-          if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
-            this.append( tb.toString( ) );
+          if( !Ats.from( f ).has( Transient.class ) || Modifier.isTransient( f.getModifiers( ) ) ) { 
+            TypeBinding tb = getTypeBinding( f );
+            if ( !( tb instanceof NoopTypeBinding ) ) {
+              System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
+              this.append( tb.toString( ) );
+            }
           }
         }
         this.end( );

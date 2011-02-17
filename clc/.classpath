@@ -129,14 +129,14 @@
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar" sourcepath="/bzr/third-party/jakarta-log4j-1.2.15"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-spring-config-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/bzr/third-party/netty-3.1.5.GA/src"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-cglib.jar"/>

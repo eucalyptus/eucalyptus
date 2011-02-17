@@ -3,6 +3,7 @@ package edu.ucsb.eucalyptus.msgs;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -10,11 +11,17 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
+  @Transient
+  User                       user;
   String                     correlationId;
   String                     userId;
   String                     effectiveUserId;
@@ -22,6 +29,7 @@ public class BaseMessage {
   String                     statusMessage;
   Integer                    epoch        = currentEpoch++;
   ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
+  private Account account;
   private static Integer     currentEpoch = 0;
   
   public BaseMessage( ) {
@@ -56,22 +64,34 @@ public class BaseMessage {
     this.correlationId = correlationId;
   }
   
-  public String getUserId( ) {
-    return this.userId;
-  }
-  
+  @Deprecated
   public void setUserId( String userId ) {
     this.userId = userId;
   }
-  
-  public void setEffectiveUserId( String effectiveUserId ) {
-    this.effectiveUserId = effectiveUserId;
+
+  public String getUserId( ) {
+    return this.user.getId( );
   }
   
   public Boolean get_return( ) {
     return this._return;
   }
   
+  public <TYPE extends BaseMessage> TYPE markFailed( ) {
+    this._return = false;
+    return ( TYPE ) this;
+  }
+  
+  public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
+    this.effectiveUserId = User.SYSTEM.getName( );
+    return ( TYPE ) this;
+  }
+
+  public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
+    this.effectiveUserId = this.user.getName( );
+    return ( TYPE ) this;
+  }
+
   public void set_return( Boolean return1 ) {
     this._return = return1;
   }
@@ -84,14 +104,22 @@ public class BaseMessage {
     this.statusMessage = statusMessage;
   }
   
+  @Deprecated
+  public void setEffectiveUserId( String effectiveUserId ) {
+    this.effectiveUserId = effectiveUserId;
+  }
+
   public String getEffectiveUserId( ) {
-    if ( isAdministrator( ) ) return "eucalyptus";
-    return effectiveUserId;
+    return this.effectiveUserId;
   }
   
+  /**
+   * Creates a default SYSTEM generated message.
+   * @param <TYPE>
+   * @return
+   */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    this.userId = "eucalyptus";
-    this.effectiveUserId = "eucalyptus";
+    this.setUser( User.SYSTEM );
     return ( TYPE ) this;
   }
   
@@ -110,13 +138,12 @@ public class BaseMessage {
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
-    this.userId = msg.getUserId( );
-    this.effectiveUserId = msg.getEffectiveUserId( );
+    this.setUser( msg.getUser( ) );
     return ( TYPE ) this;
   }
   
   public boolean isAdministrator( ) {
-    return "eucalyptus".equals( this.effectiveUserId );
+    return ( User.SYSTEM.getName( ).equals( this.effectiveUserId ) ) || this.user.isSystemAdmin( ) || this.user.isSystemInternal( );
   }
   
   public String toString( ) {
@@ -140,9 +167,6 @@ public class BaseMessage {
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
     Class targetClass = this.getClass( );
-//    while ( !targetClass.getSimpleName( ).endsWith( "Type" ) && BaseMessage.class.equals( targetClass ) ) {
-//      targetClass = targetClass.getSuperclass( );
-//    }
     try {
       IBindingFactory bindingFactory = BindingDirectory.getFactory( namespace, targetClass );
       IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
@@ -168,16 +192,15 @@ public class BaseMessage {
       reply = ( TYPE ) responseClass.newInstance( );
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
-      throw new TypeNotPresentException( correlationId, e );
+      throw new TypeNotPresentException( this.correlationId, e );
     }
     reply.setCorrelationId( this.getCorrelationId( ) );
-    reply.setUserId( this.getUserId( ) );
-    reply.setEffectiveUserId( this.getEffectiveUserId( ) );
+    reply.setUser( this.user );
     return reply;
   }
   
   public String toSimpleString( ) {
-    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserId( ), this.getEffectiveUserId( ),
+    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.account.getName( ), this.getUser( ).getName( ), this.effectiveUserId,
                           this.get_return( ), this.getStatusMessage( ) );
   }
   
@@ -222,7 +245,8 @@ public class BaseMessage {
       MappingHttpMessage msgHttp = null;
       if ( msge.getMessage( ) instanceof BaseMessage ) {
         return ( T ) msge.getMessage( );
-      } else if ( msge.getMessage( ) instanceof MappingHttpMessage && (msgHttp = (MappingHttpMessage)msge.getMessage( )).getMessage( ) instanceof BaseMessage ) {
+      } else if ( msge.getMessage( ) instanceof MappingHttpMessage
+                  && ( msgHttp = ( MappingHttpMessage ) msge.getMessage( ) ).getMessage( ) instanceof BaseMessage ) {
         return ( T ) msgHttp.getMessage( );
       } else {
         return null;
@@ -231,4 +255,27 @@ public class BaseMessage {
       return null;
     }
   }
+  
+  public BaseMessage setUser( User user ) {
+    if( user == null ) {
+      this.account = null;
+      this.user = null;
+      this.userId = null;
+      this.effectiveUserId = null;
+    } else {
+      try {
+        this.account = user.getAccount( );
+      } catch ( AuthException ex ) {
+      }
+      this.user = user;
+      this.userId = user.getId( );
+      this.effectiveUserId = this.isAdministrator( ) ? User.SYSTEM.getName( ) : user.getId( );
+    }
+    return this;
+  }
+
+  public User getUser( ) {
+    return this.user;
+  }
+
 }

@@ -122,9 +122,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
-      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getId( );
       try {
-        BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
+        BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );
         httpRequest.setMessage( msg );
       } catch ( Exception e ) {
         if ( !( e instanceof BindingException ) ) {
@@ -155,7 +154,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     this.setNamespace( newNs );
   }
   
-  public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
+  public abstract Object bind( MappingHttpRequest httpRequest ) throws Exception;
   
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

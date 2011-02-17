@@ -31,5 +31,7 @@ public interface AccountProvider {
   public Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
   
   public AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
+  @Deprecated
+  public User lookupUserByName( String userName ) throws AuthException;
   
 }

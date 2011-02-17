@@ -106,28 +106,28 @@ public class PersistenceErrorFilter {
   public enum ErrorCategory {
     APPLICATION {
       @Override
-      public void handleException( RuntimeException e ) {
+      public RuntimeException handleException( RuntimeException e ) {
         this.getMessage( e );
         throw e;
       }
     },
     CONSTRAINT {
       @Override
-      public void handleException( RuntimeException e ) {
+      public RuntimeException handleException( RuntimeException e ) {
         this.getMessage( e );
         throw e;
       }
     },
     RUNTIME {
       @Override
-      public void handleException( RuntimeException e ) {
+      public RuntimeException handleException( RuntimeException e ) {
         this.getMessage( e );
         throw e;
       }
     },
     CONNECTION {
       @Override
-      public void handleException( RuntimeException e ) {
+      public RuntimeException handleException( RuntimeException e ) {
         this.getMessage( e );
         PersistenceContexts.handleConnectionError( e );
         throw e;
@@ -135,12 +135,12 @@ public class PersistenceErrorFilter {
     },
     BUG {
       @Override
-      public void handleException( RuntimeException e ) {
+      public RuntimeException handleException( RuntimeException e ) {
         String msg = this.getMessage( e );
         if( !LogLevels.DEBUG ) {
           LOG.error( msg, e );
         }
-        throw e;
+        return e;
       }
     };
     protected String getMessage( RuntimeException e ) {
@@ -153,14 +153,13 @@ public class PersistenceErrorFilter {
       return msg;
     }
     
-    public abstract void handleException( RuntimeException e );
+    public abstract <T extends RuntimeException> T handleException( RuntimeException e );
   };
   
   private static final Multimap<ErrorCategory, Class<? extends Exception>> errorCategorization = buildErrorMap( );
   
   private static Multimap<ErrorCategory, Class<? extends Exception>> buildErrorMap( ) {
     Multimap<ErrorCategory, Class<? extends Exception>> map = Multimaps.newArrayListMultimap( );
-    //    EntityExistsException, EntityNotFoundException, LockTimeoutException, NonUniqueResultException, , , ,, , 
     map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
     map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class, PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class, EntityExistsException.class ) );
     map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class ) );
@@ -178,19 +177,19 @@ public class PersistenceErrorFilter {
    * @see {@link http://docs.jboss.org/hibernate/core/3.5/api/org/hibernate/HibernateException.html}
    */
   @SuppressWarnings( "unchecked" )
-  static void exceptionCaught( Throwable e ) {
+  static RecoverablePersistenceException exceptionCaught( Throwable e ) {
     if( e instanceof RuntimeException ) {
       Class<? extends Throwable> type = e.getClass( );
       for ( Class<? extends Throwable> t = type; type != null && type != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
         for( ErrorCategory category : ErrorCategory.values( ) ) {
           if( errorCategorization.containsEntry( category, t ) ) {
-            category.handleException( ( RuntimeException ) e );
+            throw category.handleException( ( RuntimeException ) e );
           }
         }
       }
-      ErrorCategory.RUNTIME.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) );
+      return new RecoverablePersistenceException( ErrorCategory.RUNTIME.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) ) );
     } else {
-      ErrorCategory.APPLICATION.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) );
+      return new RecoverablePersistenceException( ErrorCategory.APPLICATION.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) ) );
     }
   }
 }

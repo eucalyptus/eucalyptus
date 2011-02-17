@@ -188,7 +188,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			// TODO: get real user data here too
-			BaseMessage msg = (BaseMessage) this.bind( "admin", true, httpRequest );
+			BaseMessage msg = (BaseMessage) this.bind( httpRequest );
 			httpRequest.setMessage( msg );
 			if(msg instanceof WalrusDataGetRequestType) {
 				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
@@ -295,7 +295,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 
 	@Override
-	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws Exception {
+	public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);

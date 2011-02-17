@@ -15,7 +15,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /*******************************************************************************
  *Copyright (c) 2009  Eucalyptus Systems, Inc.
@@ -197,6 +198,24 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
   }
   
 }
+
+public class ExceptionResponseType extends BaseMessage {
+  String source;
+  String message;
+  String requestType = "not available";
+  Throwable exception;
+  public ExceptionResponseType() {}
+  public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus status, Throwable exception ) {
+    this.source = source;
+    this.message = message;
+    this.correlationId = msg.getCorrelationId();
+    this.userId = msg.getUserId();
+    this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
+    this.exception = exception;
+    this.set_return(false);
+  } 
+}
+
 public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
   String source;

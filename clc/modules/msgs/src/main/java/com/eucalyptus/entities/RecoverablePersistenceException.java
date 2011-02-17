@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,50 +53,33 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.system;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+package com.eucalyptus.entities;
+
+import javax.persistence.PersistenceException;
+import org.hibernate.HibernateException;
 
 /**
- * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
- * of {@link AnnotatedElement}s.
+ * A checked wrapper for an underlying {@link PersistenceException} and {@link HibernateException}
+ * which should be handled the application. This exception will always have a non-null
+ * {@link #getCause()}. See {@link PersistenceErrorFilter} for classification of the underlying
+ * exception types.
  */
-public class Ats {
-  private final AnnotatedElement c;
-  private Annotation             a;
+public class RecoverablePersistenceException extends Exception {
   
-  public Ats( AnnotatedElement c ) {
-    this.c = c;
+  public RecoverablePersistenceException( String message, Throwable cause ) {
+    super( message, cause );
   }
   
-  public <A extends Annotation> boolean has( Class<A> annotation ) {
-    return this.c.isAnnotationPresent( annotation );
+  public RecoverablePersistenceException( Throwable cause ) {
+    super( cause );
   }
   
-  public <A extends Annotation> A get( Class<A> annotation ) {
-    return ( A ) ( this.a = this.c.getAnnotation( annotation ) );
-  }
-  
-  public static Ats From( Object o ) {
-    return from( o );
-  }
-  
-  public static Ats from( Object o ) {
-    if ( o instanceof AnnotatedElement ) {
-      return new Ats( ( Class ) o );
-    } else {
-      return new Ats( o.getClass( ) );
-    }
-  }
 }

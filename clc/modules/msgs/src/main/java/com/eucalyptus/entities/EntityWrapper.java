@@ -291,9 +291,9 @@ public class EntityWrapper<TYPE> {
    * 
    * @param newObject
    */
-  public void merge( TYPE newObject ) {
+  public TYPE merge( TYPE newObject ) {
     try {
-      this.getEntityManager( ).merge( newObject );
+      return this.getEntityManager( ).merge( newObject );
     } catch ( RuntimeException ex ) {
       PersistenceErrorFilter.exceptionCaught( ex );
       throw ex;
@@ -305,10 +305,11 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    * @throws PersistenceException
    */
-  public void mergeAndCommit( TYPE newObject ) throws PersistenceException {
+  public TYPE mergeAndCommit( TYPE newObject ) throws RecoverablePersistenceException {
     try {
-      this.getEntityManager( ).merge( newObject );
+      newObject = this.getEntityManager( ).merge( newObject );
       this.commit( );
+      return newObject;
     } catch ( RuntimeException ex ) {
       PersistenceErrorFilter.exceptionCaught( ex );
       this.rollback( );
@@ -316,6 +317,7 @@ public class EntityWrapper<TYPE> {
     } catch ( Throwable ex ) {
       LOG.error( ex, ex );
       this.rollback( );
+      throw new RecoverablePersistenceException( ex );
     }
   }
   

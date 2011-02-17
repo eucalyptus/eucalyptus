@@ -100,6 +100,24 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
+  @Deprecated
+  public User lookupUserByName( final String userName ) throws AuthException {
+    if ( userName == null ) {
+      throw new AuthException( AuthException.EMPTY_USER_ID );
+    }
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    try {
+      UserEntity user = db.getUnique( new UserEntity( userName ) );
+      db.commit( );
+      return new DatabaseUserProxy( user );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user by ID " + userName );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
+    }
+  }
+
+  @Override
   public User lookupUserById( final String userId ) throws AuthException {
     if ( userId == null ) {
       throw new AuthException( AuthException.EMPTY_USER_ID );

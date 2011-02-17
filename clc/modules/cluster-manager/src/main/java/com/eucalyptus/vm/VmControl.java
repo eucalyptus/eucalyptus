@@ -386,12 +386,7 @@ public class VmControl {
     reply.set_return( true );
     String walrusUrl = SystemConfiguration.getWalrusUrl( );
     String instanceId = request.getInstanceId( );
-    User user = null;
-    try {
-      user = Accounts.lookupUserById( request.getUserId( ) );
-    } catch ( AuthException e1 ) {
-      throw new EucalyptusCloudException( "Failed to lookup the specified user's information: " + request.getUserId( ) );
-    }
+    User user = request.getUser( );
     try {
       VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
       if ( v.isBundling( ) ) {

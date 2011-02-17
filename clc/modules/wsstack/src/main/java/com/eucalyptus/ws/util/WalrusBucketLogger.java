@@ -152,8 +152,7 @@ public class WalrusBucketLogger {
 							String etag = Hashes.bytesToHex(digest.digest());
 
 							AddObjectType request = new AddObjectType();
-							request.setUserId("admin");
-							request.setEffectiveUserId("eucalyptus");
+							request.regarding( );
 							request.setBucket(bucket);
 							request.setKey(key);
 							request.setObjectName(logFileEntry.getLogFileName());

@@ -58,6 +58,11 @@ public class Accounts {
     return Accounts.getAccountProvider( ).shareSameAccount( userId1, userId2 );
   }
   
+  @Deprecated
+  public static User lookupUserByName( String userName ) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupUserByName( userName );
+  }
+
   public static User lookupUserById( String userId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserById( userId );
   }

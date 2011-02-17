@@ -75,7 +75,6 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;

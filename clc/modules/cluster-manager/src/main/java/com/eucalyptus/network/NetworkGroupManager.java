@@ -14,6 +14,7 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.NetworkRule;
 import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -70,9 +71,18 @@ public class NetworkGroupManager {
   public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException {
     NetworkGroupUtil.makeDefault( request.getUserId( ) );//ensure the default group exists to cover some old broken installs
     CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
-    NetworkRulesGroup newGroup = NetworkGroupUtil.createUserNetworkRulesGroup( request.getUserId( ), request.getGroupName( ), request.getGroupDescription( ) );
-    reply.set_return( true );
-    return reply;
+    NetworkRulesGroup newGroup = new NetworkRulesGroup( request.getUserId( ), request.getGroupName( ), request.getGroupDescription( ) ); 
+    try {
+      EntityWrapper.get( NetworkRulesGroup.class ).mergeAndCommit( newGroup );
+      return reply;
+    } catch ( RecoverablePersistenceException ex ) {
+      LOG.error( ex , ex );
+//      if( ex.getCause( ) instanceof  ) {
+//        return reply.markFailed( );
+//      } else {
+        throw new EucalyptusCloudException( "CreatSecurityGroup failed because: " + ex.getMessage( ), ex );
+//      }
+    }
   }
   
   public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
@@ -144,10 +154,16 @@ public class NetworkGroupManager {
       }
     } ) );
     if ( filtered.size( ) == ruleList.size( ) ) {
-      for ( NetworkRule r : filtered ) {
-        ruleGroup.getNetworkRules( ).remove( r );
+      try {
+        for ( NetworkRule r : filtered ) {
+          ruleGroup.getNetworkRules( ).remove( r );
+        }
+        ruleGroup = NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+      } catch ( RecoverablePersistenceException ex ) {
+        LOG.error( ex , ex );
+        throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
       }
-      NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+      return reply;
     } else if ( request.getIpPermissions( ).size( ) == 1 && request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) {
       //LAME: this is for the query-based clients which send incomplete named-network requests.
       for ( NetworkRule rule : ruleList ) {
@@ -156,14 +172,17 @@ public class NetworkGroupManager {
         }
       }
       if ( reply.get_return( ) ) {
-        NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+        try {
+          ruleGroup = NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+        } catch ( RecoverablePersistenceException ex ) {
+          LOG.error( ex , ex );
+          throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
+        }
       }
-    } else {
-      reply.set_return( false );
       return reply;
+    } else {
+      return reply.markFailed( );
     }
-    reply.set_return( true );
-    return reply;
   }
   
   public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception {

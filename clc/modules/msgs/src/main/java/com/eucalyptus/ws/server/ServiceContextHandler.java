@@ -115,11 +115,6 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     if ( LogLevels.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
-//    if ( reply instanceof HasSideEffect && reply.get_return( ) ) {
-//      ServiceContextManager.restart( );
-//      MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
-//      ctx.sendDownstream( newEvent );
-//    } else 
     if( reply instanceof BaseMessage ) {
       MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
       ctx.sendDownstream( newEvent );

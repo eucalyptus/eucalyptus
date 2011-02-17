@@ -104,8 +104,7 @@ public class WalrusUtil {
 
 	public static void checkValid( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
-		CheckImageType check = new CheckImageType( );
-		check.setUserId( "eucalyptus" );
+		CheckImageType check = new CheckImageType( ).regarding( );
 		check.setBucket( parts[ 0 ] );
 		check.setKey( parts[ 1 ] );
 		RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).dispatch( check );
@@ -113,8 +112,7 @@ public class WalrusUtil {
 
 	public static void triggerCaching( Image imgInfo ) {
 		String[] parts = imgInfo.getImageLocation().split( "/" );
-		CacheImageType cache = new CacheImageType();
-		cache.setUserId( "eucalyptus" );
+		CacheImageType cache = new CacheImageType().regarding( );
 		cache.setBucket( parts[ 0 ] );
 		cache.setKey( parts[ 1 ] );
 		RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).dispatch( cache );
@@ -132,7 +130,8 @@ public class WalrusUtil {
 		GetObjectResponseType reply = null;
 		try {
 			GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-			msg.setUserId( userId );
+			User user = Accounts.lookupUserByName( userId );
+			msg.setUser( user );
 
 			reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
 		}
