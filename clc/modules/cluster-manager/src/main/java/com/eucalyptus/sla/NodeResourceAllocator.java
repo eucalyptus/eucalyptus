@@ -44,7 +44,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         ? clusterName
         : "default";
       String action = PolicySpec.requestToAction( request );
-      User requestUser = Permissions.getUserById( request.getUserId( ) );
+      User requestUser = request.getUser( );
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
       int remaining = maxAmount;
       int available = 0;

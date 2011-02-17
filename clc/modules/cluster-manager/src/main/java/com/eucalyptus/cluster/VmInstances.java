@@ -84,6 +84,7 @@ import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.Request;
@@ -220,7 +221,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 
   public static void cleanUp( final VmInstance vm ) {
     try {
-      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
+      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwner( ).getName( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
       int networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
@@ -270,9 +271,9 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     }
   }
 
-  public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
+  public static VmInstance restrictedLookup( FullName userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    if ( !administrator && !vm.getOwnerId( ).equals( userId ) ) {
+    if ( !administrator && !vm.getOwner( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );
     }
     return vm;

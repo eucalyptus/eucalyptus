@@ -239,15 +239,15 @@ public class ImageInfo implements Image {
    * @see com.eucalyptus.images.Image#getImageOwnerId()
    * @return
    */
-  public String getImageOwnerId( ) {
-    return imageOwnerId;
+  @Deprecated public String getImageOwnerId( ) {
+    return this.getOwner( ).getUniqueId( );
   }
   
   /**
    * @see com.eucalyptus.images.Image#setImageOwnerId(java.lang.String)
    * @param imageOwnerId
    */
-  public void setImageOwnerId( String imageOwnerId ) {
+  @Deprecated public void setImageOwnerId( String imageOwnerId ) {
     this.imageOwnerId = imageOwnerId;
   }
   

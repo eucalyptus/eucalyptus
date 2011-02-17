@@ -165,12 +165,6 @@ public class ImageManager {
       } catch ( Throwable e ) {}
     }
     db.commit( );
-    User user = null;
-    try {
-      user = Accounts.lookupUserById( request.getUserId( ) );
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( "Failed to find user information for: " + request.getUserId( ), e );
-    }
     ArrayList<String> imageList = request.getImagesSet( );
     ArrayList<String> owners = request.getOwnersSet( );
     ArrayList<String> executable = request.getExecutableBySet( );
@@ -179,13 +173,13 @@ public class ImageManager {
     }
     Set<ImageDetails> repList = Sets.newHashSet( );
     if ( !owners.isEmpty( ) ) {
-      repList.addAll( ImageUtil.getImagesByOwner( imgList, user, owners ) );
+      repList.addAll( ImageUtil.getImagesByOwner( imgList, request.getUser( ), owners ) );
     }
     if ( !executable.isEmpty( ) ) {
       if ( executable.remove( "self" ) ) {
-        repList.addAll( ImageUtil.getImageOwnedByUser( imgList, user ) );
+        repList.addAll( ImageUtil.getImageOwnedByUser( imgList, request.getUser( ) ) );
       }
-      repList.addAll( ImageUtil.getImagesByExec( user, executable ) );
+      repList.addAll( ImageUtil.getImagesByExec( request.getUser( ), executable ) );
     }
     reply.getImagesSet( ).addAll( repList );
     return reply;
@@ -201,13 +195,12 @@ public class ImageManager {
       LOG.trace( e, e );
       throw e;
     }
-    ImageInfo imageInfo = new ImageInfo( imageLocation, request.getUserId( ), "available", true );
+    ImageInfo imageInfo = new ImageInfo( imageLocation, request.getUserErn( ).getUniqueId( ), "available", true );
     try {
       WalrusUtil.verifyManifestIntegrity( imageInfo );
     } catch ( EucalyptusCloudException e ) {
       throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
     }
-    String userName = request.getUserId( );
     // FIXME: wrap this manifest junk in a helper class.
     Document inputSource = ImageUtil.getManifestDocument( imagePathParts, request.getUserErn( ) );
     XPath xpath = XPathFactory.newInstance( ).newXPath( );
@@ -270,16 +263,12 @@ public class ImageManager {
     try {
       db.add( imageInfo );
       db.commit( );
-      LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + request.getUserId( ) );
+      LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + request.getUserErn( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( "failed to register image." );
     }
-    try {
-      imageInfo.grantPermission( Accounts.lookupUserById( request.getUserId( ) ) );
-    } catch ( AuthException e ) {
-      LOG.debug( e, e );
-    }
+    imageInfo.grantPermission( request.getUser( ) );
     imageInfo.grantPermission( ImageUserGroup.ALL );
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
@@ -314,7 +303,7 @@ public class ImageManager {
     ImageInfo imgInfo = null;
     try {
       imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.getImageOwnerId( ).equals( request.getUserId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException(
+      if ( !imgInfo.getOwner( ).getUniqueId( ).equals( request.getUserErn( ).getUniqueId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException(
                                                                                                                                            "Only the owner of a registered image or the administrator can deregister it." );
       WalrusUtil.invalidate( imgInfo );
       db.commit( );
@@ -357,7 +346,7 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.isAllowed( Accounts.lookupUserById( request.getUserId( ) ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
+      if ( !imgInfo.isAllowed( request.getUser( ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
         if ( imgInfo.getKernelId( ) != null ) {
@@ -404,7 +393,7 @@ public class ImageManager {
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
     if ( request.getProductCodes( ).isEmpty( ) ) {
-      reply.set_return( ImageUtil.modifyImageInfo( request.getImageId( ), request.getUserId( ), request.isAdministrator( ), request.getAdd( ),
+      reply.set_return( ImageUtil.modifyImageInfo( request.getImageId( ), request.getUserErn( ).getUniqueId( ), request.isAdministrator( ), request.getAdd( ),
                                                    request.getRemove( ) ) );
     } else {
       EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
@@ -433,19 +422,16 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
       ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( request.getUserId( ).equals( imgInfo.getImageOwnerId( ) ) || request.isAdministrator( ) ) {
+      if ( request.getUserErn( ).getUniqueId( ).equals( imgInfo.getOwner( ).getUniqueId( ) ) || request.isAdministrator( ) ) {
         imgInfo.getPermissions( ).clear( );
         db.commit( );
-        imgInfo.grantPermission( Accounts.lookupUserById( request.getUserId( ) ) );
+        imgInfo.grantPermission( request.getUser( ) );
         imgInfo.grantPermission( ImageUserGroup.ALL );
       } else {
         db.rollback( );
         reply.set_return( false );
       }
     } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      reply.set_return( false );
-    } catch ( AuthException e ) {
       db.rollback( );
       reply.set_return( false );
     }

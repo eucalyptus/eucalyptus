@@ -144,7 +144,7 @@ public interface FullName {
       }
       return new FullName() {
         @Override public String getUniqueId( ) {
-          return create.this.buf.toString( );
+          return this.getNamespace( );
         }
 
         @Override

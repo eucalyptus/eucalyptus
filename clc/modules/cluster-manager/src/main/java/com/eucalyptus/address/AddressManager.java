@@ -91,10 +91,9 @@ public class AddressManager {
   
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    String userId = request.getUserId( );
     Address address;
     try {
-      address = Addresses.allocate( userId, request.isAdministrator( ) );
+      address = Addresses.allocate( request.getUserErn( ), request.isAdministrator( ) );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -107,7 +106,7 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;

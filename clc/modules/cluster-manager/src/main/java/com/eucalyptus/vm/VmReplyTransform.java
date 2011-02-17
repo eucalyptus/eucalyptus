@@ -85,7 +85,7 @@ public class VmReplyTransform {
     for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
 
     ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
-                                                               reply.getUserId(),
+                                                               reply.getUserErn(),
                                                                networkNames );
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )

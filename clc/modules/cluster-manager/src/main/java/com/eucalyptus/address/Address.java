@@ -164,7 +164,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   @Transient
   public static String                    UNALLOCATED_USERID      = "nobody";
   @Transient
-  public static String                    SYSTEM_ALLOCATED_USERID = "eucalyptus";
+  public static String                    SYSTEM_ALLOCATED_USERID = User.SYSTEM.getId( );
   @Transient
   public static String                    UNASSIGNED_INSTANCEID   = "available";
   @Transient
@@ -342,7 +342,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
         try {
           VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
-                     .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                     .withDetails( vm.getOwner( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                      .withDetails( "type", Address.this.isSystemOwned( )
                        ? "SYSTEM"
                        : "USER" )
@@ -397,7 +397,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
-                   .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                   .withDetails( vm.getOwner( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                    .withDetails( "type", Address.this.isSystemOwned( )
                      ? "SYSTEM"
                      : "USER" )
@@ -461,7 +461,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   }
   
   public boolean isSystemOwned( ) {
-    return SYSTEM_ALLOCATED_USERID.equals( this.getUserId( ) );
+    return SYSTEM_ALLOCATED_USERID.equals( this.getOwner( ).getUniqueId( ) );
   }
   
   public boolean isAssigned( ) {
@@ -477,7 +477,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       addr = db.getUnique( new Address( address.getName( ) ) );
-      addr.setUserId( address.getUserId( ) );
+      addr.setUserId( address.getOwner( ).getUniqueId( ) );
       db.commit( );
     } catch ( RuntimeException e ) {
       db.rollback( );
@@ -506,7 +506,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   }
   
   public String getUserId( ) {
-    return this.userId;
+    return this.owner.getUniqueId( );
   }
   
   public String getInstanceAddress( ) {
@@ -520,8 +520,8 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   public void setUserId( final String userId ) {
     this.userId = userId;
     if ( UNALLOCATED_USERID.equals( this.userId ) ) {
-      this.owner = FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( FullName.EMPTY ).end( );
-    } else if ( UNALLOCATED_USERID.equals( this.userId ) ) {
+      this.owner = FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( UNALLOCATED_USERID ).end( );
+    } else if ( SYSTEM_ALLOCATED_USERID.equals( this.userId ) ) {
       this.owner = UserFullName.get( User.SYSTEM );
     } else {
       this.owner = Accounts.lookupUserFullNameById( userId );

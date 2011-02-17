@@ -79,7 +79,7 @@ public class CreateVmInstances {
   public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     int quantity = getVmAllocationNumber( vmAllocInfo );
     RunInstancesType request = vmAllocInfo.getRequest( );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
+    User requestUser = request.getUser( );
     String action = PolicySpec.requestToAction( request );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances
@@ -127,7 +127,7 @@ public class CreateVmInstances {
     VmInstance vmInst = new VmInstance( reservationId,
                                         index - 1,
                                         VmInstances.getId( vmAllocInfo.getReservationIndex(), index ),
-                                        vmAllocInfo.getRequest().getUserId(),
+                                        vmAllocInfo.getRequest( ).getUserErn( ),
                                         token.getCluster(),
                                         vmAllocInfo.getUserData(),
                                         vmAllocInfo.getKeyInfo(),

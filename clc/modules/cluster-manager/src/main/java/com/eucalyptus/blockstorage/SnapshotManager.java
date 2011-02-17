@@ -122,10 +122,7 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( )
-      ? null
-      : request.getUserId( );
-    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( userName, request.getVolumeId( ) ) );
+    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( request.getUserErn( ).getUniqueId( ), request.getVolumeId( ) ) );
     String partition = vol.getCluster( );
     Service sc = null;
     try {
@@ -160,11 +157,11 @@ public class SnapshotManager {
     String newId = null;
     Snapshot snap = null;
     while ( true ) {
-      newId = Crypto.generateId( request.getUserId( ), ID_PREFIX );
+      newId = Crypto.generateId( request.getUserErn( ).getUniqueId( ), ID_PREFIX );
       try {
         db.getUnique( Snapshot.ownedBy( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        snap = new Snapshot( request.getUserId( ), newId, vol.getDisplayName( ) );
+        snap = new Snapshot( request.getUserErn( ).getUniqueId( ), newId, vol.getDisplayName( ) );
         db.add( snap );
         break;
       }
@@ -199,11 +196,8 @@ public class SnapshotManager {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    String userName = request.isAdministrator( )
-      ? null
-      : request.getUserId( );
     try {
-      Snapshot snap = db.getUnique( Snapshot.named( userName, request.getSnapshotId( ) ) );
+      Snapshot snap = db.getUnique( Snapshot.named( request.getUserErn( ).getUniqueId( ), request.getSnapshotId( ) ) );
       if ( !State.EXTANT.equals( snap.getState( ) ) ) {
         db.rollback( );
         reply.set_return( false );
@@ -232,13 +226,10 @@ public class SnapshotManager {
   
   public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
-    String userName = request.isAdministrator( )
-      ? null
-      : request.getUserId( );
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( userName ) );
+      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( request.getUserErn( ).getUniqueId( ) ) );
       
       for ( Snapshot v : snapshots ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );

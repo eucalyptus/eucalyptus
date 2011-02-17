@@ -83,10 +83,9 @@ public class VmTypeVerify {
     if( v == null ) {
       throw new EucalyptusCloudException( "instance type does not exist: " + request.getInstanceType( ) );
     }
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
     String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
-    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, null /* resourceAccount */, action, requestUser ) ) {
-      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + requestUser.getName( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, null /* resourceAccount */, action, request.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + request.getUserErn( ) );
     }
     vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
     return vmAllocInfo;
