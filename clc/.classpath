@@ -118,7 +118,7 @@
 	<classpathentry kind="lib" path="lib/jgroups.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-bind-1.2.3.jar" sourcepath="/bzr/third-party/jibx-1.2.3/jibx"/>
 	<classpathentry kind="lib" path="lib/jibx-extras-1.2.3.jar"/>
-	<classpathentry kind="lib" path="lib/jibx-run-1.2.3.jar"/>
+	<classpathentry kind="lib" path="lib/jibx-run-1.2.3.jar" sourcepath="/bzr/third-party/jibx-1.2.3"/>
 	<classpathentry kind="lib" path="lib/jibx-schema-1.2.3.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-tools-1.2.3.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-20091212.jar"/>

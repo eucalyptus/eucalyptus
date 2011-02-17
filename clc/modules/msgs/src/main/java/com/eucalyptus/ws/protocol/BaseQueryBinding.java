@@ -176,8 +176,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( );    
       eucaMsg.setUser( user );    
       try {
-        Binding binding = BindingManager.getDefaultBinding( );
-        msg = binding.toOM( eucaMsg );
+        msg = BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
       } catch ( RuntimeException e ) {
         throw new BindingException( "Failed to build a valid message: " + e.getMessage( ) );
       }

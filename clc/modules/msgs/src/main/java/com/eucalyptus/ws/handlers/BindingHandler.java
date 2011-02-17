@@ -74,9 +74,12 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage( "all" )
 public class BindingHandler extends MessageStackHandler {
@@ -145,10 +148,20 @@ public class BindingHandler extends MessageStackHandler {
       Class responseClass = ClassLoader.getSystemClassLoader().loadClass( targetClass.getName( ) );
       ctx.setAttachment( responseClass );
       OMElement omElem;
-      try {
-        omElem = this.binding.toOM( httpRequest.getMessage( ) );
-      } catch ( BindingException ex ) {
-        omElem = BindingManager.getDefaultBinding( ).toOM( httpRequest.getMessage( ) );
+      if( httpRequest.getMessage( ) instanceof ExceptionResponseType ) {
+        ExceptionResponseType msg = (ExceptionResponseType) httpRequest.getMessage( );
+        omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
+      } else {
+        try {
+          omElem = this.binding.toOM( httpRequest.getMessage( ) );
+        } catch ( BindingException ex ) {
+          omElem = BindingManager.getDefaultBinding( ).toOM( httpRequest.getMessage( ) );
+        } catch ( Exception ex ) {
+          if( LogLevels.DEBUG ) {
+            LOG.debug( ex, ex );
+          }
+          throw ex;
+        }
       }
       httpRequest.setOmMessage( omElem );
     }

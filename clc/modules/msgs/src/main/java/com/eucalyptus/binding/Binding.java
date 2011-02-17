@@ -103,6 +103,7 @@ public class Binding {
   private IBindingFactory    bindingFactory;
   private Map<String, Class> elementToClassMap = Maps.newHashMap( );
   private Map<String, String> classToElementMap = Maps.newHashMap( );
+  private Map<String, String> classToNamespaceMap = Maps.newHashMap( );
   protected Binding( final String name ) throws BindingException {
     this.name = name;
   }
@@ -123,6 +124,7 @@ public class Binding {
           try {
             this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
             this.classToElementMap.put( mappedClasses[i], this.bindingFactory.getElementNames( )[i] );
+            this.classToNamespaceMap.put( mappedClasses[i], this.bindingFactory.getElementNamespaces( )[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }
@@ -165,7 +167,7 @@ public class Binding {
       LOG.error( "Binding factory's element namespace is empty" );
       throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
     }
-    final String origNs = this.classToElementMap.get( fqName );
+    final String origNs = this.classToNamespaceMap.get( fqName );
     final String useNs = altNs != null ? altNs : origNs;
     final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
     final OMElement retVal;

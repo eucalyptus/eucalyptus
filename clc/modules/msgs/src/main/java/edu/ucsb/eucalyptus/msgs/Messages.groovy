@@ -204,9 +204,20 @@ public class ExceptionResponseType extends BaseMessage {
   String message;
   String requestType = "not available";
   Throwable exception;
+  HttpResponseStatus httpStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
   public ExceptionResponseType() {}
-  public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus status, Throwable exception ) {
+  public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
     this.source = source;
+    this.message = message;
+    this.correlationId = msg.getCorrelationId();
+    this.userId = msg.getUserId();
+    this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
+    this.exception = exception;
+    this.set_return(false);
+  } 
+  public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
+    this.source = source;
+    this.httpStatus = httpStatus;
     this.message = message;
     this.correlationId = msg.getCorrelationId();
     this.userId = msg.getUserId();
