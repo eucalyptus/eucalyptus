@@ -99,16 +99,16 @@ public interface FullName {
   public abstract boolean equals( Object obj );
 
   public class create {
-    enum part { NIHIL, VENDOR, REGION, NAMESPACE, RELATIVEID }
+    enum part { VENDOR, REGION, NAMESPACE, RELATIVEID }
     private Map<part,String> partMap = Maps.newHashMap( );
-    private part current = part.NIHIL;
+    private part current = part.VENDOR;
     private final StringBuilder buf;
     create( String name ) { this.buf = new StringBuilder( ); this.buf.append( PREFIX ).append( SEP ).append( name ).append( SEP ); this.current = part.REGION; }
     public static create vendor( String name ) {
       return new create( name );
     }
     public create region( String region ) {
-      if( this.current.ordinal( ) > part.REGION.ordinal( ) ) {
+      if( this.current.ordinal( ) - 1 == part.REGION.ordinal( ) ) {
         this.buf.append( region ).append( SEP );
         this.current = part.REGION;
         this.partMap.put( part.REGION, region == null || region.length( ) == 0 ? FullName.EMPTY : region );
@@ -118,7 +118,7 @@ public interface FullName {
       return this;
     }
     public create namespace( String namespace ) {
-      if( this.current.ordinal( ) > part.NAMESPACE.ordinal( ) ) {
+      if( this.current.ordinal( ) - 1 == part.NAMESPACE.ordinal( ) ) {
         this.buf.append( namespace ).append( SEP );
         this.current = part.NAMESPACE;
         this.partMap.put( part.NAMESPACE, namespace == null || namespace.length( ) == 0 ? FullName.EMPTY : namespace );
@@ -127,11 +127,14 @@ public interface FullName {
       }
       return this;
     }
-    public FullName end( String... region ) {
-      if( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
+    public FullName end( ) {
+      return relativeId( );
+    }
+    public FullName relativeId( String... relativePath ) {
+      if( this.current.ordinal( ) - 1 == part.RELATIVEID.ordinal( ) ) {
         StringBuilder rId = new StringBuilder();
-        for( String s : region ) {
-          rId.append( region ).append( SEP_PATH );
+        for( String s : relativePath ) {
+          rId.append( relativePath ).append( SEP_PATH );
         }
         this.buf.append( rId.toString( ) );
         this.partMap.put( part.RELATIVEID, rId.toString( ) );

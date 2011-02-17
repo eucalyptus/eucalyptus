@@ -630,7 +630,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).end( "public-address",
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
                                                                                                                                         this.getName( ) );
   }
   

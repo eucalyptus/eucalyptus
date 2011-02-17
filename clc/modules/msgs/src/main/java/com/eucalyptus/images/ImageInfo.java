@@ -595,6 +595,6 @@ public class ImageInfo implements Image {
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( this.getOwner( ).getNamespace( ) ).end( "image", this.getImageId( ) );
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( this.getOwner( ).getNamespace( ) ).relativeId( "image", this.getImageId( ) );
   }
 }
