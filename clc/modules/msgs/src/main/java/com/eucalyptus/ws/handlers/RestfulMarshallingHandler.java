@@ -112,8 +112,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     try {
       this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
     } catch ( BindingException ex ) {
-      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace
-                 + " because of: " + ex.getMessage( ), ex );
+      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
     }
   }
   

@@ -141,7 +141,7 @@ public class SoapHandler extends MessageStackHandler {
         }
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );
-        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ), Exceptions.string( errMsg.getException( ) ) ) );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ), Exceptions.createFaultDetails( errMsg.getException( ) ) ) );
         if ( httpMessage instanceof MappingHttpResponse ) {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
         }        

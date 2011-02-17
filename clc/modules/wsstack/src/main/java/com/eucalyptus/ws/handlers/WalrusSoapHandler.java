@@ -176,6 +176,7 @@ public class WalrusSoapHandler extends MessageStackHandler {
               walrusErrMsg.getStatus().getReasonPhrase(), 
               walrusErrMsg.getResourceType(), 
               walrusErrMsg.getResource()));
+        }
 			} else {
 				// :: assert sourceElem != null :://
 				httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );

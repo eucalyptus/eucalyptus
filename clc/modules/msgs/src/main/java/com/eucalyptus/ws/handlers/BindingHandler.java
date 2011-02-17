@@ -144,7 +144,7 @@ public class BindingHandler extends MessageStackHandler {
         return;
       } else if ( httpRequest.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType msg = ( ExceptionResponseType ) httpRequest.getMessage( );
-        omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
+        omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.createFaultDetails( msg.getException( ) ) );
       } else {
         Class targetClass = httpRequest.getMessage( ).getClass( );
         while ( !targetClass.getSimpleName( ).endsWith( "Type" ) ) {
