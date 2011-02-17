@@ -527,6 +527,14 @@ public class Address implements HasName<Address>, HasOwner<Address> {
       this.owner = Accounts.lookupUserFullNameById( userId );
     }
   }
+
+  @Override
+  public FullName getOwner( ) {
+    if( this.owner == null ) {
+      this.setUserId( this.userId );
+    }
+    return this.owner;
+  }
   
   public String getStateUuid( ) {
     return this.stateUuid;
@@ -624,11 +632,6 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).end( "public-address",
                                                                                                                                         this.getName( ) );
-  }
-  
-  @Override
-  public FullName getOwner( ) {
-    return this.owner;
   }
   
 }
