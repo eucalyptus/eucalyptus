@@ -411,8 +411,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         for ( Field f : responseFields ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
-                               f.getType( ).getCanonicalName( ) );
+//            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+//                               f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
@@ -542,8 +542,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     public String toString( ) {
-      String s = buf.toString( );
-      buf = new StringBuilder( buf.capacity( ) );
+      String s = this.buf.toString( );
+      this.buf = new StringBuilder( this.buf.capacity( ) );
       return s;
     }
     
@@ -666,7 +666,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
           .attr( "member-type", "\"" + this.getTypeName( ) + "\"" )
           .attr( "optional", "true" )
           .beginList( "properties" );
-      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, this.type ) ) {
         TypeBinding tb = getTypeBinding( f );
         if ( !( tb instanceof NoopTypeBinding ) ) {
           this.append( tb.toString( ) );
@@ -684,10 +684,10 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     public String toString( ) {
       this.beginElem( )
-          .attr( "name", makeJSONName( name ) )
+          .attr( "name", makeJSONName( this.name ) )
           .attr( "type", "\"object\"" )
           .beginList( "properties" );
-      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, this.type ) ) {
         TypeBinding tb = getTypeBinding( f );
         if ( !( tb instanceof NoopTypeBinding ) ) {
           this.append( tb.toString( ) );
@@ -711,12 +711,12 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     @Override
     public String getTypeName( ) {
-      return type.getTypeName( );
+      return this.type.getTypeName( );
     }
     
     @Override
     public String toString( ) {
-      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + name );
+      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + this.name );
       String ret = this.type.collection( this.name ).buf.toString( );
       this.type.collection( this.name ).buf = new StringBuilder( );
       return ret;
