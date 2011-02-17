@@ -98,7 +98,6 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     this.certificates = Lists.newArrayList( );
     this.info = Maps.newHashMap( );
     this.groups = Lists.newArrayList( );
-    this.passwordExpires = System.currentTimeMillis( ) + 1000 * 60 * 60 * 24 * 365L;
   }
 
   public UserEntity( String name ) {
