@@ -23,11 +23,11 @@ public class Webifier {
     uif.setAdministrator( user.isSystemAdmin( ) );
     uif.setPassword( user.getPassword( ) );
     uif.setToken( user.getToken( ) );
-    uif.setApproved( user.getRegistrationStatus( ) == User.RegistrationStatus.APPROVED );
-    if ( uif.isApproved( ) ) {
-      uif.setConfirmed( true );
+    uif.setConfirmed( user.getRegistrationStatus( ) == User.RegistrationStatus.CONFIRMED );
+    if ( uif.isConfirmed( ) ) {
+      uif.setApproved( true );
     } else {
-      uif.setConfirmed( user.getRegistrationStatus( ) == User.RegistrationStatus.CONFIRMED );
+      uif.setApproved( user.getRegistrationStatus( ) == User.RegistrationStatus.APPROVED );
     }
     uif.setConfirmationCode( user.getConfirmationCode( ) );
     uif.setPasswordExpires( user.getPasswordExpires( ) );
