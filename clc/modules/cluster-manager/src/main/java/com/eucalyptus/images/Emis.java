@@ -120,7 +120,7 @@ public class Emis {
     public boolean hasKernel( ) {
       try {
         this.getKernel( );
-        return false;
+        return true;
       } catch ( NoSuchElementException ex ) {
         return false;
       }
@@ -129,7 +129,7 @@ public class Emis {
     public boolean hasRamdisk( ) {
       try {
         this.getRamdisk( );
-        return false;
+        return true;
       } catch ( NoSuchElementException ex ) {
         return false;
       }
@@ -216,6 +216,7 @@ public class Emis {
   
   public static BootableSet bootsetWithKernel( BootableSet bootSet ) throws EucalyptusCloudException {
     String kernelId = determineKernelId( bootSet );
+    LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
       ImageInfo kernel = Lookups.doPrivileged( kernelId, lookupImg );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
@@ -236,6 +237,7 @@ public class Emis {
   
   public static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws EucalyptusCloudException {
     String ramdiskId = determineRamdiskId( bootSet );
+    LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + bootSet.toString( ) );
     if( ramdiskId == null ) {
       return bootSet;
     } else {
