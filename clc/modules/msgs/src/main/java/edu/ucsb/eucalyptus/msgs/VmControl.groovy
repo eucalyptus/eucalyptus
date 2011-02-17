@@ -311,16 +311,17 @@ public class StartInstancesType extends VmControlMessage{
 
 public class ModifyInstanceAttributeType extends VmControlMessage {
   String instanceId;
-  String element;
+  Attr element;
   String value;
+  enum Attr { instanceType, kernel, ramdisk, userData, disableApiTermination, instanceInitiatedShutdownBehavior };
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
   public ModifyInstanceAttributeType() {  }
-  public void instanceType() { this.element = "instanceType"; }
-  public void kernel() { this.element = "kernel"; }
-  public void ramdisk() { this.element = "ramdisk"; }
-  public void userData() { this.element = "userData"; }
-  public void disableApiTermination() { this.element = "disableApiTermination"; }
-  public void instanceInitiatedShutdownBehavior() { this.element = "instanceInitiatedShutdownBehavior"; }
+  public void instanceType( String value ) { this.element = Attr.instanceType; this.value = value; }
+  public void kernel( String value ) { this.element = Attr.kernel; this.value = value; }
+  public void ramdisk( String value ) { this.element = Attr.ramdisk; this.value = value; }
+  public void userData( String value ) { this.element = Attr.userData; this.value = value; }
+  public void disableApiTermination( String value ) { this.element = Attr.disableApiTermination; this.value = value; }
+  public void instanceInitiatedShutdownBehavior( String value ) { this.element = Attr.instanceInitiatedShutdownBehavior; this.value = value; }
 }
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
   public ModifyInstanceAttributeResponseType() {  }

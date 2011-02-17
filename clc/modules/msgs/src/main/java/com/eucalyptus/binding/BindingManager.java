@@ -76,23 +76,16 @@ public class BindingManager {
   private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
   public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
   public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
-  private static Binding DEFAULT = null;
+  public static final Binding DEFAULT = getDefaultBinding( );
   public static Binding getDefaultBinding( ) {
     if( DEFAULT != null ) {
       return DEFAULT;
     } else {
-      synchronized( BindingManager.class ) {
-        if( DEFAULT != null ) {
-          return DEFAULT;
-        } else {
-          try {
-            DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) );
-            return DEFAULT;
-          } catch ( BindingException ex ) {
-            LOG.error( ex , ex );
-            throw new RuntimeException( ex );
-          }
-        }
+      try {
+        return BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) );
+      } catch ( BindingException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
       }
     }
   }

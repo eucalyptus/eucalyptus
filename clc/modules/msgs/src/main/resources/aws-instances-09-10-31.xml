@@ -329,22 +329,22 @@
     <value name="instanceId" field="instanceId" usage="required" />
     <structure usage="optional" ordered="false">
       <structure name="instanceType" usage="optional">
-        <value name="value" field="value" pre-set="instanceType" />
+        <value name="value" field="value" set-method="instanceType" />
       </structure>
       <structure name="kernel" usage="optional">
-        <value name="value" field="value" pre-set="kernel" />
+        <value name="value" field="value" set-method="kernel" />
       </structure>
       <structure name="ramdisk" usage="optional">
-        <value name="value" field="value" pre-set="ramdisk" />
+        <value name="value" field="value" set-method="ramdisk" />
       </structure>
       <structure name="userData" usage="optional">
-        <value name="value" field="value" pre-set="userData" />
+        <value name="value" field="value" set-method="userData" />
       </structure>
       <structure name="disableApiTermination" usage="optional">
-        <value name="value" field="value" pre-set="disableApiTermination" />
+        <value name="value" field="value" set-method="disableApiTermination" />
       </structure>
       <structure name="instanceInitiatedShutdownBehavior" usage="optional">
-        <value name="value" field="value" pre-set="instanceInitiatedShutdownBehavior" />
+        <value name="value" field="value" set-method="instanceInitiatedShutdownBehavior" />
       </structure>
     </structure>
     <structure name="blockDeviceMapping" usage="optional">

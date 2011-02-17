@@ -123,7 +123,6 @@ public class ServiceContextManager {
     MuleContext muleCtx = context.get( bit );
     if ( context.getReference( ) == null ) {
       BootstrapException failEx = new BootstrapException( FAIL_MSG );
-      LOG.fatal( failEx, failEx );
       throw failEx;
     } else if ( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.getReference( ) ) ) ) {
       return client.get( );

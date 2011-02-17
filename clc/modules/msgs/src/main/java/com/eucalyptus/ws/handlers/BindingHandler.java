@@ -70,6 +70,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -143,7 +144,12 @@ public class BindingHandler extends MessageStackHandler {
         targetClass = targetClass.getSuperclass( );
       Class responseClass = ClassLoader.getSystemClassLoader().loadClass( targetClass.getName( ) );
       ctx.setAttachment( responseClass );
-      OMElement omElem = this.binding.toOM( httpRequest.getMessage( ) );
+      OMElement omElem;
+      try {
+        omElem = this.binding.toOM( httpRequest.getMessage( ) );
+      } catch ( BindingException ex ) {
+        omElem = BindingManager.getDefaultBinding( ).toOM( httpRequest.getMessage( ) );
+      }
       httpRequest.setOmMessage( omElem );
     }
   }
