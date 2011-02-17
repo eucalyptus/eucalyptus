@@ -300,7 +300,7 @@ public class ObjectInfo implements Comparable {
     }
 
     public boolean canRead(User user) {
-      return user.isSystemAdmin()||user.isSystemInternal()||this.canRead(user.getName());
+      return user.isSystemAdmin()||user.isSystemInternal()||canRead(user.getName());
     }
 
     public boolean canRead(String userId) {

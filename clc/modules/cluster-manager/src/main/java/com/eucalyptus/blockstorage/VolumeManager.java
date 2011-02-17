@@ -167,8 +167,7 @@ public class VolumeManager {
     newVol.setState( State.GENERATING );
     try {
       CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
-      req.setUserId( request.getUserId( ) );
-      req.setEffectiveUserId( request.getEffectiveUserId( ) );
+      req.setUser( request.getUser( ) );
       StorageUtil.send( sc.getName( ), req );
       EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE )
                  .withDetails( newVol.getUserName( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )

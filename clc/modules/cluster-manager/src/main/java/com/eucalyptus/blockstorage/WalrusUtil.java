@@ -164,8 +164,7 @@ public class WalrusUtil {
 		String[] imagePathParts = imgInfo.getImageLocation().split( "/" );
 		GetObjectResponseType reply = null;
 		GetObjectType msg = new GetObjectType( imagePathParts[ 0 ], imagePathParts[ 1 ], true, false, true );
-		msg.setUserId( ComponentIds.lookup(Eucalyptus.class).name() );
-		msg.setEffectiveUserId( ComponentIds.lookup(Eucalyptus.class).name() );
+		msg.setUser( User.SYSTEM );
 		try {
 			reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
 		} catch ( EucalyptusCloudException e ) {
