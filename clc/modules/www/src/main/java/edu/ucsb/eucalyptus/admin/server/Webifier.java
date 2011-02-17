@@ -2,14 +2,18 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 
 public class Webifier {
   
   private static final Logger LOG = Logger.getLogger( Webifier.class );
   
+  public static final String USER_INFO_FULLNAME = "FullName";
   public static final String USER_INFO_EMAIL = "Email";
   public static final String USER_INFO_PHONE = "Telephone";
   public static final String USER_INFO_AFFILIATION = "Affiliation";
@@ -34,6 +38,9 @@ public class Webifier {
     uif.setAccountName( user.getAccount( ).getName( ) );
     
     Map<String, String> info = user.getInfo( );
+    if ( info.containsKey( USER_INFO_FULLNAME ) ) {
+      uif.setRealName( info.get( USER_INFO_FULLNAME ) );
+    }
     if ( info.containsKey( USER_INFO_EMAIL ) ) {
       uif.setEmail( info.get( USER_INFO_EMAIL ) );
     }
@@ -52,4 +59,34 @@ public class Webifier {
     
     return uif;
   }
+  
+  public static void fromWeb( UserInfoWeb uif ) throws AuthException {
+    Account account = Accounts.lookupAccountByName( uif.getAccountName( ) );
+    User user = account.lookupUserByName( uif.getUserName( ) );
+    if ( !user.getName( ).equals( uif.getUserName( ) ) ) {
+      user.setName( uif.getUserName( ) );
+    }
+    Map<String, String> info = Maps.newHashMap( );
+    info.putAll( user.getInfo( ) );
+    if ( uif.getRealName( ) != null ) {
+      info.put( USER_INFO_FULLNAME, uif.getRealName( ) );
+    }
+    if ( uif.getEmail( ) != null ) {
+      info.put( USER_INFO_EMAIL, uif.getEmail( ) );
+    }
+    if ( uif.getTelephoneNumber( ) != null ) {
+      info.put( USER_INFO_PHONE, uif.getTelephoneNumber( ) );
+    }
+    if ( uif.getAffiliation( ) != null ) {
+      info.put( USER_INFO_AFFILIATION, uif.getAffiliation( ) );
+    }
+    if ( uif.getProjectDescription( ) != null ) {
+      info.put( USER_INFO_PROJECT_DESC, uif.getProjectDescription( ) );
+    }
+    if ( uif.getProjectPIName( ) != null ) {
+      info.put( USER_INFO_PROJECT_PI, uif.getProjectPIName( ) );
+    }
+    user.setInfo( info );
+  }
+  
 }

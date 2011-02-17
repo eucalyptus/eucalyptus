@@ -255,27 +255,12 @@ public class EucalyptusManagement {
 
 	public static void commitWebUser( final UserInfoWeb webUser ) throws SerializableException
 	{
-	  /*
-	  String userName = webUser.getUserName( );
-    try {
-      Users.updateUser( userName, new Tx<User>( ) {
-        public void fire( User user ) throws Throwable {
-          Composites.project( webUser, user );
-        }
-      });
-      UserInfoStore.updateUserInfo( userName, new Tx<UserInfo>( ) {
-        public void fire( UserInfo info ) throws Throwable {
-          Composites.project( webUser, info );
-        }
-      });
-    } catch ( NoSuchUserException e1 ) {
-      LOG.error( e1, e1 );
-      throw EucalyptusManagement.makeFault( "Unable to update user" );
-    } catch ( UnsupportedOperationException e1 ) {
-      LOG.error( e1, e1 );
-      throw EucalyptusManagement.makeFault("Error while updating user: " + e1.getMessage( ) );      
-    }
-    */
+	  try {
+	    Webifier.fromWeb( webUser );
+	  } catch (Exception e) {
+	    LOG.error( e, e );
+	    throw new SerializableException("Failed to update user " + webUser.getUserName( ));
+	  }
 	}
 
 	public static String getAdminEmail() throws SerializableException
