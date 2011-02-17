@@ -380,9 +380,6 @@ public class ImageManager {
     } catch ( EucalyptusCloudException e ) {
       db.commit( );
       throw e;
-    } catch ( AuthException e ) {
-      db.commit( );
-      throw new EucalyptusCloudException( "can not find user info." );
     }
     return reply;
   }
