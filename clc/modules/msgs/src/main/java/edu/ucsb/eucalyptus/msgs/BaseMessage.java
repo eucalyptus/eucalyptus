@@ -274,8 +274,8 @@ public class BaseMessage {
       } catch ( AuthException ex ) {
       }
       this.user = user;
-      this.userId = user.getId( );
-      this.effectiveUserId = this.isAdministrator( ) ? User.SYSTEM.getName( ) : user.getId( );
+      this.userId = user.getName( );
+      this.effectiveUserId = this.isAdministrator( ) ? User.SYSTEM.getName( ) : user.getName( );
     }
     return this;
   }
