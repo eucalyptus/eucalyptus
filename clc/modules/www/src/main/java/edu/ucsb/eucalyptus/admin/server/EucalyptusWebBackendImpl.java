@@ -429,7 +429,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	{
 		UserInfoWeb user;
 		if (userName==null) {
-			throw new SerializableException("Invalid RPC arguments: userIname is missing");
+			throw new SerializableException("Invalid RPC arguments: userName is missing");
 		}
 		try {
 			user = EucalyptusManagement.getWebUser(userName, accountName);
