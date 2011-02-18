@@ -77,6 +77,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
@@ -87,24 +88,20 @@ public class BlockStorageUtil {
 	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
 
 	public static String encryptNodeTargetPassword(String password) throws EucalyptusCloudException {
-    EntityWrapper<ClusterConfiguration> db = ServiceConfigurations.getEntityWrapper( );
     try {
-      List<ClusterConfiguration> clusterList = db.query( new ClusterConfiguration( ) {{setPartition( StorageProperties.NAME ); }} );
+      List<ClusterConfiguration> clusterList = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
       if( clusterList.size() < 1 ) {
         String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
-        db.rollback();
         throw new EucalyptusCloudException(msg);
       } else {
         ClusterConfiguration clusterConfig = clusterList.get( 0 );
         PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
-        db.commit();
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
         return new String(Base64.encode(cipher.doFinal(password.getBytes())));
       }
     } catch ( Exception e ) {
 			LOG.error( "Unable to encrypt storage target password: " + e.getMessage( ), e );
-			db.rollback( );
 			throw new EucalyptusCloudException("Unable to encrypt storage target password: " + e.getMessage(), e);
 		}
 	}
