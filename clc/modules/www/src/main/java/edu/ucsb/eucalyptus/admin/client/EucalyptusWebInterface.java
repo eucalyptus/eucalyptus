@@ -1674,8 +1674,9 @@ public class EucalyptusWebInterface implements EntryPoint {
         cpanel.addStyleName("content");
 		EucaButton certButton = new EucaButton ("Download Credentials", new ClickHandler() {
 				public void onClick (ClickEvent event) {
-					Window.open(GWT.getModuleBaseURL() +
-						"getX509?user=" + loggedInUser.getUserName() +
+					Window.open(GWT.getModuleBaseURL() + "getX509?" +
+					  "account=" + loggedInUser.getAccountName() +
+						"&user=" + loggedInUser.getUserName() +
 						"&keyValue=" + loggedInUser.getUserName() +
 						"&code=" + loggedInUser.getToken(),
 						"_self", "");
