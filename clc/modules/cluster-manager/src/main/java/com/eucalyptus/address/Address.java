@@ -223,7 +223,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.transition = this.QUIESCENT;
     if ( this.userId == null ) {
-      this.setUserId(  UNALLOCATED_USERID );
+      this.setUserId( UNALLOCATED_USERID );
     }
     if ( this.instanceAddress == null || this.instanceId == null ) {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
