@@ -1864,8 +1864,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 
                     EucalyptusWebBackend.App.getInstance().changePassword(
                             sessionId,
-                            GWTUtils.md5(oldPassword_box.getText()),
-                            GWTUtils.md5(newCleartextPassword1_box.getText()),
+                            oldPassword_box.getText(),
+                            newCleartextPassword1_box.getText(),
                             new AsyncCallback<String>() {
                                 public void onSuccess( final String result )
                                 {
@@ -2636,7 +2636,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     			label_box.setStyleName("euca-greeting-pending");
 
     			loggedInUser.setEmail( emailAddress_box.getText() );
-    			loggedInUser.setPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
+    			loggedInUser.setPassword(newCleartextPassword1_box.getText());
 
     			EucalyptusWebBackend.App.getInstance().updateUserRecord(
     					sessionId,

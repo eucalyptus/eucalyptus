@@ -726,7 +726,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				throw new SerializableException("Old password is incorrect");
 			}
 		}
-		user.setPassword(Crypto.generateHashedPassword(newPassword));
+		user.setPassword(newPassword);
 		final long now = System.currentTimeMillis();
 		user.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		EucalyptusManagement.commitWebUser( user );
