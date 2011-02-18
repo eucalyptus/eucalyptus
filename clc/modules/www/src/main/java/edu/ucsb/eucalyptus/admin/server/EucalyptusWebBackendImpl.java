@@ -720,7 +720,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 		/* check old password if the user is changing password voluntarily */
 		if ( !isPasswordExpired((UserInfoWeb)user) ) {
-			if ( !oldPassword.equals(user.getPassword()) ) {
+			if ( !oldPassword.equals(Crypto.generateHashedPassword( user.getPassword() ) ) ) {
 				throw new SerializableException("Old password is incorrect");
 			}
 		}
