@@ -177,9 +177,9 @@ public class UserFullName implements FullName {
   
   public static FullName getInstance( User user ) {
     if( user == null ) {
-      return FakePrincipals.NOBODY_USER_ERN;
+      return UserFullName.getInstance( FakePrincipals.NOBODY_USER );
     } else if( user == FakePrincipals.SYSTEM_USER ) {
-      return FakePrincipals.SYSTEM_USER_ERN;
+      return UserFullName.getInstance( FakePrincipals.SYSTEM_USER );
     } else {
       return new UserFullName( user );
     }
