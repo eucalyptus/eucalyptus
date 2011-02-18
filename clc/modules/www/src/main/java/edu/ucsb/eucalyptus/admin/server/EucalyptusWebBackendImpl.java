@@ -718,7 +718,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		// naturally, it is OK to change the password if it expired => false
 		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), false);
 
-		LOG.debug( "Input: old=" + oldPassword + ", new=" + newPassword );
+		LOG.debug( "Input: old=" + oldPassword + "(" + Crypto.generateHashedPassword(oldPassword) + "), new=" + newPassword );
 		LOG.debug( "Database: " + user.getPassword( ) );
 		/* check old password if the user is changing password voluntarily */
 		if ( !isPasswordExpired((UserInfoWeb)user) ) {
