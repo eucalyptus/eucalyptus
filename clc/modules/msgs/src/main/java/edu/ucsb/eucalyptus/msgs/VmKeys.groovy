@@ -77,7 +77,6 @@ public class CreateKeyPairType extends VmKeyPairMessage {
 }
 /** *******************************************************************************/
 public class DeleteKeyPairResponseType extends VmKeyPairMessage {
-  boolean _return;
 }
 public class DeleteKeyPairType extends VmKeyPairMessage {
   String keyName;

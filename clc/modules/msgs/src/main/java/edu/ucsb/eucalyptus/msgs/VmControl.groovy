@@ -123,8 +123,6 @@ public class RebootInstancesType extends VmControlMessage {
   }
 }
 public class RebootInstancesResponseType extends VmControlMessage {
-
-  boolean _return;
 }
 /** *******************************************************************************/
 public class RunInstancesResponseType extends VmControlMessage {
@@ -402,7 +400,6 @@ public class DescribeTagsResponseType extends ResourceTagMessage  {
 }
 public class DeleteTagsResponseType extends ResourceTagMessage {
   String requestId;
-  Boolean _return;
   public DeleteTagsResponseType() {  }
 }
 public class DeleteTagsType extends ResourceTagMessage {

@@ -86,7 +86,6 @@ public class CreateSecurityGroupType extends VmSecurityMessage {
 }
 /** *******************************************************************************/
 public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
-  boolean _return;
 }
 public class DeleteSecurityGroupType extends VmSecurityMessage {
   String groupName;
