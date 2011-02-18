@@ -153,7 +153,7 @@ public class FakePrincipals {
   public static final Account  SYSTEM_ACCOUNT  = new Account( ) {
                                                  @Override
                                                  public String getId( ) {
-                                                   return "0";
+                                                   return SYSTEM_ID;
                                                  }
                                                  
                                                  @Override
@@ -219,7 +219,7 @@ public class FakePrincipals {
                                                  private final Certificate       cert  = new Certificate( ) {
                                                                                          @Override
                                                                                          public String getId( ) {
-                                                                                           return null;
+                                                                                           return Account.SYSTEM_ACCOUNT;
                                                                                          }
                                                                                          
                                                                                          @Override
