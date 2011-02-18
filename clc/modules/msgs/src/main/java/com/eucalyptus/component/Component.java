@@ -846,7 +846,7 @@ public class Component implements HasName<Component> {
     public Service getService( String name ) throws NoSuchElementException {
       Assertions.assertArgumentNotNull( name );
       for ( Service s : this.services.values( ) ) {
-        if ( s.getServiceConfiguration( ).equals( name ) ) {
+        if ( s.getServiceConfiguration( ).getName( ).equals( name ) ) {
           return s;
         }
       }
