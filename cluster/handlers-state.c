@@ -159,6 +159,7 @@ int doStartService(ncMetadata *ccMeta) {
 
   // this is actually a NOP
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
   
@@ -200,11 +201,10 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  // set state to ENABLED
+  // tell monitor thread to (re)enable
   config->kick_network = 1;
   config->kick_dhcp = 1;
   config->kick_enabled = 1;
-  //  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");

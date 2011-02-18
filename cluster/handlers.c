@@ -2753,6 +2753,11 @@ void *monitor_thread(void *in) {
 
     logprintfl(EUCADEBUG, "monitor_thread(): running\n");
     
+    if (config->kick_enabled) {
+      ccChangeState(ENABLED);
+      config->kick_enabled = 0;
+    }
+
     if (config->ccState == ENABLED) {
       rc = refresh_resources(&ccMeta, 60, 1);
       if (rc) {
@@ -2802,10 +2807,6 @@ void *monitor_thread(void *in) {
 	} else {
 	  config->kick_dhcp = 0;
 	}
-      }
-
-      if (config->kick_enabled) {
-	ccChangeState(ENABLED);
       }
 
       sem_mypost(CONFIG);
