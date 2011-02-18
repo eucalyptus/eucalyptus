@@ -144,7 +144,7 @@ public class ClusterState {
   
   public static void trim( ) {
     NavigableSet<Integer> newVlanList = Sets.newTreeSet( );
-    int min = 1;
+    int min = 2;
     int max = 4095;
     try {
       for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
@@ -171,7 +171,7 @@ public class ClusterState {
   
   private static NavigableSet<Integer> populate( ) {
     NavigableSet<Integer> list = new ConcurrentSkipListSet<Integer>( );
-    for ( int i = 1; i < 4095; i++ )
+    for ( int i = 2; i < 4095; i++ )
       list.add( i );
     return list;
   }
