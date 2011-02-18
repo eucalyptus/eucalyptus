@@ -83,10 +83,16 @@ public class UserFullName implements FullName {
   private UserFullName( User user ) {
     Assertions.assertArgumentNotNull( user );
     String aId = FullName.NOBODY_ID;
-    try {
-      aId = user.getAccount( ).getId( );
-    } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
+    if( user == FakePrincipals.SYSTEM_USER ) {
+      aId = FakePrincipals.SYSTEM_ID;
+    } else if( user == FakePrincipals.NOBODY_USER ) {
+      aId = FakePrincipals.NOBODY_ID;
+    } else {
+      try {
+        aId = user.getAccount( ).getId( );
+      } catch ( AuthException ex ) {
+        LOG.error( ex, ex );
+      }
     }
     this.accountId = aId;
     this.userId = user.getId( );

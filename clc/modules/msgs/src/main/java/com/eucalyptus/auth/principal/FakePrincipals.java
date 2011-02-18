@@ -463,7 +463,7 @@ public class FakePrincipals {
                                                  private final Certificate       cert  = new Certificate( ) {
                                                                                          @Override
                                                                                          public String getId( ) {
-                                                                                           return null;
+                                                                                           return FakePrincipals.NOBODY_ID;
                                                                                          }
                                                                                          
                                                                                          @Override
