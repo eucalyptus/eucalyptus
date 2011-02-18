@@ -726,7 +726,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 				throw new SerializableException("Old password is incorrect");
 			}
 		}
-		user.setPassword(newPassword);
+		user.setPassword(Crypto.generateHashedPassword(newPassword));
 		final long now = System.currentTimeMillis();
 		user.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		EucalyptusManagement.commitWebUser( user );
@@ -773,7 +773,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			// to reset his own password he has to use
 			// "change password" functionality
 			if(!callerRecord.getUserName().equals(userName))
-				oldRecord.setPassword (newRecord.getPassword());	
+				oldRecord.setPassword (Crypto.generateHashedPassword(newRecord.getPassword()));	
 
 			if(oldRecord.isAdministrator() != newRecord.isAdministrator())                                                     
 				oldRecord.setAdministrator(newRecord.isAdministrator());                                                   

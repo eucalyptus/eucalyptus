@@ -98,7 +98,7 @@ public class Webifier {
     }
     user.setInfo( info );
     if ( uif.getPassword( ) != null ) {
-      user.setPassword( Crypto.generateHashedPassword( uif.getPassword( ) ) );
+      user.setPassword( uif.getPassword( ) );
     }
   }
   
