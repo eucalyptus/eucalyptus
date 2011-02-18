@@ -128,8 +128,7 @@ public class SystemBootstrapper {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-//            SystemBootstrapper.out.println( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.STDOUT, string ).info( );
+            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + string );
           }
         }
       }
@@ -137,8 +136,7 @@ public class SystemBootstrapper {
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-//            SystemBootstrapper.err.println( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.STDERR, string ).error( );
+            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + string );
           }
         }
       }
