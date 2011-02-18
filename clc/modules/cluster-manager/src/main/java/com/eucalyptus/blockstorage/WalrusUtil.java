@@ -72,6 +72,7 @@ import org.w3c.dom.Document;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -163,7 +164,7 @@ public class WalrusUtil {
     String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
     GetObjectResponseType reply = null;
     GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true );
-    msg.setUser( User.SYSTEM );
+    msg.setUser( FakePrincipals.SYSTEM_USER );
     try {
       reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
       if ( reply == null || reply.getBase64Data( ) == null ) {

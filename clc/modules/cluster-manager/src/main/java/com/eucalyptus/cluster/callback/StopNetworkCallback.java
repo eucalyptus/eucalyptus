@@ -64,7 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -86,7 +86,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
     StopNetworkType msg = new StopNetworkType( this.token.getUserName(), this.token.getNetworkName(), this.token.getVlan() ).regarding( );
-    msg.setUser( User.SYSTEM );
+    msg.setUser( FakePrincipals.SYSTEM_USER );
     msg.setUserId( this.token.getUserName() );
     this.setRequest( msg );
   }

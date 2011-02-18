@@ -109,7 +109,7 @@ public class Accounts {
   @Deprecated
   public static FullName lookupUserFullNameById( String userId ) {
     try {
-      return UserFullName.get( Accounts.lookupUserById( userId ) );
+      return UserFullName.getInstance( Accounts.lookupUserById( userId ) );
     } catch ( AuthException ex ) {
       throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
     }

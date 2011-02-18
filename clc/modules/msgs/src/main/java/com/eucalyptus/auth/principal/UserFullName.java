@@ -80,9 +80,9 @@ public class UserFullName implements FullName {
   private final String                qName;
   private final ImmutableList<String> pathParts;
   
-  UserFullName( User user ) {
+  private UserFullName( User user ) {
     Assertions.assertArgumentNotNull( user );
-    String aId = FullName.UNKNOWN_ID;
+    String aId = FullName.NOBODY_ID;
     try {
       aId = user.getAccount( ).getId( );
     } catch ( AuthException ex ) {
@@ -169,9 +169,14 @@ public class UserFullName implements FullName {
     return true;
   }
   
-  @Deprecated
-  public static FullName get( User user ) {
-    return new UserFullName( user );
+  public static FullName getInstance( User user ) {
+    if( user == null ) {
+      return FakePrincipals.NOBODY_USER_ERN;
+    } else if( user == FakePrincipals.SYSTEM_USER ) {
+      return FakePrincipals.SYSTEM_USER_ERN;
+    } else {
+      return new UserFullName( user );
+    }
   }
 
   @Override

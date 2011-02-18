@@ -127,7 +127,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
 
   @Override
   public String getPartition( ) {
-    return this.isPartitioned( ) ? FullName.UNKNOWN_ID : this.name;
+    return this.isPartitioned( ) ? FullName.NOBODY_ID : this.name;
   }
 
   public boolean isPartitioned( ) {

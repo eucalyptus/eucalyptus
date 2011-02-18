@@ -80,7 +80,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
@@ -162,9 +162,9 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   @Transient
   private String                          instanceAddress;
   @Transient
-  public static String                    UNALLOCATED_USERID      = "nobody";
+  public static String                    UNALLOCATED_USERID      = FakePrincipals.NOBODY_USER_ERN.getName( );
   @Transient
-  public static String                    SYSTEM_ALLOCATED_USERID = User.SYSTEM.getId( );
+  public static String                    SYSTEM_ALLOCATED_USERID = FakePrincipals.SYSTEM_USER.getId( );
   @Transient
   public static String                    UNASSIGNED_INSTANCEID   = "available";
   @Transient
@@ -522,7 +522,7 @@ public class Address implements HasName<Address>, HasOwner<Address> {
     if ( UNALLOCATED_USERID.equals( this.userId ) ) {
       this.owner = FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( UNALLOCATED_USERID ).end( );
     } else if ( SYSTEM_ALLOCATED_USERID.equals( this.userId ) ) {
-      this.owner = UserFullName.get( User.SYSTEM );
+      this.owner = FakePrincipals.SYSTEM_USER_ERN;
     } else {
       this.owner = Accounts.lookupUserFullNameById( userId );
     }

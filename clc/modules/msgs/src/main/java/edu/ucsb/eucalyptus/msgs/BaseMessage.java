@@ -14,6 +14,7 @@ import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.empyrean.ServiceInfoType;
@@ -31,7 +32,6 @@ public class BaseMessage {
   String                     statusMessage;
   Integer                    epoch        = currentEpoch++;
   ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
-  private Account account;
   private static Integer     currentEpoch = 0;
   
   public BaseMessage( ) {
@@ -89,7 +89,7 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
-    this.effectiveUserId = User.SYSTEM.getName( );
+    this.effectiveUserId = FakePrincipals.SYSTEM_USER.getName( );
     return ( TYPE ) this;
   }
 
@@ -125,7 +125,7 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    this.setUser( User.SYSTEM );
+    this.setUser( FakePrincipals.SYSTEM_USER );
     return ( TYPE ) this;
   }
   
@@ -149,7 +149,7 @@ public class BaseMessage {
   }
   
   public boolean isAdministrator( ) {
-    return ( User.SYSTEM.getName( ).equals( this.effectiveUserId ) ) || this.user.isSystemAdmin( ) || this.user.isSystemInternal( );
+    return ( FakePrincipals.SYSTEM_USER.getName( ).equals( this.effectiveUserId ) ) || this.user.isSystemAdmin( ) || this.user.isSystemInternal( );
   }
   
   public String toString( ) {
@@ -206,7 +206,7 @@ public class BaseMessage {
   }
   
   public String toSimpleString( ) {
-    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.account.getName( ), this.getUser( ).getName( ), this.effectiveUserId,
+    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserErn( ), this.effectiveUserId,
                           this.get_return( ), this.getStatusMessage( ) );
   }
   
@@ -264,20 +264,25 @@ public class BaseMessage {
   
   public BaseMessage setUser( User user ) {
     if( user == null ) {
-      this.account = null;
       this.user = null;
       this.userId = null;
       this.effectiveUserId = null;
     } else {
-      try {
-        this.account = user.getAccount( );
-      } catch ( AuthException ex ) {
-      }
       this.user = user;
       this.userId = user.getName( );
-      this.effectiveUserId = this.isAdministrator( ) ? User.SYSTEM.getName( ) : user.getName( );
+      this.effectiveUserId = this.isAdministrator( ) ? FakePrincipals.SYSTEM_USER.getName( ) : user.getName( );
     }
     return this;
+  }
+
+  protected Account getAccount( ) {
+    try {
+      if( this.user != null ) {
+        return user.getAccount( );
+      }
+    } catch ( AuthException ex ) {
+    }
+    return FakePrincipals.NOBODY_ACCOUNT;
   }
 
   public User getUser( ) {
@@ -285,6 +290,6 @@ public class BaseMessage {
   }
 
   public FullName getUserErn( ) {
-    return UserFullName.get( this.user );
+    return UserFullName.getInstance( this.user );
   }
 }

@@ -160,10 +160,6 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   public void close( ) {
     for ( RequestInfo req : RequestInfo.getRequestInfoList( ) ) {
       String reqString = req.toString( );
-//      if ( req.getParent( ) != null ) {
-//        getWriter( req.getParent( ) ).write( reqString );
-//        getWriter( req.getParent( ) ).flush( );
-//      }
       if ( req.getRequest( ) != null ) {
         getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
         getWriter( req.getRequest( ) ).flush( );
@@ -379,7 +375,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     public String process( ) {
       if ( this.requestInfo.getRequest( ) == null || this.requestInfo.getResponse( ) == null || this.requestInfo.getRequest( ).getCanonicalName( ) == null ) {
-        new RuntimeException( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) ).printStackTrace( );
+        System.out.println( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) );
+        return null;
       } else {
         JsonDescriptorGenerator.request = true;
         this.beginElem( );

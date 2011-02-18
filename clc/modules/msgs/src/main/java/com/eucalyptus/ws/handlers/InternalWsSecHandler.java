@@ -79,7 +79,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.util.WSSecurity;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -123,7 +123,7 @@ public class InternalWsSecHandler extends WsSecHandler {
       }
       // YE TODO: will there be a problem, e.g. the system admin is not ready?
       //Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Accounts.lookupSystemAdmin( ) );
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( User.SYSTEM );
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.SYSTEM_USER );
     }
   }
 }

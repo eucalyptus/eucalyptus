@@ -65,18 +65,10 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.util.B64;
-import com.eucalyptus.auth.util.PEMFiles;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.google.common.collect.Lists;
 
 /**
  * The interface for a user in Eucalyptus.
@@ -88,6 +80,7 @@ public interface User extends HasId, BasePrincipal, Serializable {
   
   public static final String USER_GROUP_PREFIX = "_";  
   public static final String ACCOUNT_ADMIN = "admin";
+  public static final String ACCOUNT_NOBODY = "nobody";
   
   public static enum RegistrationStatus {
     REGISTERED,
@@ -155,66 +148,4 @@ public interface User extends HasId, BasePrincipal, Serializable {
   public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
   public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
     
-  public static final User SYSTEM = new User() {
-    private final Certificate cert = new Certificate() {
-      @Override public String getId( ) { return null; }
-      @Override public Boolean isActive( ) { return true; }
-      @Override public void setActive( Boolean active ) throws AuthException {}
-      @Override public Boolean isRevoked( ) { return null; }
-      @Override public void setRevoked( Boolean revoked ) throws AuthException {}
-      @Override public String getPem( ) { return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) ); }
-      @Override public X509Certificate getX509Certificate( ) { return SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ); }
-      @Override public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
-      @Override public Date getCreateDate( ) { return null; }
-      @Override public void setCreateDate( Date createDate ) throws AuthException {}
-      @Override public User getUser( ) throws AuthException { return User.SYSTEM; }
-    };
-    private final List<Certificate> certs = new ArrayList<Certificate>( ) {{
-      add( cert );
-    }};
-    @Override public String getId( ) { return Account.SYSTEM_ACCOUNT;}
-    @Override public String getName( ) { return Account.SYSTEM_ACCOUNT;}
-    @Override public BigInteger getNumber( ) { return BigInteger.ZERO;}
-    @Override public String getPath( ) { return "/";}
-    @Override public RegistrationStatus getRegistrationStatus( ) { return null;}
-    @Override public Boolean isEnabled( ) { return true;}
-    @Override public String getToken( ) { return null;}
-    @Override public String getConfirmationCode( ) { return null;}
-    @Override public String getPassword( ) { return null;}
-    @Override public Long getPasswordExpires( ) { return null;}
-    @Override public String getInfo( String key ) throws AuthException { return null;}
-    @Override public Map<String, String> getInfo( ) throws AuthException { return null;}
-    @Override public List<AccessKey> getKeys( ) throws AuthException { return null;}
-    @Override public AccessKey getKey( String keyId ) throws AuthException { return null;}
-    @Override public AccessKey addKey( String key ) throws AuthException { return null;}
-    @Override public AccessKey createKey( ) throws AuthException { return null;}
-    @Override public List<Certificate> getCertificates( ) throws AuthException { return certs; }
-    @Override public Certificate getCertificate( String certificateId ) throws AuthException { return cert;}
-    @Override public Certificate addCertificate( X509Certificate certificate ) throws AuthException { return cert;}
-    @Override public List<Group> getGroups( ) throws AuthException { return Lists.newArrayList( );}
-    @Override public Account getAccount( ) throws AuthException { return Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT ); }
-    @Override public boolean isSystemAdmin( ) { return true;}
-    @Override public boolean isSystemInternal( ) { return true;}
-    @Override public boolean isAccountAdmin( ) { return true;}
-    @Override public List<Policy> getPolicies( ) throws AuthException { return Lists.newArrayList( );}
-    @Override public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException { return null;}
-    @Override public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException { return Lists.newArrayList( );}
-    @Override public List<Authorization> lookupQuotas( String resourceType ) throws AuthException { return Lists.newArrayList( );}
-    @Override public void setName( String name ) throws AuthException {}
-    @Override public void setPath( String path ) throws AuthException {}
-    @Override public void setRegistrationStatus( RegistrationStatus stat ) throws AuthException {}
-    @Override public void setEnabled( Boolean enabled ) throws AuthException {}
-    @Override public void setToken( String token ) throws AuthException {}
-    @Override public void createToken( ) throws AuthException {}
-    @Override public void setConfirmationCode( String code ) throws AuthException {}
-    @Override public void createConfirmationCode( ) throws AuthException {}
-    @Override public void setPassword( String password ) throws AuthException {}
-    @Override public void createPassword( ) throws AuthException {}
-    @Override public void setPasswordExpires( Long time ) throws AuthException {}
-    @Override public void setInfo( String key, String value ) throws AuthException {}
-    @Override public void setInfo( Map<String, String> newInfo ) throws AuthException {}
-    @Override public void removeKey( String keyId ) throws AuthException {}
-    @Override public void removeCertificate( String certficateId ) throws AuthException {}
-    @Override public void removePolicy( String name ) throws AuthException {};
-  };
 }

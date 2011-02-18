@@ -181,7 +181,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
           if( !Ats.from( f ).has( Transient.class ) || Modifier.isTransient( f.getModifiers( ) ) ) { 
             TypeBinding tb = getTypeBinding( f );
             if ( !( tb instanceof NoopTypeBinding ) ) {
-              System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
+//              System.out.printf( "BOUND:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) +"."+ f.getName( ), tb.getTypeName( ), f.getType( ).getCanonicalName( ) );          
               this.append( tb.toString( ) );
             }
           }

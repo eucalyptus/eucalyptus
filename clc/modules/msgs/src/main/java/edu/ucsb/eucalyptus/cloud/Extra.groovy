@@ -256,7 +256,7 @@ public class VmRunType extends EucalyptusMessage {
   
 }
 
-public class VirtualBootRecord {
+public class VirtualBootRecord extends EucalyptusData {
   String id = "none";
   String resourceLocation = "none";
   String type;
@@ -265,7 +265,7 @@ public class VirtualBootRecord {
   String format = "none";
 }
 
-public class VmKeyInfo {
+public class VmKeyInfo extends EucalyptusData {
   
   String name = "";
   String value = "";

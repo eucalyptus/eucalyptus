@@ -92,11 +92,11 @@ public class BuildBindings extends Task {
     if ( this.classFileSets.isEmpty( ) ) {
       throw new BuildException( "No classes were provided to bind." );
     } else {
-      try {
-        System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
-      } catch ( Exception e ) {
-        System.err.println( "Failed setting classpath from Ant task" );
-      }
+//      try {
+//        System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
+//      } catch ( Exception e ) {
+//        System.err.println( "Failed setting classpath from Ant task" );
+//      }
       Path path = new Path( getProject( ) );
       for ( String p : paths( ) ) {
         path.add( new Path( getProject( ), p ) );
@@ -133,7 +133,7 @@ public class BuildBindings extends Task {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
             classes.put( c.getName( ), c );
-            System.out.println( "Loaded class: " + c );
+//            System.out.println( "Loaded class: " + c );
           } catch ( ClassNotFoundException e ) {
             e.printStackTrace( );
           }
