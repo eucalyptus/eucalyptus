@@ -83,7 +83,7 @@ typedef struct netEntry_t {
 
 typedef struct userEntry_t {
   char netName[32];
-  char userName[32];
+  char userName[48];
   char uuid[48];
 } userEntry;
 
