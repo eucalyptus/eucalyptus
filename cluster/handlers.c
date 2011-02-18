@@ -959,6 +959,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     sem_mypost(VNET);
   }
   
+  
   if (!ret && strcmp(dst, "0.0.0.0")) {
     // everything worked, update instance cache
 
@@ -1514,6 +1515,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		  unlock_exit(1);
 		}
 		bzero(myInstance, sizeof(ccInstance));
+		snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
 	      }
 	      snprintf(originalPublicIp, 24, "%s", myInstance->ccnet.publicIp);
 
@@ -1548,13 +1550,27 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      }
 
 	      // check for network instance IP inconsistency
-	      if (strcmp(originalPublicIp, myInstance->ccnet.publicIp) ) {
-		logprintfl(EUCADEBUG, "refresh_instances(): instId=%s, publicIP reported by NC (%s) differs from publicIp assigned at CC (%s), updating.\n", myInstance->instanceId, ncOutInsts[j]->ncnet.publicIp, myInstance->ccnet.publicIp);
-		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+	      logprintfl(EUCADEBUG, "refresh_instances(): checking for differing IPs: instanceId=%s publicIp=%s originalPublicIp=%s\n", myInstance->instanceId, myInstance->ccnet.publicIp, originalPublicIp);
+	      // cases
+	      // 1.) local CC cache has no IP info for VM, NC VM has no IP info
+	      //     - do nothing
+	      // 2.) local CC cache has no IP info, NC VM has IP info
+	      //     - ingress NC info, kick_network
+	      // 3.) local CC cache has IP info, NC VM has no IP info
+	      //     - send ncAssignAddress
+	      // 4.) local CC cache has IP info, NC VM has different IP info
+	      //     - ingress NC info, kick_network
+	      // 5.) local CC cache has IP info, NC VM has same IP info
+	      //     - do nothing
+	      if (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && !strcmp(originalPublicIp, "0.0.0.0")) { // case 2
+		config->kick_network = 1;
+	      } else if ( (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && strcmp(originalPublicIp, "0.0.0.0")) && strcmp(myInstance->ccnet.publicIp, originalPublicIp)) { // case 4
+		config->kick_network = 1;
+	      } else if (strcmp(originalPublicIp, "0.0.0.0") && !strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) { // case 3
+		snprintf(myInstance->ccnet.publicIp, 24, "%s", originalPublicIp);
+		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, originalPublicIp);
 		if (rc) {
-		  logprintfl(EUCAERROR, "refresh_instance(): could not update publicIP (%s) of instance (%s) at NC (%s)\n", myInstance->ccnet.publicIp, myInstance->instanceId, resourceCacheStage->resources[i].ncURL);
-		} else {
-		  config->kick_network = 1;
+		  
 		}
 	      }
 	      
@@ -1789,7 +1805,8 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   dst->ccnet.vlan = src->ncnet.vlan;
   dst->ccnet.networkIndex = src->ncnet.networkIndex;
   strncpy(dst->ccnet.privateMac, src->ncnet.privateMac, 24);
-  if (strcmp(src->ncnet.publicIp, "0.0.0.0") || dst->ccnet.publicIp[0] == '\0') strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
+  //  if (strcmp(src->ncnet.publicIp, "0.0.0.0") || dst->ccnet.publicIp[0] == '\0') strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
+  strncpy(dst->ccnet.publicIp, src->ncnet.publicIp, 24);
   if (strcmp(src->ncnet.privateIp, "0.0.0.0") || dst->ccnet.privateIp[0] == '\0') strncpy(dst->ccnet.privateIp, src->ncnet.privateIp, 24);
 
   for (i=0; i < src->groupNamesSize && i < 64; i++) {
@@ -2017,32 +2034,38 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
   
   if (config->use_proxy) {
-    rc = image_cache(amiId, amiURL);
-    if (rc) {
-      logprintfl(EUCAWARN, "RunInstances(): could not cache image (%s/%s)\n", SP(amiId), SP(amiURL));
-    } else {
-      // re-write URLs to point at CC image proxy
-      snprintf(emiURLCached, 1024, "http://%s:8776/%s", config->proxyIp, amiId);
-      amiURL = emiURLCached;
+    char walrusURL[MAX_PATH], *strptr=NULL, newURL[MAX_PATH];
+    
+    // get walrus IP
+    done=0;
+    for (i=0; i<16 && !done; i++) {
+      if (!strcmp(config->services[i].type, "walrus")) {
+	snprintf(walrusURL, MAX_PATH, "%s", config->services[i].uris[0]);
+	done++;
+      }
     }
-    rc = image_cache(kernelId, kernelURL);
-    if (rc) {
-      logprintfl(EUCAWARN, "RunInstances(): could not cache image (%s/%s)\n", SP(kernelId), SP(kernelURL));
-    } else {
-      // re-write URLs to point at CC image proxy
-      snprintf(kernelURLCached, 1024, "http://%s:8776/%s", config->proxyIp, kernelId);
-      kernelURL = kernelURLCached;
-    }
-    rc = image_cache(ramdiskId, ramdiskURL);
-    if (rc) {
-      logprintfl(EUCAWARN, "RunInstances(): could not cache image (%s/%s)\n", SP(ramdiskId), SP(ramdiskURL));
-    } else {
-      // re-write URLs to point at CC image proxy
-      snprintf(ramdiskURLCached, 1024, "http://%s:8776/%s", config->proxyIp, ramdiskId);
-      ramdiskURL = ramdiskURLCached;
+    
+    if (done) {
+      // cache and reset endpoint
+      for (i=0; i<ccvm->virtualBootRecordLen; i++) {
+	newURL[0] = '\0';
+	if (!strcmp(ccvm->virtualBootRecord[i].typeName, "machine") || !strcmp(ccvm->virtualBootRecord[i].typeName, "kernel") || !strcmp(ccvm->virtualBootRecord[i].typeName, "ramdisk")) {
+	  strptr = strstr(ccvm->virtualBootRecord[i].resourceLocation, "walrus://");
+	  if (strptr) {
+	    strptr += strlen("walrus://");
+	    snprintf(newURL, MAX_PATH, "%s/%s", walrusURL, strptr);
+	    logprintfl(EUCADEBUG, "RunInstances(): constructed cacheable URL: %s\n", newURL);
+	    rc = image_cache(ccvm->virtualBootRecord[i].id, newURL);
+	    if (!rc) {
+	      snprintf(ccvm->virtualBootRecord[i].resourceLocation, CHAR_BUFFER_SIZE, "http://%s:8776/%s", config->proxyIp, ccvm->virtualBootRecord[i].id);
+	    } else {
+	      logprintfl(EUCAWARN, "RunInstances(): could not cache image %s/%s\n", ccvm->virtualBootRecord[i].id, newURL);
+	    }
+	  }
+	}
+      }
     }
   }
-
   *outInstsLen = 0;
   
   if (!ccvm) {
@@ -2661,8 +2684,20 @@ int initialize(ncMetadata *ccMeta) {
   if (!ret) {
     // store information from CLC that needs to be kept up-to-date in the CC
     if (ccMeta != NULL) {
+      int i;
       sem_mywait(CONFIG);
       memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
+      for (i=0; i<16; i++) {
+	int j;
+	//	if (strlen(config->services[i].type)) {
+	  logprintfl(EUCADEBUG, "initialize(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+	  for (j=0; j<8; j++) {
+	    if (strlen(config->services[i].uris[j])) {
+	      logprintfl(EUCADEBUG, "initialize(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+	    }
+	  }
+	  //	}
+      }
       sem_mypost(CONFIG);
     }
     
@@ -3576,10 +3611,12 @@ int maintainNetworkState() {
   cloudIp = vnetconfig->cloudIp;
   for (i=0; i<16; i++) {
     int j;
-    logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
-    for (j=0; j<8; j++) {
-      if (strlen(config->services[i].uris[j])) {
-	logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+    if (strlen(config->services[i].type)) {
+      logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+      for (j=0; j<8; j++) {
+	if (strlen(config->services[i].uris[j])) {
+	  logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+	}
       }
     }
   }
@@ -3930,9 +3967,11 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
     }
   }
 
-  rc = image_cache_proxykick(*res, numHosts);
-  if (rc) {
-    logprintfl(EUCAERROR, "refreshNodes(): could not restart the image proxy\n");
+  if (config->use_proxy) {
+    rc = image_cache_proxykick(*res, numHosts);
+    if (rc) {
+      logprintfl(EUCAERROR, "refreshNodes(): could not restart the image proxy\n");
+    }
   }
 
   if (hosts) free(hosts);
@@ -4559,6 +4598,10 @@ int image_cache_invalidate() {
   //  snprintf(path, MAX_PATH, "%s/%s.manifest.xml.staging", config->proxyPath, id);  
 
   if (config->use_proxy) {
+    proxyPath[0] = '\0';
+    path[0] = '\0';
+    oldestpath[0] = '\0';
+    oldestmanifestpath[0] = '\0';
 
     oldest = time(NULL);
     snprintf(proxyPath, MAX_PATH, "%s/data", config->proxyPath);

@@ -122,6 +122,12 @@ public class NetappSessionManager implements SessionManager {
 			}			
 		} catch (UnknownHostException ex) {
 			throw new EucalyptusCloudException(ex);
+		} catch (EucalyptusCloudException e) {
+			if(connection != null) {
+				connection.close();
+				connection = null;
+			}
+			throw e;
 		}
 	}
 
@@ -146,6 +152,17 @@ public class NetappSessionManager implements SessionManager {
 			public void run() {
 				NaElement request = sanTask.getCommand();
 				try {
+					if(connection == null) {
+						try {
+							connect();
+						} catch (EucalyptusCloudException e) {
+							LOG.error(e);
+							sanTask.setErrorMessage(e.getMessage());
+							synchronized (task) {
+								sanTask.notifyAll();
+							}
+						}
+					}
 					NaElement reply = connection.invokeElem(request);
 					synchronized (task) {
 						sanTask.setValue(reply);
