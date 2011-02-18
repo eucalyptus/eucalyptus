@@ -530,7 +530,9 @@ public class Address implements HasName<Address>, HasOwner<Address> {
 
   @Override
   public FullName getOwner( ) {
-    if( this.owner == null ) {
+    if( this.userId == null ) {
+      return FakePrincipals.NOBODY_USER_ERN;
+    } else if( this.owner == null ) {
       this.setUserId( this.userId );
     }
     return this.owner;
