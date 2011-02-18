@@ -3623,16 +3623,16 @@ fi
 # Check whether --enable-appliance-store was given.
 if test "${enable_appliance_store+set}" = set; then :
   enableval=$enable_appliance_store; if test "${enableval}" != "no"; then
-                        EXTENSIONS="store"
-                fi
+                EXTENSIONS="store"
+        fi
 fi
 
 
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
   enableval=$enable_debug; if test "${enableval}" != "no"; then
-                        CFLAGS="$CFLAGS -g -DDEBUG"
-                fi
+                CFLAGS="$CFLAGS -g -DDEBUG"
+        fi
 fi
 
 
@@ -3658,7 +3658,7 @@ if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/lib ; then
                 LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
         fi
-        if test -d ${AXIS2C_HOME}/modules/rampart ; then
+        if test -d "${AXIS2C_HOME}"/modules/rampart ; then
                 LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
         fi
 fi
@@ -3666,21 +3666,6 @@ if test -n "${LIBVIRT_HOME}" ; then
         if test -d "${LIBVIRT_HOME}"/include ; then
                 INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
                 LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
-        fi
-fi
-if test -n "${VDDK_HOME}" ; then
-        if test -d "${VDDK_HOME}"/include/ ; then
-                # Using tarball direct from VMware
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
-                if test "x$build_cpu" = "xx86_64"; then :
-  LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"
-else
-  LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"
-fi
-        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
-                # Using installed tarball
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
         fi
 fi
 

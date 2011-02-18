@@ -75,15 +75,15 @@ AC_ARG_WITH(interface-theme,
         [INTERFACE_THEME="${withval}"])
 AC_ARG_ENABLE(appliance-store,
         [  --enable-appliance-store             enable the store tab],
-                [if test "${enableval}" != "no"; then
-                        EXTENSIONS="store"
-                fi])
+        [if test "${enableval}" != "no"; then
+                EXTENSIONS="store"
+        fi])
 
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
-                [if test "${enableval}" != "no"; then
-                        CFLAGS="$CFLAGS -g -DDEBUG"
-                fi])
+        [if test "${enableval}" != "no"; then
+                CFLAGS="$CFLAGS -g -DDEBUG"
+        fi])
 
 
 # If we didn't specify the services directory, let's use the default
@@ -107,7 +107,7 @@ if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/lib ; then
                 LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
         fi
-        if test -d ${AXIS2C_HOME}/modules/rampart ; then
+        if test -d "${AXIS2C_HOME}"/modules/rampart ; then
                 LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
         fi
 fi
@@ -115,18 +115,6 @@ if test -n "${LIBVIRT_HOME}" ; then
         if test -d "${LIBVIRT_HOME}"/include ; then
                 INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
                 LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
-        fi
-fi
-if test -n "${VDDK_HOME}" ; then
-        if test -d "${VDDK_HOME}"/include/ ; then
-                # Using tarball direct from VMware
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
-                AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
-                      [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
-        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
-                # Using installed tarball
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
         fi
 fi
 
@@ -249,11 +237,11 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup strerror strncasecmp strstr rmdir])
 
 # Time to substitute and generate the files
-AC_CONFIG_FILES([Makedefs 
-                tools/eucalyptus-cc:tools/eucalyptus-cc.in
-                tools/eucalyptus-nc:tools/eucalyptus-nc.in
-                tools/euca_conf:tools/euca_conf.in
-                tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
+AC_CONFIG_FILES([Makedefs
+                 tools/eucalyptus-cc:tools/eucalyptus-cc.in
+                 tools/eucalyptus-nc:tools/eucalyptus-nc.in
+                 tools/euca_conf:tools/euca_conf.in
+                 tools/eucalyptus-cloud:tools/eucalyptus-cloud.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
