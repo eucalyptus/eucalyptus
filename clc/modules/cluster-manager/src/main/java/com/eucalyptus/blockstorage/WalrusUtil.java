@@ -104,11 +104,11 @@ public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
   public static void checkValid( Image imgInfo ) {
-    String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    CheckImageType check = new CheckImageType( ).regarding( );
-    check.setBucket( parts[0] );
-    check.setKey( parts[1] );
-    RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( check );
+//    String[] parts = imgInfo.getImageLocation( ).split( "/" );
+//    CheckImageType check = new CheckImageType( ).regarding( );
+//    check.setBucket( parts[0] );
+//    check.setKey( parts[1] );
+//    RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( check );
   }
   
   public static void triggerCaching( Image imgInfo ) {

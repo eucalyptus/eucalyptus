@@ -232,7 +232,7 @@ public class FakePrincipals {
                                                                                          
                                                                                          @Override
                                                                                          public Boolean isRevoked( ) {
-                                                                                           return null;
+                                                                                           return false;
                                                                                          }
                                                                                          
                                                                                          @Override
@@ -253,7 +253,7 @@ public class FakePrincipals {
                                                                                          
                                                                                          @Override
                                                                                          public Date getCreateDate( ) {
-                                                                                           return null;
+                                                                                           return SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
                                                                                          }
                                                                                          
                                                                                          @Override
@@ -372,7 +372,7 @@ public class FakePrincipals {
                                                  
                                                  @Override
                                                  public Account getAccount( ) throws AuthException {
-                                                   return Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+                                                   return SYSTEM_ACCOUNT;
                                                  }
                                                  
                                                  @Override
