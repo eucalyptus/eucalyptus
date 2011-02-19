@@ -10,13 +10,13 @@ import com.eucalyptus.http.MappingHttpRequest;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Contexts {
-  private static Logger LOG = Logger.getLogger( Contexts.class );
+  private static Logger                          LOG             = Logger.getLogger( Contexts.class );
   private static int                             MAX             = 8192;
   private static int                             CONCUR          = MAX / ( Runtime.getRuntime( ).availableProcessors( ) * 2 + 1 );
   private static float                           THRESHOLD       = 1.0f;
   private static ConcurrentMap<String, Context>  uuidContexts    = new ConcurrentHashMap<String, Context>( MAX, THRESHOLD, CONCUR );
   private static ConcurrentMap<Channel, Context> channelContexts = new ConcurrentHashMap<Channel, Context>( MAX, THRESHOLD, CONCUR );
-
+  
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
@@ -24,7 +24,7 @@ public class Contexts {
     channelContexts.put( channel, ctx );
     return ctx;
   }
-
+  
   public static Context lookup( Channel channel ) throws NoSuchContextException {
     if ( !channelContexts.containsKey( channel ) ) {
       throw new NoSuchContextException( "Found channel context " + channel + " but no corresponding context." );
@@ -36,8 +36,9 @@ public class Contexts {
   }
   
   public static boolean exists( String correlationId ) {
-    return uuidContexts.containsKey( correlationId );
+    return correlationId != null && uuidContexts.containsKey( correlationId );
   }
+  
   public static Context lookup( String correlationId ) throws NoSuchContextException {
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
@@ -47,7 +48,7 @@ public class Contexts {
       return ctx;
     }
   }
-
+  
   public static Context lookup( ) throws IllegalContextAccessException {
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
@@ -71,7 +72,7 @@ public class Contexts {
       throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }
   }
-
+  
   public static void clear( Context context ) {
     Context ctx = uuidContexts.remove( context.getCorrelationId( ) );
     Channel channel = null;
@@ -82,12 +83,12 @@ public class Contexts {
     }
     ctx.clear( );
   }
-
+  
   public static void clear( String correlationId ) {
     try {
       clear( lookup( correlationId ) );
     } catch ( NoSuchContextException e ) {
       LOG.error( e, e );
     }
-  }   
+  }
 }
