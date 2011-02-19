@@ -34,13 +34,13 @@ import com.google.common.collect.Lists;
 public class BaseMessage {
   @Transient
   private static Logger LOG = Logger.getLogger( BaseMessage.class );
-  String                     correlationId;
-  String                     userId;
-  String                     effectiveUserId;
-  Boolean                    _return      = true;
-  String                     statusMessage;
-  Integer                    epoch        = currentEpoch++;
-  ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
+  private String                     correlationId;
+  private String                     userId;
+  private String                     effectiveUserId;
+  private Boolean                    _return      = true;
+  private String                     statusMessage;
+  private Integer                    epoch        = currentEpoch++;
+  private ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
   private static Integer     currentEpoch = 0;
   
   public BaseMessage( ) {
@@ -153,7 +153,11 @@ public class BaseMessage {
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
+    String userId = msg.userId;
     this.setUser( msg.getUser( ) );
+    if( userId != null && !Account.NOBODY_ACCOUNT.equals( userId ) ) {
+      this.userId = userId;//TODO:GRZE:HACKHACKHACK
+    }
     return ( TYPE ) this;
   }
   
@@ -300,12 +304,31 @@ public class BaseMessage {
   @Deprecated
   public User getUser( ) {
     if( !Contexts.exists( this.correlationId ) ) {
-      return FakePrincipals.NOBODY_USER;
-    } else {
-      try {
-        return Contexts.lookup( this.correlationId ).getUser( );
-      } catch ( NoSuchContextException ex ) {
+      if( this.userId != null ) {
+        if( FakePrincipals.NOBODY_USER_ERN.getName( ).equals( this.userId ) ) {
+          return FakePrincipals.NOBODY_USER;
+        } else if( FakePrincipals.SYSTEM_USER_ERN.getName( ).equals( this.userId ) ) {
+          return FakePrincipals.SYSTEM_USER;
+        } else {
+          try {
+            return Accounts.lookupUserById( this.userId );
+          } catch ( AuthException ex ) {
+            LOG.error( ex );
+            return FakePrincipals.NOBODY_USER;
+          }
+        }
+      } else {
         return FakePrincipals.NOBODY_USER;
+      }
+    } else {
+      if( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
+        return Account.SYSTEM_ACCOUNT.equals( this.userId ) ? FakePrincipals.SYSTEM_USER : FakePrincipals.NOBODY_USER;
+      } else {
+        try {
+          return Contexts.lookup( this.correlationId ).getUser( );
+        } catch ( NoSuchContextException ex ) {
+          return FakePrincipals.NOBODY_USER;
+        }
       }
     }
   }

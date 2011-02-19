@@ -227,7 +227,7 @@ public class ClusterAllocator extends Thread {
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
                                    vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
-                                   vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regardingUserRequest( request );
+                                   vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regarding( request );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newRequest( new VmRunCallback( run, childToken ) );
     if ( !childToken.getAddresses( ).isEmpty( ) ) {
       req.then( new Callback.Success<VmRunResponseType>( ) {

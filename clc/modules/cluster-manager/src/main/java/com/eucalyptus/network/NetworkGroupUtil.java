@@ -101,7 +101,7 @@ public class NetworkGroupUtil {
 
   public static List<SecurityGroupItemType> getUserNetworksAdmin( AccountFullName accountFullName, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
-    if ( groupNames.isEmpty( ) ) {
+    if ( groupNames.isEmpty( ) ) {bzr
       try {
         for( User u : Accounts.listAllUsers( ) ) {
           groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( Accounts.lookupAccountFullNameByUserId( u.getId( ) ), groupNames ) );        

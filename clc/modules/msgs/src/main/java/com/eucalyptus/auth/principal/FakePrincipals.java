@@ -84,7 +84,9 @@ import com.google.common.collect.Lists;
 public class FakePrincipals {
   public static final String   SYSTEM_ID       = "0";
   public static final String   NOBODY_ID       = "1";
-  
+  public static boolean isFakeIdentify( String userId ) {
+    return Account.NOBODY_ACCOUNT.equals( userId ) || Account.SYSTEM_ACCOUNT.equals( userId );
+  }
   public static final Account  NOBODY_ACCOUNT  = new Account( ) {
                                                  @Override
                                                  public String getId( ) {
