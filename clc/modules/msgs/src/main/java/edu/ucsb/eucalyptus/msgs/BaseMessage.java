@@ -274,7 +274,7 @@ public class BaseMessage {
       this.setUser( FakePrincipals.NOBODY_USER );
     } else {
       this.userId = user.getName( );
-      this.effectiveUserId = this.isAdministrator( ) ? FakePrincipals.SYSTEM_USER.getName( ) : user.getName( );
+      this.effectiveUserId = ( this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( ) ) ? FakePrincipals.SYSTEM_USER.getName( ) : user.getName( );
     }
     return this;
   }
