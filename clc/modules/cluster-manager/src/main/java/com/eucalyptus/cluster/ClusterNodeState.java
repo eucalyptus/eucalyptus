@@ -133,7 +133,7 @@ public class ClusterNodeState {
     LOG.debug( LogUtil.header("AFTER ALLOCATE") );
     LOG.debug( sorted );
 
-    ResourceToken token = new ResourceToken( userFullName, this.clusterName, requestId, quantity, this.virtualTimer++, vmTypeName );
+    ResourceToken token = new ResourceToken( userFullName, requestId, this.clusterName, quantity, this.virtualTimer++, vmTypeName );
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
     this.pendingTokens.add( token );
     return token;
@@ -147,7 +147,7 @@ public class ClusterNodeState {
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       NetworkToken primaryNet = token.getPrimaryNetwork( );
-      ResourceToken childToken = new ResourceToken( token.getUserFullName( ), token.getCluster( ), token.getCorrelationId( )+index, 1, this.virtualTimer++, token.getVmType( ) );
+      ResourceToken childToken = new ResourceToken( token.getUserFullName( ), token.getCorrelationId( )+index, token.getCluster( ), 1, this.virtualTimer++, token.getVmType( ) );
       if( token.getAddresses( ).size( ) > index ) {
         childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
       }
