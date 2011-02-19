@@ -87,8 +87,6 @@ public class Ats {
     }
   }
   
-  public Ats( AnnotatedElement o ) {}
-
   public <A extends Annotation> boolean has( Class<A> annotation ) {
     for( AnnotatedElement a : this.ancestry ) {
       if( a.isAnnotationPresent( annotation ) ) {
@@ -112,10 +110,12 @@ public class Ats {
   }
   
   public static Ats from( Object o ) {
-    if ( o instanceof AnnotatedElement ) {
+    if ( o instanceof Class ) {
+      return new Ats( (AnnotatedElement) o );
+    } else if ( o instanceof AnnotatedElement ) {
       return new Ats( (AnnotatedElement) o );
     } else {
-      return new Ats( o.getClass( ) );
+      return new Ats( (AnnotatedElement) o.getClass( ) );
     }
   }
   

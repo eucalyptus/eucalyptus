@@ -160,7 +160,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   public void close( ) {
     for ( RequestInfo req : RequestInfo.getRequestInfoList( ) ) {
       String reqString = req.toString( );
-      if ( req.getRequest( ) != null ) {
+      if ( req.getRequest( ) != null && reqString != null ) {
         getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
         getWriter( req.getRequest( ) ).flush( );
       }
