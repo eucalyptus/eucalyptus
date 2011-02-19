@@ -33,14 +33,14 @@ import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger LOG = Logger.getLogger( BaseMessage.class );
-  private String                     correlationId;
-  private String                     userId;
-  private String                     effectiveUserId;
-  private Boolean                    _return      = true;
-  private String                     statusMessage;
-  private Integer                    epoch        = currentEpoch++;
-  private ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
+  private static Logger      LOG          = Logger.getLogger( BaseMessage.class );
+  String                     correlationId;
+  String                     userId;
+  String                     effectiveUserId;
+  Boolean                    _return      = true;
+  String                     statusMessage;
+  Integer                    epoch        = currentEpoch++;
+  ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
   private static Integer     currentEpoch = 0;
   
   public BaseMessage( ) {
@@ -79,9 +79,9 @@ public class BaseMessage {
   public void setUserId( String userId ) {
     this.userId = userId;
   }
-
+  
   public String getUserId( ) {
-    if( this.getUser( ) == null ) {
+    if ( this.getUser( ) == null ) {
       return FakePrincipals.NOBODY_ID;
     } else {
       return this.getUser( ).getId( );
@@ -101,12 +101,12 @@ public class BaseMessage {
     this.effectiveUserId = FakePrincipals.SYSTEM_USER.getName( );
     return ( TYPE ) this;
   }
-
+  
   public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
     this.effectiveUserId = this.getUser( ).getName( );
     return ( TYPE ) this;
   }
-
+  
   public void set_return( Boolean return1 ) {
     this._return = return1;
   }
@@ -123,13 +123,14 @@ public class BaseMessage {
   public void setEffectiveUserId( String effectiveUserId ) {
     this.effectiveUserId = effectiveUserId;
   }
-
+  
   public String getEffectiveUserId( ) {
     return this.effectiveUserId;
   }
   
   /**
    * Creates a default SYSTEM generated message.
+   * 
    * @param <TYPE>
    * @return
    */
@@ -155,7 +156,7 @@ public class BaseMessage {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     String userId = msg.userId;
     this.setUser( msg.getUser( ) );
-    if( userId != null && !Account.NOBODY_ACCOUNT.equals( userId ) ) {
+    if ( userId != null && !Account.NOBODY_ACCOUNT.equals( userId ) ) {
       this.userId = userId;//TODO:GRZE:HACKHACKHACK
     }
     return ( TYPE ) this;
@@ -275,15 +276,17 @@ public class BaseMessage {
   }
   
   public BaseMessage setUser( User user ) {
-    if( user == null ) {
+    if ( user == null ) {
       this.setUser( FakePrincipals.NOBODY_USER );
     } else {
       this.userId = user.getName( );
-      this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) ) ? FakePrincipals.SYSTEM_USER.getName( ) : user.getName( );
+      this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
+        ? FakePrincipals.SYSTEM_USER.getName( )
+        : user.getName( );
     }
     return this;
   }
-
+  
   /**
    * @deprecated
    * @see {@link Context#getAccount()}
@@ -295,7 +298,6 @@ public class BaseMessage {
       return FakePrincipals.NOBODY_ACCOUNT;
     }
   }
-
   
   /**
    * @deprecated
@@ -303,11 +305,11 @@ public class BaseMessage {
    */
   @Deprecated
   public User getUser( ) {
-    if( !Contexts.exists( this.correlationId ) ) {
-      if( this.userId != null ) {
-        if( FakePrincipals.NOBODY_USER_ERN.getName( ).equals( this.userId ) ) {
+    if ( !Contexts.exists( this.correlationId ) ) {
+      if ( this.userId != null ) {
+        if ( FakePrincipals.NOBODY_USER_ERN.getName( ).equals( this.userId ) ) {
           return FakePrincipals.NOBODY_USER;
-        } else if( FakePrincipals.SYSTEM_USER_ERN.getName( ).equals( this.userId ) ) {
+        } else if ( FakePrincipals.SYSTEM_USER_ERN.getName( ).equals( this.userId ) ) {
           return FakePrincipals.SYSTEM_USER;
         } else {
           try {
@@ -321,8 +323,10 @@ public class BaseMessage {
         return FakePrincipals.NOBODY_USER;
       }
     } else {
-      if( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
-        return Account.SYSTEM_ACCOUNT.equals( this.userId ) ? FakePrincipals.SYSTEM_USER : FakePrincipals.NOBODY_USER;
+      if ( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
+        return Account.SYSTEM_ACCOUNT.equals( this.userId )
+          ? FakePrincipals.SYSTEM_USER
+          : FakePrincipals.NOBODY_USER;
       } else {
         try {
           return Contexts.lookup( this.correlationId ).getUser( );
@@ -332,7 +336,6 @@ public class BaseMessage {
       }
     }
   }
-
   
   /**
    * @deprecated
