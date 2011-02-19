@@ -161,7 +161,7 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   }
   public NetworkRulesGroup( final AccountFullName account, final String groupName ) {
     super( account, groupName );
-    this.uniqueName = user.getAuthority( ) + "/security-groups/" + groupName;
+    this.uniqueName = account.getAuthority( ) + "/security-groups/" + groupName;
   }  
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
     this( account, groupName );
