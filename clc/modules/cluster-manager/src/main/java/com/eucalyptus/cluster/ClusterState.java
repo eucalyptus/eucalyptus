@@ -180,15 +180,15 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String userName, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, networkUuid, vlan );
+  public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    NetworkToken netToken = new NetworkToken( this.clusterName, accountId, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }
     return netToken;
   }
   
-  private static NetworkToken getNetworkAllocation( String userName, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
+  private static NetworkToken getNetworkAllocation( String accountId, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
     ClusterState.trim( );
     try {
       Network network = getVlanAssignedNetwork( networkName );      
