@@ -67,21 +67,22 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class NetworkToken implements Comparable {
-  private final String                networkUuid;
-  private final String                networkName;
+  private final String networkUuid;
+  private final String networkName;
+  
   public String getNetworkUuid( ) {
     return this.networkUuid;
   }
-
+  
   public String getNetworkName( ) {
     return this.networkName;
   }
-
-  private final String                cluster;
-  private final Integer               vlan;
-  private final NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
-  private final String                accountId;
-  private final String                name;
+  
+  private final String          cluster;
+  private final Integer         vlan;
+  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
+  private final String          accountId;
+  private final String          name;
   
   public NetworkToken( final String cluster, final String accountId, final String networkName, final String networkUuid, final int vlan ) {
     this.networkName = networkName;
@@ -91,19 +92,19 @@ public class NetworkToken implements Comparable {
     this.accountId = accountId;
     this.name = this.accountId + "-" + this.networkName;
   }
-
+  
   public String getCluster( ) {
     return this.cluster;
   }
-
+  
   public Integer getVlan( ) {
     return this.vlan;
   }
-
+  
   public String getAccountId( ) {
     return this.accountId;
   }
-
+  
   public String getName( ) {
     return this.name;
   }
@@ -125,7 +126,7 @@ public class NetworkToken implements Comparable {
     
     return true;
   }
-
+  
   @Override
   public int hashCode( ) {
     int result;
@@ -143,22 +144,21 @@ public class NetworkToken implements Comparable {
       ? this.vlan - that.vlan
       : this.cluster.compareTo( that.cluster );
   }
-
+  
   public void removeIndex( Integer index ) {
     this.indexes.remove( index );
   }
-
+  
   public void allocateIndex( Integer nextIndex ) {
     this.indexes.add( nextIndex );
   }
-
+  
   public boolean isEmpty( ) {
     return this.indexes.isEmpty( );
   }
-
+  
   public NavigableSet<Integer> getIndexes( ) {
     return this.indexes;
   }
-  
   
 }
