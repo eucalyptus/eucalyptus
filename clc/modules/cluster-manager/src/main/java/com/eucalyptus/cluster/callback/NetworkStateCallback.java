@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -45,18 +47,23 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
     }
     this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
     this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
-    List<String> active = Lists.newArrayList( );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
       Network net = null;
       try {
         net = Networks.getInstance( ).lookup( netInfo.getAccountId( ) + "-" + netInfo.getNetworkName( ) );
+        if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
+          NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+          netToken = net.addTokenIfAbsent( netToken );
+        }
       } catch ( NoSuchElementException e1 ) {
-        net = new Network( Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) ), netInfo.getNetworkName( ), netInfo.getUuid( ) );
-      }
-      active.add( net.getName( ) );
-      if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-        netToken = net.addTokenIfAbsent( netToken );
+        AccountFullName accountFn = Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) );
+        if( accountFn != null ) {
+          net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
+          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
+            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+            netToken = net.addTokenIfAbsent( netToken );
+          }
+        }
       }
     }
     
