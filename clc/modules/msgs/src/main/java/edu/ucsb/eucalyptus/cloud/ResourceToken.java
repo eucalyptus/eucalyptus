@@ -73,9 +73,9 @@ public class ResourceToken implements Comparable {
   private final String             cluster;
   private final String             correlationId;
   private final UserFullName       userFullName;
-  private final List<String>       instanceIds   = new ArrayList<String>( );
-  private final List<String>       addresses     = new ArrayList<String>( );
-  private final List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
+  private List<String>       instanceIds   = new ArrayList<String>( );
+  private List<String>       addresses     = new ArrayList<String>( );
+  private List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
   private final Integer            amount;
   private final String             vmType;
   private final Date               creationTime;
