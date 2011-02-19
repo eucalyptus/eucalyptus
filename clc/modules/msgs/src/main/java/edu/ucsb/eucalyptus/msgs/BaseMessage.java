@@ -285,7 +285,11 @@ public class BaseMessage {
    * @see {@link Context#getAccount()}
    */
   public Account getAccount( ) {
-    return this.getContext( ).getAccount( );
+    try {
+      return Contexts.lookup( this.correlationId ).getAccount( );
+    } catch ( NoSuchContextException ex ) {
+      return FakePrincipals.NOBODY_ACCOUNT;
+    }
   }
 
   
@@ -295,21 +299,13 @@ public class BaseMessage {
    */
   @Deprecated
   public User getUser( ) {
-    if( !Bootstrap.isFinished( ) ) {
-      return FakePrincipals.SYSTEM_USER;
-    } else {
-      return this.getContext( ).getUser( );
+    try {
+      return Contexts.lookup( this.correlationId ).getUser( );
+    } catch ( NoSuchContextException ex ) {
+      return FakePrincipals.NOBODY_USER;
     }
   }
 
-  public Context getContext( ) {
-    try {
-      return Contexts.lookup( this.correlationId );
-    } catch ( NoSuchContextException ex ) {
-      LOG.error( ex , ex );
-      throw new IllegalStateException( "Unable to locate the context in which this message is being executed: " + this.toSimpleString( ) + " because of " + ex, ex );
-    }
-  }
   
   /**
    * @deprecated
