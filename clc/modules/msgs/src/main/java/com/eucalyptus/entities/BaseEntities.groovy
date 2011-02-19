@@ -24,6 +24,7 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
@@ -74,7 +75,7 @@ public abstract class AccountMetadata extends AbstractPersistent implements Seri
   @Column( name = "metadata_account_id" )
   String accountId;
   public AccountMetadata() {}
-  public AccountMetadata(AccountFullName user) {
+  public AccountMetadata(AccountFullName account) {
     this.accountId = user.getAccountId( );
   }
   @Override
@@ -105,11 +106,11 @@ public abstract class UserMetadata extends AccountMetadata implements Serializab
   String displayName;
   public UserMetadata( ) {
   }
-  public UserMetadata( AccountFullName user ) {
+  public UserMetadata( UserFullName user ) {
     super( user );
     this.userId = user.getUserId( );
   }
-  public UserMetadata( AccountFullName user, String displayName ) {
+  public UserMetadata( UserFullName user, String displayName ) {
     this( user );
     this.displayName = displayName;
   }  
@@ -208,26 +209,26 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   public static String NETWORK_DEFAULT_NAME = "default";
   public NetworkRulesGroup( ) {
   }  
-  public NetworkRulesGroup( final AccountFullName user ) {
-    super( user );
+  public NetworkRulesGroup( final AccountFullName account ) {
+    super( account );
   }
-  public NetworkRulesGroup( final AccountFullName user, final String groupName ) {
-    super( user, groupName );
+  public NetworkRulesGroup( final AccountFullName account, final String groupName ) {
+    super( account, groupName );
     this.uniqueName = user.getAuthority( ) + "/security-groups/" + groupName;
   }  
-  public NetworkRulesGroup( final AccountFullName user, final String groupName, final String groupDescription ) {
-    this( user, groupName );
+  public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
+    this( account, groupName );
     this.description = groupDescription;
   }
-  public NetworkRulesGroup( final AccountFullName user, final String groupName, final String description, final List<NetworkRule> networkRules ) {
-    this( user, groupName, description );
+  public NetworkRulesGroup( final AccountFullName account, final String groupName, final String description, final List<NetworkRule> networkRules ) {
+    this( account, groupName, description );
     this.networkRules = networkRules;
   }
-  public static NetworkRulesGroup getDefaultGroup( AccountFullName user ) {
-    return new NetworkRulesGroup( user, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
+  public static NetworkRulesGroup getDefaultGroup( AccountFullName account ) {
+    return new NetworkRulesGroup( account, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
   }
   public Network getVmNetwork( ) {
-    Network vmNetwork = new Network( this.getAccountId( ), this.getDisplayName( ), this.getId( ) );
+    Network vmNetwork = new Network( Accounts.lookupAccontById( this.getAccountId( ) ), this.getDisplayName( ), this.getId( ) );
     for ( NetworkRule networkRule : this.getNetworkRules( ) ) {
       PacketFilterRule pfrule = new PacketFilterRule( this.getAccountId( ), this.getDisplayName( ), networkRule.getProtocol( ), networkRule.getLowPort( ), networkRule.getHighPort( ) );
       for ( IpRange cidr : networkRule.getIpRanges( ) )
@@ -238,8 +239,8 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     }
     return vmNetwork;
   }  
-  public static NetworkRulesGroup named( AccountFullName user, String groupName ) {
-    return new NetworkRulesGroup( user, groupName );
+  public static NetworkRulesGroup named( AccountFullName account, String groupName ) {
+    return new NetworkRulesGroup( account, groupName );
   }
   @Override
   public int hashCode( ) {
