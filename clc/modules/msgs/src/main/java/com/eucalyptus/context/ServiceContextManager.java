@@ -148,10 +148,11 @@ public class ServiceContextManager {
           return context.getReference( );
         }
       };
+      ctxMgmtThreadPool.submit( caller );
     } else if( !Bootstrap.isFinished( ) ) {
-      return;
+    } else {
+      ctxMgmtThreadPool.submit( caller );
     }
-    ctxMgmtThreadPool.submit( caller );
   }
   
   static String mapEndpointToService( String endpoint ) throws ServiceDispatchException {
