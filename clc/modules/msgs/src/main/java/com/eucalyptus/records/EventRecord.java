@@ -3,6 +3,7 @@ package com.eucalyptus.records;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
@@ -44,8 +45,8 @@ public class EventRecord extends EucalyptusMessage {
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   private static EucalyptusMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
-    hi.setUser( null );
-    hi.setCorrelationId( null );
+    hi.setUser( FakePrincipals.NOBODY_USER );
+    hi.setCorrelationId( FakePrincipals.NOBODY_ID );
     return hi;
   }
   private static EucalyptusMessage tryForMessage( ) {
