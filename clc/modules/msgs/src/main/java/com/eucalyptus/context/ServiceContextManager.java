@@ -131,22 +131,27 @@ public class ServiceContextManager {
       return client.get( );
     }
   }
-  
+  private static volatile Callable<MuleContext> caller;
   public static final void restart( ) {
-    ctxMgmtThreadPool.submit( new Callable<MuleContext>( ) {
-      @Override
-      public MuleContext call( ) throws Exception {
-        try {
-          while( !Bootstrap.isFinished( ) ) {
-            TimeUnit.MILLISECONDS.sleep( 30 );
+    if( !Bootstrap.isFinished( ) && caller == null ) {
+      caller = new Callable<MuleContext>( ) {
+        @Override
+        public MuleContext call( ) throws Exception {
+          try {
+            while( !Bootstrap.isFinished( ) ) {
+              TimeUnit.MILLISECONDS.sleep( 30 );
+            }
+            startup( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex, ex );
           }
-          startup( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+          return context.getReference( );
         }
-        return context.getReference( );
-      }
-    } );
+      };
+    } else if( !Bootstrap.isFinished( ) ) {
+      return;
+    }
+    ctxMgmtThreadPool.submit( caller );
   }
   
   static String mapEndpointToService( String endpoint ) throws ServiceDispatchException {
