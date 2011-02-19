@@ -324,17 +324,17 @@ public class BaseMessage {
         return FakePrincipals.NOBODY_USER;
       }
     } else {
-      if ( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
-        return Account.SYSTEM_ACCOUNT.equals( this.userId )
-          ? FakePrincipals.SYSTEM_USER
-          : FakePrincipals.NOBODY_USER;
-      } else {
+//      if ( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
+//        return Account.SYSTEM_ACCOUNT.equals( this.userId )
+//          ? FakePrincipals.SYSTEM_USER
+//          : FakePrincipals.NOBODY_USER;
+//      } else {
         try {
           return Contexts.lookup( this.correlationId ).getUser( );
         } catch ( NoSuchContextException ex ) {
           return FakePrincipals.NOBODY_USER;
         }
-      }
+//      }
     }
   }
   
