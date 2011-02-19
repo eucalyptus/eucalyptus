@@ -151,6 +151,22 @@ public class ServiceContextManager {
       ctxMgmtThreadPool.submit( caller );
     } else if( !Bootstrap.isFinished( ) ) {
     } else {
+      if( caller == null ) {
+        caller = new Callable<MuleContext>( ) {
+          @Override
+          public MuleContext call( ) throws Exception {
+            try {
+              while( !Bootstrap.isFinished( ) ) {
+                TimeUnit.MILLISECONDS.sleep( 30 );
+              }
+              startup( );
+            } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
+            }
+            return context.getReference( );
+          }
+        };
+      }
       ctxMgmtThreadPool.submit( caller );
     }
   }
