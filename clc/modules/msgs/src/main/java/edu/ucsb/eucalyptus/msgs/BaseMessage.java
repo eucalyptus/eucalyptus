@@ -18,6 +18,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.context.Context;
@@ -294,7 +295,11 @@ public class BaseMessage {
    */
   @Deprecated
   public User getUser( ) {
-    return this.getContext( ).getUser( );
+    if( !Bootstrap.isFinished( ) ) {
+      return FakePrincipals.SYSTEM_USER;
+    } else {
+      return this.getContext( ).getUser( );
+    }
   }
 
   public Context getContext( ) {
