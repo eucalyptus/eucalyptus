@@ -20,6 +20,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
@@ -29,7 +32,7 @@ import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  User                       user;
+  private static Logger LOG = Logger.getLogger( BaseMessage.class );
   String                     correlationId;
   String                     userId;
   String                     effectiveUserId;
@@ -77,10 +80,10 @@ public class BaseMessage {
   }
 
   public String getUserId( ) {
-    if( this.user == null ) {
-      return "unknown";
+    if( this.getUser( ) == null ) {
+      return FakePrincipals.NOBODY_ID;
     } else {
-      return this.user.getId( );
+      return this.getUser( ).getId( );
     }
   }
   
@@ -99,7 +102,7 @@ public class BaseMessage {
   }
 
   public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
-    this.effectiveUserId = this.user.getName( );
+    this.effectiveUserId = this.getUser( ).getName( );
     return ( TYPE ) this;
   }
 
@@ -154,7 +157,7 @@ public class BaseMessage {
   }
   
   public boolean isAdministrator( ) {
-    return ( FakePrincipals.SYSTEM_USER.getName( ).equals( this.effectiveUserId ) ) || this.user.isSystemAdmin( ) || this.user.isSystemInternal( );
+    return ( FakePrincipals.SYSTEM_USER.getName( ).equals( this.effectiveUserId ) ) || this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( );
   }
   
   public String toString( ) {
@@ -206,7 +209,6 @@ public class BaseMessage {
       throw new TypeNotPresentException( this.correlationId, e );
     }
     reply.setCorrelationId( this.getCorrelationId( ) );
-    reply.setUser( this.user );
     return reply;
   }
   
@@ -271,28 +273,45 @@ public class BaseMessage {
     if( user == null ) {
       this.setUser( FakePrincipals.NOBODY_USER );
     } else {
-      this.user = user;
       this.userId = user.getName( );
       this.effectiveUserId = this.isAdministrator( ) ? FakePrincipals.SYSTEM_USER.getName( ) : user.getName( );
     }
     return this;
   }
 
+  /**
+   * @deprecated
+   * @see {@link Context#getAccount()}
+   */
   public Account getAccount( ) {
-    try {
-      if( this.user != null ) {
-        return user.getAccount( );
-      }
-    } catch ( AuthException ex ) {
-    }
-    return FakePrincipals.NOBODY_ACCOUNT;
+    return this.getContext( ).getAccount( );
   }
 
+  
+  /**
+   * @deprecated
+   * @see {@link Context#getUser()}
+   */
+  @Deprecated
   public User getUser( ) {
-    return this.user;
+    return this.getContext( ).getUser( );
   }
 
+  public Context getContext( ) {
+    try {
+      return Contexts.lookup( this.correlationId );
+    } catch ( NoSuchContextException ex ) {
+      LOG.error( ex , ex );
+      throw new IllegalStateException( "Unable to locate the context in which this message is being executed: " + this.toSimpleString( ) + " because of " + ex, ex );
+    }
+  }
+  
+  /**
+   * @deprecated
+   * @see {@link Context#getUserErn()}
+   */
+  @Deprecated
   public UserFullName getUserErn( ) {
-    return UserFullName.getInstance( this.user );
+    return UserFullName.getInstance( this.getUser( ) );
   }
 }

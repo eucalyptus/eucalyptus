@@ -64,6 +64,7 @@
 package com.eucalyptus.util;
 
 import java.util.Map;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
@@ -100,6 +101,16 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */ {
   
   public abstract boolean equals( Object obj );
 
+  public static final Function<String[],String> ASSEMBLE_PATH_PARTS = new Function<String[],String>() {
+    @Override
+    public String apply( String[] pathParts ) {
+      StringBuilder rId = new StringBuilder( );
+      for ( String pathPart : pathParts ) {
+        rId.append( SEP_PATH.substring( 0, rId.length( ) == 0 ? 0 : 1 ) ).append( pathPart );
+      }
+      return rId.toString( );
+    }}; 
+  
   public class create {
     enum part { VENDOR, REGION, NAMESPACE, RELATIVEID, DONE }
     private Map<part,String> partMap = Maps.newHashMap( );

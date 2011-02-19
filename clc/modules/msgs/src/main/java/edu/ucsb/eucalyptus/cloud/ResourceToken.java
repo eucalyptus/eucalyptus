@@ -61,130 +61,111 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth.principal;
+package edu.ucsb.eucalyptus.cloud;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.FullName;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import com.eucalyptus.auth.principal.UserFullName;
 
-public class AccountFullName implements FullName {
-  private static Logger LOG = Logger.getLogger( UserFullName.class );
-  public static final String VENDOR = "euare";
-  private final String accountId;
-  private final String name;
-  private final String authority;
-  private final String relativeId;
-  private final String qName;
-
-  protected AccountFullName( AccountFullName accountFn, String... relativePath ) {
-    this.accountId = accountFn.getAccountId( );
-    this.name = accountFn.getName( );
-    this.authority = accountFn.getAuthority( );
-    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
-    this.qName = this.authority + this.relativeId;
+public class ResourceToken implements Comparable {
+  private final String             cluster;
+  private final String             correlationId;
+  private final UserFullName       userFullName;
+  private final List<String>       instanceIds   = new ArrayList<String>( );
+  private final List<String>       addresses     = new ArrayList<String>( );
+  private final List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
+  private final Integer            amount;
+  private final String             vmType;
+  private final Date               creationTime;
+  private final Integer            sequenceNumber;
+  
+  public ResourceToken( final UserFullName userFullName, final String correlationId, final String cluster, final int amount, final int sequenceNumber,
+                        final String vmType ) {
+    this.cluster = cluster;
+    this.correlationId = correlationId;
+    this.userFullName = userFullName;
+    this.amount = amount;
+    this.sequenceNumber = sequenceNumber;
+    this.creationTime = Calendar.getInstance( ).getTime( );
+    this.vmType = vmType;
   }
-  protected AccountFullName( Account account, String... relativePath ) {
-    Assertions.assertArgumentNotNull( account );
-    this.accountId = account.getId( );
-    this.name = accountId;
-    this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );
-    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
-    this.qName = this.authority + this.relativeId;
+  
+  public NetworkToken getPrimaryNetwork( ) {
+    return this.networkTokens.size( ) > 0
+      ? this.networkTokens.get( 0 )
+      : null;
   }
-
-  public String getAccountId( ) {
-    return this.accountId;
+  
+  public String getCluster( ) {
+    return this.cluster;
   }
-
+  
+  public String getCorrelationId( ) {
+    return this.correlationId;
+  }
+  
+  public UserFullName getUserFullName( ) {
+    return this.userFullName;
+  }
+  
+  public List<String> getInstanceIds( ) {
+    return this.instanceIds;
+  }
+  
+  public List<String> getAddresses( ) {
+    return this.addresses;
+  }
+  
+  public List<NetworkToken> getNetworkTokens( ) {
+    return this.networkTokens;
+  }
+  
+  public Integer getAmount( ) {
+    return this.amount;
+  }
+  
+  public String getVmType( ) {
+    return this.vmType;
+  }
+  
+  public Date getCreationTime( ) {
+    return this.creationTime;
+  }
+  
+  public Integer getSequenceNumber( ) {
+    return this.sequenceNumber;
+  }
+  
   @Override
-  public final String getVendor( ) {
-    return VENDOR;
-  }
-
-  @Override
-  public final String getRegion( ) {
-    return EMPTY;
-  }
-
-  @Override
-  public final String getNamespace( ) {
-    return this.accountId;
-  }
-
-  @Override
-  public final String getRelativeId( ) {
-    return this.relativeId;
-  }
-
-  @Override
-  public String getAuthority( ) {
-    return this.authority;
-  }
-
-  @Override
-  public final String getPartition( ) {
-    return this.accountId;
-  }
-
-  @Override
-  public final String getName( ) {
-    return this.name;
-  }
-
-  @Override
-  public String toString( ) {
-    return this.qName;
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.accountId == null )
-      ? 0
-      : this.accountId.hashCode( ) );
-    return result;
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( obj == null ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    UserFullName other = ( UserFullName ) obj;
-    if ( this.qName == null ) {
-      if ( other.getFullyQualifiedName( ) != null ) {
-        return false;
-      }
-    } else if ( !this.getFullyQualifiedName( ).equals( other.toString( ) ) ) {
-      return false;
-    }
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( !( o instanceof ResourceToken ) ) return false;
+    
+    ResourceToken that = ( ResourceToken ) o;
+    
+    if ( !amount.equals( that.amount ) ) return false;
+    if ( !cluster.equals( that.cluster ) ) return false;
+    if ( !correlationId.equals( that.correlationId ) ) return false;
+    if ( !creationTime.equals( that.creationTime ) ) return false;
+    
     return true;
   }
-
-  public String getFullyQualifiedName( ) {
-    return this.qName;
-  }
-
+  
   @Override
-  public String getUniqueId( ) {
-    return this.accountId;
+  public int hashCode( ) {
+    int result = cluster.hashCode( );
+    result = 31 * result + correlationId.hashCode( );
+    result = 31 * result + amount;
+    result = 31 * result + creationTime.hashCode( );
+    return result;
   }
-  public static AccountFullName getInstance( Account account ) {
-    if( account == null ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
-    } else if( account == FakePrincipals.SYSTEM_USER ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
-    } else {
-      return new AccountFullName( account );
-    }
+  
+  @Override
+  public int compareTo( final Object o ) {
+    ResourceToken that = ( ResourceToken ) o;
+    return this.sequenceNumber - that.sequenceNumber;
   }
-
+  
 }

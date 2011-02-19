@@ -87,6 +87,7 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -136,6 +137,9 @@ public class ServiceContextManager {
       @Override
       public MuleContext call( ) throws Exception {
         try {
+          while( !Bootstrap.isFinished( ) ) {
+            TimeUnit.MILLISECONDS.sleep( 30 );
+          }
           startup( );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );

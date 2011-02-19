@@ -97,11 +97,8 @@ public class ComponentFullName implements FullName {
     temp.addAll( Arrays.asList( pathPartsArray ) );
     this.authority = new StringBuilder( ).append( PREFIX ).append( SEP ).append( VENDOR ).append( SEP ).append( partition ).append( SEP ).append( FullName.SYSTEM_ID ).append( SEP ).toString( );
     StringBuilder rId = new StringBuilder( );
-    String prefix = "";
     for ( String pathPart : pathPartsArray ) {
-      rId.append( "".equals( prefix )
-        ? ( prefix = SEP_PATH ).substring( 0, 0 )
-        : prefix ).append( pathPart );
+      rId.append( SEP_PATH.substring( 0, rId.length( ) == 0 ? 0 : 1 ) ).append( pathPart );
     }
     this.relativeId = rId.toString( );
     this.qName = this.authority + this.relativeId;

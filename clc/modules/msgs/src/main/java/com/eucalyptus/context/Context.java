@@ -7,8 +7,11 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
 import com.google.common.collect.Maps;
@@ -74,6 +77,10 @@ public class Context {
     }
   }
   
+  public UserFullName getUserErn( ) {
+    return UserFullName.getInstance( this.getUser( ) );
+  }
+  
   public User getUser( ) {
     return check( this.user );
   }
@@ -122,6 +129,15 @@ public class Context {
   
   public Map<String, Contract> getContracts( ) {
     return this.contracts;
+  }
+
+  public Account getAccount( ) {
+    try {
+      return this.user.getAccount( );
+    } catch ( AuthException ex ) {
+      LOG.error( ex , ex );
+      throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
+    }
   }
   
 }

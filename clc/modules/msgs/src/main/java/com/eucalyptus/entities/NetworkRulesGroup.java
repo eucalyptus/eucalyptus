@@ -79,83 +79,96 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
-@PersistenceContext(name="eucalyptus_general")
+@PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkRulesGroup extends AccountMetadata implements Serializable {
-  @Column( name = "metadata_network_group_user_network_group_name", unique=true )
-  String uniqueName;//bogus field to enforce uniqueness
+  @Column( name = "metadata_network_group_user_network_group_name", unique = true )
+  String               uniqueName;                                          //bogus field to enforce uniqueness
   @Column( name = "metadata_network_group_description" )
-  String            description;
-  @OneToMany( cascade={CascadeType.ALL}, fetch=FetchType.EAGER )
+  String               description;
+  @OneToMany( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<NetworkRule> networkRules = new ArrayList<NetworkRule>( );
+  List<NetworkRule>    networkRules         = new ArrayList<NetworkRule>( );
   public static String NETWORK_DEFAULT_NAME = "default";
-  public NetworkRulesGroup( ) {
-  }  
+  
+  public NetworkRulesGroup( ) {}
+  
   public NetworkRulesGroup( final AccountFullName account ) {
     super( account );
   }
+  
   public NetworkRulesGroup( final AccountFullName account, final String groupName ) {
     super( account, groupName );
     this.uniqueName = account.getAuthority( ) + "/security-groups/" + groupName;
-  }  
+  }
+  
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
     this( account, groupName );
     this.description = groupDescription;
   }
+  
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String description, final List<NetworkRule> networkRules ) {
     this( account, groupName, description );
     this.networkRules = networkRules;
   }
+  
   public String getUniqueName( ) {
     return this.uniqueName;
   }
+  
   public void setUniqueName( String uniqueName ) {
     this.uniqueName = uniqueName;
   }
+  
   public String getDescription( ) {
     return this.description;
   }
+  
   public void setDescription( String description ) {
     this.description = description;
   }
+  
   public List<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
   }
+  
   public void setNetworkRules( List<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
   }
+  
   public static NetworkRulesGroup getDefaultGroup( AccountFullName account ) {
     return new NetworkRulesGroup( account, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
   }
+  
   public Network getVmNetwork( ) {
-    Network vmNetwork = new Network( Accounts.lookupAccountFullNameById( this.getAccountId( ) ), this.getDisplayName( ), this.getId( ) );
-    for ( NetworkRule networkRule : this.getNetworkRules( ) ) {
-      PacketFilterRule pfrule = new PacketFilterRule( this.getAccountId( ), this.getDisplayName( ), networkRule.getProtocol( ), networkRule.getLowPort( ), networkRule.getHighPort( ) );
-      for ( IpRange cidr : networkRule.getIpRanges( ) )
-        pfrule.getSourceCidrs( ).add( cidr.getValue( ) );
-      for ( NetworkPeer peer : networkRule.getNetworkPeers( ) )
-        pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
-      vmNetwork.getRules( ).add( pfrule );
-    }
+    List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
+    Network vmNetwork = new Network( Accounts.lookupAccountFullNameById( this.getAccountId( ) ), this.getDisplayName( ), this.getId( ), pfRules );
+    
     return vmNetwork;
-  }  
+  }
+  
   public static NetworkRulesGroup named( AccountFullName account, String groupName ) {
     return new NetworkRulesGroup( account, groupName );
   }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( uniqueName == null ) ? 0 : uniqueName.hashCode( ) );
+    result = prime * result + ( ( uniqueName == null )
+      ? 0
+      : uniqueName.hashCode( ) );
     return result;
   }
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -166,9 +179,28 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
       if ( other.uniqueName != null ) return false;
     } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
     return true;
-  }  
+  }
+  
   @Override
   public String toString( ) {
     return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.uniqueName, this.description, this.networkRules );
   }
+  
+  private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
+                                                                        
+                                                                        @Override
+                                                                        public PacketFilterRule apply( NetworkRule from ) {
+                                                                          PacketFilterRule pfrule = new PacketFilterRule(
+                                                                                                                          NetworkRulesGroup.this.getAccountId( ),
+                                                                                                                          NetworkRulesGroup.this.getDisplayName( ),
+                                                                                                                          from.getProtocol( ),
+                                                                                                                          from.getLowPort( ),
+                                                                                                                          from.getHighPort( ) );
+                                                                          for ( IpRange cidr : from.getIpRanges( ) )
+                                                                            pfrule.getSourceCidrs( ).add( cidr.getValue( ) );
+                                                                          for ( NetworkPeer peer : from.getNetworkPeers( ) )
+                                                                            pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
+                                                                          return pfrule;
+                                                                        }
+                                                                      };
 }

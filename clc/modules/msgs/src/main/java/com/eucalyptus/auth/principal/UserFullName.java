@@ -63,6 +63,7 @@
 
 package com.eucalyptus.auth.principal;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
@@ -71,7 +72,7 @@ import com.google.common.collect.ImmutableList;
 public class UserFullName extends AccountFullName implements FullName {
   
   private UserFullName( User user ) {
-    super( user );
+    super( Accounts.lookupAccount( user ), "user", user.getName( ) );
   }
   
   public static UserFullName getInstance( User user ) {

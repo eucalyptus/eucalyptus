@@ -84,7 +84,7 @@
 	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar" sourcepath="/bzr/third-party/geronimo-jpa_2.0_spec-1.1"/>
 	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/google-collect-20080808.jar"/>
+	<classpathentry kind="lib" path="lib/google-collect-20080808.jar" sourcepath="/bzr/third-party/libgoogle-collections-java-0~20080808"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.0.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-dev-2.0.jar"/>

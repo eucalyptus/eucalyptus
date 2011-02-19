@@ -43,7 +43,7 @@ public class BuildBindings extends Task {
       for ( String d : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String buildDir = dirName + File.separator + d.replaceAll( "build/.*", "build" );
         if ( !dirs.contains( buildDir ) ) {
-          log( "Found class directory: " + buildDir );
+          System.out.println( "Found class directory: " + buildDir );
           dirs.add( buildDir );
         }
       }
@@ -60,7 +60,7 @@ public class BuildBindings extends Task {
         try {
           URL buildDirUrl = new File( buildDir ).toURL( );
           if ( !dirUrls.contains( buildDirUrl ) ) {
-            log( "Found class directory: " + buildDirUrl );
+            System.out.println( "Found class directory: " + buildDirUrl );
             dirUrls.add( buildDirUrl );
           }
         } catch ( MalformedURLException ex ) {

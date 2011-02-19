@@ -61,130 +61,104 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth.principal;
+package edu.ucsb.eucalyptus.cloud;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.FullName;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
-public class AccountFullName implements FullName {
-  private static Logger LOG = Logger.getLogger( UserFullName.class );
-  public static final String VENDOR = "euare";
-  private final String accountId;
-  private final String name;
-  private final String authority;
-  private final String relativeId;
-  private final String qName;
-
-  protected AccountFullName( AccountFullName accountFn, String... relativePath ) {
-    this.accountId = accountFn.getAccountId( );
-    this.name = accountFn.getName( );
-    this.authority = accountFn.getAuthority( );
-    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
-    this.qName = this.authority + this.relativeId;
+public class NetworkToken implements Comparable {
+  private final String                networkUuid;
+  private final String                networkName;
+  public String getNetworkUuid( ) {
+    return this.networkUuid;
   }
-  protected AccountFullName( Account account, String... relativePath ) {
-    Assertions.assertArgumentNotNull( account );
-    this.accountId = account.getId( );
-    this.name = accountId;
-    this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );
-    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
-    this.qName = this.authority + this.relativeId;
+
+  public String getNetworkName( ) {
+    return this.networkName;
+  }
+
+  private final String                cluster;
+  private final Integer               vlan;
+  private final NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
+  private final String                accountId;
+  private final String                name;
+  
+  public NetworkToken( final String cluster, final String accountId, final String networkName, final String networkUuid, final int vlan ) {
+    this.networkName = networkName;
+    this.networkUuid = networkUuid;
+    this.cluster = cluster;
+    this.vlan = vlan;
+    this.accountId = accountId;
+    this.name = this.accountId + "-" + this.networkName;
+  }
+
+  public String getCluster( ) {
+    return this.cluster;
+  }
+
+  public Integer getVlan( ) {
+    return this.vlan;
   }
 
   public String getAccountId( ) {
     return this.accountId;
   }
 
-  @Override
-  public final String getVendor( ) {
-    return VENDOR;
-  }
-
-  @Override
-  public final String getRegion( ) {
-    return EMPTY;
-  }
-
-  @Override
-  public final String getNamespace( ) {
-    return this.accountId;
-  }
-
-  @Override
-  public final String getRelativeId( ) {
-    return this.relativeId;
-  }
-
-  @Override
-  public String getAuthority( ) {
-    return this.authority;
-  }
-
-  @Override
-  public final String getPartition( ) {
-    return this.accountId;
-  }
-
-  @Override
-  public final String getName( ) {
+  public String getName( ) {
     return this.name;
   }
-
+  
   @Override
   public String toString( ) {
-    return this.qName;
+    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.name, this.cluster, this.vlan, this.indexes );
+  }
+  
+  @Override
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( !( o instanceof NetworkToken ) ) return false;
+    NetworkToken that = ( NetworkToken ) o;
+    
+    if ( !cluster.equals( that.cluster ) ) return false;
+    if ( !networkName.equals( that.networkName ) ) return false;
+    if ( !accountId.equals( that.accountId ) ) return false;
+    
+    return true;
   }
 
   @Override
   public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.accountId == null )
-      ? 0
-      : this.accountId.hashCode( ) );
+    int result;
+    
+    result = networkName.hashCode( );
+    result = 31 * result + cluster.hashCode( );
+    result = 31 * result + accountId.hashCode( );
     return result;
   }
-
+  
   @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( obj == null ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    UserFullName other = ( UserFullName ) obj;
-    if ( this.qName == null ) {
-      if ( other.getFullyQualifiedName( ) != null ) {
-        return false;
-      }
-    } else if ( !this.getFullyQualifiedName( ).equals( other.toString( ) ) ) {
-      return false;
-    }
-    return true;
+  public int compareTo( Object o ) {
+    NetworkToken that = ( NetworkToken ) o;
+    return ( !this.cluster.equals( that.cluster ) && ( this.vlan.equals( that.vlan ) ) )
+      ? this.vlan - that.vlan
+      : this.cluster.compareTo( that.cluster );
   }
 
-  public String getFullyQualifiedName( ) {
-    return this.qName;
+  public void removeIndex( Integer index ) {
+    this.indexes.remove( index );
   }
 
-  @Override
-  public String getUniqueId( ) {
-    return this.accountId;
-  }
-  public static AccountFullName getInstance( Account account ) {
-    if( account == null ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
-    } else if( account == FakePrincipals.SYSTEM_USER ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
-    } else {
-      return new AccountFullName( account );
-    }
+  public void allocateIndex( Integer nextIndex ) {
+    this.indexes.add( nextIndex );
   }
 
+  public boolean isEmpty( ) {
+    return this.indexes.isEmpty( );
+  }
+
+  public NavigableSet<Integer> getIndexes( ) {
+    return this.indexes;
+  }
+  
+  
 }
