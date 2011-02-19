@@ -25,6 +25,8 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.FakePrincipals;
 
 
 @MappedSuperclass
@@ -150,17 +152,17 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   @Transient
   public static String NO_KEY_NAME = "";
   @Transient
-  public static SshKeyPair NO_KEY = new SshKeyPair( "", "", "", "", "" );
+  public static SshKeyPair NO_KEY = new SshKeyPair( FakePrincipals.N, "", "", "", "" );
   public SshKeyPair( ) {
   }
-  public SshKeyPair( AccountFullName user ) {
+  public SshKeyPair( UserFullName user ) {
     super( user );
   }
-  public SshKeyPair( AccountFullName user, String keyName ) {
+  public SshKeyPair( UserFullName user, String keyName ) {
     super( user, keyName );
     this.uniqueName = user.toString( ) + "/keys/" + keyName;
   }
-  public SshKeyPair( AccountFullName user, String keyName, String publicKey, String fingerPrint ) {
+  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
     this( user, keyName );
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;
