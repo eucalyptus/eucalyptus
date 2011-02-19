@@ -75,6 +75,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
@@ -186,6 +187,7 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
     return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.uniqueName, this.description, this.networkRules );
   }
   
+  @Transient
   private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
                                                                         
                                                                         @Override
