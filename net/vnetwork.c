@@ -276,7 +276,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  vnetLoadIPTables(vnetconfig);
 	}
 	
-	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-P FORWARD ACCEPT");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-P FORWARD DROP");
 	
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
 	
