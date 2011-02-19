@@ -200,15 +200,14 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
 }
 
 public class ExceptionResponseType extends BaseMessage {
-  String source;
-  String message;
+  String source = "not available";
+  String message = "not available";
   String requestType = "not available";
   Throwable exception;
   HttpResponseStatus httpStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
   public ExceptionResponseType() {}
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
-    this.source = source;
-    this.message = message;
+    this.message = message!=null?message:"not available";
     this.correlationId = msg.getCorrelationId();
     this.userId = msg.getUserId();
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
@@ -216,9 +215,8 @@ public class ExceptionResponseType extends BaseMessage {
     this.set_return(false);
   } 
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
-    this.source = source;
     this.httpStatus = httpStatus;
-    this.message = message;
+    this.message = message!=null?message:"not available"
     this.correlationId = msg.getCorrelationId();
     this.userId = msg.getUserId();
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;

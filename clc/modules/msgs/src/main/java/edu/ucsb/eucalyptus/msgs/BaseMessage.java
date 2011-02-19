@@ -299,10 +299,15 @@ public class BaseMessage {
    */
   @Deprecated
   public User getUser( ) {
-    try {
-      return Contexts.lookup( this.correlationId ).getUser( );
-    } catch ( NoSuchContextException ex ) {
+    if( !Contexts.exists( this.correlationId ) ) {
       return FakePrincipals.NOBODY_USER;
+
+    } else {
+      try {
+        return Contexts.lookup( this.correlationId ).getUser( );
+      } catch ( NoSuchContextException ex ) {
+        return FakePrincipals.NOBODY_USER;
+      }
     }
   }
 

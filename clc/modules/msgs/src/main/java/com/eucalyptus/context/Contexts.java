@@ -35,6 +35,9 @@ public class Contexts {
     }
   }
   
+  public static boolean exists( String correlationId ) {
+    return uuidContexts.containsKey( correlationId );
+  }
   public static Context lookup( String correlationId ) throws NoSuchContextException {
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
