@@ -65,7 +65,7 @@ public class BaseMessage {
   
   public String getCorrelationId( ) {
     if ( this.correlationId == null ) {
-      LOG.error( "Creating UUID for message which did not have it set correctly!" );
+      LOG.error( "Creating UUID for message which did not have it set correctly: " + this.getClass( ) );
       return ( this.correlationId = UUID.randomUUID( ).toString( ) );
     } else {
       return this.correlationId;
