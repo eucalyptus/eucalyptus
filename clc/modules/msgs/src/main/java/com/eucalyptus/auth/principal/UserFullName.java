@@ -70,9 +70,10 @@ import com.eucalyptus.util.FullName;
 import com.google.common.collect.ImmutableList;
 
 public class UserFullName extends AccountFullName implements FullName {
-  
+  private final String userId;
   private UserFullName( User user ) {
     super( Accounts.lookupAccount( user ), "user", user.getName( ) );
+    this.userId = user.getId( );
   }
   
   public static UserFullName getInstance( User user ) {
@@ -83,5 +84,32 @@ public class UserFullName extends AccountFullName implements FullName {
     } else {
       return new UserFullName( user );
     }
+  }
+
+  @Override
+  public String getUniqueId( ) {
+    return this.userId;
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.userId == null )
+      ? 0
+      : this.userId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( getClass( ) != obj.getClass( ) ) return false;
+    UserFullName other = ( UserFullName ) obj;
+    if ( this.userId == null ) {
+      if ( other.userId != null ) return false;
+    } else if ( !this.userId.equals( other.userId ) ) return false;
+    return true;
   }
 }
