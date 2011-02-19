@@ -79,6 +79,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   
   public ConsoleOutputCallback( GetConsoleOutputType msg ) {
+    LOG.debug( msg.toSimpleString( ) );
     this.setRequest( msg );
   }
   
@@ -87,6 +88,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
+    LOG.debug( reply.toSimpleString( ) );
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
     try {
@@ -94,7 +96,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
 //for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
       if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
+//    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );

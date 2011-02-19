@@ -109,7 +109,7 @@ public class DescribeSecurityGroupsType extends VmSecurityMessage {
   ArrayList<String> securityGroupSet = new ArrayList<String>();
 }
 public class SecurityGroupItemType extends EucalyptusData {
-  String ownerId;
+  String accountId;
   String groupName;
   String groupDescription;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();

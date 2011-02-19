@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -102,7 +103,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
             if( !VmState.RUNNING.equals( vm.getState( ) ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
-              network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );
+              network = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameById( network.getAccountId( ) ), network.getNetworkName( ) ).getVmNetwork( );
               networks.put( network.getName( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( network.getName( ) ) ) {
                 

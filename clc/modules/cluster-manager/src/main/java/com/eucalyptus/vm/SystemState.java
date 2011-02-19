@@ -84,6 +84,7 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
@@ -269,7 +270,7 @@ public class SystemState {
     try {
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      FullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
+      UserFullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
       if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
@@ -285,20 +286,12 @@ public class SystemState {
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
         try {
-          EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );
-          try {
-            SshKeyPair searchKey = new SshKeyPair( runVm.getOwnerId( ) ) {
-              {
-                setPublicKey( runVm.getKeyValue( ) );
-              }
-            };
-            key = db.getUnique( searchKey );
-            db.commit( );
-          } catch ( Throwable e ) {
-            db.rollback( );
-            throw new EucalyptusCloudException( "Failed to find key pair associated with public key " + runVm.getKeyValue( ), e );
-          }
-        } catch ( Throwable e ) {
+          SshKeyPair searchKey = EntityWrapper.get( SshKeyPair.class ).lookupAndClose( new SshKeyPair( ownerId ) {
+            {
+              setPublicKey( runVm.getKeyValue( ) );
+            }
+          } );
+        } catch ( Exception e ) {
           key = SshKeyPair.NO_KEY;
         }
       } else {
@@ -323,21 +316,22 @@ public class SystemState {
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
-            try {
-              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
-            }
+          //TODO:GRZE:RESTORE
+//            try {
+//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+//            } catch ( Exception ex ) {
+//              LOG.error( ex );
+//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
+//            }
             networks.add( notwork );
             NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
-          } catch ( EucalyptusCloudException e ) {
-            LOG.error( e );
-            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+//          } catch ( EucalyptusCloudException e ) {
+//            LOG.error( e );
+//            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+//            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -383,13 +377,14 @@ public class SystemState {
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }
-  
-  public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
-    try {
-      return NetworkGroupUtil.getUserNetworkRulesGroup( userId, networkName ).getVmNetwork( );
-    } catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
-    }
-  }
+
+//TODO:GRZE:RESTORE
+//  public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
+//    try {
+//      return NetworkGroupUtil.getUserNetworkRulesGroup( AccountFullName.get, networkName ).getVmNetwork( );
+//    } catch ( Exception e ) {
+//      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
+//    }
+//  }
   
 }

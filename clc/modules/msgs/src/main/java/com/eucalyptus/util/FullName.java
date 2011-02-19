@@ -67,7 +67,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
-public interface FullName {
+public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */ {
 
   public final static String EMPTY      = "";
   public final static String SEP_PATH   = "/";
@@ -84,14 +84,16 @@ public interface FullName {
   
   public abstract String getNamespace( );
   
+  public abstract String getAuthority( );
+
   public abstract String getRelativeId( );
   
   public abstract String getPartition( );
   
   public abstract String getName( );
-  
-  public abstract ImmutableList<String> getPathParts( );
-  
+
+  public abstract String getFullyQualifiedName( );
+
   public abstract String toString( );
   
   public abstract int hashCode( );
@@ -136,6 +138,7 @@ public interface FullName {
         for( String s : relativePath ) {
           rId.append( relativePath ).append( SEP_PATH );
         }
+        this.partMap.put( part.DONE, this.buf.toString( ) );
         this.buf.append( rId.toString( ) );
         this.partMap.put( part.RELATIVEID, rId.toString( ) );
         this.current = part.DONE;
@@ -145,6 +148,9 @@ public interface FullName {
       return new FullName() {
         @Override public String getUniqueId( ) {
           return this.getNamespace( );
+        }
+        @Override public String getFullyQualifiedName( ) {
+          return create.this.buf.toString( );
         }
 
         @Override
@@ -163,6 +169,11 @@ public interface FullName {
         }
 
         @Override
+        public String getAuthority( ) {
+          return create.this.partMap.get( part.DONE );
+        }
+
+        @Override
         public String getRelativeId( ) {
           return create.this.partMap.get( part.RELATIVEID );
         }
@@ -175,11 +186,6 @@ public interface FullName {
         @Override
         public String getName( ) {
           return create.this.buf.toString( );
-        }
-
-        @Override
-        public ImmutableList<String> getPathParts( ) {
-          return ImmutableList.of( create.this.partMap.get( part.RELATIVEID ).split( SEP_PATH ) );
         }};
     }
   

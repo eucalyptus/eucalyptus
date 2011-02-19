@@ -14,12 +14,17 @@ import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
@@ -264,9 +269,7 @@ public class BaseMessage {
   
   public BaseMessage setUser( User user ) {
     if( user == null ) {
-      this.user = null;
-      this.userId = null;
-      this.effectiveUserId = null;
+      this.setUser( FakePrincipals.NOBODY_USER );
     } else {
       this.user = user;
       this.userId = user.getName( );
@@ -275,7 +278,7 @@ public class BaseMessage {
     return this;
   }
 
-  protected Account getAccount( ) {
+  public Account getAccount( ) {
     try {
       if( this.user != null ) {
         return user.getAccount( );
@@ -289,7 +292,7 @@ public class BaseMessage {
     return this.user;
   }
 
-  public FullName getUserErn( ) {
+  public UserFullName getUserErn( ) {
     return UserFullName.getInstance( this.user );
   }
 }

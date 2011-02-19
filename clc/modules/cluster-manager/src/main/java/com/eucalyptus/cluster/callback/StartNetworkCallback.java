@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.util.LogUtil;
@@ -73,47 +74,49 @@ import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
-public class StartNetworkCallback extends BroadcastCallback<StartNetworkType,StartNetworkResponseType> {
-
-  private static Logger    LOG = Logger.getLogger( StartNetworkCallback.class );
-
-  private NetworkToken     networkToken;
-
+public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, StartNetworkResponseType> {
+  
+  private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
+  
+  private final NetworkToken networkToken;
+  
   public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
-    StartNetworkType msg = new StartNetworkType( networkToken.getUserName( ), networkToken.getVlan( ), networkToken.getNetworkName( ), networkToken.getNetworkUuid( ) );
+    StartNetworkType msg = new StartNetworkType( networkToken.getAccountId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
+                                                 networkToken.getNetworkUuid( ) );
+    msg.setUser( FakePrincipals.SYSTEM_USER );
+    msg.setUserId( networkToken.getAccountId( ) );
     this.setRequest( msg );
   }
-
+  
   @Override
-  public void fire( StartNetworkResponseType msg )  {
+  public void fire( StartNetworkResponseType msg ) {
     try {
       Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
   }
-
-
+  
   @Override
-  public void initialize( StartNetworkType msg )  {
+  public void initialize( StartNetworkType msg ) {
     try {
       msg.setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
-      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );      
+      msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
   }
-
+  
   @Override
   public void fireException( Throwable e ) {
     LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
     LOG.debug( e, e );
   }
-
+  
   @Override
   public BroadcastCallback<StartNetworkType, StartNetworkResponseType> newInstance( ) {
     return new StartNetworkCallback( this.networkToken );
   }
-
+  
 }

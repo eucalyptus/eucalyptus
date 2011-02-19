@@ -223,6 +223,7 @@ public class ClusterAllocator extends Thread {
       }
     } );
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
+    //TODO:GRZE:ASAP use ern here instead of string name -- see KeyPairManager.resolve()
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
                                    vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 

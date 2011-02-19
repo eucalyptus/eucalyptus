@@ -4,6 +4,7 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -48,13 +49,13 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
       Network net = null;
       try {
-        net = Networks.getInstance( ).lookup( netInfo.getUserName( ) + "-" + netInfo.getNetworkName( ) );
+        net = Networks.getInstance( ).lookup( netInfo.getAccountId( ) + "-" + netInfo.getNetworkName( ) );
       } catch ( NoSuchElementException e1 ) {
-        net = new Network( netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ) );
+        net = new Network( Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) ), netInfo.getNetworkName( ), netInfo.getUuid( ) );
       }
       active.add( net.getName( ) );
       if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getUserName( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+        NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
         netToken = net.addTokenIfAbsent( netToken );
       }
     }

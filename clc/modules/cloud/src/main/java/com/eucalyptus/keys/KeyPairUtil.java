@@ -8,6 +8,8 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -21,7 +23,7 @@ public class KeyPairUtil {
     return db;
   }
 
-  public static List<SshKeyPair> getUserKeyPairs( String userName ) {
+  public static List<SshKeyPair> getUserKeyPairs( AccountFullName userName ) {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     List<SshKeyPair> keys = Lists.newArrayList( );
     try {
@@ -33,7 +35,7 @@ public class KeyPairUtil {
     return keys;
   }
 
-  public static SshKeyPair getUserKeyPair( String userName, String keyName ) throws EucalyptusCloudException {
+  public static SshKeyPair getUserKeyPair( AccountFullName userName, String keyName ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
@@ -46,7 +48,7 @@ public class KeyPairUtil {
     return key;
   }
 
-  public static SshKeyPair getUserKeyPairByValue( String userName, String keyValue ) throws EucalyptusCloudException {
+  public static SshKeyPair getUserKeyPairByValue( AccountFullName userName, String keyValue ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
@@ -61,7 +63,7 @@ public class KeyPairUtil {
     return key;
   }
 
-  public static SshKeyPair deleteUserKeyPair( String userName, String keyName ) throws EucalyptusCloudException {
+  public static SshKeyPair deleteUserKeyPair( AccountFullName userName, String keyName ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
@@ -74,7 +76,7 @@ public class KeyPairUtil {
     }
     return key;
   }
-  public static PrivateKey createUserKeyPair( String userName, String keyName ) throws EucalyptusCloudException {
+  public static PrivateKey createUserKeyPair( AccountFullName userName, String keyName ) throws EucalyptusCloudException {
     SshKeyPair newKey = new SshKeyPair( userName, keyName );
     KeyPair newKeys = null;
     try {
@@ -96,7 +98,7 @@ public class KeyPairUtil {
     return newKeys.getPrivate( );
   }
 
-  private static String getAuthKeyString( String userName, KeyPair newKeys ) {
+  private static String getAuthKeyString( AccountFullName userName, KeyPair newKeys ) {
     RSAPublicKey publicKey = ( RSAPublicKey ) newKeys.getPublic( );
     byte[] keyType = "ssh-rsa".getBytes( );
     byte[] expBlob = publicKey.getPublicExponent( ).toByteArray( );
@@ -116,7 +118,7 @@ public class KeyPairUtil {
     System.arraycopy( lenArray, 0, authKeyBlob, 4 + expBlob.length + 4 + keyType.length + 4 - lenArray.length, lenArray.length );
     System.arraycopy( modBlob, 0, authKeyBlob, 4 + ( 4 + expBlob.length + ( 4 + keyType.length ) ), modBlob.length );
 
-    String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName );
+    String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.toString( ) );
     return authKeyString;
   }
 

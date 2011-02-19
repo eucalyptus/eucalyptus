@@ -24,7 +24,7 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
+import com.eucalyptus.auth.principal.AccountFullName;
 
 
 @MappedSuperclass
@@ -68,21 +68,70 @@ public class AbstractPersistent implements Serializable {
 }
 
 @MappedSuperclass
-public abstract class UserMetadata extends AbstractPersistent implements Serializable {
-  @Column( name = "metadata_user_name" )
-  String userName;
+public abstract class AccountMetadata extends AbstractPersistent implements Serializable {
+  @Column( name = "metadata_account_id" )
+  String accountId;
+  public AccountMetadata() {}
+  public AccountMetadata(AccountFullName user) {
+    this.accountId = user.getAccountId( );
+  }
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( accountId == null ) ? 0 : accountId.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
+    AccountMetadata other = ( AccountMetadata ) obj;
+    if ( accountId == null ) {
+      if ( other.accountId != null ) return false;
+    } else if ( !accountId.equals( other.accountId ) ) return false;
+    return true;
+  }
+
+}
+@MappedSuperclass
+public abstract class UserMetadata extends AccountMetadata implements Serializable {
+  @Column( name = "metadata_user_id" )
+  String userId;
   @Column( name = "metadata_display_name" )
   String displayName;
   public UserMetadata( ) {
   }
-  public UserMetadata( String userName ) {
-    super( );
-    this.userName = userName;
+  public UserMetadata( AccountFullName user ) {
+    super( user );
+    this.userId = user.getUserId( );
   }
-  public UserMetadata( String userName, String displayName ) {
-    super( );
-    this.userName = userName;
+  public UserMetadata( AccountFullName user, String displayName ) {
+    this( user );
     this.displayName = displayName;
+  }  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( userId == null ) ? 0 : userId.hashCode( ) );
+    result = prime * result + ( ( displayName == null ) ? 0 : displayName.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
+    UserMetadata other = ( UserMetadata ) obj;
+    if ( userId == null ) {
+      if ( other.userId != null ) return false;
+    } else if ( !userId.equals( other.userId ) ) return false;
+    if ( displayName == null ) {
+      if ( other.displayName != null ) return false;
+    } else if ( !displayName.equals( other.displayName ) ) return false;
+    return true;
   }  
 }
 
@@ -104,48 +153,40 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   public static SshKeyPair NO_KEY = new SshKeyPair( "", "", "", "", "" );
   public SshKeyPair( ) {
   }
-  public SshKeyPair( String userName, String keyName, String publicKey, String fingerPrint ) {
-    super( userName, keyName );
-    this.uniqueName = userName + keyName;
+  public SshKeyPair( AccountFullName user ) {
+    super( user );
+  }
+  public SshKeyPair( AccountFullName user, String keyName ) {
+    super( user, keyName );
+    this.uniqueName = user.toString( ) + "/keys/" + keyName;
+  }
+  public SshKeyPair( AccountFullName user, String keyName, String publicKey, String fingerPrint ) {
+    this( user, keyName );
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;
   }  
-  public SshKeyPair( String userName, String keyName, String asdfsdffsdf, String publicKey, String fingerPrint ) {
-    super( userName, keyName );
-    this.uniqueName = userName + keyName;
-    this.publicKey = publicKey;
-    this.fingerPrint = fingerPrint;
-  }  
-  public SshKeyPair( String userName, String displayName ) {
-    super( userName, displayName );
-    this.uniqueName = userName+displayName;
-  }
-  public SshKeyPair( String userName ) {
-    super( userName );
-  }
-  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( fingerPrint == null ) ? 0 : fingerPrint.hashCode( ) );
-    result = prime * result + ( ( publicKey == null ) ? 0 : publicKey.hashCode( ) );
+    result = prime * result + ( ( uniqueName == null ) ? 0 : uniqueName.hashCode( ) );
     return result;
   }
   @Override
   public boolean equals( Object obj ) {
     if ( this.is( obj ) ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).is( obj.getClass( ) ) ) return false;
-    SshKeyPair other = ( SshKeyPair ) obj;
-    if ( fingerPrint == null ) {
-      if ( other.fingerPrint != null ) return false;
-    } else if ( !fingerPrint.equals( other.fingerPrint ) ) return false;
-    if ( publicKey == null ) {
-      if ( other.publicKey != null ) return false;
-    } else if ( !publicKey.equals( other.publicKey ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    NetworkRulesGroup other = ( NetworkRulesGroup ) obj;
+    if ( uniqueName == null ) {
+      if ( other.uniqueName != null ) return false;
+    } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
     return true;
   }  
+  @Override
+  public String toString( ) {
+    return String.format( "SshKeyPair:uniqueName=%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
+  }
 }
 
 
@@ -165,29 +206,28 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
   public static String NETWORK_DEFAULT_NAME = "default";
   public NetworkRulesGroup( ) {
   }  
-  public NetworkRulesGroup( String userName ) {
-    super( userName );
+  public NetworkRulesGroup( final AccountFullName user ) {
+    super( user );
   }
-  public NetworkRulesGroup( String userName, String groupName, String groupDescription ) {
-    this( userName, groupName );
+  public NetworkRulesGroup( final AccountFullName user, final String groupName ) {
+    super( user, groupName );
+    this.uniqueName = user.getAuthority( ) + "/security-groups/" + groupName;
+  }  
+  public NetworkRulesGroup( final AccountFullName user, final String groupName, final String groupDescription ) {
+    this( user, groupName );
     this.description = groupDescription;
   }
-  public static NetworkRulesGroup getDefaultGroup( String userName ) {
-    return new NetworkRulesGroup( userName, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
-  }
-  public NetworkRulesGroup( final String userName, final String groupName ) {
-    super( userName, groupName );
-    this.uniqueName = userName + groupName;
-  }  
-  public NetworkRulesGroup( final String userName, final String groupName, final String description, final List<NetworkRule> networkRules ) {
-    this( userName, groupName );
-    this.description = description;
+  public NetworkRulesGroup( final AccountFullName user, final String groupName, final String description, final List<NetworkRule> networkRules ) {
+    this( user, groupName, description );
     this.networkRules = networkRules;
   }
+  public static NetworkRulesGroup getDefaultGroup( AccountFullName user ) {
+    return new NetworkRulesGroup( user, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
+  }
   public Network getVmNetwork( ) {
-    Network vmNetwork = new Network( this.getUserName( ), this.getDisplayName( ), this.getId( ) );
+    Network vmNetwork = new Network( this.getAccountId( ), this.getDisplayName( ), this.getId( ) );
     for ( NetworkRule networkRule : this.getNetworkRules( ) ) {
-      PacketFilterRule pfrule = new PacketFilterRule( this.getUserName( ), this.getDisplayName( ), networkRule.getProtocol( ), networkRule.getLowPort( ), networkRule.getHighPort( ) );
+      PacketFilterRule pfrule = new PacketFilterRule( this.getAccountId( ), this.getDisplayName( ), networkRule.getProtocol( ), networkRule.getLowPort( ), networkRule.getHighPort( ) );
       for ( IpRange cidr : networkRule.getIpRanges( ) )
         pfrule.getSourceCidrs( ).add( cidr.getValue( ) );
       for ( NetworkPeer peer : networkRule.getNetworkPeers( ) )
@@ -196,8 +236,8 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     }
     return vmNetwork;
   }  
-  public static NetworkRulesGroup named( String userName, String groupName ) {
-    return new NetworkRulesGroup( userName, groupName );
+  public static NetworkRulesGroup named( AccountFullName user, String groupName ) {
+    return new NetworkRulesGroup( user, groupName );
   }
   @Override
   public int hashCode( ) {
@@ -217,6 +257,10 @@ public class NetworkRulesGroup extends UserMetadata implements Serializable {
     } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
     return true;
   }  
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.uniqueName, this.description, this.networkRules );
+  }
 }
 
 @Entity

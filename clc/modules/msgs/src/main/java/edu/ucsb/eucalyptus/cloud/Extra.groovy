@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud
 
 
 import edu.ucsb.eucalyptus.msgs.*
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.records.EventType;
 import org.apache.log4j.Logger;
 import java.util.ArrayList;
@@ -293,7 +294,7 @@ public class Network implements HasName<Network> {
   String uuid;
   String name;
   String networkName;
-  String userName;
+  String accountId;
   Integer max;
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
   private ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String,NetworkToken>();
@@ -304,11 +305,11 @@ public class Network implements HasName<Network> {
   def Network() {
   }
   
-  def Network(final String userName, final String networkName, final String uuid) {
+  def Network(final AccountFullName owner, final String networkName, final String uuid) {
     this.uuid = uuid;
-    this.userName = userName;
+    this.accountId = owner.getUniqueId( )( );
     this.networkName = networkName;
-    this.name = this.userName + "-" + this.networkName;
+    this.name = this.accountId + "-" + this.networkName;
     try {
       Network me = Networks.getInstance().lookup( this.networkName );
       this.max = me.max;
@@ -468,16 +469,16 @@ public class NetworkToken implements Comparable {
   String cluster;
   Integer vlan;
   NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
-  String userName;
+  String accountId;
   String name;
   
-  def NetworkToken(final String cluster, final String userName, final String networkName, final String networkUuid, final int vlan ) {
+  def NetworkToken(final String cluster, final String accountId, final String networkName, final String networkUuid, final int vlan ) {
     this.networkName = networkName;
     this.networkUuid = networkUuid; 
     this.cluster = cluster;
     this.vlan = vlan;
-    this.userName = userName;
-    this.name = this.userName + "-" + this.networkName;
+    this.accountId = accountId;
+    this.name = this.accountId + "-" + this.networkName;
   }
   
   @Override

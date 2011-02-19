@@ -116,7 +116,7 @@
     </mapping>
 
     <mapping class="edu.ucsb.eucalyptus.msgs.SecurityGroupItemType" abstract="true">
-        <value name="ownerId" field="ownerId"/>
+        <value name="ownerId" field="accountId"/>
         <value name="groupName" field="groupName"/>
         <value name="groupDescription" field="groupDescription"/>
         <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">

@@ -5,10 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.ResourceOwnerLookup;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
@@ -44,7 +48,7 @@ public class NetworkGroupManager {
     User requestUser = request.getUser( );
     Account account = Permissions.getAccountByUserId( requestUser.getId( ) );
     
-    NetworkGroupUtil.makeDefault( requestUser.getId( ) );
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );
     
     ArrayList<String> networkNames = new ArrayList<String>( request.getGroupSet( ) );
     if ( networkNames.size( ) < 1 ) {
@@ -52,7 +56,7 @@ public class NetworkGroupManager {
     }
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
     for ( String groupName : networkNames ) {
-      NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( requestUser.getId( ), groupName );
+      NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserErn( ), groupName );
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
         throw new EucalyptusCloudException( "Not authorized to use network group " + groupName + " for " + requestUser.getName( ) );
       }
@@ -68,9 +72,9 @@ public class NetworkGroupManager {
   }
   
   public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException {
-    NetworkGroupUtil.makeDefault( request.getUserErn( ).getUniqueId( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );//ensure the default group exists to cover some old broken installs
     CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
-    NetworkRulesGroup newGroup = new NetworkRulesGroup( request.getUserErn( ).getUniqueId( ), request.getGroupName( ), request.getGroupDescription( ) ); 
+    NetworkRulesGroup newGroup = new NetworkRulesGroup( request.getUserErn( ), request.getGroupName( ), request.getGroupDescription( ) ); 
     try {
       EntityWrapper.get( NetworkRulesGroup.class ).mergeAndCommit( newGroup );
       return reply;
@@ -85,25 +89,33 @@ public class NetworkGroupManager {
   }
   
   public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
-    NetworkGroupUtil.makeDefault( request.getUserErn( ).getUniqueId( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );//ensure the default group exists to cover some old broken installs
     DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
     if ( request.isAdministrator( ) && request.getGroupName( ).indexOf( "::" ) != -1 ) {
-      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getGroupName( ).replaceAll( "::.*", "" ), request.getGroupName( ).replaceAll( "\\w*::", "" ) );
+      String userName = request.getGroupName( ).replaceAll( "::.*", "" );
+      try {
+        User user = Accounts.lookupUserByName( userName );
+        AccountFullName userFullName = UserFullName.getInstance( user ); 
+        NetworkGroupUtil.deleteUserNetworkRulesGroup( userFullName, request.getGroupName( ).replaceAll( "\\w*::", "" ) );
+      } catch ( AuthException ex ) {
+        LOG.error( ex.getMessage( ) );
+        throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
+      }
     } else {
-      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserErn( ).getUniqueId( ), request.getGroupName( ) );
+      NetworkGroupUtil.deleteUserNetworkRulesGroup( request.getUserErn( ), request.getGroupName( ) );
     }
     reply.set_return( true );
     return reply;
   }
   
   public DescribeSecurityGroupsResponseType describe( DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
-    NetworkGroupUtil.makeDefault( request.getUserErn( ).getUniqueId( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );//ensure the default group exists to cover some old broken installs
     final List<String> groupNames = request.getSecurityGroupSet( );
     DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply( );
     final List<SecurityGroupItemType> replyList = reply.getSecurityGroupInfo( );
     if ( request.isAdministrator( ) ) {
       try {
-        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworksAdmin( request.getUserErn( ).getUniqueId( ), request.getSecurityGroupSet( ) ),
+        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworksAdmin( request.getUserErn( ), request.getSecurityGroupSet( ) ),
                                                               new Predicate<SecurityGroupItemType>( ) {
                                                                 @Override
                                                                 public boolean apply( SecurityGroupItemType arg0 ) {
@@ -117,7 +129,7 @@ public class NetworkGroupManager {
       }
     } else {
       try {
-        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworks( request.getUserErn( ).getUniqueId( ), request.getSecurityGroupSet( ) ),
+        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworks( request.getUserErn( ), request.getSecurityGroupSet( ) ),
                                                               new Predicate<SecurityGroupItemType>( ) {
                                                                 @Override
                                                                 public boolean apply( SecurityGroupItemType arg0 ) {
@@ -134,9 +146,9 @@ public class NetworkGroupManager {
   }
   
   public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
-    NetworkGroupUtil.makeDefault( request.getUserErn( ).getUniqueId( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );//ensure the default group exists to cover some old broken installs
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
-    NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserErn( ).getUniqueId( ), request.getGroupName( ) );
+    NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserErn( ), request.getGroupName( ) );
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
@@ -185,10 +197,10 @@ public class NetworkGroupManager {
   }
   
   public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception {
-    NetworkGroupUtil.makeDefault( request.getUserErn( ).getUniqueId( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroupUtil.makeDefault( request.getUserErn( ) );//ensure the default group exists to cover some old broken installs
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserErn( ).getUniqueId( ), request.getGroupName( ) );
+    NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( request.getUserErn( ), request.getGroupName( ) );
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       try {

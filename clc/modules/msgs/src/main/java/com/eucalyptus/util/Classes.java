@@ -67,9 +67,22 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Callable;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
 public class Classes {
+  public static List<Class> ancestry( Object o ) {
+    Function<Class, Class> parent = new Function<Class, Class>( ) {
+      @Override
+      public Class apply( Class arg0 ) {
+        return arg0.getSuperclass( );
+      }
+    };
+    List<Class> ret = Lists.newArrayList( );
+    for( Class t = ( o instanceof Class ? (Class)o : o.getClass() ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
+    return ret;
+  }
+  
   public static List<Class> genericsToClasses( Object o ) {
     List<Class> ret = Lists.newArrayList( );
     ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
@@ -79,12 +92,13 @@ public class Classes {
   
   private static List<Class> processTypeForGenerics( Type... types ) {
     List<Class> ret = Lists.newArrayList( );
-    for( Type t : types ) {
-      if( t instanceof Class && t != Object.class ) {
+    for ( Type t : types ) {
+      if ( t instanceof Class && t != Object.class ) {
         ret.add( ( Class ) t );
-      } else if( t instanceof ParameterizedType ) {
-        ParameterizedType pt = (ParameterizedType) t;
-        for( Type ptType : pt.getActualTypeArguments( ) ) {
+        ret.addAll( processTypeForGenerics( ( ( ( Class ) t ).getSuperclass( ) ) ) );
+      } else if ( t instanceof ParameterizedType ) {
+        ParameterizedType pt = ( ParameterizedType ) t;
+        for ( Type ptType : pt.getActualTypeArguments( ) ) {
           ret.addAll( processTypeForGenerics( ptType ) );
         }
       }
