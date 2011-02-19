@@ -116,10 +116,11 @@ public abstract class UserMetadata extends AccountMetadata implements Serializab
   }
   public UserMetadata( UserFullName user ) {
     super( user );
-    this.userId = user.getUserId( );
+    this.userId = user.getUniqueId( );
   }
   public UserMetadata( UserFullName user, String displayName ) {
     super( user, displayName );
+    this.userId = user.getUniqueId( );
   }  
   @Override
   public int hashCode( ) {
