@@ -281,7 +281,7 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
-      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getImageId( ) ), Tx.NOOP );
+      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
