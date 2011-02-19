@@ -76,7 +76,7 @@ public abstract class AccountMetadata extends AbstractPersistent implements Seri
   String accountId;
   public AccountMetadata() {}
   public AccountMetadata(AccountFullName account) {
-    this.accountId = user.getAccountId( );
+    this.accountId = account.getAccountId( );
   }
   @Override
   public int hashCode( ) {
@@ -343,8 +343,8 @@ public class NetworkRule {
 
   @Override
   public String toString( ) {
-    return String.format( "NetworkRule [highPort=%s, id=%s, ipRanges=%s, lowPort=%s, networkPeers=%s, protocol=%s]",
-                          this.highPort, this.id, this.ipRanges, this.lowPort, this.networkPeers, this.protocol );
+    return String.format( "NetworkRule:%s:%d:%d:ipRanges=%s:networkPeers=%s:",
+                          this.protocol, this.lowPort, this.highPort, this.ipRanges, this.networkPeers );
   }
   
   
@@ -367,10 +367,9 @@ public class IpRange {
     this.value = value;
   }
 
-  
   @Override
   public String toString( ) {
-    return String.format( "IpRange [value=%s]", this.value );
+    return String.format( "IpRange:%s", this.value );
   }
 
   @Override
