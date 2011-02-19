@@ -77,9 +77,9 @@ import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
 public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
   
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
-  
+  private final String correlationId;
   public ConsoleOutputCallback( GetConsoleOutputType msg ) {
-    LOG.debug( msg.toSimpleString( ) );
+    this.correlationId = msg.getCorrelationId( );
     this.setRequest( msg );
   }
   
@@ -88,8 +88,6 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
-    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
-    LOG.debug( reply.toSimpleString( ) );
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
     try {
@@ -97,10 +95,11 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
 //for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
       if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-//    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
+    reply.setCorrelationId( this.correlationId );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );
+    LOG.debug( reply.toSimpleString( ) );
     ServiceContext.response( reply );
   }
 
