@@ -87,12 +87,12 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
   private static AtomicReference<String> topoString = new AtomicReference<String>( null );
   
   private String getNetworkTopology( ) {
-    if ( topoString.get( ) != null && ( lastTime + ( 10 * 1000l ) ) > System.currentTimeMillis( ) ) {
+    if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
       return topoString.get( );
     } else {
       lock.lock( );
       try {
-        if ( topoString.get( ) != null && ( lastTime + ( 10 * 1000l ) ) > System.currentTimeMillis( ) ) {
+        if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
           return topoString.get( );
         } else {
           lastTime = System.currentTimeMillis( );
