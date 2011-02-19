@@ -165,10 +165,14 @@ public class Accounts {
    */
   @Deprecated
   public static Account lookupAccount( User user ) {
-    try {
-      return user.getAccount( );
-    } catch ( AuthException ex ) {
+    if( FakePrincipals.NOBODY_USER.equals( user ) ) {
       return FakePrincipals.NOBODY_ACCOUNT;
+    } else {
+      try {
+        return user.getAccount( );
+      } catch ( AuthException ex ) {
+        return FakePrincipals.NOBODY_ACCOUNT;
+      }
     }
   }
   
