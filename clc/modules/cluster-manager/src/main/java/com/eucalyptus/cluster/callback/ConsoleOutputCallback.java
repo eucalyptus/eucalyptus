@@ -88,6 +88,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
+    reply.setCorrelationId( this.getRequest( ).getCorrelationId( ) );
     LOG.debug( reply.toSimpleString( ) );
     VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
