@@ -172,7 +172,7 @@ public class ClusterAllocator extends Thread {
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      Request<StartNetworkType,StartNetworkResponseType> callback = Callbacks.newRequest( new StartNetworkCallback( networkToken ).regardingUserRequest( this.vmAllocInfo.getRequest( ) ) );
+      Request<StartNetworkType,StartNetworkResponseType> callback = Callbacks.newRequest( new StartNetworkCallback( networkToken ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ).debug( );
     }
