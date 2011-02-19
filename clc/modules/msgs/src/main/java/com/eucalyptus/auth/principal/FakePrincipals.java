@@ -703,6 +703,6 @@ public class FakePrincipals {
                                                  public void removePolicy( String name ) throws AuthException {};
                                                };
   
-  public static final FullName SYSTEM_USER_ERN = UserFullName.getInstance( SYSTEM_USER );
-  public static final FullName NOBODY_USER_ERN = UserFullName.getInstance( NOBODY_USER );
+  public static final UserFullName SYSTEM_USER_ERN = UserFullName.getInstance( SYSTEM_USER );
+  public static final UserFullName NOBODY_USER_ERN = UserFullName.getInstance( NOBODY_USER );
 }

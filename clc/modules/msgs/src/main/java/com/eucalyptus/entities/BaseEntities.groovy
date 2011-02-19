@@ -138,59 +138,6 @@ public abstract class UserMetadata extends AccountMetadata implements Serializab
   }  
 }
 
-@Entity
-@PersistenceContext(name="eucalyptus_general")
-@Table( name = "metadata_keypair" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata implements Serializable {
-  @Column( name = "metadata_keypair_user_keyname", unique=true )
-  String uniqueName;//bogus field to enforce uniqueness
-  @Lob
-  @Column( name = "metadata_keypair_public_key" )
-  String publicKey;
-  @Column( name = "metadata_keypair_finger_print" )
-  String fingerPrint;
-  @Transient
-  public static String NO_KEY_NAME = "";
-  @Transient
-  public static SshKeyPair NO_KEY = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
-  public SshKeyPair( ) {
-  }
-  public SshKeyPair( UserFullName user ) {
-    super( user );
-  }
-  public SshKeyPair( UserFullName user, String keyName ) {
-    super( user, keyName );
-    this.uniqueName = user.toString( ) + "/keys/" + keyName;
-  }
-  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
-    this( user, keyName );
-    this.publicKey = publicKey;
-    this.fingerPrint = fingerPrint;
-  }  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( uniqueName == null ) ? 0 : uniqueName.hashCode( ) );
-    return result;
-  }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    NetworkRulesGroup other = ( NetworkRulesGroup ) obj;
-    if ( uniqueName == null ) {
-      if ( other.uniqueName != null ) return false;
-    } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
-    return true;
-  }  
-  @Override
-  public String toString( ) {
-    return String.format( "SshKeyPair:uniqueName=%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
-  }
-}
 
 
 @Entity
