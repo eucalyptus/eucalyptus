@@ -301,7 +301,6 @@ public class BaseMessage {
   public User getUser( ) {
     if( !Contexts.exists( this.correlationId ) ) {
       return FakePrincipals.NOBODY_USER;
-
     } else {
       try {
         return Contexts.lookup( this.correlationId ).getUser( );
