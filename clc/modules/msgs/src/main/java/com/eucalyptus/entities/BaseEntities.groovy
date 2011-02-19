@@ -152,7 +152,7 @@ public class SshKeyPair extends UserMetadata implements Serializable {
   @Transient
   public static String NO_KEY_NAME = "";
   @Transient
-  public static SshKeyPair NO_KEY = new SshKeyPair( FakePrincipals.N, "", "", "", "" );
+  public static SshKeyPair NO_KEY = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
   public SshKeyPair( ) {
   }
   public SshKeyPair( UserFullName user ) {

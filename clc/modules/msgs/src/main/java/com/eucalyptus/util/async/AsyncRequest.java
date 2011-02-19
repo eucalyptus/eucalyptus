@@ -47,6 +47,9 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           } catch ( Throwable ex ) {
             LOG.error( ex , ex );
           }
+        } catch ( RuntimeException ex ) {
+          LOG.error( ex, ex );
+          AsyncRequest.this.callbackSequence.fireException( ex );
         } catch ( Exception ex ) {
           AsyncRequest.this.callbackSequence.fireException( ex );
         }

@@ -518,6 +518,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
                 transitionCallback.fireException( t );
               }
             } else {
+              LOG.trace( t, t );
               transitionCallback.fireException( t );
             }
           }
