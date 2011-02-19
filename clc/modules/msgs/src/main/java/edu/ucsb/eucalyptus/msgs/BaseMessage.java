@@ -220,7 +220,7 @@ public class BaseMessage {
   }
   
   public String toSimpleString( ) {
-    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.getCorrelationId( ), this.getUserErn( ), this.effectiveUserId,
+    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.correlationId, this.getUserErn( ), this.effectiveUserId,
                           this.get_return( ), this.getStatusMessage( ) );
   }
   
