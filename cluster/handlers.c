@@ -3692,7 +3692,6 @@ int reconfigureNetworkFromCLC() {
   snettok[0] = '\0';
   range[0] = '\0';
 
-  // TODO: grab CLC ip from serviceInfo / ccConfig
   snprintf(tmpfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
   
   fd = mkstemp(tmpfile);
