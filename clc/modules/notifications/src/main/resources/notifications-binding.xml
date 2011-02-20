@@ -169,8 +169,7 @@
   <mapping class="com.eucalyptus.notifications.PublishResult" abstract="true">
     <value name="MessageId" field="messageId" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.notifications.Topic" abstract="true" extends="com.eucalyptus.notifications.NotificationMessage">
-    <structure map-as="com.eucalyptus.notifications.NotificationMessage"/>
+  <mapping class="com.eucalyptus.notifications.Topic" abstract="true">
     <value name="TopicArn" field="topicArn" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.notifications.TopicAttributesMap" abstract="true">
@@ -182,8 +181,7 @@
     <value name="key" field="key" usage="required"/>
     <value name="value" field="value" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.notifications.Subscription" abstract="true" extends="com.eucalyptus.notifications.NotificationMessage">
-    <structure map-as="com.eucalyptus.notifications.NotificationMessage"/>
+  <mapping class="com.eucalyptus.notifications.Subscription" abstract="true">
     <value name="SubscriptionArn" field="subscriptionArn" usage="optional"/>
     <value name="Owner" field="owner" usage="optional"/>
     <value name="Protocol" field="protocol" usage="optional"/>

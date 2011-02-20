@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
 
     <mapping class="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" abstract="true">
         <value name="userId" field="userId" usage="optional"/>

@@ -146,28 +146,18 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   @Override
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( partition, name, host, port );
-    ServiceConfigurations.getInstance( ).store( config );
-    return config;
+    return ( T ) ServiceConfigurations.getInstance( ).store( config );
   }
 
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    try {
-      if( "vm".equals( uri.getScheme( ) ) || NetworkUtil.testLocal( uri.getHost( ) ) ) {
-        return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );      
-      } else {
-        return new RemoteConfiguration( null, this.getComponent( ).getIdentity( ), uri );
-      }
-    } catch ( Exception e ) {
-      return new LocalConfiguration( null, this.getComponent( ).getIdentity( ), uri );
-    }
+    return ServiceConfigurations.uriToServiceConfiguration( this.getComponent( ), uri );
   }
 
   @Override
   public T remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     T removeConf = this.lookupByName( config.getName( ) );
-    ServiceConfigurations.getInstance( ).remove( removeConf );
-    return removeConf;
+    return ( T ) ServiceConfigurations.getInstance( ).remove( removeConf );
   }
   
 }

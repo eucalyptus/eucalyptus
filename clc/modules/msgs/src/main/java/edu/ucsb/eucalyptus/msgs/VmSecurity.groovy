@@ -69,7 +69,6 @@ import com.eucalyptus.binding.HttpParameterMapping;
 public class VmSecurityMessage extends EucalyptusMessage{}
 /** *******************************************************************************/
 public class AuthorizeSecurityGroupIngressResponseType extends VmSecurityMessage {
-  boolean _return;
 }
 public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
@@ -80,7 +79,6 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
 }
 /** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
-  boolean _return;
 }
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
@@ -88,14 +86,12 @@ public class CreateSecurityGroupType extends VmSecurityMessage {
 }
 /** *******************************************************************************/
 public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
-  boolean _return;
 }
 public class DeleteSecurityGroupType extends VmSecurityMessage {
   String groupName;
 }
 /** *******************************************************************************/
 public class RevokeSecurityGroupIngressResponseType extends VmSecurityMessage {
-  boolean _return;
 }
 public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
@@ -113,7 +109,7 @@ public class DescribeSecurityGroupsType extends VmSecurityMessage {
   ArrayList<String> securityGroupSet = new ArrayList<String>();
 }
 public class SecurityGroupItemType extends EucalyptusData {
-  String ownerId;
+  String accountId;
   String groupName;
   String groupDescription;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();

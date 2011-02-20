@@ -62,50 +62,90 @@
  */
 package com.eucalyptus.auth.principal;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import com.eucalyptus.auth.principal.credential.HmacPrincipal;
-import com.eucalyptus.auth.principal.credential.X509Principal;
+import java.util.Map;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
+ * The interface for a user in Eucalyptus.
+ * 
  * @author decker
  *
  */
-public abstract interface User extends BasePrincipal, X509Principal, HmacPrincipal {
-  public abstract Boolean isSystem( );
-  public abstract Boolean isAdministrator( );
-  public abstract void setAdministrator( Boolean admin );
-  public abstract Boolean isEnabled( );
-  public abstract void setEnabled( Boolean enabled );
-  public abstract String getToken( );
-  public abstract boolean checkToken( String testToken );
-  public abstract User getDelegate( );
-  public abstract String getPassword( );
-  public abstract void setPassword( String password );
-  public static final User SYSTEM = new User() { //NOTE:GRZE: this is transitional.  needed for internal communication.
-    @Override public String getName( ) {
-      return "eucalyptus";
-    }
-    @Override public X509Certificate getX509Certificate( ) { return null; }
-    @Override public Boolean isSystem( ) { return true; }
-    @Override public Boolean isAdministrator( ) { return true; }
-    @Override public Boolean isEnabled( ) { return true; }
-    @Override public List<X509Certificate> getAllX509Certificates( ) { return null; }
-    @Override public void setX509Certificate( X509Certificate cert ) {}    
-    @Override public void revokeX509Certificate( ) {}    
-    @Override public BigInteger getNumber( ) { return BigInteger.ZERO; }
-    @Override public void revokeSecretKey( ) {}
-    @Override public String getQueryId( ) { return null; }
-    @Override public String getSecretKey( ) { return null; }
-    @Override public void setQueryId( String queryId ) {}
-    @Override public void setSecretKey( String secretKey ) {}
-    @Override public void setAdministrator( Boolean admin ) {}
-    @Override public void setEnabled( Boolean enabled ) {}
-    @Override public String getToken( ) { return null; }
-    @Override public boolean checkToken( String testToken ) { return true; }
-    @Override public User getDelegate( ) { return null; }
-    @Override public String getPassword( ) { return null; }
-    @Override public void setPassword( String password ) {}
-  };
+public interface User extends HasId, BasePrincipal, Serializable {
+  
+  public static final String USER_GROUP_PREFIX = "_";  
+  public static final String ACCOUNT_ADMIN = "admin";
+  public static final String ACCOUNT_NOBODY = "nobody";
+  
+  public static enum RegistrationStatus {
+    REGISTERED,
+    APPROVED,
+    CONFIRMED,
+  }
+  
+  public BigInteger getNumber( );
+  
+  public void setName( String name ) throws AuthException;
+  
+  public String getPath( );
+  public void setPath( String path ) throws AuthException;
+    
+  public RegistrationStatus getRegistrationStatus( );
+  public void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
+
+  public Boolean isEnabled( );
+  public void setEnabled( Boolean enabled ) throws AuthException;
+  
+  public String getToken( );
+  public void setToken( String token ) throws AuthException;
+  public void createToken( ) throws AuthException;
+  
+  public String getConfirmationCode( );
+  public void setConfirmationCode( String code ) throws AuthException;
+  public void createConfirmationCode( ) throws AuthException;
+    
+  public String getPassword( );  
+  public void setPassword( String password ) throws AuthException;
+  public void createPassword( ) throws AuthException;
+  
+  public Long getPasswordExpires( );
+  public void setPasswordExpires( Long time ) throws AuthException;
+  
+  public String getInfo( String key ) throws AuthException;
+  public Map<String, String> getInfo( ) throws AuthException;
+  public void setInfo( String key, String value ) throws AuthException;  
+  public void setInfo( Map<String, String> newInfo ) throws AuthException;
+  
+  public List<AccessKey> getKeys( ) throws AuthException;
+  public AccessKey getKey( String keyId ) throws AuthException;
+  public AccessKey addKey( String key ) throws AuthException;
+  public void removeKey( String keyId ) throws AuthException;
+  public AccessKey createKey( ) throws AuthException;
+  
+  public List<Certificate> getCertificates( ) throws AuthException;
+  public Certificate getCertificate( String certificateId ) throws AuthException;
+  public Certificate addCertificate( X509Certificate certificate ) throws AuthException;
+  public void removeCertificate( String certficateId ) throws AuthException;
+  
+  public List<Group> getGroups( ) throws AuthException;
+  
+  public Account getAccount( ) throws AuthException;
+  
+  public boolean isSystemAdmin( );
+  public boolean isSystemInternal( );
+  
+  public boolean isAccountAdmin( );
+  
+  public List<Policy> getPolicies( ) throws AuthException;
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  public void removePolicy( String name ) throws AuthException;
+
+  public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
+  public List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
+    
 }

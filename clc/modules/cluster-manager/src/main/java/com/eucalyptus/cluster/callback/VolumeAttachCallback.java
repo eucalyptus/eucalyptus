@@ -66,12 +66,14 @@ package com.eucalyptus.cluster.callback;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.blockstorage.StorageUtil;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -121,7 +123,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         LOG.debug( "Found volume attachment info in async error path: " + volume );
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-          StorageControllerConfiguration sc = Configuration.lookupSc( cluster.getName( ) );
+          ServiceConfiguration sc = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
           Dispatcher dispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );

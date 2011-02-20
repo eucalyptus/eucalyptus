@@ -6,9 +6,10 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.concurrent.AbstractCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
-public class AsyncResponseFuture<R> extends AbstractListenableFuture<R> implements CheckedListenableFuture<R> {
+public class AsyncResponseFuture<R> extends AbstractCheckedListenableFuture<R> implements CheckedListenableFuture<R> {
   private static Logger LOG = Logger.getLogger( AsyncResponseFuture.class );
   
   AsyncResponseFuture( ) {
@@ -24,9 +25,6 @@ public class AsyncResponseFuture<R> extends AbstractListenableFuture<R> implemen
   public boolean setException( Throwable exception ) {
     EventRecord.caller( this.getClass( ), EventType.FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
     boolean r = false;
-    if ( exception == null ) {
-      exception = new IllegalArgumentException( "setException(Throwable) was called with a null argument" );
-    }
     if ( !( r = super.setException( exception ) ) ) {
       LOG.error( "Duplicate exception: " + exception.getMessage( ) );
     }

@@ -4,9 +4,8 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.signature.XMLSignature;
 import org.w3c.dom.Element;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.WSSecurity;
@@ -32,14 +31,14 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
       SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
       try {
-        final User user = Users.lookupCertificate( cert );
+        final User user = Accounts.lookupUserByCertificate( cert );
         super.setCredential( cert );
         super.setPrincipal( user );
-        super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
-      } catch ( NoSuchUserException e ) {
+        //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
+      } catch ( AuthException e ) {
         try {
-          if ( Users.getUserProvider( ).checkRevokedCertificate( cert ) ) {
-            throw new NoSuchUserException( "Certificate has been revoked: " + e.getMessage( ), e );
+          if ( !Accounts.lookupCertificate( cert ).isActive( ) ) {
+            throw new AuthException( "Certificate is inactive or revoked: " + e.getMessage( ), e );
           } else {
             throw e;
           }

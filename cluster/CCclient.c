@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
   int rc, i, port, use_wssec;
   char *euca_home, configFile[1024], policyFile[1024];
 
-  mymeta.userId = strdup("eucalyptus");
+  mymeta.userId = strdup("admin");
   mymeta.correlationId = strdup("1234abcd");
   mymeta.epoch = 3;
   mymeta.servicesLen = 1;

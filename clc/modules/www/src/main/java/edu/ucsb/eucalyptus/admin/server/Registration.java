@@ -64,6 +64,7 @@ import java.io.IOException;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.persistence.PersistenceException;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -74,7 +75,8 @@ import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.config.Configuration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -109,11 +111,11 @@ public class Registration extends HttpServlet {
   
   private static String blockStorageConfiguration( ) {
     try {
-      if ( !Configuration.getStorageControllerConfigurations( ).isEmpty( ) ) {
+      if ( !ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class ).isEmpty( ) ) {
         return "        <Resource>\n" + "          <Name>ebs_snapshots</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
                + "          <Name>ebs_volumes</Name>\n" + "        </Resource>\n";
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( PersistenceException e ) {
       LOG.debug( e, e );
     }
     return "";
@@ -131,7 +133,7 @@ public class Registration extends HttpServlet {
     String walrusUrl;
     try {
       walrusUrl = SystemConfiguration.getWalrusUrl( );
-    } catch ( Exception e ) {
+    } catch ( Throwable e ) {
       walrusUrl = "NOT REGISTERED.";
     }
     return walrusUrl;

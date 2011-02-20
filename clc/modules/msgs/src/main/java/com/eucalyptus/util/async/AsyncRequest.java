@@ -6,7 +6,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
-import com.eucalyptus.component.Services;
 import com.eucalyptus.util.async.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -48,6 +47,9 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           } catch ( Throwable ex ) {
             LOG.error( ex , ex );
           }
+        } catch ( RuntimeException ex ) {
+          LOG.error( ex, ex );
+          AsyncRequest.this.callbackSequence.fireException( ex );
         } catch ( Exception ex ) {
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
@@ -66,7 +68,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    Services.lookupByName( com.eucalyptus.component.id.Cluster.class, cluster ).enqueue( this );
+    Components.lookup( com.eucalyptus.component.id.Cluster.class ).lookupService( cluster ).getEndpoint( ).enqueue( this );
     return this.getResponse( );
   }
   

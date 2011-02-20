@@ -28,10 +28,8 @@ public class StorageEventPoller
 	{
 		EntityWrapper<StorageUsageSnapshot> entityWrapper =
 			EntityWrapper.get( StorageUsageSnapshot.class );
-		Session sess = null;
 		try {
 
-			sess = entityWrapper.getSession();
 			final StorageUsageLog usageLog = StorageUsageLog.getStorageUsageLog();
 			
 			/* Load usageDataMap
@@ -110,7 +108,7 @@ public class StorageEventPoller
 				StorageUsageSnapshot sus =
 					new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
 				System.out.println("Storing:" + sus);
-				sess.save(sus);
+				entityWrapper.add(sus);
 			}
 			changedSnapshots.clear();
 

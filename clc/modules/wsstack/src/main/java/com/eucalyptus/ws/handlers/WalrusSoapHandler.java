@@ -96,8 +96,10 @@ import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 
 @ChannelPipelineCoverage("one")
@@ -153,7 +155,7 @@ public class WalrusSoapHandler extends MessageStackHandler {
 			final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
 			if( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
 				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) httpMessage.getMessage( );
-				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
+				BaseMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
 				if(errMsg instanceof WalrusErrorMessageType) {
 					WalrusErrorMessageType walrusErrMsg = (WalrusErrorMessageType) errMsg;
 					httpMessage.setSoapEnvelope( createFault( walrusErrMsg.getCode(), 
@@ -164,6 +166,17 @@ public class WalrusSoapHandler extends MessageStackHandler {
 				} else {
 					httpMessage.setSoapEnvelope( Binding.createFault( errorMessage.getSource( ), errorMessage.getMessage( ), errorMessage.getStatusMessage( ) ) );
 				}
+			} else if( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
+			  ExceptionResponseType errorMessage = (ExceptionResponseType) httpMessage.getMessage( );
+        BaseMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
+        if(errMsg instanceof WalrusErrorMessageType) {
+          WalrusErrorMessageType walrusErrMsg = (WalrusErrorMessageType) errMsg;
+          httpMessage.setSoapEnvelope( createFault( walrusErrMsg.getCode(), 
+              walrusErrMsg.getMessage(), 
+              walrusErrMsg.getStatus().getReasonPhrase(), 
+              walrusErrMsg.getResourceType(), 
+              walrusErrMsg.getResource()));
+        }
 			} else {
 				// :: assert sourceElem != null :://
 				httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );

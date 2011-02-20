@@ -74,11 +74,12 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 
-@Provides( HttpService.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.UserCredentialsInit )
 @DependsLocal( Eucalyptus.class )
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {  

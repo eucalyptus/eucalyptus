@@ -72,16 +72,19 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.blockstorage.StorageUtil;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.Request;
@@ -201,7 +204,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
             }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserName( ), net.getNetworkName( ), net.getUuid( ),
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccountId( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
@@ -218,7 +221,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 
   public static void cleanUp( final VmInstance vm ) {
     try {
-      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwnerId( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
+      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwner( ).getName( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
       int networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
@@ -247,7 +250,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-      final StorageControllerConfiguration sc = Configuration.lookupSc( vm.getPlacement( ) );
+      final ServiceConfiguration sc = StorageUtil.getActiveSc( vm.getPlacement( ) ).getServiceConfiguration( );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( AttachedVolume arg0 ) {
@@ -268,9 +271,9 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     }
   }
 
-  public static VmInstance restrictedLookup( String userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
+  public static VmInstance restrictedLookup( FullName userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    if ( !administrator && !vm.getOwnerId( ).equals( userId ) ) {
+    if ( !administrator && !vm.getOwner( ).equals( userId ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );
     }
     return vm;

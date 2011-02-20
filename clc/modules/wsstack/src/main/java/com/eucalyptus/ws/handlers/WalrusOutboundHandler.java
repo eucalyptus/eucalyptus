@@ -80,6 +80,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDeleteResponseType;
@@ -133,14 +134,22 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 					httpResponse.addHeader("x-amz-version-id", copyResponse.getVersionId());
 				if(copyResponse.getCopySourceVersionId() != null)
 					httpResponse.addHeader("x-amz-copy-source-version-id", copyResponse.getCopySourceVersionId());
-			}	else if(msg instanceof EucalyptusErrorMessageType) {			
-				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
-				EucalyptusMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof WalrusErrorMessageType) {
-					WalrusErrorMessageType walrusErrorMsg = (WalrusErrorMessageType) errMsg;
-					httpResponse.setStatus(walrusErrorMsg.getStatus());
-				}
-				httpResponse.setMessage(errMsg);
+      } else if(msg instanceof EucalyptusErrorMessageType) {      
+        EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
+        BaseMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
+        if(errMsg instanceof WalrusErrorMessageType) {
+          WalrusErrorMessageType walrusErrorMsg = (WalrusErrorMessageType) errMsg;
+          httpResponse.setStatus(walrusErrorMsg.getStatus());
+        }
+        httpResponse.setMessage(errMsg);
+      } else if(msg instanceof ExceptionResponseType) {      
+        ExceptionResponseType errorMessage = (ExceptionResponseType) msg;
+        BaseMessage errMsg = WalrusUtil.convertErrorMessage(errorMessage);
+        if(errMsg instanceof WalrusErrorMessageType) {
+          WalrusErrorMessageType walrusErrorMsg = (WalrusErrorMessageType) errMsg;
+          httpResponse.setStatus(walrusErrorMsg.getStatus());
+        }
+        httpResponse.setMessage(errMsg);
 			} else if(msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
 				httpResponse.setMessage(null);

@@ -84,7 +84,6 @@ public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01
   def ReleaseAddressType() {}
 }
 public class ReleaseAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
-  boolean _return;
 }
 /** *******************************************************************************/
 public class DescribeAddressesType extends VmAddressMessage { //** added 2008-02-01  **/
@@ -108,14 +107,12 @@ public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-
   }
 }
 public class AssociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
-  boolean _return;
 }
 /** *******************************************************************************/
 public class DisassociateAddressType extends VmAddressMessage {  //** added 2008-02-01  **/
   String publicIp;
 }
 public class DisassociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
-  boolean _return;
 }
 /** *******************************************************************************/
 public class DescribeAddressesResponseItemType extends EucalyptusData {  //** added 2008-02-01  **/

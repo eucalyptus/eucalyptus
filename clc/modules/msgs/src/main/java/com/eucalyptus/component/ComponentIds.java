@@ -76,31 +76,27 @@ public class ComponentIds {
   private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
   private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
   
-  public static List<ComponentId> listEnabled( ) {
+  public static List<ComponentId> listLocallyRynning( ) {
     List<ComponentId> components = Lists.newArrayList( );
-    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
-      for ( Component comp : Components.list( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
-          components.add( comp.getIdentity( ) );
-        }
-      }
-    }
     for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) || comp.getIdentity( ).isAlwaysLocal( ) ) {
-        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
-          components.add( comp.getIdentity( ) );
-        }
+      if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
+        components.add( comp.getComponentId( ) );
+      } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
+        components.add( comp.getComponentId( ) );
+      } else if ( comp.isRunningLocally( ) ) {
+        components.add( comp.getComponentId( ) );
       }
     }
+    LOG.trace( "Found the following running components: " + components );
     return components;
   }
-
+  
   @SuppressWarnings( "unchecked" )
   public static List<ComponentId> list( ) {
     return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
   }
-
-  public static ComponentId lookup( Class compIdClass ) {
+  
+  public final static ComponentId lookup( final Class compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
     } else {
@@ -116,7 +112,7 @@ public class ComponentIds {
    * @throws NoSuchElementException
    * @return
    */
-  public static ComponentId lookup( String name ) {
+  public final static ComponentId lookup( final String name ) {
     String realName = name.toLowerCase( );
     Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     if ( !map.containsKey( realName ) ) {
@@ -126,7 +122,7 @@ public class ComponentIds {
     }
   }
   
-  public static void register( ComponentId componentId ) {
+  public final static void register( final ComponentId componentId ) {
     Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
     map.put( componentId.getName( ), componentId );
     compIdMap.put( componentId.getClass( ), componentId );

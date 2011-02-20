@@ -1,14 +1,15 @@
 package com.eucalyptus.reporting.instance;
 
-import org.hibernate.*;
-import org.apache.log4j.*;
-
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
-
-import java.util.*;
 
 /**
  * <p>InstanceUsageLog is the main API for accessing usage information which
@@ -187,11 +188,9 @@ public class InstanceUsageLog
 		Map<String, InstanceData> instanceDataMap =
 			new HashMap<String, InstanceData>();
 		EntityWrapper<InstanceAttributes> entityWrapper = EntityWrapper.get(InstanceAttributes.class);
-		Session sess = null;
 		try {
-			sess = entityWrapper.getSession();
 			@SuppressWarnings("rawtypes")
-			Iterator iter = sess.createQuery(
+			Iterator iter = entityWrapper.createQuery(
 				"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
 				+ " where ia.uuid = ius.uuid"
 				+ " and ius.timestampMs > ?"
@@ -261,13 +260,11 @@ public class InstanceUsageLog
 		log.info(String.format("purge earlierThan:%d ", earlierThanMs));
 
 		EntityWrapper<InstanceAttributes> entityWrapper = EntityWrapper.get(InstanceAttributes.class);
-		Session sess = null;
 		try {
 			
 			/* Delete older instance snapshots
 			 */
-			sess = entityWrapper.getSession();
-			sess.createSQLQuery("DELETE FROM instance_usage_snapshot WHERE timestamp_ms < ?")
+			entityWrapper.createSQLQuery("DELETE FROM instance_usage_snapshot WHERE timestamp_ms < ?")
 				.setLong(0, new Long(earlierThanMs))
 				.executeUpdate();
 
@@ -275,7 +272,7 @@ public class InstanceUsageLog
 			 * a single corresponding instance usage snapshot, using
 			 * MySQL's fancy multi-table delete with left outer join syntax.
 			 */
-			sess.createSQLQuery(
+			entityWrapper.createSQLQuery(
 					"DELETE reporting_instance" 
 					+ " FROM reporting_instance"
 					+ " LEFT OUTER JOIN instance_usage_snapshot"

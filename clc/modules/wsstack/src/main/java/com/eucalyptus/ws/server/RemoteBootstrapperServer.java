@@ -129,8 +129,8 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
     if( System.getProperty("euca.debug.addr") != null ) {
       String host = System.getProperty("euca.debug.addr");
       for( Component c : Components.list( ) ) {
-        if( c.getIdentity( ).isCloudLocal( ) ) {
-          URI uri = c.getUri( host, c.getIdentity( ).getPort( ) );
+        if( c.getComponentId( ).isCloudLocal( ) ) {
+          URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
           ServiceBuilder builder = c.getBuilder( );
           ServiceConfiguration config = builder.toConfiguration( uri );
           c.loadService( config );
@@ -216,7 +216,7 @@ public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPi
     @Override
     public boolean start( ) throws Exception {
       for( com.eucalyptus.component.Component c : Components.list( ) ) {
-        for( Service s : c.getServices( ) ) {
+        for( Service s : c.lookupServices( ) ) {
           if( s.isLocal( ) ) {
             try {
               c.startService( s.getServiceConfiguration( ) );

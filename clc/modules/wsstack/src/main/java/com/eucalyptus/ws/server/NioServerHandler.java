@@ -162,7 +162,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );
     } else if ( cause instanceof WriteTimeoutException ) {
       LOG.debug( cause, cause );
-      Channels.fireExceptionCaught( ctx, cause );
+      ctx.sendUpstream( e );
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
@@ -170,15 +170,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
     } else if ( cause instanceof LoginException ) {
       this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
-    } else {
+    } else if ( e.getCause( ) instanceof WebServicesException ) {
       LOG.error( "Internal Error.", cause );
-      if ( ch.isConnected( ) ) {
-        if ( e.getCause( ) instanceof WebServicesException ) {
-          this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
-        } else {
-          this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
-        }
-      }
+      this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
+    } else {
+      this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
     }
   }
   
@@ -195,7 +191,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     }
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
-    Channels.write( ctx, writeFuture, response );
-    //    ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
+    if( ctx.getChannel( ).isConnected( ) ) {
+      Channels.write( ctx, writeFuture, response );
+    }
   }
 }

@@ -76,6 +76,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ArbitratorConfiguration;
@@ -100,7 +101,7 @@ public class ArbitratorControl {
   
   public static void check( ) throws Exception {
     if( Components.lookup( Walrus.class ).getLocalService( ) != null || Components.lookup( Eucalyptus.class ).getLocalService( ) != null ) {
-      List<ArbitratorConfiguration> configs = Configuration.getArbitratorConfigurations( );
+      List<ArbitratorConfiguration> configs = ServiceConfigurations.getConfigurations( ArbitratorConfiguration.class );
       for ( ArbitratorConfiguration config : configs ) {
         final String hostName = config.getHostName( );
         Threads.getThreadPool( ArbitratorControl.class.getSimpleName( ) ).submit( new Runnable( ) {

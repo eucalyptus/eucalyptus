@@ -63,23 +63,11 @@
 
 package com.eucalyptus.util.concurrent;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
-public class GenericFuture<V> extends AbstractListenableFuture<V> implements CheckedListenableFuture<V> {
-
-  @Override
-  public boolean isCanceled( ) {
-    return false;
-  }
-
-  @Override
-  public boolean set( V value ) {
-    return super.set( value );
-  }
-
-  @Override
-  public  boolean setException( Throwable throwable ) {
-    return super.setException( throwable );
-  }
+public class GenericFuture<V> extends AbstractCheckedListenableFuture<V> implements CheckedListenableFuture<V> {
 
 }

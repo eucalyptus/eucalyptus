@@ -1,6 +1,8 @@
 package com.eucalyptus.config;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Handles;
@@ -9,6 +11,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -38,10 +41,13 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
-      Configuration.getClusterConfiguration( name );
-    } catch ( Exception e1 ) {
+      ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, partition );
+    } catch ( PersistenceException ex ) {
       throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-                                              + "  No cluster found with the name: " + name );
+                                              + "  An error occurred while trying to lookup the partition: " + name );
+    } catch ( NoSuchElementException ex ) {
+      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
+                                              + "  No cluster found within the partition: " + name );
     }
     return super.checkAdd( partition, name, host, port );
   }
@@ -49,8 +55,8 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   @Override
   public List<StorageControllerConfiguration> list( ) throws ServiceRegistrationException {
     try {
-      return Configuration.getStorageControllerConfigurations( );
-    } catch ( EucalyptusCloudException e ) {
+      return ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class );
+    } catch ( PersistenceException e ) {
       return super.list( );
     }
   }

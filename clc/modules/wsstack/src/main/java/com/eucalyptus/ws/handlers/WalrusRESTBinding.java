@@ -99,6 +99,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
@@ -128,6 +129,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
@@ -187,7 +189,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 			// TODO: get real user data here too
-			BaseMessage msg = (BaseMessage) this.bind( "admin", true, httpRequest );
+			BaseMessage msg = (BaseMessage) this.bind( httpRequest );
 			httpRequest.setMessage( msg );
 			if(msg instanceof WalrusDataGetRequestType) {
 				WalrusDataGetRequestType getObject = (WalrusDataGetRequestType) msg;
@@ -218,7 +220,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 			Binding binding;
 
-			if(!(msg instanceof EucalyptusErrorMessageType)) {
+			if(!(msg instanceof EucalyptusErrorMessageType)||!(msg instanceof ExceptionResponseType)) {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( super.getNamespace( ) ) );
 				if(putQueue != null) {
 					putQueue = null;
@@ -294,7 +296,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 
 	@Override
-	public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws Exception {
+	public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
 		String servicePath = httpRequest.getServicePath();
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
@@ -372,9 +374,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 	}
 
-	private void setRequiredParams(final GroovyObject msg, User user) {
+	private void setRequiredParams(final GroovyObject msg, User user) throws Exception {
 		if(user != null) {
-			msg.setProperty("accessKeyID", user.getQueryId());
+		  // YE TODO: can we just use any key here?
+			msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
 		}
 		msg.setProperty("timeStamp", new Date());
 	}

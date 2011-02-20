@@ -61,9 +61,19 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     this.outStateListeners.putAll( outStateListeners );
   }
   
+  public boolean isLegalTransition( T transitionName ) {
+    try {
+      this.lookupTransition( transitionName );
+      return true;
+    } catch ( NoSuchElementException ex ) {
+      return false;
+    }
+  }
+  
   public CheckedListenableFuture<P> startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
-      throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
+      throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: "
+                                             + this.currentTransition.get( ) );
     } else if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
@@ -76,7 +86,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   public CheckedListenableFuture<P> startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
-      throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
+      throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: "
+                                             + this.currentTransition.get( ) );
     } else if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
                                         + this.getTransitions( ) );
@@ -99,7 +110,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     Transition<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> r = transition.getRule( );
     if ( !this.currentTransition.compareAndSet( null, new ActiveTransition( this.id.incrementAndGet( ), transition ) ) ) {
-      throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: " + this.currentTransition.get( ) );
+      throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: "
+                                             + this.currentTransition.get( ) );
     } else if ( !this.state.compareAndSet( r.getFromState( ), r.getToState( ), r.getFromStateMark( ), true ) ) {
       this.id.decrementAndGet( );
       this.currentTransition.set( null );
@@ -133,13 +145,16 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.get( );
+      boolean doFireInListeners = !this.state.getReference( ).equals( tr.getFromState( ) );
       if ( !this.state.compareAndSet( tr.getToState( ), tr.getToState( ), true, tr.getToStateMark( ) ) ) {
         this.state.set( this.state.getReference( ), false );
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
       this.currentTransition.set( null );
-      this.fireInListeners( tr.getToState( ) );
+      if( doFireInListeners ) { 
+        this.fireInListeners( tr.getToState( ) );
+      }
     }
   }
   
@@ -153,9 +168,14 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.currentTransition.set( null );
-      this.state.set( tr.getErrorState( ), false );
-      this.fireInListeners( tr.getErrorState( ) );
+      if ( !this.state.getReference( ).equals( tr.getErrorState( ) ) ) {
+        this.currentTransition.set( null );
+        this.state.set( tr.getErrorState( ), false );
+        this.fireInListeners( tr.getErrorState( ) );
+      } else {
+        this.currentTransition.set( null );
+        this.state.set( tr.getErrorState( ), false );
+      }
     }
   }
   
@@ -171,9 +191,14 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.state.set( tr.getFromState( ), false );
-      this.currentTransition.set( null );
-      this.fireInListeners( tr.getFromState( ) );
+      if ( !this.state.getReference( ).equals( tr.getFromState( ) ) ) {
+        this.state.set( tr.getFromState( ), false );
+        this.currentTransition.set( null );
+        this.fireInListeners( tr.getFromState( ) );
+      } else {
+        this.state.set( tr.getFromState( ), false );
+        this.currentTransition.set( null );
+      }
     }
   }
   
@@ -264,9 +289,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   public String toString( ) {
     ActiveTransition t = this.currentTransition.get( );
-    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), (LogLevels.EXTREME ? (t != null 
-      ? t.toString( )
-      : "idle" ) : ""));
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( LogLevels.EXTREME
+      ? ( t != null
+        ? t.toString( )
+        : "idle" )
+      : "" ) );
   }
   
   /**
@@ -280,10 +307,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private final Long                id;
     private final String              name;
     private final Long                startTime;
-    private Long                      endTime = 0l;
+    private Long                      endTime          = 0l;
     private final Transition<P, S, T> transition;
     private final Throwable           startStackTrace;
-    private final Throwable           endStackTrace = new RuntimeException( );
+    private final Throwable           endStackTrace    = new RuntimeException( );
     private final TransitionFuture<P> transitionFuture = new TransitionFuture<P>( );
     
     public void fire( ) {
@@ -309,10 +336,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
         LOG.error( t, t );
       }
     }
-
+    
     private void teardown( ) {
       if ( LogLevels.TRACE ) {
-        RuntimeException ex = new RuntimeException();
+        RuntimeException ex = new RuntimeException( );
         if ( this.endTime != 0l ) {
           LOG.error( "Transition being committed for a second time!" );
           LOG.error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
@@ -382,20 +409,15 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     public TransitionFuture<P> getTransitionFuture( ) {
       return this.transitionFuture;
     }
-
+    
     public int compareTo( ActiveTransition that ) {
       return this.id.compareTo( that.id );
     }
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( "ActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( "startTime=" ).append( this.startTime ).append( "transition=" ).append( this.transition.toString( ) );
-      StackTraceElement[] stes = this.startStackTrace.getStackTrace( );
-      if ( this.startStackTrace != null ) {
-        for ( int i = 0; /*i < 7 &&*/i < stes.length; i++ ) {
-          sb.append( "\nActiveTransition name=" ).append( this.name ).append( "id=" ).append( this.id ).append( stes[i].toString( ) );
-        }
-      }
+      sb.append( "ActiveTransition name=" ).append( this.name ).append( " id=" ).append( this.id ).append( " startTime=" ).append( this.startTime ).append( " transition=" ).append( this.transition.toString( ) )
+        .append( '\n' ).append( Exceptions.string( this.startStackTrace ) );
       return sb.toString( );
     }
   }

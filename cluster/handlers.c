@@ -130,7 +130,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "BundleInstance(): called\n");
+  logprintfl(EUCAINFO, "BundleInstance(): called \n");
   logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
   if (!instanceId) {
     logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
@@ -166,7 +166,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     }
   }
 
-  logprintfl(EUCADEBUG,"BundleInstance(): done.\n");
+  logprintfl(EUCADEBUG,"BundleInstance(): done. \n");
   
   shawn();
   
@@ -188,7 +188,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "CancelBundleTask(): called\n");
+  logprintfl(EUCAINFO, "CancelBundleTask(): called \n");
   logprintfl(EUCADEBUG, "CancelBundleTask(): params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
   if (!instanceId) {
     logprintfl(EUCAERROR, "CancelBundleTask(): bad input params\n");
@@ -224,7 +224,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
     }
   }
 
-  logprintfl(EUCADEBUG,"CancelBundleTask(): done.\n");
+  logprintfl(EUCADEBUG,"CancelBundleTask(): done. \n");
   
   shawn();
   
@@ -749,7 +749,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     return(1);
   }
   
-  logprintfl(EUCAINFO, "AttachVolume(): called\n");
+  logprintfl(EUCAINFO, "AttachVolume(): called \n");
   logprintfl(EUCADEBUG, "AttachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
     logprintfl(EUCAERROR, "AttachVolume(): bad input params\n");
@@ -785,7 +785,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   }
   
-  logprintfl(EUCADEBUG,"AttachVolume(): done.\n");
+  logprintfl(EUCADEBUG,"AttachVolume(): done. \n");
   
   shawn();
 
@@ -806,7 +806,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "DetachVolume(): called\n");
+  logprintfl(EUCAINFO, "DetachVolume(): called \n");
   logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
     logprintfl(EUCAERROR, "DetachVolume(): bad input params\n");
@@ -841,7 +841,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   }
 
-  logprintfl(EUCADEBUG,"DetachVolume(): done.\n");
+  logprintfl(EUCADEBUG,"DetachVolume(): done. \n");
   
   shawn();
   
@@ -856,7 +856,7 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
     return(1);
   }
   
-  logprintfl(EUCAINFO, "ConfigureNetwork(): called\n");
+  logprintfl(EUCAINFO, "ConfigureNetwork(): called \n");
   logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
   
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
@@ -897,7 +897,7 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
     sem_mypost(VNET);
   }
   
-  logprintfl(EUCADEBUG,"ConfigureNetwork(): done\n");
+  logprintfl(EUCADEBUG,"ConfigureNetwork(): done. \n");
   
   shawn();
   
@@ -934,7 +934,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"AssignAddress(): called\n");
+  logprintfl(EUCAINFO,"AssignAddress(): called \n");
   logprintfl(EUCADEBUG,"AssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
 
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
@@ -969,7 +969,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     }
   }
   
-  logprintfl(EUCADEBUG,"AssignAddress(): done\n");  
+  logprintfl(EUCADEBUG,"AssignAddress(): done. \n");
   
   shawn();
 
@@ -984,7 +984,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
     return(1);
   }
   
-  logprintfl(EUCAINFO, "DescribePublicAddresses(): called\n");
+  logprintfl(EUCAINFO, "DescribePublicAddresses(): called \n");
   logprintfl(EUCADEBUG, "DescribePublicAddresses(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   ret=0;
@@ -997,7 +997,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
     ret=2;
   }
   
-  logprintfl(EUCADEBUG, "DescribePublicAddresses(): done\n");
+  logprintfl(EUCADEBUG, "DescribePublicAddresses(): done. \n");
 
   shawn();
 
@@ -1013,7 +1013,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"UnassignAddress(): called\n");
+  logprintfl(EUCAINFO,"UnassignAddress(): called \n");
   logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));  
   
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
@@ -1071,7 +1071,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     }
   }
   
-  logprintfl(EUCADEBUG,"UnassignAddress(): done\n");  
+  logprintfl(EUCADEBUG,"UnassignAddress(): done. \n");
   
   shawn();
 
@@ -1086,7 +1086,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
     return(1);
   }
   
-  logprintfl(EUCAINFO, "StopNetwork(): called\n");
+  logprintfl(EUCAINFO, "StopNetwork(): called \n");
   logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan);
   if (!ccMeta || !netName || vlan < 0) {
     logprintfl(EUCAERROR, "StopNetwork(): bad input params\n");
@@ -1104,7 +1104,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
     sem_mypost(VNET);
   }
   
-  logprintfl(EUCADEBUG,"StopNetwork(): done\n");
+  logprintfl(EUCADEBUG,"StopNetwork(): done. \n");
 
   shawn();
   
@@ -1119,7 +1119,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
     return(1);
   }
 
-  logprintfl(EUCAINFO, "DescribeNetworks(): called\n");
+  logprintfl(EUCAINFO, "DescribeNetworks(): called \n");
   logprintfl(EUCADEBUG, "DescribeNetworks(): params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
   
   sem_mywait(VNET);
@@ -1133,7 +1133,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
 
   sem_mypost(VNET);
-  logprintfl(EUCADEBUG, "DescribeNetworks(): done\n");
+  logprintfl(EUCADEBUG, "DescribeNetworks(): done. \n");
   
   shawn();
 
@@ -1152,7 +1152,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char
     return(1);
   }
   
-  logprintfl(EUCAINFO, "StartNetwork(): called\n");
+  logprintfl(EUCAINFO, "StartNetwork(): called \n");
   logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan, SP(nameserver), ccsLen);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
@@ -1181,7 +1181,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char
     
   }
   
-  logprintfl(EUCADEBUG,"StartNetwork(): done\n");
+  logprintfl(EUCADEBUG,"StartNetwork(): done \n");
   
   shawn();  
 
@@ -1197,7 +1197,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   ccResourceCache resourceCacheLocal;
   char strbuf[4096];
 
-  logprintfl(EUCAINFO,"DescribeResources(): called\n");
+  logprintfl(EUCAINFO,"DescribeResources(): called \n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
   op_start = time(NULL);
 
@@ -1288,7 +1288,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
     logprintfl(EUCAINFO,"DescribeResources(): resource response summary (name{avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name, (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name, (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
   }
 
-  logprintfl(EUCADEBUG,"DescribeResources(): done\n");
+  logprintfl(EUCADEBUG,"DescribeResources(): done \n");
   
   shawn();
 
@@ -1647,7 +1647,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
 
-  logprintfl(EUCAINFO,"DescribeInstances(): called\n");
+  logprintfl(EUCAINFO,"DescribeInstances(): called \n");
   logprintfl(EUCADEBUG,"DescribeInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
   
   op_start = time(NULL);
@@ -1688,7 +1688,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
     logprintfl(EUCAINFO, "DescribeInstances(): instance response summary: instanceId=%s, state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
   }
 
-  logprintfl(EUCADEBUG,"DescribeInstances(): done\n");
+  logprintfl(EUCADEBUG,"DescribeInstances(): done \n");
 
   shawn();
       
@@ -1789,7 +1789,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->uuid, src->uuid, 48);
   strncpy(dst->instanceId, src->instanceId, 16);
   strncpy(dst->reservationId, src->reservationId, 16);
-  strncpy(dst->ownerId, src->userId, 16);
+  strncpy(dst->ownerId, src->userId, 48);
   strncpy(dst->amiId, src->imageId, 16);
   strncpy(dst->kernelId, src->kernelId, 16);
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
@@ -2030,7 +2030,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"RunInstances(): called\n");
+  logprintfl(EUCAINFO,"RunInstances(): called \n");
   logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
   
   if (config->use_proxy) {
@@ -2292,7 +2292,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   *outInstsLen = runCount;
   *outInsts = retInsts;
   
-  logprintfl(EUCADEBUG,"RunInstances(): done\n");
+  logprintfl(EUCADEBUG,"RunInstances(): done. \n");
   
   shawn();
 
@@ -2323,7 +2323,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
     return(1);
   }
 
-  logprintfl(EUCAINFO,"GetConsoleOutput(): called\n");
+  logprintfl(EUCAINFO,"GetConsoleOutput(): called \n");
   logprintfl(EUCADEBUG,"GetConsoleOutput(): params: userId=%s, instId=%s\n", SP(ccMeta->userId), SP(instId));
 
   sem_mywait(RESCACHE);
@@ -2375,7 +2375,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
     }
   }
 
-  logprintfl(EUCADEBUG,"GetConsoleOutput(): done.\n");
+  logprintfl(EUCADEBUG,"GetConsoleOutput(): done. \n");
   
   shawn();
 
@@ -2399,7 +2399,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"RebootInstances(): called\n");
+  logprintfl(EUCAINFO,"RebootInstances(): called \n");
   logprintfl(EUCADEBUG,"RebootInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
   
   sem_mywait(RESCACHE);
@@ -2432,7 +2432,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
     }
   }
   
-  logprintfl(EUCADEBUG,"RebootInstances(): done.\n");
+  logprintfl(EUCADEBUG,"RebootInstances(): done. \n");
 
   shawn();
 
@@ -2456,7 +2456,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"TerminateInstances(): called\n");
+  logprintfl(EUCAINFO,"TerminateInstances(): called \n");
   logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d, firstInstId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"));
   
   sem_mywait(RESCACHE);
@@ -2521,7 +2521,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     }
   }
   
-  logprintfl(EUCADEBUG,"TerminateInstances(): done.\n");
+  logprintfl(EUCADEBUG,"TerminateInstances(): done. \n");
   
   shawn();
 
@@ -2544,7 +2544,7 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
     return(1);
   }
   
-  logprintfl(EUCAINFO, "CreateImage(): called\n");
+  logprintfl(EUCAINFO, "CreateImage(): called \n");
   logprintfl(EUCADEBUG, "CreateImage(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev));
   if (!volumeId || !instanceId || !remoteDev) {
     logprintfl(EUCAERROR, "CreateImage(): bad input params\n");
@@ -2581,7 +2581,7 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
     }
   }
   
-  logprintfl(EUCADEBUG,"CreateImage(): done.\n");
+  logprintfl(EUCADEBUG,"CreateImage(): done. \n");
   
   shawn();
 
@@ -4095,7 +4095,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     if (ramdiskURL) strncpy(out->ramdiskURL, ramdiskURL, 512);
     
     if (state) strncpy(out->state, state, 16);
-    if (ownerId) strncpy(out->ownerId, ownerId, 16);
+    if (ownerId) strncpy(out->ownerId, ownerId, 48);
     if (reservationId) strncpy(out->reservationId, reservationId, 16);
     if (keyName) strncpy(out->keyName, keyName, 1024);
     out->ts = ts;

@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
     <!--2008-05-05-->
     <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Volume" ordered="false">
         <value name="volumeId" field="volumeId" usage="required"/>

@@ -24,6 +24,7 @@ import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
@@ -60,6 +61,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       Object reply = null;
       try {
         reply = ServiceContext.send( "VmMetadata", newUri );
+      } catch ( ServiceDispatchException e1 ) {
+        LOG.debug( e1 );
       } catch ( Throwable e1 ) {
         LOG.debug( e1, e1 );
         reply = "".getBytes( );

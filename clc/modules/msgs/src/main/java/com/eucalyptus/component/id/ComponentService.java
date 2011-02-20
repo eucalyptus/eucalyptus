@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 
@@ -90,5 +91,10 @@ public class ComponentService extends ComponentId {
   @Override
   public Boolean isCloudLocal( ) {
     return false;
+  }
+
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Any.LIST;
   }
 }

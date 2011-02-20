@@ -81,7 +81,7 @@ public class InternalOnlyHandler implements ChannelUpstreamHandler {
     final BaseMessage msg = BaseMessage.extractMessage( e );
     if( request != null && msg != null ) {
       final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-      if( user.isSystem( ) || user.isAdministrator( ) ) {
+      if( user.isSystemInternal( ) || user.isSystemInternal( ) ) {
         ctx.sendUpstream( e );
       } else {
         Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

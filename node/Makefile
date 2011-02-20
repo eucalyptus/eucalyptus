@@ -76,10 +76,10 @@ $(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-ad
 	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
 
 test: test.c ../util/misc.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o ../util/euca_auth.o
 
 test_nc: test_nc.c ../util/misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../util/euca_auth.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

@@ -1,40 +1,34 @@
 package com.eucalyptus.auth.principal;
 
-import com.google.common.collect.ImmutableList;
+import java.io.Serializable;
+import java.util.List;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
- * @author decker
+ * 
+ * @author wenye
  *
  */
-public interface Group extends java.security.acl.Group, Cloneable {
-  /**
-   * @see java.security.Principal#getName()
-   * @return
-   */
-  public abstract String getName( );
+public interface Group extends HasId, BasePrincipal, Serializable {
+
+  public void setName( String name ) throws AuthException;
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @return
-   */
-  public ImmutableList<User> getMembers( );
+  public String getPath( );
+  public void setPath( String path ) throws AuthException;
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @return
-   */
-  public ImmutableList<Authorization> getAuthorizations( );
+  public Boolean isUserGroup( );
+  public void setUserGroup( Boolean userGroup ) throws AuthException;
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @param auth
-   */
-  public boolean addAuthorization( Authorization auth );
+  public Account getAccount( ) throws AuthException;
   
-  /**
-   * TODO: DOCUMENT Group.java
-   * @param auth
-   */
-  public boolean removeAuthorization( Authorization auth );
+  public List<User> getUsers( ) throws AuthException;
+  public boolean hasUser( String userName ) throws AuthException;
+  public void addUserByName( String userName ) throws AuthException;
+  public void removeUserByName( String userName ) throws AuthException; 
+  
+  public List<Policy> getPolicies( ) throws AuthException;
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  public void removePolicy( String name ) throws AuthException;
   
 }

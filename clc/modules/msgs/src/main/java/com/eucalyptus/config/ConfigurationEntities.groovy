@@ -97,16 +97,19 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.NetworkUtil;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
-public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration, HasName<ComponentConfiguration> {
+public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Column( name = "config_component_partition" )
   String partition;
   @Column( name = "config_component_name" )
@@ -157,35 +160,12 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( hostName == null ) ? 0 : hostName.hashCode( ) );
-    result = prime * result + ( ( name == null ) ? 0 : name.hashCode( ) );
-    return result;
+  public FullName getFullName( ) {
+    return this.getComponentId().makeFullName( this.partition != null ? this.partition : this.name, this.name );
   }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ComponentConfiguration other = ( ComponentConfiguration ) obj;
-//    if ( hostName == null ) {
-//      if ( other.hostName != null ) return false;
-//    } else if ( !hostName.equals( other.hostName ) ) return false;
-    if ( name == null ) {
-      if ( other.name != null ) return false;
-    } else if ( !name.equals( other.name ) ) return false;
-    if ( partition == null ) {
-      if ( other.partition != null ) return false;
-    } else if ( !partition.equals( other.partition ) ) return false;
-    return true;
-  }
+  
 
-  public int compareTo(ComponentConfiguration that) {
+  public int compareTo(ServiceConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
     return (partition + name).compareTo( that.partition + that.name );
   }
@@ -195,6 +175,29 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s uuid=%s hostName=%s port=%s servicePath=%s",
                           this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.getId(), this.hostName, this.port, this.servicePath );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.name == null )
+      ? 0
+      : this.name.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) return true;
+    if ( obj == null ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    ComponentConfiguration other = ( ComponentConfiguration ) obj;
+    if ( name == null ) {
+      if ( other.name != null ) return false;
+    } else if ( !name.equals( other.name ) ) return false;
+    return true;
+  }
+
 }
 /**
  * @deprecated do not even think of using this.
@@ -220,37 +223,29 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   ComponentId c;
   
-  public EphemeralConfiguration( String partition, String name, ComponentId c, URI uri ) {
+  public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
     super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  public EphemeralConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c.name(), uri.getHost( ), uri.getPort( ), uri.getPath( ) );
-    this.uri = uri;
-    this.c = c;
-  }  
   public ComponentId getComponentId() {
     return c;
-  }
-  public Component lookup() {
-    return Components.lookup(this.getComponentId( ));
   }
   public String getUri() {
     return this.uri.toASCIIString( );
   }  
 }
 public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c, uri );
+  public LocalConfiguration( ComponentId c, String partition, String name, URI uri ) {
+    super( c, partition, name, uri );
   }
   public Boolean isLocal() {
     return true;
   }
 }
 public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( String partition, ComponentId c, URI uri ) {
-    super( partition, c, uri );
+  public RemoteConfiguration( ComponentId c, String partition, String name, URI uri ) {
+    super( c, partition, name, uri );
   }
   public Boolean isLocal() {
     return false;
@@ -270,7 +265,13 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   Integer minVlan;
   @Column(name="maxvlan")
   Integer maxVlan;
-  
+  @Lob
+  @Column(name="auth_cluster_x509_certificate")
+  String clusterCertificate;
+  @Lob
+  @Column(name="auth_cluster_node_x509_certificate")
+  String nodeCertificate;
+
   public ClusterConfiguration( ) {}
   public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
@@ -287,16 +288,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
   }
 
-  public static ClusterConfiguration byClusterName( String name ) {
-    ClusterConfiguration c = new ClusterConfiguration( );
-    c.setClusterName(name);
-    return c;
-  }
-  public static ClusterConfiguration byHostName( String hostName ) {
-    ClusterConfiguration c = new ClusterConfiguration( );
-    c.setHostName(hostName);
-    return c;
-  }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Cluster.class);
   }
@@ -330,11 +321,35 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
   public WalrusConfiguration( ) {
   }
-  public WalrusConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  public WalrusConfiguration( String name, String hostName, Integer port ) {
+    super( "walrus", name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Walrus.class);
+  }
+  @Override
+  public FullName getFullName( ) {
+    return this.getComponentId().makeFullName( "walrus", this.name );
+  }
+}
+@Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_eucalyptus" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";
+  public EucalyptusConfiguration( ) {
+  }
+  public EucalyptusConfiguration( String name, String hostName, Integer port ) {
+    super( "eucalyptus", name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(Eucalyptus.class);
+  }
+  @Override
+  public FullName getFullName( ) {
+    return this.getComponentId().makeFullName( "eucalyptus", this.name );
   }
 }
 
@@ -390,3 +405,4 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
     return ComponentIds.lookup(Arbitrator.class);
   }
 }
+

@@ -37,15 +37,13 @@ public class StorageUsageLog
 	{
 		EntityWrapper<InstanceAttributes> entityWrapper =
 			EntityWrapper.get( InstanceAttributes.class );
-		Session sess = null;
 		try {
-			sess = entityWrapper.getSession();
 			/* TODO: Hibernate's iterate is stupid and doesn't do what you'd want.
 			 * It executes one query per row! Replace with something more
 			 * efficient.
 			 */
 			@SuppressWarnings("rawtypes")
-			Iterator iter = sess.createQuery(
+			Iterator iter = entityWrapper.createQuery(
 				"from StorageUsageSnapshot as sus"
 				+ " where sus.key.timestampMs > ?"
 				+ " and sus.key.timestampMs < ?"
@@ -260,8 +258,7 @@ public class StorageUsageLog
 			
 			/* Delete older instance snapshots
 			 */
-			sess = entityWrapper.getSession();
-			sess.createSQLQuery("DELETE FROM storage_usage_snapshot "
+			entityWrapper.createSQLQuery("DELETE FROM storage_usage_snapshot "
 				+ "WHERE timestamp_ms < ?")
 				.setLong(0, new Long(earlierThanMs))
 				.executeUpdate();

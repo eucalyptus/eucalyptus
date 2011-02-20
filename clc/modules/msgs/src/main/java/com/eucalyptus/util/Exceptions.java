@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.system.LogLevels;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -19,6 +20,9 @@ public class Exceptions {
     return message + "\n" + string( ex );
   }
   
+  public static <T extends Throwable> String createFaultDetails( T ex ) {
+    return LogLevels.DEBUG ? string( ex ) : ex.getMessage( ); 
+  }
   public static <T extends Throwable> String string( T ex ) {
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
@@ -77,6 +81,7 @@ public class Exceptions {
       : 2];
     IllegalArgumentException ex = new IllegalArgumentException( "Illegal argument given to " + ste.toString( ) + ": " + message, t );
     ex.fillInStackTrace( );
+    ex = filterStackTrace( ex );
     return ex;
   }
   
@@ -145,16 +150,6 @@ public class Exceptions {
       ? t
       : ex );
     return false;
-  }
-  
-  public static void ifNullArgument( Object... args ) throws IllegalArgumentException {
-    for ( Object o : args ) {
-      if ( o == null ) {
-        IllegalArgumentException ex = illegalArgument( "The argument to " + Thread.currentThread( ).getStackTrace( )[2].getMethodName( ) + " cannot be null." );
-        LOG.error( ex, ex );
-        throw ex;
-      }
-    }
   }
   
   public static RuntimeException trace( String message ) {

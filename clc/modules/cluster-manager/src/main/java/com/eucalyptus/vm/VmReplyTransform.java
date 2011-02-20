@@ -85,12 +85,12 @@ public class VmReplyTransform {
     for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
 
     ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
-                                                               reply.getUserId(),
+                                                               reply.getUserErn(),
                                                                networkNames );
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
       for( String instId : allocToken.getInstanceIds() ) {
-        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( Components.lookup( Dns.class ).isLocal( ) ) );
+        reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( ) );
       }
 
     reply.setRsvInfo( reservation );

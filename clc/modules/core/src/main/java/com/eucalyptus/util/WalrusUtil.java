@@ -75,8 +75,10 @@ import java.util.Collections;
 import java.util.List;
 
 import edu.ucsb.eucalyptus.cloud.WalrusException;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 
 
@@ -102,19 +104,35 @@ public class WalrusUtil {
 			}	
 		} catch ( SocketException e1 ) {}
 	}
-
-	public static EucalyptusMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		EucalyptusMessage errMsg;
+  public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
+    Throwable ex = errorMessage.getException();
+    String correlationId = errorMessage.getCorrelationId( );
+    BaseMessage errMsg = null;
+    if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
+      errMsg = errorMessage;
+    }
+    return errMsg;
+  }
+	public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
 		Throwable ex = errorMessage.getException();
-		if(ex instanceof WalrusException) {
-			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), errorMessage.getCorrelationId(), ipAddress, e.getLogData());
-			errMsg.setCorrelationId( errorMessage.getCorrelationId() );
-		} else {
-			errMsg = errorMessage;
+		String correlationId = errorMessage.getCorrelationId( );
+    BaseMessage errMsg = null;
+		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
+		  errMsg = errorMessage;
 		}
 		return errMsg;
 	}
+  private static EucalyptusMessage convertException( String correlationId, Throwable ex ) {
+    EucalyptusMessage errMsg;
+    if(ex instanceof WalrusException) {
+			WalrusException e = (WalrusException) ex;
+			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, ipAddress, e.getLogData());
+			errMsg.setCorrelationId( correlationId );
+			return errMsg;
+		} else {
+		  return null;
+		}
+  }
 	
 	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
 		return URLDecoder.decode(objectKey, "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");

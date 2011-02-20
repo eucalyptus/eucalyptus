@@ -2,6 +2,7 @@ clc/target
 clc/bin
 clc/deps
 clc/lib
+*.ajsv
 *.class
 */generated/
 Makedefs

@@ -1,0 +1,240 @@
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, only version 3 of the License.
+  ~
+  ~
+  ~ This file is distributed in the hope that it will be useful, but WITHOUT
+  ~ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  ~ FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  ~ for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along
+  ~ with this program.  If not, see http://www.gnu.org/licenses/.
+  ~
+  ~ Please contact Eucalyptus Systems, Inc., 130 Castilian
+  ~ Dr., Goleta, CA 93101 USA or visit http://www.eucalyptus.com/licenses/
+  ~ if you need additional information or have any questions.
+  ~
+  ~ This file may incorporate work covered under the following copyright and
+  ~ permission notice:
+  ~
+  ~   Software License Agreement (BSD License)
+  ~
+  ~   Copyright (c) 2008, Regents of the University of California
+  ~   All rights reserved.
+  ~
+  ~   Redistribution and use of this software in source and binary forms, with
+  ~   or without modification, are permitted provided that the following
+  ~   conditions are met:
+  ~
+  ~     Redistributions of source code must retain the above copyright notice,
+  ~     this list of conditions and the following disclaimer.
+  ~
+  ~     Redistributions in binary form must reproduce the above copyright
+  ~     notice, this list of conditions and the following disclaimer in the
+  ~     documentation and/or other materials provided with the distribution.
+  ~
+  ~   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  ~   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  ~   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  ~   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  ~   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  ~   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  ~   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  ~   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  ~   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  ~   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  ~   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  ~   THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  ~   LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ~   ANY SUCH LICENSES OR RIGHTS.
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Author: chris grzegorczyk grze@eucalyptus.com
+  -->
+
+<project name="eucalyptus" basedir=".">
+	<property environment="localenv" />
+	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
+	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
+		<contains string="${euca.home.0}" substring="localenv" />
+	</condition>
+	<property name="DESTDIR.0" value="${localenv.DESTDIR}" />
+	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+		<contains string="${DESTDIR.0}" substring="localenv" />
+	</condition>
+	<property name="project.basedir" value="${user.dir}" />
+	<loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
+		<filterchain>
+			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
+		</filterchain>
+	</loadfile>
+	<!--================================== other vars ==================================-->
+	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
+	<property name="deps.dir" value="deps" />
+	<property name="deps.lib.dir" value="lib" />
+	<property name="tools.dir" value="tools/src" />
+	<property name="deps.lib" value="cloud-lib" />
+	<property name="bind.timestamp" value="target/.bind-timestamp" />
+  <path id="groovy-classpath">
+      <fileset dir="${deps.lib.dir}">
+        <include name="**/*.jar" />
+      </fileset>
+  </path>
+  <taskdef name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
+  <loadfile property="modules" srcfile="modules/build.order"/>
+  <macrodef name="call-module-target">
+    <attribute name="target"/>
+    <sequential>
+      <property name="antTarget" value="@{target}"/>
+      <groovy maxmemory="1024m" src="modules/module-inc.groovy" classpathref="groovy-classpath">
+      	<jvmarg value="-XX:MaxPermSize=512m"/>
+      </groovy>
+    </sequential>
+  </macrodef>
+	<!--================================== build targets ==================================-->
+	<target name="build">
+		<ant dir="." inheritall="false" target="build-all" />
+		<ant dir="." inheritall="false" target="jar" />
+	</target>
+	<target name="build-all">
+		<call-module-target target="builder"/>
+	</target>
+	<target name="jar" depends="build-bind">
+		<call-module-target target="jar"/>
+	</target>
+	<target name="shouldBind">
+		<uptodate property="bind.notRequired" targetfile="${bind.timestamp}">
+			<srcfiles dir="modules">
+				<include name="**/*.java"/>
+			</srcfiles>
+		</uptodate>
+		<echo message="[BINDING] Up-to-date check shows bind.notRequred=${bind.notRequired}." />
+	</target>
+	<target name="build-bind" depends="shouldBind" unless="bind.notRequired">
+		<echo message="[BINDING] Running binding compiler." />
+		<path id="bindingclasspath">
+			<dirset dir="modules">
+				<include name="**/build" />
+			</dirset>
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</path>
+		<delete>
+			<fileset dir="modules" includes="**/*JiBX*" />
+		</delete>
+		<delete file="modules/msgs/src/main/resources/msgs-binding.xml" />
+		<taskdef name="bindings" classname="com.eucalyptus.binding.BuildBindings" classpathref="bindingclasspath" />
+		<bindings>
+			<classfileset dir="${project.basedir}/modules" includes="*/build/**" />
+			<bindingfileset dir="${project.basedir}/modules" includes="**/*-binding.xml" />
+		</bindings>
+		<touch file="${bind.timestamp}"/>
+	</target>
+
+	<!--================================== clean targets ==================================-->
+	<target name="clean">
+		<delete file="${bind.timestamp}"/>
+		<call-module-target target="clean"/>
+		<delete dir="${target.dir}" />
+	</target>
+	<target name="distclean" depends="clean">
+		<delete dir="${deps.dir}" />
+		<delete dir="${deps.lib.dir}" />
+		<delete dir="target" />
+	</target>
+	<!--================================== install target ==================================-->
+	<property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d" />
+	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
+	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
+	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
+	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
+	<property name="euca.bin.dir" value="${euca.home}/usr/sbin" />
+	<target name="install" depends="build-all,jar">
+		<!-- copy libraries over -->
+		<mkdir dir="${DESTDIR}${euca.lib.dir}" />
+		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
+			<fileset dir="${deps.lib.dir}">
+				<include name="**/*" />
+				<exclude name="**/gwt-api-checker-*.jar" />
+				<exclude name="**/gwt-dev-*.jar" />
+				<exclude name="**/gwt-soyc-vis-*.jar" />
+				<exclude name="**/gwt-user-*.jar" />
+			</fileset>
+		</copy>
+		<!--copy admin tools -->
+		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
+		<copy todir="${DESTDIR}${euca.bin.dir}" overwrite="true">
+			<fileset dir="${tools.dir}">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
+			<include name="**/euca-*" />
+		</chmod>
+		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
+		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
+		<mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
+		<chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
+		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
+		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
+		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
+		<mkdir dir="${DESTDIR}${euca.log.dir}" />
+		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
+		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
+		<mkdir dir="${DESTDIR}${euca.run.dir}" />
+		<call-module-target target="install"/>
+	</target>
+	<!--================================== unzipping target ==================================-->
+	<target name="deps">
+		<condition property="needDownload">
+			<and>
+				<not>
+					<available file="${deps.lib.dir}/bcprov.jar" />
+				</not>
+				<and>
+					<not>
+						<available file="${deps.dir}/${deps.lib}.tar.gz" />
+					</not>
+				</and>
+			</and>
+		</condition>
+		<ant target="download-deps" />
+		<condition property="needUnzipping">
+			<and>
+				<not>
+					<available file="${deps.lib.dir}/bcprov.jar" />
+				</not>
+				<and>
+					<available file="${deps.dir}/${deps.lib}.tar.gz" />
+				</and>
+			</and>
+		</condition>
+		<ant target="untar" />
+	</target>
+	<target name="dist-deps" depends="deps">
+		<delete dir="${deps.dir}" />
+	</target>
+	<target name="untar" if="needUnzipping">
+		<untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}" />
+	</target>
+	<target name="download-deps" if="needDownload">
+		<mkdir dir="${deps.dir}" />
+		<mkdir dir="${deps.lib.dir}" />
+		<!--===========  download the dependency libraries  ===========-->
+		<get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz" />
+	</target>
+	<target name="test-for">
+    <call-module-target target="builder"/>
+		<call-module-target target="clean"/>
+	</target>
+</project>

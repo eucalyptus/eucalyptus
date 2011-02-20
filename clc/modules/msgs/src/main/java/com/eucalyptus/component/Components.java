@@ -77,12 +77,12 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Components {
   private static Logger                            LOG                  = Logger
@@ -99,14 +99,14 @@ public class Components {
     List<Component> components = Lists.newArrayList( );
     if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
       for ( Component comp : Components.list( ) ) {
-        if ( comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( comp.getComponentId( ).isCloudLocal( ) ) {
           components.add( comp );
         }
       }
     }
     for ( Component comp : Components.list( ) ) {
       if ( comp.isRunningLocally( ) ) {
-        if ( !comp.getIdentity( ).isCloudLocal( ) ) {
+        if ( !comp.getComponentId( ).isCloudLocal( ) ) {
           components.add( comp );
         }
       }
@@ -119,7 +119,7 @@ public class Components {
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
-  private static <T extends ComponentInformation> Class getRealType( Class<T> maybeSubclass ) {
+  private static <T extends HasName<T>> Class getRealType( Class<T> maybeSubclass ) {
     Class type = null;
     for ( Class c : componentInformation.keySet( ) ) {
       if ( c.isAssignableFrom( maybeSubclass ) ) {
@@ -144,16 +144,16 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> boolean contains( Class<T> type, String name ) {
+  public static <T extends HasName<T>> boolean contains( Class<T> type, String name ) {
     return Components.lookupMap( type ).containsKey( name );
   }
   
-  private static <T extends ComponentInformation> void remove( T componentInfo ) {
+  private static <T extends HasName<T>> void remove( T componentInfo ) {
     Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     infoMap.remove( componentInfo.getName( ) );
   }
   
-  private static <T extends ComponentInformation> void put( T componentInfo ) {
+  private static <T extends HasName<T>> void put( T componentInfo ) {
     Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
     if ( infoMap.containsKey( componentInfo.getName( ) ) ) {
       throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Duplicate information for component '" + componentInfo.getName( ) + "': "
@@ -163,18 +163,18 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> void deregister( T componentInfo ) {
+  public static <T extends HasName<T>> void deregister( T componentInfo ) {
     remove( componentInfo );
-    if ( componentInfo instanceof Component ) {
+    if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
       EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.toString( ) ).info( );
     } else {
       EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
     }
   }
   
-  static <T extends ComponentInformation> void register( T componentInfo ) {
+  static <T extends HasName<T>> void register( T componentInfo ) {
     if ( !contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
-      if ( componentInfo instanceof Component ) {
+      if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
         EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.toString( ) ).info( );
       } else {
         EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
@@ -183,7 +183,7 @@ public class Components {
     }
   }
   
-  public static <T extends ComponentInformation> T lookup( Class<T> type, String name ) throws NoSuchElementException {
+  public static <T extends HasName<T>> T lookup( Class<T> type, String name ) throws NoSuchElementException {
     if ( !contains( type, name ) ) {
       try {
         ComponentId compId = ComponentIds.lookup( name );
@@ -208,15 +208,6 @@ public class Components {
 
   public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
     return Components.lookup( Component.class, componentId.getName( ) );
-  }
-
-  public static Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
-    for( Service s : Components.lookup( config.getComponentId( ) ).getServices( ) ) {
-      if( s.getServiceConfiguration( ).equals( config ) ) {
-        return s;
-      }
-    }
-    throw new NoSuchElementException( "Failed to find service corresponding to " + config.toString( ) );
   }
 
   public static boolean contains( String componentName ) {
@@ -247,27 +238,31 @@ public class Components {
             buf.append( "-> Builder:            "
                         + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
             buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".disable" )
+                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".disable" )
                         + "/"
-                        + System.getProperty( "euca." + comp.getIdentity( ).name( ) + ".remote" ) ).append( "\n" );
+                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".remote" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( Service s : comp.getServices( ) ) {
+            for ( Service s : comp.lookupServices( ) ) {
               buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
               buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
                           + s.getDispatcher( ).getAddress( ) ).append( "\n" );
               buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
-//TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
               buf.append( "|-> Service config:   "
                           + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
+            //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
             }
             return buf.toString( );
           }
         };
       }
     }
+  }
+  
+  public static Component oneWhichHandles( Class c ) {
+    return ServiceBuilderRegistry.handles( c ).getComponent( );
   }
   
   private static final Callback.Success<Component> componentPrinter = componentPrinter( );
@@ -366,8 +361,8 @@ public class Components {
             final StringBuilder buf = new StringBuilder( );
             buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
                                        comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getIdentity( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getIdentity( ).name( ) ) ) ) ).append( "\n" );
+                                       System.getProperty( String.format( "euca.%s.disable", comp.getComponentId( ).name( ) ) ),
+                                       System.getProperty( String.format( "euca.%s.remote", comp.getComponentId( ).name( ) ) ) ) ).append( "\n" );
             buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
                                        comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
             buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),

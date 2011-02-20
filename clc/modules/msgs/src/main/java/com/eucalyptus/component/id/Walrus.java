@@ -92,4 +92,9 @@ public class Walrus extends ComponentId {
   public Boolean hasCredentials( ) {
     return true;
   }
+
+  @Override
+  public boolean isPartitioned( ) {
+    return false;
+  }
 }

@@ -62,7 +62,7 @@
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
     <!--2008-02-01-->
     <mapping name="DescribeAvailabilityZonesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>

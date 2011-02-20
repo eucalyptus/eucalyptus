@@ -3,9 +3,6 @@ package com.eucalyptus.component;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import com.eucalyptus.config.LocalConfiguration;
-import com.eucalyptus.config.RemoteConfiguration;
-import com.eucalyptus.util.NetworkUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -42,17 +39,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
 
   @Override
   public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    String partition = "bootstrap".equals( this.component.getName( ) ) ? this.component.getName( ) : "eucalyptus"; 
-    try {
-      
-      if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && NetworkUtil.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
-      } else {
-        return new RemoteConfiguration( partition, this.component.getIdentity( ), uri );      
-      }
-    } catch ( Throwable t ) {
-      return new LocalConfiguration( partition, this.component.getIdentity( ), uri );      
-    }
+    return ServiceConfigurations.uriToServiceConfiguration( this.component, uri );
   }
 
   @Override

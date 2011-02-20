@@ -151,7 +151,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   @Override
   public void processClass( Class klass ) {
     if ( BindingGenerator.MSG_TYPE.isAssignableFrom( klass ) ) {
-      System.out.println( "JSONifying " + klass.getCanonicalName( ) );
+//      System.out.println( "JSONifying " + klass.getCanonicalName( ) );
       RequestInfo.get( klass );
     }
   }
@@ -160,11 +160,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   public void close( ) {
     for ( RequestInfo req : RequestInfo.getRequestInfoList( ) ) {
       String reqString = req.toString( );
-//      if ( req.getParent( ) != null ) {
-//        getWriter( req.getParent( ) ).write( reqString );
-//        getWriter( req.getParent( ) ).flush( );
-//      }
-      if ( req.getRequest( ) != null ) {
+      if ( req.getRequest( ) != null && reqString != null ) {
         getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
         getWriter( req.getRequest( ) ).flush( );
       }
@@ -379,7 +375,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     public String process( ) {
       if ( this.requestInfo.getRequest( ) == null || this.requestInfo.getResponse( ) == null || this.requestInfo.getRequest( ).getCanonicalName( ) == null ) {
-        new RuntimeException( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) ).printStackTrace( );
+        System.out.println( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) );
+        return null;
       } else {
         JsonDescriptorGenerator.request = true;
         this.beginElem( );
@@ -390,8 +387,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         for ( Field f : getRecursiveFields( this.requestInfo.getParent( ), this.requestInfo.getRequest( ) ) ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
-                               f.getType( ).getCanonicalName( ) );
+//            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+//                               f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
@@ -411,8 +408,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
         for ( Field f : responseFields ) {
           TypeBinding tb = getTypeBinding( f );
           if ( !( tb instanceof NoopTypeBinding ) ) {
-            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
-                               f.getType( ).getCanonicalName( ) );
+//            System.out.printf( "JSONIZE:  %-70s [type=%s:%s]\n", f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( ), tb.getTypeName( ),
+//                               f.getType( ).getCanonicalName( ) );
             this.append( tb.toString( ) );
           }
         }
@@ -542,8 +539,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     public String toString( ) {
-      String s = buf.toString( );
-      buf = new StringBuilder( buf.capacity( ) );
+      String s = this.buf.toString( );
+      this.buf = new StringBuilder( this.buf.capacity( ) );
       return s;
     }
     
@@ -666,7 +663,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
           .attr( "member-type", "\"" + this.getTypeName( ) + "\"" )
           .attr( "optional", "true" )
           .beginList( "properties" );
-      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, this.type ) ) {
         TypeBinding tb = getTypeBinding( f );
         if ( !( tb instanceof NoopTypeBinding ) ) {
           this.append( tb.toString( ) );
@@ -684,10 +681,10 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     public String toString( ) {
       this.beginElem( )
-          .attr( "name", makeJSONName( name ) )
+          .attr( "name", makeJSONName( this.name ) )
           .attr( "type", "\"object\"" )
           .beginList( "properties" );
-      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, type ) ) {
+      for ( Field f : getRecursiveFields( BindingGenerator.DATA_TYPE, this.type ) ) {
         TypeBinding tb = getTypeBinding( f );
         if ( !( tb instanceof NoopTypeBinding ) ) {
           this.append( tb.toString( ) );
@@ -711,12 +708,12 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     @Override
     public String getTypeName( ) {
-      return type.getTypeName( );
+      return this.type.getTypeName( );
     }
     
     @Override
     public String toString( ) {
-      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + name );
+      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + this.name );
       String ret = this.type.collection( this.name ).buf.toString( );
       this.type.collection( this.name ).buf = new StringBuilder( );
       return ret;

@@ -74,6 +74,9 @@ import com.eucalyptus.empyrean.Empyrean;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger LOG = Logger.getLogger( SystemClock.class );
+  
+  private static final long RATE = 10000;
+  
   private static SystemClock clock;
   private static Timer timer;
   private static Timer hzTimer;
@@ -84,7 +87,11 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     super( );
   }
 
-  private static void setupTimer( ) {
+  public static long getRate( ) {
+    return RATE;
+  }
+  
+  public static void setupTimer( ) {
     synchronized(SystemClock.class) {
       if( timer == null ) {
         timer = new Timer("SystemClockTimer");

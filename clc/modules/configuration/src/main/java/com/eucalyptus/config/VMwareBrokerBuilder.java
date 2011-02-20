@@ -1,12 +1,14 @@
 package com.eucalyptus.config;
 
 import java.util.List;
+import javax.persistence.PersistenceException;
 
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -33,7 +35,7 @@ public class VMwareBrokerBuilder extends DatabaseServiceBuilder<VMwareBrokerConf
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
-      Configuration.getClusterConfiguration( name );
+      ServiceConfigurations.getConfiguration( ClusterConfiguration.class, name );
     } catch ( Exception e1 ) {
       throw new ServiceRegistrationException( "Vmwarebroker may only be registered with a corresponding Cluster of the same name."
                                               + "  No cluster found with the name: " + name );
@@ -49,8 +51,8 @@ public class VMwareBrokerBuilder extends DatabaseServiceBuilder<VMwareBrokerConf
   @Override
   public List<VMwareBrokerConfiguration> list( ) throws ServiceRegistrationException {
     try {
-      return Configuration.getVMwareBrokerConfigurations( );
-    } catch ( EucalyptusCloudException e ) {
+      return ServiceConfigurations.getConfigurations( VMwareBrokerConfiguration.class );
+    } catch ( PersistenceException e ) {
       return super.list( );
     }
   }

@@ -139,7 +139,7 @@ public class InternalQueryPipeline extends FilteredPipeline {
 
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false ) );
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( true ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
     pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
     return pipeline;

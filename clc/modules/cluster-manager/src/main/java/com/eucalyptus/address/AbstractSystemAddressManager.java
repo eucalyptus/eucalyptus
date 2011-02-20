@@ -12,6 +12,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
@@ -22,8 +23,8 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 public abstract class AbstractSystemAddressManager {
   static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
   
-  public Address allocateNext( String userId ) throws NotEnoughResourcesAvailable {
-    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
+  public Address allocateNext( FullName userId ) throws NotEnoughResourcesAvailable {
+    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId.getUniqueId( ) );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -46,7 +47,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         Address address = Helper.lookupOrCreate( cluster, addrInfo );
         if ( address.isAssigned( ) && !address.isPending( ) ) {
-          if ( Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) ) {
+          if ( Address.UNALLOCATED_USERID.equals( address.getOwner( ).getUniqueId( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
@@ -63,7 +64,7 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState( ).handleOrphan( addrInfo );
             }
           }
-        } else if ( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getUserId( ) ) && !address.isPending( ) ) {
+        } else if ( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getOwner( ).getUniqueId( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
       } catch ( Throwable e ) {

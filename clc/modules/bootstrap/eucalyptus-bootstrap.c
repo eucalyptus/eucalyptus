@@ -251,12 +251,12 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
     __write_pid( GETARG(args,pidfile) );
     setpgrp( );
     __die(java_init( args, data ) != 1, "Failed to initialize Eucalyptus.");
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
+    __die_jni((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.init))==0,"Failed to init Eucalyptus.");
     __abort(4, set_keys_ownership( GETARG( args, home ), uid, gid ) != 0,"Setting ownership of keyfile failed." );
     __abort(4, linuxset_user_group( GETARG( args, user ), uid, gid ) != 0,"Setting the user failed." );
     __abort(4, (set_caps(0)!=0), "set_caps (0) failed");
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
+    __die_jni((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.load))==0,"Failed to load Eucalyptus.");
+    __die_jni((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.start))==0,"Failed to start Eucalyptus.");
     handle._hup = signal_set( SIGHUP, handler );
     handle._term = signal_set( SIGTERM, handler );
     handle._int = signal_set( SIGINT, handler );
@@ -264,10 +264,10 @@ static int child( euca_opts *args, java_home_t *data, uid_t uid, gid_t gid ) {
     __debug( "Waiting for a signal to be delivered" );
     while( !stopping ) sleep( 60 );
     __debug( "Shutdown or reload requested: exiting" );
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.stop))==0,"Failed to stop Eucalyptus.");
+    __die_jni((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.stop))==0,"Failed to stop Eucalyptus.");
     if( doreload == 1 ) ret = EUCA_RET_RELOAD;
     else ret = 0;
-    __die((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.destroy))==0,"Failed to destroy Eucalyptus.");
+    __die_jni((r=(*env)->CallBooleanMethod(env,bootstrap.instance,bootstrap.destroy))==0,"Failed to destroy Eucalyptus.");
     __die((JVM_destroy( ret ) != 1), "Failed trying to destroy JVM... bailing out seems like the right thing to do" );
     return ret;
 }
@@ -455,7 +455,7 @@ void euca_load_bootstrapper(void) {
     __debug("Native methods registered.");
 
     __die((bootstrap.constructor=(*env)->GetStaticMethodID(env, bootstrap.clazz,euca_get_instance.method_name, euca_get_instance.method_signature))==NULL,"Failed to get reference to default constructor.");
-    __die((bootstrap.instance=(*env)->CallStaticObjectMethod(env,bootstrap.clazz,bootstrap.constructor))==NULL,"Failed to create instance of bootstrapper.");
+    __die_jni((bootstrap.instance=(*env)->CallStaticObjectMethod(env,bootstrap.clazz,bootstrap.constructor))==NULL,"Failed to create instance of bootstrapper.");
     __debug("Created bootstrapper instance.");//TODO: fix all these error messages..
     __die((bootstrap.init=(*env)->GetMethodID(env,bootstrap.clazz,euca_init.method_name,euca_init.method_signature))==NULL,"Failed to get method reference for load.");
     __debug("-> bound method: init");

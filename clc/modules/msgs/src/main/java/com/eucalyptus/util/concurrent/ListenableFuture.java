@@ -37,7 +37,9 @@
 
 package com.eucalyptus.util.concurrent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 /**
@@ -83,6 +85,6 @@ public interface ListenableFuture<V> extends Future<V> {
    * @throws RejectedExecutionException if we tried to execute the listener
    * immediately but the executor rejected it.
    */
-  void addListener(Runnable listener, Executor exec);
+  void addListener(Runnable listener, ExecutorService exec);
   void addListener(Runnable listener);
 }

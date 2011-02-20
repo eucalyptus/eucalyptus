@@ -63,7 +63,7 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 
-<binding name="eucalyptus_ucsb_edu" force-classes="true">
+<binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
   <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
 
   <include path="cc-network.xml" />

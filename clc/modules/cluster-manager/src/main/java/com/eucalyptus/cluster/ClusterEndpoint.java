@@ -75,7 +75,6 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.sla.ClusterAllocator;
@@ -311,7 +310,7 @@ public class ClusterEndpoint implements Startable {
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupServiceByName( "walrus" ).getUri( ).toASCIIString( ) ) );
+      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupService( "walrus" ).getUri( ).toASCIIString( ) ) );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
     }

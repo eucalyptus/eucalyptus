@@ -1,6 +1,7 @@
 package com.eucalyptus.config;
 
 import java.util.List;
+import javax.persistence.PersistenceException;
 
 import org.apache.log4j.Logger;
 
@@ -10,6 +11,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.empyrean.Empyrean;
@@ -44,8 +46,8 @@ public class ArbitratorBuilder extends DatabaseServiceBuilder<ArbitratorConfigur
   @Override
   public List<ArbitratorConfiguration> list( ) throws ServiceRegistrationException {
     try {
-      return Configuration.getArbitratorConfigurations( );
-    } catch ( EucalyptusCloudException e ) {
+      return ServiceConfigurations.getConfigurations( ArbitratorConfiguration.class );
+    } catch ( PersistenceException e ) {
       return super.list( );
     }
   }

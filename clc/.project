@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>grze_eee</name>
+	<name>eee</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -29,4 +29,11 @@
 		<nature>com.borland.selena.uml20.uml20_nature</nature>
 		<nature>org.python.pydev.pythonNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>Suspended Root</name>
+			<type>2</type>
+			<locationURI>SuspendedRootVariable</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>

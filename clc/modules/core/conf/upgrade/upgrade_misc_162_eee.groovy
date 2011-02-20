@@ -19,8 +19,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.auth.Users;
-import com.eucalyptus.auth.Groups;
 
 class upgrade_misc_162_eee extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "1.6.2";

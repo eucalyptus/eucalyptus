@@ -13,6 +13,8 @@ import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.NetworkUtil;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
@@ -22,13 +24,17 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       this.lookupByName( name );
       return true;
-    } catch ( Exception e ) {
+    } catch ( ServiceRegistrationException e ) {
+      throw e;
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
       return false;
     }
   }
 
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getFullName( ).toString( ), config.toString( ) ).debug( );
     try {
       List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
       for ( ConfigurableProperty prop : props ) {
@@ -60,6 +66,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
 
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).debug( );
     StopComponentEvent e = null;
     if ( NetworkUtil.testLocal( config.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( config );
@@ -95,6 +102,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
    */
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
     EnableComponentEvent e = null;
     if ( config.isLocal( ) ) {
       e = EnableComponentEvent.getLocal( config );
@@ -116,6 +124,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
    */
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
     DisableComponentEvent e = null;
     if ( config.isLocal( ) ) {
       e = DisableComponentEvent.getLocal( config );

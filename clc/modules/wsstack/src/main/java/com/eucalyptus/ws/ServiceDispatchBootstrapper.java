@@ -114,8 +114,8 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.list( ) ) {
-        if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
+      for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+        if ( euca.isLocal( ) && euca.getComponentId( ).hasDispatcher( ) ) {
           try {
             comp.loadService( s );
           } catch ( ServiceRegistrationException ex ) {
@@ -139,25 +139,12 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-      for ( final ServiceConfiguration s : comp.list( ) ) {
-        if ( euca.isLocal( ) && euca.getIdentity( ).hasDispatcher( ) ) {
+      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+        if ( euca.isLocal( ) && euca.getComponentId( ).hasDispatcher( ) ) {
           try {
-            comp.startService( s ).addListener( new Runnable( ) {
-              @Override
-              public void run( ) {
-                try {
-                  comp.enableService( s );
-                } catch ( ServiceRegistrationException ex ) {
-                  LOG.error( ex , ex );
-                } catch ( Throwable ex ) {
-                  Exceptions.trace( "enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
-                }
-              }
-            } );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
+            comp.enableTransition( s ).get( );
           } catch ( Throwable ex ) {
-            Exceptions.trace( "start(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
+            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
           }
         }
       }

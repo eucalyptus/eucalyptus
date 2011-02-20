@@ -87,6 +87,7 @@ import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -123,7 +124,6 @@ public class ServiceContextManager {
     MuleContext muleCtx = context.get( bit );
     if ( context.getReference( ) == null ) {
       BootstrapException failEx = new BootstrapException( FAIL_MSG );
-      LOG.fatal( failEx, failEx );
       throw failEx;
     } else if ( client.get( ) == null && client.compareAndSet( null, new MuleClient( context.getReference( ) ) ) ) {
       return client.get( );
@@ -131,19 +131,44 @@ public class ServiceContextManager {
       return client.get( );
     }
   }
-  
+  private static volatile Callable<MuleContext> caller;
   public static final void restart( ) {
-    ctxMgmtThreadPool.getExecutorService( ).submit( new Callable<MuleContext>( ) {
-      @Override
-      public MuleContext call( ) throws Exception {
-        try {
-          startup( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+    if( !Bootstrap.isFinished( ) && caller == null ) {
+      caller = new Callable<MuleContext>( ) {
+        @Override
+        public MuleContext call( ) throws Exception {
+          try {
+            while( !Bootstrap.isFinished( ) ) {
+              TimeUnit.MILLISECONDS.sleep( 30 );
+            }
+            startup( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex, ex );
+          }
+          return context.getReference( );
         }
-        return context.getReference( );
+      };
+      ctxMgmtThreadPool.submit( caller );
+    } else if( !Bootstrap.isFinished( ) ) {
+    } else {
+      if( caller == null ) {
+        caller = new Callable<MuleContext>( ) {
+          @Override
+          public MuleContext call( ) throws Exception {
+            try {
+              while( !Bootstrap.isFinished( ) ) {
+                TimeUnit.MILLISECONDS.sleep( 30 );
+              }
+              startup( );
+            } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
+            }
+            return context.getReference( );
+          }
+        };
       }
-    } );
+      ctxMgmtThreadPool.submit( caller );
+    }
   }
   
   static String mapEndpointToService( String endpoint ) throws ServiceDispatchException {
@@ -170,7 +195,7 @@ public class ServiceContextManager {
   }
   
   static boolean loadContext( ) {
-    List<ComponentId> components = ComponentIds.listEnabled( );
+    List<ComponentId> components = ComponentIds.listLocallyRynning( );
     LOG.info( "The following components have been identified as active: " );
     for ( ComponentId c : components ) {
       LOG.info( "-> " + c );
@@ -341,8 +366,8 @@ public class ServiceContextManager {
   }
   
   private static MuleContext createContext( ) throws ServiceInitializationException {
-    List<ComponentId> components = ComponentIds.listEnabled( );
-    if ( checkStateUnchanged( ComponentIds.listEnabled( ) ) && context.getReference( ) != null ) {
+    List<ComponentId> components = ComponentIds.listLocallyRynning( );
+    if ( checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) && context.getReference( ) != null ) {
       return context.getReference( );
     } else {
       LOG.info( "The following components have been identified as active: " );
@@ -375,7 +400,7 @@ public class ServiceContextManager {
   }
   
   public static boolean check( ) {
-    if ( !checkStateUnchanged( ComponentIds.listEnabled( ) ) ) {
+    if ( !checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) ) {
       ServiceContextManager.restart( );
     }
     return true;

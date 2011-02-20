@@ -1,5 +1,4 @@
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;
@@ -12,7 +11,7 @@ import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.Configuration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
@@ -44,16 +43,15 @@ class UpgradeAuth extends AbstractUpgradeScript {
     //println "----- eucalyptus_auth.AUTH_CLUSTERS -----";
     StandalonePersistence.getConnection("eucalyptus_auth").rows('SELECT * FROM AUTH_CLUSTERS').each{
       //println "ROW: ${it}";
-      EntityWrapper<ClusterCredentials> db = Authentication.getEntityWrapper( );
-      try {
-        db.add( new ClusterCredentials( it.AUTH_CLUSTER_NAME ) );
-        db.commit( );
-        ccCertIdToCluster[it.AUTH_CLUSTER_X509_CERTIFICATE] = it.AUTH_CLUSTER_NAME;
-        ncCertIdToCluster[it.AUTH_CLUSTER_NODE_X509_CERTIFICATE] = it.AUTH_CLUSTER_NAME;
-      } catch ( EucalyptusCloudException e ) {
-        db.rollback( );
-        println "Failed to add credentials for cluster ${it.AUTH_CLUSTER_NAME}";
-        e.printStackTrace( );
+      for( ClusterConfiguration config : ServiceConfigurations.getClusterConfigurations( ) ) {
+        config.setClusterCertificate( it.AUTH_CLUSTER_X509_CERTIFICATE );
+        config.setNodeCertificate( it.AUTH_CLUSTER_NODE_X509_CERTIFICATE );
+        try {
+          EntityWrapper.get( ClusterConfiguration.class ).mergeAndCommit( config );
+        } catch ( Throwable e ) {
+          println "Failed to add credentials for cluster ${it.AUTH_CLUSTER_NAME}";
+          e.printStackTrace( );
+        }
       }
     }       
     //println "----- eucalyptus_auth.AUTH_USERS -----";
@@ -157,10 +155,10 @@ class UpgradeAuth extends AbstractUpgradeScript {
         e.printStackTrace( );
       }
     }
-    println "Making sure default group has all the availability zones"
-    for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
-      Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( cluster.getName( ) ) );
-    }
+//    println "Making sure default group has all the availability zones"
+//    for ( ClusterConfiguration cluster : ServiceConfigurations.getClusterConfigurations( ) ) {
+//      Groups.DEFAULT.addAuthorization( new AvailabilityZonePermission( cluster.getName( ) ) );
+//    }
   }
   
   private String ifEmptyReplaceByBogus( String value ) {
