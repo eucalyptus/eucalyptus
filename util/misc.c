@@ -1635,6 +1635,86 @@ char * xpath_content (const char * xml, const char * xpath)
     return ret;
 }
 
+int construct_uri(char *uri, char *uriType, char *host, int port, char *path) {
+  
+  if (!uri || !uriType || !host || !strlen(uriType) || !strlen(host)) {
+    return(1);
+  }
+  
+  uri[0] = '\0';
+  strncat(uri, uriType, strlen(uriType));
+  strncat(uri, "://", 3);
+  
+  strncat(uri, host, strlen(host));
+  
+  if (port > 0) {
+    char tmp[32];
+    snprintf(tmp, 32, ":%d", port);
+    strncat(uri, tmp, strlen(tmp));
+  }
+  strncat(uri, "/", 1);
+
+  if (path && strlen(path)) {
+    strncat(uri, path, strlen(path));
+  }
+  
+  return(0);
+}
+
+int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path) {
+  char *tok, *start;
+
+  uriType[0] = host[0] = path[0] = '\0';
+  *port = 0;
+
+  start = uri;
+
+  // must have a type
+  tok = strsep(&start, "://");
+  if (!start) {
+    return(1);
+  }
+  snprintf(uriType, strlen(tok)+1, "%s", tok);
+  start += 2;
+  //  printf("HERE: %s %s\n", start, tok);
+
+  tok = strsep(&start, ":");
+  if (!start) {
+    // no port
+    start = tok;
+    tok = strsep(&start, "/");
+    if (!start) {
+      // no path
+      if (tok) {
+	snprintf(host, strlen(tok)+1, "%s", tok);
+      } else {
+	// no host
+	// must have a host
+	return(1);
+      }
+    } else {
+      // path present
+      snprintf(host, strlen(tok)+1, "%s", tok);
+      snprintf(path, strlen(start)+1, "%s", start);
+    }
+  } else {
+    // port present
+    snprintf(host, strlen(tok)+1, "%s", tok);
+    tok = strsep(&start, "/");
+    if (!start) {
+      // no path present
+      if (tok) {
+	*port = atoi(tok);
+      }
+    } else {
+      // path present
+      *port = atoi(tok);
+      snprintf(path, strlen(start)+1, "%s", start);
+    }
+  }
+  return(0);
+}
+
 int hash_b64enc_string(const char *in, char **out) {
   unsigned char *md5ret=NULL;
   unsigned char hash[17];
@@ -1651,9 +1731,8 @@ int hash_b64enc_string(const char *in, char **out) {
     if (*out == NULL) {
       return(1);
     }
-  } else {
-    return(1);
   }
 
   return(0);
 }
+

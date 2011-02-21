@@ -96,6 +96,7 @@ extern vnetConfig *vnetconfig;
 
 int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
+  serviceStatusType *myStatus=NULL;
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -105,8 +106,30 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   logprintfl(EUCAINFO, "DescribeServices(): called\n");
   logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
+  // TODO: for now, return error if list of services is passed in as parameter
+  if (serviceIdsLen > 0) {
+    logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
+    *outStatusesLen = 0;
+    *outStatuses = NULL;
+    return(1);
+  }
+
+  *outStatusesLen = 1;
+  *outStatuses = malloc(sizeof(serviceStatusType));
+  if (!*outStatuses) {
+    logprintfl(EUCAFATAL, "DescribeServices(): out of memory!\n");
+    unlock_exit(1);
+  }
+
+  myStatus = *outStatuses;
+  snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState);
+  snprintf(myStatus->details, 1024, "%s", config->ccStatus.details);
+  myStatus->localEpoch = config->ccStatus.localEpoch;
+  memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
+
   // go through input service descriptions and match with self and node states
 
+  /*
   *outStatusesLen = serviceIdsLen;
   *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
   for (i=0; i<serviceIdsLen; i++) {
@@ -117,10 +140,10 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
     snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
     (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
     memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
-  }
-  
+  }  
+  */
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
-  return(ret);
+  return(0);
 }
 
 int doStartService(ncMetadata *ccMeta) {
@@ -136,6 +159,7 @@ int doStartService(ncMetadata *ccMeta) {
 
   // this is actually a NOP
   sem_mywait(CONFIG);
+  config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
   
@@ -177,11 +201,10 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  // set state to ENABLED
+  // tell monitor thread to (re)enable
   config->kick_network = 1;
   config->kick_dhcp = 1;
   config->kick_enabled = 1;
-  //  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
@@ -222,12 +245,75 @@ int validCmp(ccInstance *inst, void *in) {
   return(0);
 }
 
+int instIpSync(ccInstance *inst, void *in) {
+  int ret=0;
+
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    return(0);
+  }
+
+  logprintfl(EUCADEBUG, "instIpSync(): instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+
+  if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
+    // ccnet is completely empty, make a copy of ncnet
+    logprintfl(EUCADEBUG, "instIpSync(): ccnet is empty, copying ncnet\n");
+    memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
+    return(1);
+  }
+  
+  // IP cases
+  // 1.) local CC cache has no IP info for VM, NC VM has no IP info
+  //     - do nothing
+  // 2.) local CC cache has no IP info, NC VM has IP info
+  //     - ingress NC info, kick_network
+  // 3.) local CC cache has IP info, NC VM has no IP info
+  //     - send ncAssignAddress
+  // 4.) local CC cache has IP info, NC VM has different IP info
+  //     - ingress NC info, kick_network
+  // 5.) local CC cache has IP info, NC VM has same IP info
+  //     - do nothing
+  if ((inst->ccnet.publicIp[0] == '\0' || !strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
+    // case 2
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp is empty, NC publicIp is set\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  } else if (( (inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")) ) && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
+    // case 4
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp and NC publicIp differ\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  }
+
+  // VLAN cases
+  if (inst->ccnet.vlan != inst->ncnet.vlan) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
+  }
+  inst->ccnet.vlan = inst->ncnet.vlan;
+
+  // networkIndex cases
+  if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+  }
+  inst->ccnet.networkIndex = inst->ncnet.networkIndex;
+
+  // mac addr cases
+  if (strcmp(inst->ccnet.privateMac, inst->ncnet.privateMac)) {
+    // problem;
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
+  }
+  snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
+
+  return(ret);
+}
+
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
   if (!inst) {
     return(1);
-  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
     return(0);
   }
 
@@ -241,6 +327,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     if (inst->groupNames[0][0] != '\0' && inst->ownerId[0] != '\0') {
       if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->ownerId)) ) {
 	// this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
+	logprintfl(EUCAERROR, "instNetParamsSet(): input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->ownerId, inst->groupNames[0], inst->ccnet.vlan);
 	ret = 1;
       } else {
 	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
@@ -259,9 +346,9 @@ int instNetParamsSet(ccInstance *inst, void *in) {
   }
 
   if (ret) {
-    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   } else {
-    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   }
 
   return(0);
@@ -272,7 +359,7 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
 
   if (!inst) {
     return(1);
-  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
     return(0);
   }
 
