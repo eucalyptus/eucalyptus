@@ -1,7 +1,7 @@
 package com.eucalyptus.reporting.instance;
 
-import org.hibernate.*;
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
+import org.hibernate.Session;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
