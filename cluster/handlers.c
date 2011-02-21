@@ -2373,6 +2373,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     } else {
       // instance is not in cache, try all resources
       myInstance = malloc(sizeof(ccInstance));
+      bzero(myInstance, sizeof(ccInstance));
       snprintf(myInstance->instanceId, 16, "%s", instId);
 
       start = 0;
