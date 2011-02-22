@@ -38,8 +38,9 @@
       }									\
       adb_##thefunc##_add_services(theadb, env, sit);			\
     }									\
-    logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(themeta->userId), SP(themeta->correlationId), themeta->epoch, SP(themeta->services[0].name), SP(themeta->services[0].type), SP(themeta->services[0].uris[0])); \
   }
+
+//    logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(themeta->userId), SP(themeta->correlationId), themeta->epoch, SP(themeta->services[0].name), SP(themeta->services[0].type), SP(themeta->services[0].uris[0]));
 
 
 static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *env)
@@ -86,17 +87,17 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
   for (i = 0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
     adb_virtualBootRecordType_t * vbr_type = adb_virtualMachineType_get_virtualBootRecord_at (vm_type, env, i);
     strncpy (params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
+    logprintfl (EUCADEBUG2, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
     strncpy (params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
+    logprintfl (EUCADEBUG2, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
     params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
-    logprintfl (EUCADEBUG, "             size: %d\n", params->virtualBootRecord[i].size);
+    logprintfl (EUCADEBUG2, "             size: %d\n", params->virtualBootRecord[i].size);
     strncpy (params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "           format: %s\n", params->virtualBootRecord[i].formatName);
+    logprintfl (EUCADEBUG2, "           format: %s\n", params->virtualBootRecord[i].formatName);
     strncpy (params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "               id: %s\n", params->virtualBootRecord[i].id);
+    logprintfl (EUCADEBUG2, "               id: %s\n", params->virtualBootRecord[i].id);
     strncpy (params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG, "             type: %s\n", params->virtualBootRecord[i].typeName);
+    logprintfl (EUCADEBUG2, "             type: %s\n", params->virtualBootRecord[i].typeName);
   }
 }
 
