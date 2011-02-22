@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
   mymeta.userId = strdup("admin");
   mymeta.correlationId = strdup("1234abcd");
   mymeta.epoch = 3;
-  mymeta.servicesLen = 1;
-  snprintf(mymeta.services[0].name, 16, "thewalrus");
-  snprintf(mymeta.services[0].type, 16, "walrus");
+  mymeta.servicesLen = 16;
+  snprintf(mymeta.services[15].name, 16, "theBogusService");
+  snprintf(mymeta.services[15].type, 16, "bogusService");
   mymeta.services[0].urisLen = 1;
   snprintf(mymeta.services[0].uris[0], 512, "http://1.2.3.4/path");
     

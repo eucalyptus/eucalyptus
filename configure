@@ -3694,7 +3694,6 @@ fi
         fi
 fi
 
-
 # Checks for programs.
 for ac_prog in gawk mawk nawk awk
 do
