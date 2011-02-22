@@ -63,22 +63,30 @@
  */
 package com.eucalyptus.cluster;
 
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VmTypeVerify {
 
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
   {
-    String instanceType = vmAllocInfo.getRequest().getInstanceType();
-    VmType v = VmTypes.getVmType( (instanceType==null)?"m1.small":instanceType );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    String instanceType = request.getInstanceType( );
+    VmType v = VmTypes.getVmType( ( instanceType == null ) ? "m1.small" : instanceType );
     if( v == null ) {
-      throw new EucalyptusCloudException( "instance type does not exist: " + vmAllocInfo.getRequest().getInstanceType() );
+      throw new EucalyptusCloudException( "instance type does not exist: " + request.getInstanceType( ) );
     }
-
+    String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, null /* resourceAccount */, action, request.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + request.getUserErn( ) );
+    }
     vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
     return vmAllocInfo;
   }

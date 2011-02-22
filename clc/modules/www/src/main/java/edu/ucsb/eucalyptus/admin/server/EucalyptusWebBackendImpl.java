@@ -79,18 +79,18 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import javax.persistence.PersistenceException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.UserInfo;
-import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.Cluster;
@@ -100,9 +100,9 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
@@ -289,7 +289,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		boolean admin = false;
 		try {
 			SessionInfo session = verifySession (sessionId);
-			UserInfoWeb requestingUser = verifyUser (session, session.getUserId(), true);
+			UserInfoWeb requestingUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 			if ( !requestingUser.isAdministrator().booleanValue()) {
 				user.setAdministrator(false); // in case someone is trying to be sneaky
 				throw new SerializableException("Administrative privileges required");
@@ -356,7 +356,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		String response;
 		if (web_user.getPassword()==null) { // someone is initiating password recovery
 			try {
-				UserInfoWeb db_user = EucalyptusManagement.getWebUser(web_user.getUserName());
+				UserInfoWeb db_user = EucalyptusManagement.getWebUser(web_user.getUserName(), web_user.getAccountName());
 				if (!db_user.isConfirmed() || !db_user.isEnabled()) {
 					throw new SerializableException("Illegal request"); // no password recoveries before confirmation or while disabled
 				}
@@ -424,15 +424,15 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	}
 
 	/* ensure the user exists and valid */
-	private static UserInfoWeb verifyUser (SessionInfo session, String userName, boolean verifyPasswordAge)
+	private static UserInfoWeb verifyUser (SessionInfo session, String userName, String accountName, boolean verifyPasswordAge)
 	throws SerializableException
 	{
 		UserInfoWeb user;
 		if (userName==null) {
-			throw new SerializableException("Invalid RPC arguments: userIname is missing");
+			throw new SerializableException("Invalid RPC arguments: userName is missing");
 		}
 		try {
-			user = EucalyptusManagement.getWebUser(userName);
+			user = EucalyptusManagement.getWebUser(userName, accountName);
 		} catch (Exception e) {
 			if (session!=null) {
 				sessions.remove(session.getSessionId());
@@ -450,30 +450,46 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 		if (verifyPasswordAge) {
 			if (isPasswordExpired(user) && 
-					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY))) { // first-time config will catch that
+					!(user.isAdministrator() && user.getEmail().equalsIgnoreCase("n/a"))) { // first-time config will catch that
 				throw new SerializableException("Password expired");
 			}
 		}
 		return user;
 	}
 
-	public String getNewSessionID (String userId, String md5Password)
+	public String getNewSessionID (String userId, String password)
 	throws SerializableException
 	{
 		String sessionId = null;
 		UserInfoWeb user;
 
-		if (md5Password==null) {
+		if (userId == null) {
+		  throw new SerializableException("Invalid RPC arguments: user ID is missing");
+		}
+		if (password == null) {
 			throw new SerializableException("Invalid RPC arguments: password is missing");
 		}
+		
+		// Parse userId in the follow forms:
+		// 1. "username" (meaning "username" in "eucalyptus" account)
+		// 2. "accountname/username"
+		String account = null;
+		int slash = userId.indexOf( '/' );
+		if (slash > 0) {
+		  account = userId.substring( 0, slash );
+		}
+		userId = userId.substring( slash + 1 );
+		if (account == null || "".equals(account)) {
+		  account = Account.SYSTEM_ACCOUNT;
+		}
 		// you can get a sessionId with an expired password so you can change it => false
-		user = verifyUser (null, userId, false);
-		if (!user.getPassword().equals( md5Password )) {
+		user = verifyUser (null, userId, account, false);
+		if (!user.getPassword().equals( Crypto.generateHashedPassword( password ) ) ) {
 			throw new SerializableException("Incorrect password");
 		}
 
 		sessionId = ServletUtils.genGUID();
-		SessionInfo session = new SessionInfo(sessionId, userId, System.currentTimeMillis());
+		SessionInfo session = new SessionInfo(sessionId, userId, account, System.currentTimeMillis());
 		session.setStartedOn(session.getLastAccessed());
 		sessions.put(session.getSessionId(), session);
 
@@ -554,7 +570,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		}
 
 		final SessionInfo session = verifySession (sessionId);
-		final UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		final UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		String response = "Your `" + action + "` request succeeded."; /* generic response */
 		if (action.equals("approve")
@@ -566,7 +582,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			if (!user.isAdministrator()) {
 				throw new SerializableException("Administrative privileges required");
 			}
-			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName);
+			UserInfoWeb new_user = EucalyptusManagement.getWebUser(userName, session.getAccountId( ));
 			if (action.equals("approve")) {
 				if (new_user.isApproved()) {
 					throw new SerializableException("User already approved");
@@ -631,7 +647,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		List l = new ArrayList();
 		if (userId==null) {
@@ -643,7 +659,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			if (userId.equals("*")) {
 				l.addAll( EucalyptusManagement.getWebUsers(userId) ); /* NOTE: userId is currently ignored */
 			} else {
-				l.add(EucalyptusManagement.getWebUser(user.getUserName()));
+				l.add(EucalyptusManagement.getWebUser(user.getUserName(), user.getAccountName( )));
 			}
 		}
 		return l;
@@ -653,7 +669,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		return user;
 	}
 
@@ -661,7 +677,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		/* TODO: right now userId parameter is ignored since we only have public images */
 		return EucalyptusManagement.getWebImages(userId);
@@ -674,7 +690,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	{
 		/* perform full checks */
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		return user.getToken();
 	}
@@ -700,15 +716,15 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 		/* check everything except password expiration */
 		SessionInfo session = verifySession (sessionId);
 		// naturally, it is OK to change the password if it expired => false
-		UserInfoWeb user = verifyUser (session, session.getUserId(), false);
-
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), false);
+		
 		/* check old password if the user is changing password voluntarily */
 		if ( !isPasswordExpired((UserInfoWeb)user) ) {
-			if ( !oldPassword.equals(user.getPassword()) ) {
+			if ( !Crypto.generateHashedPassword(oldPassword).equals(user.getPassword())) {
 				throw new SerializableException("Old password is incorrect");
 			}
 		}
-		user.setPassword( newPassword );
+		user.setPassword(Crypto.generateHashedPassword(newPassword));
 		final long now = System.currentTimeMillis();
 		user.setPasswordExpires( new Long(now + pass_expiration_ms) );
 		EucalyptusManagement.commitWebUser( user );
@@ -721,11 +737,11 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	{
 		/* perform full checks */
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb callerRecord = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb callerRecord = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		String userName = newRecord.getUserName();
 		UserInfoWeb oldRecord;
 		try {
-			oldRecord = EucalyptusManagement.getWebUser(userName);
+			oldRecord = EucalyptusManagement.getWebUser(userName, session.getAccountId( ));
 		} catch (Exception e) {
 			throw new SerializableException("Username '" + userName + "' not found");
 		}
@@ -734,21 +750,28 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			throw new SerializableException ("Operation restricted to owner and administrator");
 		}
 
+		// set expiration for admin setting password for the first time
+		if (oldRecord.isAdministrator() && oldRecord.getEmail().equalsIgnoreCase("n/a")) {
+			long now = System.currentTimeMillis();
+			oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+		}
+
+		/* TODO: Any checks? */
 		// only an admin should be able to change this settings                                                                    
 		if (callerRecord.isAdministrator()) {   
-
+//TODO:ASAP:REVIEW:YE
 			// set password and expiration for admin when logging in for the first time
-			if (oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
-				long now = System.currentTimeMillis();
-				oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
-				oldRecord.setPassword (newRecord.getPassword());
-			}
+//			if (oldRecord.getEmail().equalsIgnoreCase(UserInfo.BOGUS_ENTRY)) {
+//				long now = System.currentTimeMillis();
+//				oldRecord.setPasswordExpires( new Long(now + pass_expiration_ms) );
+//				oldRecord.setPassword (newRecord.getPassword());
+//			}
 			
 			// admin can reset pwd of another user, but
 			// to reset his own password he has to use
 			// "change password" functionality
 			if(!callerRecord.getUserName().equals(userName))
-				oldRecord.setPassword (newRecord.getPassword());	
+				oldRecord.setPassword (Crypto.generateHashedPassword(newRecord.getPassword()));	
 
 			if(oldRecord.isAdministrator() != newRecord.isAdministrator())                                                     
 				oldRecord.setAdministrator(newRecord.isAdministrator());                                                   
@@ -777,7 +800,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<ClusterInfoWeb> getClusterList(String sessionId) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		try {
 			return RemoteInfoHandler.getClusterList();
 		} catch ( EucalyptusCloudException e ) {
@@ -788,7 +811,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void setClusterList(String sessionId, List<ClusterInfoWeb> clusterList ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		try {
 			RemoteInfoHandler.setClusterList( clusterList );
 		} catch ( EucalyptusCloudException e ) {
@@ -799,7 +822,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<StorageInfoWeb> getStorageList(String sessionId) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		try {
 			return RemoteInfoHandler.getStorageList();
 		} catch(EucalyptusCloudException e) {
@@ -810,7 +833,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void setStorageList(String sessionId, List<StorageInfoWeb> storageList ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		try {
 			RemoteInfoHandler.setStorageList(storageList);
 		} catch(EucalyptusCloudException e) {
@@ -821,7 +844,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<WalrusInfoWeb> getWalrusList(String sessionId) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		try {
 			return RemoteInfoHandler.getWalrusList();
 		} catch(EucalyptusCloudException e) {
@@ -832,7 +855,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void setWalrusList(String sessionId, List<WalrusInfoWeb> walrusList ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		try {
 			RemoteInfoHandler.setWalrusList(walrusList);
@@ -844,7 +867,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public SystemConfigWeb getSystemConfig( final String sessionId ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		return EucalyptusManagement.getSystemConfig();
 	}
@@ -852,7 +875,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void setSystemConfig( final String sessionId, final SystemConfigWeb systemConfig ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		EucalyptusManagement.setSystemConfig(systemConfig);
 	}
@@ -860,7 +883,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<VmTypeWeb> getVmTypes( final String sessionId ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		return RemoteInfoHandler.getVmTypes();
 	}
@@ -868,7 +891,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void setVmTypes( final String sessionId, final List<VmTypeWeb> vmTypes ) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		RemoteInfoHandler.setVmTypes(vmTypes);
 	}
@@ -876,7 +899,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public CloudInfoWeb getCloudInfo(final String sessionId, final boolean setExternalHostPort) throws SerializableException
 	{
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 
 		return EucalyptusManagement.getCloudInfo(setExternalHostPort);
 	}
@@ -933,7 +956,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 
 	public List<DownloadsWeb> getDownloads(final String sessionId, final String downloadsUrl) throws SerializableException {
 		SessionInfo session = verifySession(sessionId);
-		UserInfoWeb user = verifyUser(session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser(session, session.getUserId(), session.getAccountId( ), true);
 		return getDownloadsFromUrl(downloadsUrl);
 	}
 
@@ -969,7 +992,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public void addGroup(String sessionId, GroupInfoWeb group) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!user.isAdministrator()) {
 			throw new Exception("Only admin can add a group");
 		}
@@ -980,14 +1003,14 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void addUser(String sessionId, UserInfoWeb user,
 			List<String> groupNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can add a user");
 		}
 		addUserRecord(sessionId, user);
 		boolean inDefaultGroup = false;
 		for (String groupName : groupNames) {
-		  if ( Groups.NAME_DEFAULT.equals( groupName ) ) {
+		  if ( "default".equals( groupName ) ) {
 		    inDefaultGroup = true;
 		  }
 			try {
@@ -998,7 +1021,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 			}
 		}
 		if ( !inDefaultGroup && groupNames.size( ) > 0 ) {
-		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), Groups.NAME_DEFAULT );
+		  EucalyptusManagement.removeUserFromGroup( user.getUserName( ), "default" );
 		}
 	}
 
@@ -1006,7 +1029,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void deleteGroups(String sessionId, List<String> groupNames)
 			throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!user.isAdministrator()) {
 			throw new Exception("Only admin can add a group");
 		}
@@ -1024,7 +1047,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<GroupInfoWeb> getGroups(String sessionId, String name)
 			throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!user.isAdministrator()) {
 			throw new Exception("Only admin can view group list");
 		}
@@ -1043,7 +1066,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<String> getGroupsByUser(String sessionId, String userName)
 			throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!user.isAdministrator()) {
 			throw new Exception("Only admin can view group list");
 		}
@@ -1057,7 +1080,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public List<UserInfoWeb> getUsersByGroups(String sessionId,
 			List<String> groupNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb user = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb user = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!user.isAdministrator()) {
 			throw new Exception("Only admin can view user list of a group");
 		}
@@ -1077,7 +1100,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void updateGroup(String sessionId, GroupInfoWeb group)
 			throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can update a group");
 		}
@@ -1095,7 +1118,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void deleteUsers(final String sessionId, 
 			final List<String> userNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can delete users");
 		}
@@ -1108,7 +1131,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void addUsersToGroups(final String sessionId, 
 			final List<String> userNames, final List<String> groupNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can change user's group membership");
 		}
@@ -1123,7 +1146,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	public void removeUsersFromGroups(final String sessionId, 
 			final List<String> userNames, final List<String> groupNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can change user's group membership");
 		}
@@ -1137,12 +1160,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public void enableUsers(final String sessionId, final List<String> userNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can enable users");
 		}
 		for (String userName : userNames) {
-			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName, session.getAccountId( ));
 			updateUser.setEnabled(true);
 			EucalyptusManagement.commitWebUser(updateUser);
 		}
@@ -1151,12 +1174,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public void disableUsers(final String sessionId, final List<String> userNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can disable users");
 		}
 		for (String userName : userNames) {
-			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName, session.getAccountId( ));
 			updateUser.setEnabled(false);
 			EucalyptusManagement.commitWebUser(updateUser);
 		}
@@ -1165,12 +1188,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public void approveUsers(final String sessionId, final List<String> userNames) throws Exception {
 		SessionInfo session = verifySession (sessionId);
-		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+		UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
 		if (!reqUser.isAdministrator()) {
 			throw new Exception("Only admin can approve users");
 		}
 		for (String userName : userNames) {
-			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName);
+			UserInfoWeb updateUser = EucalyptusManagement.getWebUser(userName, session.getAccountId( ));
 			updateUser.setEnabled(true);
 			updateUser.setApproved(true);
 			updateUser.setConfirmed(false);
@@ -1181,7 +1204,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public List<String> getZones(final String sessionId) throws Exception {
 		List<String> zones = new ArrayList<String>();
-		for ( ClusterConfiguration cluster : Configuration.getClusterConfigurations( ) ) {
+		for ( ClusterConfiguration cluster : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
 		  zones.add( cluster.getName( ) );
 		}
 		return zones;
@@ -1190,7 +1213,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
   public List<ReportInfo> getReports(final String sessionId) throws Exception {
     SessionInfo session = verifySession (sessionId);
-    UserInfoWeb reqUser = verifyUser (session, session.getUserId(), true);
+    UserInfoWeb reqUser = verifyUser (session, session.getUserId(), session.getAccountId( ), true);
     if (!reqUser.isAdministrator()) {
       throw new Exception("Only admin can view reports.");
     }
@@ -1247,9 +1270,12 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );
       }
       try {
-        ServiceConfiguration scConfig = Configuration.getStorageControllerConfiguration( cluster.getName( ) );
+        ServiceConfiguration scConfig = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cluster.getName( ) );
         reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponentId( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
-      } catch ( EucalyptusCloudException e ) {
+      } catch ( PersistenceException e ) {
+        LOG.error( e.getMessage( ), e );
+      } catch ( NoSuchElementException e ) {
+        LOG.error( e.getMessage( ) );
       }
     }
     return reports;

@@ -666,8 +666,7 @@ public class NetappProvider implements SANProvider {
 			SANInfo sanInfo = SANInfo.getStorageInfo();
 			SANVolumeInfo searchVolumeInfo = new SANVolumeInfo(volumeId);
 			SANVolumeInfo volumeInfo = db.getUnique(searchVolumeInfo);
-			String property = System.getProperty("euca.home") + "," + 
-			sanInfo.getSanHost() + "," + 
+			String property = sanInfo.getSanHost() + "," + 
 			volumeInfo.getIqn() + "," + "not_required";
 			db.commit();
 			return property;

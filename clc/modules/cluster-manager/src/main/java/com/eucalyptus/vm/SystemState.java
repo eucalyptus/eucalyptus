@@ -83,6 +83,8 @@ import org.bouncycastle.util.encoders.Base64;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
@@ -101,6 +103,7 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callbacks;
@@ -113,6 +116,7 @@ import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
@@ -217,7 +221,7 @@ public class SystemState {
       } catch ( Exception e ) {}
     }
   }
-  public static ArrayList<String> getAncestors( String userId, String manifestPath ) {
+  public static ArrayList<String> getAncestors( BaseMessage parentMsg, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
       String[] imagePathParts = manifestPath.split( "/" );
@@ -225,8 +229,7 @@ public class SystemState {
       String objectName = imagePathParts[1];
       GetObjectResponseType reply = null;
       try {
-        GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-        msg.setUserId( userId );
+        GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true ).regardingUserRequest( parentMsg );
 
         reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }
@@ -267,7 +270,7 @@ public class SystemState {
     try {
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      String ownerId = runVm.getOwnerId( );
+      UserFullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
       if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
@@ -278,25 +281,17 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
-      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getImageId( ) ), Tx.NOOP );
+      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
         try {
-          EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );
-          try {
-            SshKeyPair searchKey = new SshKeyPair( runVm.getOwnerId( ) ) {
-              {
-                setPublicKey( runVm.getKeyValue( ) );
-              }
-            };
-            key = db.getUnique( searchKey );
-            db.commit( );
-          } catch ( Throwable e ) {
-            db.rollback( );
-            throw new EucalyptusCloudException( "Failed to find key pair associated with public key " + runVm.getKeyValue( ), e );
-          }
-        } catch ( Throwable e ) {
+          SshKeyPair searchKey = EntityWrapper.get( SshKeyPair.class ).lookupAndClose( new SshKeyPair( ownerId ) {
+            {
+              setPublicKey( runVm.getKeyValue( ) );
+            }
+          } );
+        } catch ( Exception e ) {
           key = SshKeyPair.NO_KEY;
         }
       } else {
@@ -321,21 +316,22 @@ public class SystemState {
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
-            try {
-              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
-            }
+          //TODO:GRZE:RESTORE
+//            try {
+//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
+//            } catch ( Exception ex ) {
+//              LOG.error( ex );
+//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
+//            }
             networks.add( notwork );
             NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
-          } catch ( EucalyptusCloudException e ) {
-            LOG.error( e );
-            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+//          } catch ( EucalyptusCloudException e ) {
+//            LOG.error( e );
+//            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+//            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
           } catch ( NetworkAlreadyExistsException e ) {
             LOG.trace( e );
           }
@@ -356,40 +352,39 @@ public class SystemState {
     }
   }
   
-  private static String DESCRIBE_NO_DNS = "no-dns";
   private static String ALT_PREFIX      = "i-";
   
-  public static ArrayList<ReservationInfoType> handle( String userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
+  public static ArrayList<ReservationInfoType> handle( FullName userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    boolean dns = Components.lookup( "dns" ).isLocal( ) && !( instancesSet.remove( DESCRIBE_NO_DNS ) || instancesSet.remove( ALT_PREFIX + DESCRIBE_NO_DNS ) );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( ( !isAdmin && !userId.equals( v.getOwnerId( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
+      if ( ( !isAdmin && !userId.equals( v.getOwner( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
+        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
-      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( dns ) );
+      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
     }
     if ( isAdmin ) {
       for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
         if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
         if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwnerId( ), v.getNetworkNames( ) );
+          ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
           rsvMap.put( reservation.getReservationId( ), reservation );
         }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( dns ) );
+        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
       }
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }
-  
-  public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
-    try {
-      return NetworkGroupUtil.getUserNetworkRulesGroup( userId, networkName ).getVmNetwork( );
-    } catch ( Exception e ) {
-      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
-    }
-  }
+
+//TODO:GRZE:RESTORE
+//  public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
+//    try {
+//      return NetworkGroupUtil.getUserNetworkRulesGroup( AccountFullName.get, networkName ).getVmNetwork( );
+//    } catch ( Exception e ) {
+//      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
+//    }
+//  }
   
 }

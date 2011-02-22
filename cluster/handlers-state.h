@@ -75,6 +75,7 @@ int doDisableService(ncMetadata *ccMeta);
 
 int validCmp(ccInstance *inst, void *in);
 int instNetParamsSet(ccInstance *inst, void *in);
+int instNetReassignAddrs(ccInstance *inst, void *in);
 int clean_network_state(void);
 
 #endif

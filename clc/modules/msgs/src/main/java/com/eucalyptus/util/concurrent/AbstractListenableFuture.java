@@ -36,48 +36,85 @@
  *******************************************************************************/
 package com.eucalyptus.util.concurrent;
 
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
+import com.google.common.collect.Lists;
 
 /**
- * <p>An abstract base implementation of the listener support provided by
- * {@link ListenableFuture}. This class uses an {@link ExecutionList} to
- * guarantee that all registered listeners will be executed. Listener/Executor
- * pairs are stored in the execution list and executed in the order in which
- * they were added, but because of thread scheduling issues there is no
- * guarantee that the JVM will execute them in order. In addition, listeners
- * added after the task is complete will be executed immediately, even if some
- * previously added listeners have not yet been executed.
+ * <p>
+ * An abstract base implementation of the listener support provided by {@link ListenableFuture}.
+ * This class uses an {@link ExecutionList} to guarantee that all registered listeners will be
+ * executed. Listener/Executor pairs are stored in the execution list and executed in the order in
+ * which they were added, but because of thread scheduling issues there is no guarantee that the JVM
+ * will execute them in order. In addition, listeners added after the task is complete will be
+ * executed immediately, even if some previously added listeners have not yet been executed.
  * 
- * <p>This class uses the {@link AbstractFuture} class to implement the
- * {@code ListenableFuture} interface and simply delegates the
- * {@link #addListener(Runnable, Executor)} and {@link #done()} methods to it.
+ * <p>
+ * This class uses the {@link AbstractFuture} class to implement the {@code ListenableFuture}
+ * interface and simply delegates the {@link #addListener(Runnable, Executor)} and {@link #done()}
+ * methods to it.
  * 
  * @author Sven Mawson
  * @since 1
  */
 public abstract class AbstractListenableFuture<V>
     extends AbstractFuture<V> implements ListenableFuture<V> {
+  enum State{ PENDING, RUNNING, DONE };
+  private static Logger           LOG       = Logger.getLogger( AbstractListenableFuture.class );
+  protected final BlockingQueue<Runnable> listeners = new LinkedBlockingQueue<Runnable>( );
+  private static final Runnable DONE = new Runnable() {public void run( ) {}};
 
-  // The execution list to hold our executors.
-  private final ExecutionList executionList = new ExecutionList();
-
+  protected <T> void add( ExecPair<T> pair ) {
+    this.listeners.add( pair );
+    if( this.listeners.contains( DONE ) ) {
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
+      this.listeners.remove( pair );
+      pair.run( );
+    } else {
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).debug( );
+    }
+  }
+  
   /*
    * Adds a listener/executor pair to execution list to execute when this task
    * is completed.
    */
-  public void addListener(Runnable listener, Executor exec) {
-    executionList.add(listener, exec);
+  public void addListener( final Runnable listener, ExecutorService exec ) {
+    ExecPair<Object> pair = new ExecPair<Object>( listener, exec );
+    add( pair );
   }
-
-  public void addListener(Runnable listener) {
-    executionList.add(listener, MoreExecutors.sameThreadExecutor( ));
+  
+  public void addListener( Runnable listener ) {
+    addListener( listener, Threads.currentThreadExecutor( ) );
   }
-
+  
   /*
    * Override the done method to execute the execution list.
    */
   @Override
-  protected void done() {
-    executionList.run();
+  protected void done( ) {
+    this.listeners.add( DONE );
+    while( this.listeners.peek( ) != DONE ) {
+      this.listeners.poll( ).run( );
+    }
   }
+  
+  @Override
+  public boolean set( V value ) {
+    return super.set( value );
+  }
+  
+  @Override
+  public boolean setException( Throwable throwable ) {
+    return super.setException( throwable );
+  }
+  
 }

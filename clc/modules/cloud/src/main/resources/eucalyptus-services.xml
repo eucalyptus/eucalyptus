@@ -96,5 +96,6 @@
   <endpoint name="UpdateSystemWS" address="vm://UpdateSystemState" synchronous="false" />
   <endpoint name="SystemStateWS" address="vm://SystemState" synchronous="false" />
   <endpoint name="TransformReplyWS" address="vm://TransformReply" synchronous="false" />
+
 </mule>
   

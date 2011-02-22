@@ -63,9 +63,15 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class Eucalyptus extends ComponentId {
+  @SuppressWarnings( "unchecked" )
+  public static final List<Class<? extends ComponentId>> LIST = ComponentId.getList( Eucalyptus.class );
   
   @Override
   public String getLocalEndpointName( ) {
@@ -92,4 +98,8 @@ public class Eucalyptus extends ComponentId {
     return true;
   }
   
+  @Override
+  public boolean isPartitioned( ) {
+    return false;
+  }
 }

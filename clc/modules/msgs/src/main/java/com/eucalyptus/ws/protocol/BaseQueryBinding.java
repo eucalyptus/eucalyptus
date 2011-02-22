@@ -72,11 +72,14 @@ import java.util.List;
 import java.util.Map;
 import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
@@ -117,12 +120,12 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
 
   private final String extractOperationName( final MappingHttpRequest httpRequest ) {
-    if( httpRequest.getParameters( ).containsKey( operationParam.toString( ) ) ) {
-      return httpRequest.getParameters( ).get( operationParam.toString( ) );
+    if( httpRequest.getParameters( ).containsKey( this.operationParam.toString( ) ) ) {
+      return httpRequest.getParameters( ).get( this.operationParam.toString( ) );
     } else {
       for( T param : this.altOperationParams ) {
         if( httpRequest.getParameters( ).containsKey( param.toString( ) ) ) {
-          return httpRequest.getParameters( ).get( operationParam.toString( ) );
+          return httpRequest.getParameters( ).get( this.operationParam.toString( ) );
         }
       }
     }
@@ -131,7 +134,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
   
   @Override
-  public Object bind( final String userId, final boolean admin, final MappingHttpRequest httpRequest ) throws BindingException {
+  public Object bind( final MappingHttpRequest httpRequest ) throws BindingException {
     final String operationName = this.extractOperationName( httpRequest );
     
     for ( T op : this.possibleParams )
@@ -169,17 +172,17 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         errMsg.append( f.getKey( ) ).append( " = " ).append( f.getValue( ) ).append( '\n' );
       throw new BindingException( errMsg.toString( ) );
     }
-    
-    eucaMsg.setUserId( userId );
-    eucaMsg.setEffectiveUserId( admin
-      ? "eucalyptus"
-      : userId );
-    
     try {
-      Binding binding = BindingManager.getDefaultBinding( );
-      msg = binding.toOM( eucaMsg );
-    } catch ( RuntimeException e ) {
-      throw new BindingException( "Failed to build a valid message: " + e.getMessage( ) );
+      User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( );    
+      eucaMsg.setUser( user );    
+      try {
+        msg = BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
+      } catch ( RuntimeException e ) {
+        throw new BindingException( "Failed to build a valid message: " + e.getMessage( ) );
+      }
+    } catch ( NoSuchContextException ex ) {
+      LOG.error( ex , ex );
+      throw new BindingException( "Failed to build a valid message: " + ex.getMessage( ) );
     }
     return eucaMsg;
   }

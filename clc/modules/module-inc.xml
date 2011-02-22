@@ -130,31 +130,39 @@
 		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
 			<isset property="builder.suffix" />
 		</condition>
-    <echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
+		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
 		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 	</target>
-	<target name="build-java">
+	<target name="should-build-java">
+		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
-		<antcall target="do-build-java" />
 	</target>
-	<target name="do-build-java" unless="build.notRequired">
-    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+	<target name="build-java" depends="should-build-java" unless="build.notRequired">
+		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
-		<javac srcdir="src/main/java/" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
+		<mkdir dir="${conf.dir}" />
+		<mkdir dir="${rsrc.dir}" />
+		<mkdir dir="${test.dir}" />
+		<mkdir dir="${src.dir}" />
+		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
 	</target>
-	<target name="build-groovy">
+	<target name="should-build-groovy">
+		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
-		<antcall target="do-build-groovy" />
 	</target>
-	<target name="do-build-groovy" unless="build.notRequired">
-    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+	<target name="build-groovy" depends="should-build-groovy" unless="build.notRequired">
+		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<mkdir dir="${build.dir}" />
+		<mkdir dir="${conf.dir}" />
+		<mkdir dir="${rsrc.dir}" />
+		<mkdir dir="${test.dir}" />
+		<mkdir dir="${src.dir}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
 			<javac target="1.5" debug="true" />

@@ -63,23 +63,31 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class Reporting extends ComponentId {
-  
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
-  
+
   @Override
   public Boolean hasDispatcher( ) {
     return false;
   }
   
   @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class, Any.class );
+  }
+  
+  @Override
   public Boolean isAlwaysLocal( ) {
     return true;
+  }
+  
+  @Override
+  public Boolean isCloudLocal( ) {
+    return false;
   }
   
 }

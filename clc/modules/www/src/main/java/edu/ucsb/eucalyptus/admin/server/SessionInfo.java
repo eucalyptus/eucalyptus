@@ -75,12 +75,14 @@ package edu.ucsb.eucalyptus.admin.server;
 public class SessionInfo {
     private String sessionId;
     private String userId;
+    private String accountId;
     private long startedOn;
     private long lastAccessed;
 
-    public SessionInfo(String sessionId, String userId, long lastAccessed) {
+    public SessionInfo(String sessionId, String userId, String accountId, long lastAccessed) {
         this.sessionId = sessionId;
         this.userId = userId;
+        this.accountId = accountId;
         this.lastAccessed = lastAccessed;
     }
 
@@ -93,6 +95,7 @@ public class SessionInfo {
         if (lastAccessed != that.lastAccessed) return false;
         if (startedOn != that.startedOn) return false;
         if (sessionId != null ? !sessionId.equals(that.sessionId) : that.sessionId != null) return false;
+        if (accountId != null ? !accountId.equals(that.accountId) : that.accountId != null) return false;
         if (userId != null ? !userId.equals(that.userId) : that.userId != null) return false;
 
         return true;
@@ -102,6 +105,7 @@ public class SessionInfo {
         int result;
         result = (sessionId != null ? sessionId.hashCode() : 0);
         result = 31 * result + (userId != null ? userId.hashCode() : 0);
+        result = 31 * result + (accountId != null ? accountId.hashCode() : 0);
         result = 31 * result + (int) (startedOn ^ (startedOn >>> 32));
         result = 31 * result + (int) (lastAccessed ^ (lastAccessed >>> 32));
         return result;
@@ -123,6 +127,14 @@ public class SessionInfo {
         this.userId = userId;
     }
 
+    public String getAccountId() {
+      return this.accountId;
+    }
+    
+    public void setAccountId(String accountId) {
+      this.accountId = accountId;
+    }
+    
     public long getLastAccessed() {
         return lastAccessed;
     }

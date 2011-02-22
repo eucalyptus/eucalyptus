@@ -3,6 +3,7 @@ package com.eucalyptus.records;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
@@ -12,7 +13,7 @@ public class EventRecord extends EucalyptusMessage {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    return new LogFileRecord( eventClass, eventName, component, ste, msg.getUserId( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "nobody" : msg.getUserErn( ).toString( ), msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
@@ -44,9 +45,8 @@ public class EventRecord extends EucalyptusMessage {
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   private static EucalyptusMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
-    hi.setUserId( null );
-    hi.setEffectiveUserId( null );
-    hi.setCorrelationId( null );
+    hi.setCorrelationId( FakePrincipals.NOBODY_ID );
+    hi.setUser( FakePrincipals.NOBODY_USER );
     return hi;
   }
   private static EucalyptusMessage tryForMessage( ) {

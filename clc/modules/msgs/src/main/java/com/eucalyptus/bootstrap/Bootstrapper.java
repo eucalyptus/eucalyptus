@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.bootstrap;
 
-import static com.eucalyptus.system.Ats.From;
 import java.util.List;
 import org.apache.log4j.Logger;
 import java.util.NoSuchElementException;
@@ -71,6 +70,7 @@ import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Any;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -175,11 +175,11 @@ public abstract class Bootstrapper {
     if ( dependsLocal != null ) {
       return dependsLocal;
     } else {
-      if ( !From( this.getClass( ) ).has( DependsLocal.class ) ) {
+      if ( !Ats.from( this.getClass( ) ).has( DependsLocal.class ) ) {
         dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
       } else {
         dependsLocal = Lists.newArrayList( );
-        for( Class compIdClass : From( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
+        for( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
           if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
           } else {
@@ -212,11 +212,11 @@ public abstract class Bootstrapper {
     if ( dependsRemote != null ) {
       return dependsRemote;
     } else {
-      if ( !From( this.getClass( ) ).has( DependsRemote.class ) ) {
+      if ( !Ats.from( this.getClass( ) ).has( DependsRemote.class ) ) {
         dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
       } else {
         dependsRemote = Lists.newArrayList( );
-        for( Class compIdClass : From( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
+        for( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
           if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
           } else {
@@ -247,10 +247,10 @@ public abstract class Bootstrapper {
    * @return Bootstrap.Stage
    */
   public Bootstrap.Stage getBootstrapStage( ) {
-    if ( !From( this.getClass( ) ).has( RunDuring.class ) ) {
+    if ( !Ats.from( this.getClass( ) ).has( RunDuring.class ) ) {
       throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + this.getClass( ) );
     } else {
-      return From( this.getClass( ) ).get( RunDuring.class ).value( );
+      return Ats.from( this.getClass( ) ).get( RunDuring.class ).value( );
     }
   }
   
@@ -260,12 +260,12 @@ public abstract class Bootstrapper {
    * @return Component
    */
   public <T extends ComponentId> Class<T> getProvides( ) {
-    if ( !From( this.getClass( ) ).has( Provides.class ) ) {
+    if ( !Ats.from( this.getClass( ) ).has( Provides.class ) ) {
       Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(Any.classss) instead of System.exit(-1): "
                       + this.getClass( ) );
       return ( Class<T> ) Any.class;
     } else {
-      return ( Class<T> ) From( this.getClass( ) ).get( Provides.class ).value( );
+      return ( Class<T> ) Ats.from( this.getClass( ) ).get( Provides.class ).value( );
     }
     
   }

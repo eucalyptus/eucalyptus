@@ -88,6 +88,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * Java entry point from eucalyptus-bootstrap
@@ -126,23 +127,29 @@ public class SystemBootstrapper {
       }
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
-          if( string.replaceAll("\\s*","").length( ) > 2 ) {
-            SystemBootstrapper.out.print( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).info( );
+          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
+            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + string );
           }
         }
       }
             );
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
-          if( string.replaceAll("\\s*","").length( ) > 2 ) {
-            SystemBootstrapper.err.print( string );
-            EventRecord.caller( SystemBootstrapper.class, EventType.BOGUS, string ).error( );
+          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
+            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + string );
           }
         }
       }
             );
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
+      try {
+        Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
+        Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
+        Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
+        Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+      }
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
@@ -183,11 +190,9 @@ public class SystemBootstrapper {
       throw t;
     }
     /** ASAP:FIXME:GRZE **/
-    for ( Component c : Components.list( ) ) {
-      try {
-        Component.Transition.LOADING.transit( c );
-      } catch ( Throwable ex ) {
-        LOG.error( ex );
+    for ( final Component c : Components.list( ) ) {
+      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
+        Bootstrap.applyTransition( c, Component.Transition.LOADING );
       }
     }
     return true;
@@ -210,18 +215,15 @@ public class SystemBootstrapper {
       throw t;
     }
     for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getIdentity( ).isCloudLocal( ) || ( c.getIdentity( ).isAlwaysLocal( ) ) ) ) {
-        Threads.lookup( Empyrean.class.getName( ) ).submit( new Runnable( ) {
+      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
+        Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
-            try {
-              Component.Transition.STARTING.transit( c );
-              Component.Transition.READY_CHECK.transit( c );
-              Component.Transition.ENABLING.transit( c );
-            } catch ( Throwable ex ) {
-              LOG.error( ex , ex );
-            }
-          }} );
+            Bootstrap.applyTransition( c, Component.Transition.STARTING );
+            Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
+            Bootstrap.applyTransition( c, Component.Transition.ENABLING );
+          }
+        } );
       }
     }
     try {
@@ -359,9 +361,9 @@ public class SystemBootstrapper {
     for ( Component c : Components.list( ) ) {
       if ( c.isAvailableLocally( ) ) {
         banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getIdentity( ).toString( );
+        banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
-        for ( Service s : c.getServices( ) ) {
+        for ( Service s : c.lookupServices( ) ) {
           if ( s.isLocal( ) ) {
             banner += prefix + c.getName( ) + SEP + s.toString( );
           }

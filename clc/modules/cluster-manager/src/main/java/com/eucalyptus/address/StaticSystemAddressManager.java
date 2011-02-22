@@ -78,14 +78,14 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     if ( allocCount > 0 ) {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          this.allocateNext( ComponentIds.lookup( Eucalyptus.class ).name( ) );
+          this.allocateNext( ComponentIds.lookup( Eucalyptus.class ).getFullName( ) );
         } catch ( NotEnoughResourcesAvailable e ) {
           break;
         }
       }
     } else {
       for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-        if ( ComponentIds.lookup( Eucalyptus.class ).name( ).equals( addr.getUserId( ) ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( addr.getOwner( ).getName( ).equals( Address.SYSTEM_ALLOCATED_USERID ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
           addr.release( );
           if ( allocCount++ >= 0 ) break;
         }

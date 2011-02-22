@@ -91,10 +91,9 @@ public class AddressManager {
   
   public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    String userId = request.getUserId( );
     Address address;
     try {
-      address = Addresses.allocate( userId, request.isAdministrator( ) );
+      address = Addresses.allocate( request.getUserErn( ), request.isAdministrator( ) );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -107,7 +106,7 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -118,8 +117,8 @@ public class AddressManager {
     Addresses.updateAddressingMode( );
     boolean isAdmin = request.isAdministrator( );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( isAdmin || address.getUserId( ).equals( request.getUserId( ) ) ) {
-        reply.getAddressesSet( ).add( address.getDescription( isAdmin ) );
+      if ( isAdmin || address.getOwner( ).equals( request.getUserErn( ) ) ) {
+        reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
       }
     }
     if ( isAdmin ) {
@@ -135,8 +134,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getInstanceId( ) );
+    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
+    final VmInstance vm = VmInstances.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
@@ -200,7 +199,7 @@ public class AddressManager {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserId( ), request.isAdministrator( ), request.getPublicIp( ) );
+    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !request.isAdministrator( ) ) {

@@ -38,9 +38,7 @@ public class InstanceEventListener
 	
 		  EntityWrapper<InstanceAttributes> entityWrapper =
 			  EntityWrapper.get(InstanceAttributes.class);
-		  Session sess = null;
 		  try {
-			  sess = entityWrapper.getSession();
 
 			  /* Convert InstanceEvents to internal types. Internal types are
 			   * not exposed because the reporting.instance package won't be
@@ -58,10 +56,16 @@ public class InstanceEventListener
 			   * already.
 			   */
 			  if (! recentlySeenUuids.contains(uuid)) {
-				  if (null == sess.get(InstanceAttributes.class, uuid)) {
-					  sess.save(insAttrs);
-					  log.info("Wrote Reporting Instance:" + uuid);
-				  }
+          try {
+            entityWrapper.getUnique( new InstanceAttributes( ) {
+              {
+                setUuid( uuid );
+              }
+            } );
+          } catch ( Exception ex ) {
+            entityWrapper.add(insAttrs);
+            log.info("Wrote Reporting Instance:" + uuid);
+          }
 				  recentlySeenUuids.add(uuid);
 			  }
 
@@ -72,7 +76,7 @@ public class InstanceEventListener
 
 			  if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 				  for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
-					  sess.save(ius);
+					  entityWrapper.recast(InstanceUsageSnapshot.class).add(ius);
 					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
 				  }
 				  recentUsageSnapshots.clear();
@@ -90,13 +94,11 @@ public class InstanceEventListener
 	//TODO: shutdown hook
 	public void flush()
 	{
-		EntityWrapper<InstanceAttributes> entityWrapper =
-			EntityWrapper.get(InstanceAttributes.class);
-		Session sess = null;
+		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
+			EntityWrapper.get(InstanceUsageSnapshot.class);
 		try {
-			sess = entityWrapper.getSession();
 			for (InstanceUsageSnapshot ius : recentUsageSnapshots) {
-				sess.save(ius);
+				entityWrapper.add(ius);
 				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
 						+ ius.getId());
 			}

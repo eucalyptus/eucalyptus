@@ -68,13 +68,14 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -143,14 +144,14 @@ public class ClusterState {
   
   public static void trim( ) {
     NavigableSet<Integer> newVlanList = Sets.newTreeSet( );
-    int min = 1;
+    int min = 2;
     int max = 4095;
     try {
-      for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
+      for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
         if ( cc.getMinVlan( ) != null ) min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
         if ( cc.getMaxVlan( ) != null ) max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( PersistenceException e ) {
       LOG.debug( e, e );
     }
     for ( int i = min; i < max; i++ )
@@ -170,7 +171,7 @@ public class ClusterState {
   
   private static NavigableSet<Integer> populate( ) {
     NavigableSet<Integer> list = new ConcurrentSkipListSet<Integer>( );
-    for ( int i = 1; i < 4095; i++ )
+    for ( int i = 2; i < 4095; i++ )
       list.add( i );
     return list;
   }
@@ -179,15 +180,15 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String userName, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, userName, networkName, networkUuid, vlan );
+  public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    NetworkToken netToken = new NetworkToken( this.clusterName, accountId, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }
     return netToken;
   }
   
-  private static NetworkToken getNetworkAllocation( String userName, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
+  private static NetworkToken getNetworkAllocation( String accountId, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
     ClusterState.trim( );
     try {
       Network network = getVlanAssignedNetwork( networkName );      

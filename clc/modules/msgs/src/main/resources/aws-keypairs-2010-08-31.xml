@@ -26,7 +26,7 @@
   TO COMPLY WITH ~ ANY SUCH LICENSES OR RIGHTS. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   ~ Author: chris grzegorczyk grze@eucalyptus.com -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
 
   <mapping name="CreateKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

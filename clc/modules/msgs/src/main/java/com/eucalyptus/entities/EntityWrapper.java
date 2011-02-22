@@ -66,65 +66,108 @@
  */
 package com.eucalyptus.entities;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.JDBCException;
+import org.hibernate.LazyInitializationException;
+import org.hibernate.MappingException;
+import org.hibernate.NonUniqueObjectException;
+import org.hibernate.PersistentObjectException;
+import org.hibernate.PropertyAccessException;
+import org.hibernate.Query;
+import org.hibernate.QueryException;
+import org.hibernate.QueryTimeoutException;
 import org.hibernate.Session;
+import org.hibernate.SessionException;
+import org.hibernate.StaleStateException;
+import org.hibernate.TransientObjectException;
+import org.hibernate.TypeMismatchException;
+import org.hibernate.UnresolvableObjectException;
+import org.hibernate.WrongClassException;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import org.hibernate.exception.JDBCConnectionException;
+import org.hibernate.jdbc.TooManyRowsAffectedException;
+import org.hibernate.loader.MultipleBagFetchException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.TransactionException;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
+import com.google.gwt.user.client.rpc.SerializationException;
 
 public class EntityWrapper<TYPE> {
-
-  static Logger    LOG     = Logger.getLogger( EntityWrapper.class );
-  private TxHandle tx;
+  
+  static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
+  private TxHandle             tx;
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
+  
   public EntityWrapper( ) {
     this( "eucalyptus_general" );
   }
   
   public static <T> EntityWrapper<T> get( Class<T> type ) {
-    if( !type.isAnnotationPresent( PersistenceContext.class ) ) {
-      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
+    for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
+        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ) );
+      }
     }
-    return new EntityWrapper<T>( type.getAnnotation( PersistenceContext.class ).name( ) );    
+    throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
   }
+  
   public static <T> EntityWrapper<T> get( T obj ) {
-    return get( (Class<T>) obj.getClass( ) );
+    return get( ( Class<T> ) obj.getClass( ) );
   }
-
+  
   @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
     try {
-      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ).trace( );
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ).trace( );
       this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
-      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ),e.getMessage( ) ).trace( );
-      this.exceptionCaught( e );
-      throw (RuntimeException) e ;
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), e.getMessage( ) ).trace( );
+      PersistenceErrorFilter.exceptionCaught( e );
+      throw ( RuntimeException ) e;
     }
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ), Long.toString( this.tx.splitOperation( ) ),
+                                   this.tx.getTxUuid( ) ).trace( );
   }
-
+  
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.begin( ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.begin( ), this.tx.getTxUuid( ) ).trace( );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setCacheable( true ).add( qbe ).list( );
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
+                                   this.tx.getTxUuid( ) ).trace( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
-
+  
+  public TYPE lookupAndClose( TYPE example ) throws NoSuchElementException {
+    TYPE ret = null;
+    try {
+      ret = this.getUnique( example );
+      this.commit( );
+    } catch ( EucalyptusCloudException ex ) {
+      this.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+    return ret;
+  }  
+  
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ).trace( );
     List<TYPE> res = this.query( example );
     if ( res.size( ) != 1 ) {
       String msg = null;
@@ -133,80 +176,212 @@ public class EntityWrapper<TYPE> {
       } catch ( Exception e ) {
         msg = example.toString( );
       }
-      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.fail( ), Long.toString( this.tx.splitOperation( ) ),
+                                     this.tx.getTxUuid( ) ).trace( );
       throw new EucalyptusCloudException( "Error locating information for " + msg );
     }
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
+                                   this.tx.getTxUuid( ) ).trace( );
     return res.get( 0 );
   }
-
-  @SuppressWarnings( "unchecked" )
-  private void exceptionCaught( Throwable e ) {
-    if( e instanceof JDBCConnectionException || e instanceof IllegalStateException ) {
-      LOG.error( e, e );
-      PersistenceContexts.handleConnectionError( e );
+  
+  
+  
+  /**
+   * Invokes underlying persist implementation per jsr-220
+   * 
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param newObject
+   */
+  public void persist( TYPE newObject ) {
+    try {
+      this.getEntityManager( ).persist( newObject );
+    } catch ( RuntimeException ex ) {
+      PersistenceErrorFilter.exceptionCaught( ex );
     }
   }
-
+  
+  /**
+   * Performs a save directly on the session with the distinguishing feature that generated IDs are
+   * not forcibly generated (e.g., INSERTS are not performed)
+   * 
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param e
+   */
+  public void save( TYPE e ) {
+    this.getSession( ).save( e );
+  }
+  
+  /**
+   * Calls {@link #persist(Object)}; here for legacy, and is deprecated in favor of persist
+   * 
+   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
+   * @param newObject
+   */
   public void add( TYPE newObject ) {
-    this.getEntityManager( ).persist( newObject );
+    this.persist( newObject );
   }
-
-  public void merge( TYPE newObject ) {
-    this.getEntityManager( ).merge( newObject );
+  
+  /**
+   * TODO: not use this please.
+   * 
+   * @param string
+   * @return
+   */
+  public Query createQuery( String string ) {
+    return this.getSession( ).createQuery( string );
   }
-
-  public void mergeAndCommit( TYPE newObject ) {
-    this.getEntityManager( ).merge( newObject );
-    this.commit( );
+  
+  /**
+   * TODO: not use this.
+   * 
+   * @param class1
+   * @param uuid
+   * @return
+   */
+  public Object get( Class<TYPE> class1, String uuid ) {
+    return this.getSession( ).get( class1, uuid );
   }
-
-  public void delete( TYPE deleteObject ) {
+  
+  /**
+   * <table>
+   * <tbody>
+   * <tr valign="top">
+   * <th>Scenario</th>
+   * <th><tt>EntityManager.persist</tt></th>
+   * <th><tt>EntityManager.merge</tt></th>
+   * <th><tt>SessionManager.saveOrUpdate</tt></th>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object passed was never persisted</th>
+   * 
+   * <td>1. Object added to persistence context as new entity<br>
+   * 2. New entity inserted into database at flush/commit</td>
+   * <td>1. State copied to new entity.<br>
+   * 2. New entity added to persistence context<br>
+   * 3. New entity inserted into database at flush/commit<br>
+   * 4. New entity returned</td>
+   * <td>1. Object added to persistence context as new entity<br>
+   * 2. New entity inserted into database at flush/commit</td>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object was previously persisted, but not loaded in this persistence context</th>
+   * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at
+   * flush/commit)</td>
+   * 
+   * <td>2. Existing entity loaded.<br>
+   * 2. State copied from object to loaded entity<br>
+   * 3. Loaded entity updated in database at flush/commit<br>
+   * 4. Loaded entity returned</td>
+   * <td>1. Object added to persistence context<br>
+   * 2. Loaded entity updated in database at flush/commit</td>
+   * </tr>
+   * <tr valign="top">
+   * <th>Object was previously persisted and already loaded in this persistence context</th>
+   * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at flush or
+   * commit time)</td>
+   * 
+   * <td>1. State from object copied to loaded entity<br>
+   * 2. Loaded entity updated in database at flush/commit<br>
+   * 3. Loaded entity returned</td>
+   * <td>1. <tt>NonUniqueObjectException</tt> thrown</td>
+   * </tr>
+   * </tbody>
+   * </table>
+   * 
+   * @param newObject
+   */
+  public TYPE merge( TYPE newObject ) {
+    try {
+      return this.getEntityManager( ).merge( newObject );
+    } catch ( RuntimeException ex ) {
+      PersistenceErrorFilter.exceptionCaught( ex );
+      throw ex;
+    }
+  }
+  
+  /**
+   * @see EntityWrapper#merge(Object)
+   * @param newObject
+   * @throws PersistenceException
+   */
+  public TYPE mergeAndCommit( TYPE newObject ) throws RecoverablePersistenceException {
+    try {
+      newObject = this.getEntityManager( ).merge( newObject );
+      this.commit( );
+      return newObject;
+    } catch ( RuntimeException ex ) {
+      PersistenceErrorFilter.exceptionCaught( ex );
+      this.rollback( );
+      throw ex;
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      this.rollback( );
+      throw new RecoverablePersistenceException( ex );
+    }
+  }
+  
+  public void delete( Object deleteObject ) {
     this.getEntityManager( ).remove( deleteObject );
   }
-
+  
   public void rollback( ) {
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.begin( ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.begin( ), this.tx.getTxUuid( ) ).trace( );
     try {
       this.tx.rollback( );
     } catch ( Throwable e ) {
-      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.fail( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ).trace( );
-      this.exceptionCaught( e );
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.fail( ), Long.toString( this.tx.splitOperation( ) ),
+                                     this.tx.getTxUuid( ) ).trace( );
+      PersistenceErrorFilter.exceptionCaught( e );
     }
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.end( ), Long.toString( tx.splitOperation() ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.ROLLBACK.end( ), Long.toString( this.tx.splitOperation( ) ),
+                                   this.tx.getTxUuid( ) ).trace( );
   }
-
+  
   public void commit( ) {
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), this.tx.getTxUuid( ) ).trace( );
     try {
       this.tx.commit( );
+    } catch ( RuntimeException e ) {
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
+                                     this.tx.getTxUuid( ) ).trace( );
+      PersistenceErrorFilter.exceptionCaught( e );
+      throw e;
     } catch ( Throwable e ) {
-      if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
-      this.exceptionCaught( e );
-      throw (RuntimeException) e ;
+      if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
+                                     this.tx.getTxUuid( ) ).trace( );
+      PersistenceErrorFilter.exceptionCaught( e );
+      throw new RuntimeException( e );
     }
-    if( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( tx.splitOperation( ) ), tx.getTxUuid( ) ).trace( );
+    if ( TRACE ) EventRecord.here( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( this.tx.splitOperation( ) ),
+                                   this.tx.getTxUuid( ) ).trace( );
   }
-
-  public Session getSession( ) {
-    return tx.getSession( );
+  
+  public Criteria createCriteria( Class class1 ) {
+    return this.getSession( ).createCriteria( class1 );
   }
-
-  public EntityManager getEntityManager( ) {
-    return tx.getEntityManager( );
+  
+  /** package default on purpose **/
+  EntityManager getEntityManager( ) {
+    return this.tx.getEntityManager( );
   }
-
+  
+  /** :| should also be package default **/
+  Session getSession( ) {
+    return this.tx.getSession( );
+  }
+  
   @SuppressWarnings( "unchecked" )
   public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {
-    return (com.eucalyptus.entities.EntityWrapper<NEWTYPE> ) this;
+    return ( com.eucalyptus.entities.EntityWrapper<NEWTYPE> ) this;
   }
-
+  
   public static StackTraceElement getMyStackTraceElement( ) {
     int i = 0;
     for ( StackTraceElement ste : Thread.currentThread( ).getStackTrace( ) ) {
-      if ( i++ < 2 || ste.getClassName( ).matches( ".*EntityWrapper.*" ) 
-          || ste.getClassName( ).matches( ".*TxHandle.*" )
-          || ste.getMethodName( ).equals( "getEntityWrapper" ) ) {
+      if ( i++ < 2 || ste.getClassName( ).matches( ".*EntityWrapper.*" )
+           || ste.getClassName( ).matches( ".*TxHandle.*" )
+           || ste.getMethodName( ).equals( "getEntityWrapper" ) ) {
         continue;
       } else {
         return ste;
@@ -214,29 +389,36 @@ public class EntityWrapper<TYPE> {
     }
     throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
   }
-
+  
   enum DbEvent {
     CREATE,
     COMMIT,
     ROLLBACK,
     UNIQUE,
     QUERY;
-    public String fail() {
+    public String fail( ) {
       return this.name( ) + ":FAIL";
     }
-    public String begin() {
+    
+    public String begin( ) {
       return this.name( ) + ":BEGIN";
     }
-    public String end() {
+    
+    public String end( ) {
       return this.name( ) + ":END";
     }
+    
     public String getMessage( ) {
-      if( LogLevels.TRACE ) {
+      if ( LogLevels.TRACE ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );
       } else {
         return "n.a";
       }
     }
   }
-
+  
+  public Query createSQLQuery( String sqlQuery ) {
+    return this.getSession( ).createSQLQuery( sqlQuery );
+  }
+  
 }

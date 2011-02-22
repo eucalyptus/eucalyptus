@@ -10,7 +10,7 @@ import java.util.ArrayList;
 @ComponentMessage(Notifications.class)
 public class NotificationMessage extends BaseMessage {
 }
-public class Subscription extends NotificationMessage {
+public class Subscription extends EucalyptusData {
   String subscriptionArn;
   String owner;
   String protocol;
@@ -49,7 +49,7 @@ public class GetTopicAttributesResult extends EucalyptusData {
   TopicAttributesMap attributes;
   public GetTopicAttributesResult() {  }
 }
-public class Topic extends NotificationMessage {
+public class Topic extends EucalyptusData {
   String topicArn;
   public Topic() {  }
 }

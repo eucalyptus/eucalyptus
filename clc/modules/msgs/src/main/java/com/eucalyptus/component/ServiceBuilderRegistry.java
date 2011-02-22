@@ -70,8 +70,8 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
   private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
-  private static Map<Class,ServiceBuilder<ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
-  private static Map<ComponentId,ServiceBuilder<ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
+  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
+  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
 
   public static void addBuilder( Class c, ServiceBuilder b ) {
     LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
@@ -83,15 +83,24 @@ public class ServiceBuilderRegistry {
     componentBuilders.put( c, b );
   }
 
-  public static Set<Entry<Class, ServiceBuilder<ServiceConfiguration>>> entrySet( ) {
+  public static Set<Entry<Class,ServiceBuilder<? extends ServiceConfiguration>>> entrySet( ) {
     return builders.entrySet( );
   }
 
-  public static ServiceBuilder<ServiceConfiguration> get( Class arg0 ) {
-    return builders.get( arg0 );
+  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class handlesType ) {
+    return builders.get( handlesType );
   }
 
-  public static ServiceBuilder<ServiceConfiguration> get( ComponentId arg0 ) {
-    return componentBuilders.get( arg0 );
+  public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
+    return componentBuilders.get( componentId );
+  }  
+
+  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
+    try {
+      return componentBuilders.get( componentIdClass.newInstance( ) );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      throw new RuntimeException( ex );
+    }
   }  
 }

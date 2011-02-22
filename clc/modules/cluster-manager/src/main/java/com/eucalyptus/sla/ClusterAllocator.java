@@ -78,7 +78,6 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.cluster.callback.ConfigureNetworkCallback;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventRecord;
@@ -126,7 +125,7 @@ public class ClusterAllocator extends Thread {
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
-        this.messages = new StatefulMessageSet<State>( cluster, State.values( ) );
+        this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
         for ( NetworkToken networkToken : vmToken.getNetworkTokens( ) )
           this.setupNetworkMessages( networkToken );
         this.setupVmMessages( vmToken );
@@ -173,30 +172,10 @@ public class ClusterAllocator extends Thread {
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      Request<StartNetworkType,StartNetworkResponseType> callback = Callbacks.newRequest( new StartNetworkCallback( networkToken ).regardingUserRequest( vmAllocInfo.getRequest( ) ) );
+      Request<StartNetworkType,StartNetworkResponseType> callback = Callbacks.newRequest( new StartNetworkCallback( networkToken ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ),networkToken.toString( ) ).debug( );
     }
-    try {
-      RunInstancesType request = this.vmAllocInfo.getRequest( );
-      if ( networkToken != null ) {
-        Network network = Networks.getInstance( ).lookup( networkToken.getName( ) );
-        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, ConfigureNetworkCallback.class.getSimpleName( ), network.getRules().toString( ) ).debug( );
-        if ( !network.getRules( ).isEmpty( ) ) {
-          this.messages.addRequest( State.CREATE_NETWORK_RULES, Callbacks.newRequest( new ConfigureNetworkCallback( this.vmAllocInfo.getRequest( ).getUserId( ), network.getRules( ) ) ) );
-        }
-        //:: need to refresh the rules on the backend for all active networks which point to this network :://
-        for ( Network otherNetwork : Networks.getInstance( ).listValues( ) ) {
-          if ( otherNetwork.isPeer( network.getUserName( ), network.getNetworkName( ) ) ) {
-            LOG.warn( "Need to refresh rules for incoming named network ingress on: " + otherNetwork.getName( ) );
-            LOG.debug( otherNetwork );
-            if ( !otherNetwork.getRules( ).isEmpty( ) ) {
-              this.messages.addRequest( State.CREATE_NETWORK_RULES, Callbacks.newRequest( new ConfigureNetworkCallback( otherNetwork.getUserName( ), otherNetwork.getRules( ) ) ) );
-            }
-          }
-        }
-      }
-    } catch ( NoSuchElementException e ) {}/* just added this network, shouldn't happen, if so just smile and nod */
   }
   
   private void setupVmMessages( final ResourceToken token ) {
@@ -244,10 +223,11 @@ public class ClusterAllocator extends Thread {
       }
     } );
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null ) ? new ArrayList<String>( ) : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.TO_STRING ) );
+    //TODO:GRZE:ASAP use ern here instead of string name -- see KeyPairManager.resolve()
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ), 
                                    vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
-                                   vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regardingUserRequest( request );
+                                   vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regarding( request );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newRequest( new VmRunCallback( run, childToken ) );
     if ( !childToken.getAddresses( ).isEmpty( ) ) {
       req.then( new Callback.Success<VmRunResponseType>( ) {

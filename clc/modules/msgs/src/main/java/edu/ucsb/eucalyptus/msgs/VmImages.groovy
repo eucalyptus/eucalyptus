@@ -70,8 +70,6 @@ import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
 public class DeregisterImageResponseType extends VmImageMessage {
-
-  boolean _return;
 }
 public class DeregisterImageType extends VmImageMessage {
 
@@ -130,7 +128,6 @@ public class DescribeImagesType extends VmImageMessage {
 }
 /** *******************************************************************************/
 public class ModifyImageAttributeResponseType extends VmImageMessage {
-  boolean _return;
 }
 public class ModifyImageAttributeType extends VmImageMessage {
   String imageId;
@@ -176,7 +173,6 @@ public class RegisterImageType extends VmImageMessage {
 }
 /** *******************************************************************************/
 public class ResetImageAttributeResponseType extends VmImageMessage {
-  boolean _return;
 }
 public class ResetImageAttributeType extends VmImageMessage {
   String imageId;
@@ -251,7 +247,6 @@ public class EucaRegisterImageResponseType extends VmImageMessage {
 }
 
 public class ConfirmProductInstanceResponseType extends EucalyptusMessage {
-  boolean _return;
   String ownerId;
 }
 public class ConfirmProductInstanceType extends VmImageMessage {

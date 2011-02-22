@@ -75,6 +75,7 @@ permission notice:
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
+#include <http.h>
 
 #define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
@@ -467,105 +468,3 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 
 #endif /* CAN_GZIP */
 
-int http_get (const char * url, const char * outfile)
-{
-	int code = ERROR;
-
-	logprintfl (EUCAINFO, "http_get(): downloading %s\n", outfile);
-	logprintfl (EUCAINFO, "            from %s\n", url);
-
-	/* isolate the PATH in the URL as it will be needed for signing */
-	if (strncasecmp (url, "http://", 7)!=0) {
-		logprintfl (EUCAERROR, "http_get(): URL must start with http://...\n");
-		return code;
-	}
-
-	FILE * fp = fopen64 (outfile, "w");
-	if (fp==NULL) {
-		logprintfl (EUCAERROR, "http_get(): failed to open %s for writing\n", outfile);
-		return code;
-	}
-
-	CURL * curl;
-	CURLcode result;
-	curl = curl_easy_init ();
-	if (curl==NULL) {
-		logprintfl (EUCAERROR, "http_get(): could not initialize libcurl\n");
-		fclose(fp);
-		return code;
-	}
-
-	char error_msg [CURL_ERROR_SIZE];
-	curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
-	curl_easy_setopt (curl, CURLOPT_URL, url); 
-	//	curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
-	
-        curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
-	
-	/* set up the default write function, but possibly override it below, if compression is desired and possible */
-	struct request params;
-	params.fp = fp;
-	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
-	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
-
-	//	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
-
-        logprintfl (EUCADEBUG, "http_get(): writing %s output to %s\n", "GET", outfile);
-
-	int retries = TOTAL_RETRIES;
-	int timeout = FIRST_TIMEOUT;
-	do {
-	  params.total_wrote = 0L;
-	  params.total_calls = 0L;
-
-	  result = curl_easy_perform (curl); /* do it */
-	  logprintfl (EUCADEBUG, "http_get(): wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
-
-
-	  if (result) { // curl error (connection or transfer failed)
-            logprintfl (EUCAERROR,     "http_get(): %s (%d)\n", error_msg, result);
-	    
-	  } else {
-            long httpcode;
-            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
-            /* TODO: pull out response message, too */
-
-            switch (httpcode) {
-            case 200L: /* all good */
-                logprintfl (EUCAINFO, "http_get(): saved image in %s\n", outfile);
-                code = OK;
-                break;
-	    case 408L: /* timeout, retry */
-	      logprintfl (EUCAWARN, "http_get(): server responded with HTTP code %ld (timeout)\n", httpcode);
-	      //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-	      break;
-	    case 404L:
-	      logprintfl (EUCAWARN, "http_get(): server responded with HTTP code %ld (file not found)\n", httpcode);
-	      break;
-            default: /* some kind of error */
-                logprintfl (EUCAERROR, "http_get(): server responded with HTTP code %ld\n", httpcode);
-                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
-                retries=0;
-            }
-	  }
-        
-	  if (code!=OK && retries>0) {
-            logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
-            sleep (timeout);
-            fseek (fp, 0L, SEEK_SET);
-            timeout <<= 1;
-	  }
-        
-	  retries--;
-	} while (code!=OK && retries>0);
-	fclose (fp);
-	
-	if ( code != OK ) {
-	  logprintfl (EUCAINFO, "http_get(): due to error, removing %s\n", outfile);
-	  remove (outfile);
-	}
-	
-	//	curl_slist_free_all (headers);
-	curl_easy_cleanup (curl);
-	return code;
-}

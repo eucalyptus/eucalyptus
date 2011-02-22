@@ -26,9 +26,8 @@
   TO COMPLY WITH ~ ANY SUCH LICENSES OR RIGHTS. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   ~ Author: chris grzegorczyk grze@eucalyptus.com -->
 
-<binding force-classes="true">
+<binding force-classes="true" add-constructors="true">
   <!-- TODO: change name space to reflect change of API -->
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
     <value name="privateMacAddress" field="macAddress" />
     <value name="privateIp" field="ipAddress" />
@@ -40,7 +39,7 @@
     <value name="uuid" field="uuid" usage="required" />
     <value name="vlan" field="vlan" />
     <value name="netName" field="networkName" />
-    <value name="userName" field="userName" />
+    <value name="userName" field="accountId" />
     <structure usage="optional">
       <collection field="allocatedAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="activeAddrs" type="java.lang.String" />

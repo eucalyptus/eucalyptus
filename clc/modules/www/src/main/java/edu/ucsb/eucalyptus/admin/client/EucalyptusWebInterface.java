@@ -64,7 +64,6 @@
 
 package edu.ucsb.eucalyptus.admin.client;
 
-import com.eucalyptus.auth.UserInfo;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -358,7 +357,7 @@ public class EucalyptusWebInterface implements EntryPoint {
                 label_box.setStyleName("euca-greeting-pending");
                 EucalyptusWebBackend.App.getInstance().getNewSessionID(
                         login_box.getText(),
-                        GWTUtils.md5(pass_box.getText()),
+                        pass_box.getText(),
                         new AsyncCallback() {
                             public void onSuccess( Object result )
                             {
@@ -654,6 +653,7 @@ public class EucalyptusWebInterface implements EntryPoint {
             }
         }
 
+        final String accountName = userToEdit.getAccountName( );
         ClickHandler SignupEucaButtonListener = new ClickHandler() {
             public void onClick( ClickEvent event )
             {
@@ -750,6 +750,7 @@ public class EucalyptusWebInterface implements EntryPoint {
 					}
                     final UserInfoWeb userToSave = new UserInfoWeb(
                             userName_box.getText(),
+                            accountName,
                             realName_box.getText(),
                             emailAddress_box.getText(),
                             encryptedPassword);
@@ -963,8 +964,10 @@ public class EucalyptusWebInterface implements EntryPoint {
                     label_box.setText( "Checking with the server..." );
                     label_box.setStyleName("euca-greeting-pending");
 
+                    //TODO(wenye): fix the account name
                     UserInfoWeb user = new UserInfoWeb(
                             username_box.getText(),
+                            "",
                             "", // don't care about real name
                             email_box.getText(),
                             null ); // null => reset requested
@@ -1671,8 +1674,9 @@ public class EucalyptusWebInterface implements EntryPoint {
         cpanel.addStyleName("content");
 		EucaButton certButton = new EucaButton ("Download Credentials", new ClickHandler() {
 				public void onClick (ClickEvent event) {
-					Window.open(GWT.getModuleBaseURL() +
-						"getX509?user=" + loggedInUser.getUserName() +
+					Window.open(GWT.getModuleBaseURL() + "getX509?" +
+					  "account=" + loggedInUser.getAccountName() +
+						"&user=" + loggedInUser.getUserName() +
 						"&keyValue=" + loggedInUser.getUserName() +
 						"&code=" + loggedInUser.getToken(),
 						"_self", "");
@@ -1861,8 +1865,8 @@ public class EucalyptusWebInterface implements EntryPoint {
 
                     EucalyptusWebBackend.App.getInstance().changePassword(
                             sessionId,
-                            GWTUtils.md5(oldPassword_box.getText()),
-                            GWTUtils.md5(newCleartextPassword1_box.getText()),
+                            oldPassword_box.getText(),
+                            newCleartextPassword1_box.getText(),
                             new AsyncCallback<String>() {
                                 public void onSuccess( final String result )
                                 {
@@ -2633,7 +2637,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     			label_box.setStyleName("euca-greeting-pending");
 
     			loggedInUser.setEmail( emailAddress_box.getText() );
-    			loggedInUser.setPassword(GWTUtils.md5(newCleartextPassword1_box.getText()));
+    			loggedInUser.setPassword(newCleartextPassword1_box.getText());
 
     			EucalyptusWebBackend.App.getInstance().updateUserRecord(
     					sessionId,

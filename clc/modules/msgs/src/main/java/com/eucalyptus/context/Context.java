@@ -1,19 +1,20 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.auth.Groups;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Contract;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventType;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
@@ -28,6 +29,7 @@ public class Context {
   private WeakReference<MuleEvent> muleEvent = new WeakReference<MuleEvent>( null );
   private User                     user      = null;
   private Subject                  subject   = null;
+  private Map<String, Contract>    contracts = Maps.newHashMap( );
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
@@ -62,35 +64,30 @@ public class Context {
   }
   
   public BaseMessage getRequest( ) {
+    if( this.request == null && this.httpRequest != null ) {
+      this.request = ( BaseMessage ) this.httpRequest.getMessage( );
+    }
     return check( this.request );
   }
   
   public void setUser( User user ) {
     if ( user != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getName( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getId( ) ).debug( );
       this.user = user;
     }
+  }
+  
+  public UserFullName getUserErn( ) {
+    return UserFullName.getInstance( this.getUser( ) );
   }
   
   public User getUser( ) {
     return check( this.user );
   }
   
-  public List<Group> getGroups( ) {
-    return Groups.lookupUserGroups( this.getUser( ) );
-  }
-  
-  public List<Authorization> getAuthorizations( ) {
-    List<Authorization> auths = Lists.newArrayList( );
-    for ( Group g : this.getGroups( ) ) {
-      auths.addAll( g.getAuthorizations( ) );
-    }
-    return auths;
-  }
-  
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_EVENT, this.correlationId, event.getId( ) ).debug( );
+      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }
@@ -128,6 +125,19 @@ public class Context {
       LOG.error( "Accessing context field when it is null: " + steMethod.getMethodName( ) + " from " + steCaller );
     }
     return obj;
+  }
+  
+  public Map<String, Contract> getContracts( ) {
+    return this.contracts;
+  }
+
+  public Account getAccount( ) {
+    try {
+      return this.user.getAccount( );
+    } catch ( AuthException ex ) {
+      LOG.error( ex , ex );
+      throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
+    }
   }
   
 }

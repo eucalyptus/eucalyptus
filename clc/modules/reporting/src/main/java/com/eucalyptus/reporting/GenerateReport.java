@@ -1,17 +1,33 @@
 package com.eucalyptus.reporting;
 
-import java.io.*;
-import java.util.*;
-
-import org.apache.log4j.Logger;
-
-import net.sf.jasperreports.engine.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import net.sf.jasperreports.engine.JRAbstractExporter;
+import net.sf.jasperreports.engine.JRDataSource;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRExporterParameter;
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
-import net.sf.jasperreports.engine.export.*;
-
-import com.eucalyptus.reporting.instance.*;
-import com.eucalyptus.reporting.storage.*;
-import com.eucalyptus.reporting.units.*;
+import net.sf.jasperreports.engine.export.JRCsvExporter;
+import net.sf.jasperreports.engine.export.JRHtmlExporter;
+import net.sf.jasperreports.engine.export.JRHtmlExporterParameter;
+import net.sf.jasperreports.engine.export.JRPdfExporter;
+import org.apache.log4j.Logger;
+import com.eucalyptus.reporting.instance.InstanceDisplayBean;
+import com.eucalyptus.reporting.instance.InstanceDisplayDb;
+import com.eucalyptus.reporting.storage.StorageDisplayBean;
+import com.eucalyptus.reporting.storage.StorageDisplayDb;
+import com.eucalyptus.reporting.units.Units;
 
 /**
  * <p>GenerateReport is a command-line tool for rapid testing which uses

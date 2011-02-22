@@ -2,6 +2,7 @@
     <name>test</name>
     <os>
     <type>hvm</type>
+    <boot dev='cdrom'/>
     </os>
     <features>
         <acpi/>
@@ -11,23 +12,26 @@
     <devices>
         <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
-            <source file='disk'/>
+            <source file='fully_qualifed_path_to_disk'/>
             <target dev='hda'/>
         </disk>
+	<!-- <disk type='file' device='disk'>
+	     <source file='fully_qualified_path_to_secondary_disk'/>
+	     <target dev='vda' bus='virtio'/>
+	</disk> -->
         <disk type='file' device='cdrom'>
-            <source file='en_windows_server_2003_with_sp1_enterprise.iso'/>
+            <source file='fully_qualified_path_to_iso'/>
             <target dev='hdc'/>
             <readonly/>
         </disk>
-        <disk type='file' device='floppy'>
-          <source file='floppy'/>
-          <target dev='fda'/>
-        </disk>
         <interface type='bridge'>
             <source bridge='br0'/>
-            <mac address='d0:0d:3B:81:07:5D'/>
             <model type='rtl8139'/>
         </interface>
+	<!--<interface type='bridge'>
+	    <source bridge='br0'/>
+	    <model type='virtio'/> 
+	</interface> -->
         <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
     </devices>
 </domain>

@@ -71,8 +71,8 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.NoSuchUserException;
-import com.eucalyptus.auth.Users;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -86,6 +86,7 @@ import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.SystemState.Reason;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
@@ -157,7 +158,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( DescribeInstancesType msg ) throws EucalyptusCloudException {
     DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     try {
-      reply.setReservationSet( SystemState.handle( msg.getUserId( ), msg.getInstancesSet( ), msg.isAdministrator( ) ) );
+      reply.setReservationSet( SystemState.handle( msg.getUserErn( ), msg.getInstancesSet( ), msg.isAdministrator( ) ) );
     } catch ( Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );
@@ -171,13 +172,13 @@ public class VmControl {
     try {
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
       final Boolean admin = request.isAdministrator( );
-      final String userId = request.getUserId( );
+      final FullName userId = request.getUserErn( );
       Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
         @Override
         public boolean apply( String instanceId ) {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
-            if ( admin || v.getOwnerId( ).equals( userId ) ) {
+            if ( admin || v.getOwner( ).equals( userId ) ) {
               int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
@@ -208,14 +209,14 @@ public class VmControl {
   public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
     RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     try {
-      final String userId = request.getUserId( );
+      final FullName userId = request.getUserErn( );
       final Boolean admin = request.isAdministrator( );
       boolean result = Iterables.any( request.getInstancesSet( ), new Predicate<String>( ) {
         @Override
         public boolean apply( String instanceId ) {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
-            if ( admin || v.getOwnerId( ).equals( userId ) ) {
+            if ( admin || v.getOwner( ).equals( userId ) ) {
               Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
               return true;
             } else {
@@ -251,7 +252,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
     }
-    if ( !request.isAdministrator( ) && !v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+    if ( !request.isAdministrator( ) && !v.getOwner( ).equals( request.getUserErn( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
       GetConsoleOutputResponseType reply = request.getReply( );
@@ -275,12 +276,12 @@ public class VmControl {
     DescribeBundleTasksResponseType reply = request.getReply( );
     if ( request.getBundleIds( ).isEmpty( ) ) {
       for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-        if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) ) {
+        if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }
       for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) ) {
+        if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }
@@ -288,7 +289,7 @@ public class VmControl {
       for ( String bundleId : request.getBundleIds( ) ) {
         try {
           VmInstance v = VmInstances.getInstance( ).lookupByBundleId( bundleId );
-          if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) ) {
+          if ( v.isBundling( ) && ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) ) {
             reply.getBundleTasks( ).add( v.getBundleTask( ) );
           }
         } catch ( NoSuchElementException e ) {}
@@ -362,9 +363,9 @@ public class VmControl {
     
     try {
       VmInstance v = VmInstances.getInstance( ).lookupByBundleId( request.getBundleId( ) );
-      if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+      if ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) {
         v.getBundleTask( ).setState( "canceling" );
-        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, request.getUserId( ), v.getBundleTask( ).getBundleId( ),
+        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, request.getUserErn( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
         
         Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
@@ -386,12 +387,7 @@ public class VmControl {
     reply.set_return( true );
     String walrusUrl = SystemConfiguration.getWalrusUrl( );
     String instanceId = request.getInstanceId( );
-    User user = null;
-    try {
-      user = Users.lookupUser( request.getUserId( ) );
-    } catch ( NoSuchUserException e1 ) {
-      throw new EucalyptusCloudException( "Failed to lookup the specified user's information: " + request.getUserId( ) );
-    }
+    User user = request.getUser( );
     try {
       VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
       if ( v.isBundling( ) ) {
@@ -401,7 +397,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
-      } else if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+      } else if ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) {
         BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ), request.getPrefix( ) );
         if ( v.startBundleTask( bundleTask ) ) {
           reply.setTask( bundleTask );
@@ -414,16 +410,16 @@ public class VmControl {
         }
         LOG
            .info( EventRecord
-                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserId( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
+                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, request.getUserErn( ).toString( ), v.getBundleTask( ).getBundleId( ), v.getInstanceId( ) ) );
         BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
-        request.setAwsAccessKeyId( user.getQueryId( ) );
+        request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );
         Callbacks.newClusterRequest( callback ).dispatch( v.getPlacement( ) );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-    } catch ( NoSuchElementException e ) {
+    } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
     }
   }
@@ -435,7 +431,7 @@ public class VmControl {
       if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
-      if ( request.isAdministrator( ) || v.getOwnerId( ).equals( request.getUserId( ) ) ) {
+      if ( request.isAdministrator( ) || v.getOwner( ).equals( request.getUserErn( ) ) ) {
         cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );

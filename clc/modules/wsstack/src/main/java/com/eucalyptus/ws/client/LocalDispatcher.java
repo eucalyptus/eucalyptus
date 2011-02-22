@@ -23,7 +23,7 @@ public class LocalDispatcher extends ServiceDispatcher {
   public void dispatch( BaseMessage msg ) {
     MuleEvent context = RequestContext.getEvent( );
     try {
-      ServiceContext.dispatch( this.getComponent( ).getLocalEndpointName( ), msg );
+      ServiceContext.dispatch( this.getComponent( ).getComponentId( ).getLocalEndpointName( ), msg );
     } catch ( Exception e ) {
       LOG.error( e );
     } finally {
@@ -34,7 +34,7 @@ public class LocalDispatcher extends ServiceDispatcher {
   @Override
   public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
     try {
-      return ServiceContext.send( this.getComponent( ).getLocalEndpointName( ), msg );
+      return ServiceContext.send( this.getComponent( ).getComponentId( ).getLocalEndpointName( ), msg );
     } catch ( ServiceDispatchException ex ) {
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }

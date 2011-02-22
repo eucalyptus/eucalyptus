@@ -76,11 +76,17 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.PersistenceException;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.config.Configuration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -90,6 +96,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -106,6 +113,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
+@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_INSTANCE )
 public class VmInstance implements HasName<VmInstance> {
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
   public static String  DEFAULT_IP   = "0.0.0.0";
@@ -123,11 +131,12 @@ public class VmInstance implements HasName<VmInstance> {
       return this.mappedState;
     }
   }
+  
   private String                                      uuid;
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
-  private final String                                ownerId;
+  private final FullName                              owner;
   private final String                                placement;
   private final String                                partition;
   private final byte[]                                userData;
@@ -141,7 +150,7 @@ public class VmInstance implements HasName<VmInstance> {
   private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
   private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
   private final StopWatch                             stopWatch     = new StopWatch( );
-  private final StopWatch                             updateWatch     = new StopWatch( );
+  private final StopWatch                             updateWatch   = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
@@ -153,18 +162,18 @@ public class VmInstance implements HasName<VmInstance> {
   private Long                                        blockBytes    = 0l;
   private Long                                        networkBytes  = 0l;
   
-  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final String ownerId, final String placement,
+  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final FullName owner, final String placement,
                      final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final String platform, final List<Network> networks,
                      final String networkIndex ) {
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
     this.instanceId = instanceId;
-    this.ownerId = ownerId;
+    this.owner = owner;
     this.placement = placement;
     String p = null;
     try {
-      p = Configuration.getClusterConfiguration( this.placement ).getPartition( );
-    } catch ( EucalyptusCloudException ex ) {
+      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.placement ).getPartition( );
+    } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/
       LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );
@@ -250,7 +259,9 @@ public class VmInstance implements HasName<VmInstance> {
     if ( this.reason == null ) {
       this.reason = Reason.NORMAL;
     }
-    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null ? " -- " + this.reasonDetails : "" );
+    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null
+      ? " -- " + this.reasonDetails
+      : "" );
   }
   
   private int           stateCounter        = 0;
@@ -264,7 +275,7 @@ public class VmInstance implements HasName<VmInstance> {
   
   public void setState( final VmState newState, SystemState.Reason reason, String... extra ) {
     this.updateWatch.split( );
-    if( this.updateWatch.getSplitTime( ) > 1000*60*60 ) {
+    if ( this.updateWatch.getSplitTime( ) > 1000 * 60 * 60 ) {
       this.store( );
       this.updateWatch.unsplit( );
     } else {
@@ -318,24 +329,26 @@ public class VmInstance implements HasName<VmInstance> {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
       if ( !this.getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.ownerId, this.state.getReference( ).name( ), this.launchTime );
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.state.getReference( ).name( ), this.launchTime );
       }
     }
   }
-
+  
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ), 
-                                                                    this.getOwnerId( ), this.getOwnerId( ), /** TODO:ASAP:GRZE update w/ account! **/ 
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ),
+                                                                    this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
                                                                     this.placement, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
   }
   
-  public String getByKey( String path ) {
+  public String getByKey( String pathArg ) {
     Map<String, String> m = getMetadataMap( );
-    if ( path == null ) path = "";
+    String path = ( pathArg != null )
+      ? pathArg
+      : "";
     LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
     if ( m.containsKey( path + "/" ) ) path += "/";
     return m.get( path ).replaceAll( "\n*\\z", "" );
@@ -419,102 +432,102 @@ public class VmInstance implements HasName<VmInstance> {
     this.stopWatch.unsplit( );
     return ret;
   }
-
+  
   public Boolean isBundling( ) {
-     return this.bundleTask.getReference( ) != null;
-   }
-   
-   public BundleTask resetBundleTask( ) {
-     BundleTask oldTask = this.bundleTask.getReference( );
-     this.bundleTask.set( null, false );
-     EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
-     return oldTask;
-   }
-   
-   private BundleState getBundleTaskState( ) {
-     if ( this.bundleTask.getReference( ) != null ) {
-       return BundleState.valueOf( this.getBundleTask( ).getState( ) );
-     } else {
-       return null;
-     }
-   }
-   
-   public void setBundleTaskState( String state ) {
-     BundleState next = null;
-     if ( BundleState.storing.getMappedState( ).equals( state ) ) {
-       next = BundleState.storing;
-     } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
-       next = BundleState.complete;
-     } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
-       next = BundleState.failed;
-     } else {
-       next = BundleState.none;
-     }
-     if ( this.bundleTask.getReference( ) != null ) {
-       if ( !this.bundleTask.isMarked( ) ) {
-         BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
-         if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
-           return; //already finished, wait and timeout the state along with the instance.
-         } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
-           this.getBundleTask( ).setState( next.name( ) );
-           EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+    return this.bundleTask.getReference( ) != null;
+  }
+  
+  public BundleTask resetBundleTask( ) {
+    BundleTask oldTask = this.bundleTask.getReference( );
+    this.bundleTask.set( null, false );
+    EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
+    return oldTask;
+  }
+  
+  private BundleState getBundleTaskState( ) {
+    if ( this.bundleTask.getReference( ) != null ) {
+      return BundleState.valueOf( this.getBundleTask( ).getState( ) );
+    } else {
+      return null;
+    }
+  }
+  
+  public void setBundleTaskState( String state ) {
+    BundleState next = null;
+    if ( BundleState.storing.getMappedState( ).equals( state ) ) {
+      next = BundleState.storing;
+    } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
+      next = BundleState.complete;
+    } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
+      next = BundleState.failed;
+    } else {
+      next = BundleState.none;
+    }
+    if ( this.bundleTask.getReference( ) != null ) {
+      if ( !this.bundleTask.isMarked( ) ) {
+        BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
+        if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
+          return; //already finished, wait and timeout the state along with the instance.
+        } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
+          this.getBundleTask( ).setState( next.name( ) );
+          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                              this.getBundleTask( ).getState( ) ).info( );
-           this.getBundleTask( ).setUpdateTime( new Date( ) );
-         } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
-           this.resetBundleTask( );
-         }
-       } else {
-         this.getBundleTask( ).setUpdateTime( new Date( ) );
-       }
-     }
-   }
-   
-   public Boolean cancelBundleTask( ) {
-     if ( this.getBundleTask( ) != null ) {
-       this.bundleTask.set( this.getBundleTask( ), true );
-       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
-       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+          this.getBundleTask( ).setUpdateTime( new Date( ) );
+        } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
+          this.resetBundleTask( );
+        }
+      } else {
+        this.getBundleTask( ).setUpdateTime( new Date( ) );
+      }
+    }
+  }
+  
+  public Boolean cancelBundleTask( ) {
+    if ( this.getBundleTask( ) != null ) {
+      this.bundleTask.set( this.getBundleTask( ), true );
+      this.getBundleTask( ).setState( BundleState.canceling.name( ) );
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
-       return true;
-     } else {
-       return false;
-     }
-   }
-   
-   public Boolean clearPendingBundleTask( ) {
-     if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  public Boolean clearPendingBundleTask( ) {
+    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
           && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-       this.getBundleTask( ).setState( BundleState.storing.name( ) );
-       EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      this.getBundleTask( ).setState( BundleState.storing.name( ) );
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
-       return true;
-     } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
+      return true;
+    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
                  && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwnerId( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
-       this.resetBundleTask( );
-       return true;
-     } else {
-       return false;
-     }
-   }
-   
-   public Boolean startBundleTask( BundleTask task ) {
-     if ( this.bundleTask.compareAndSet( null, task, false, true ) ) {
-       return true;
-     } else {
-       if ( this.getBundleTask( ) != null && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
-         this.resetBundleTask( );
-         this.bundleTask.set( task, true );
-         return true;
-       } else {
-         return false;
-       }
-     }
-   }
-   
-
-  public RunningInstancesItemType getAsRunningInstanceItemType( boolean dns ) {
+      this.resetBundleTask( );
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  public Boolean startBundleTask( BundleTask task ) {
+    if ( this.bundleTask.compareAndSet( null, task, false, true ) ) {
+      return true;
+    } else {
+      if ( this.getBundleTask( ) != null && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
+        this.resetBundleTask( );
+        this.bundleTask.set( task, true );
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+  
+  public RunningInstancesItemType getAsRunningInstanceItemType( ) {
+    boolean dns = Components.lookup( Dns.class ).isLocal( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
@@ -526,7 +539,7 @@ public class VmInstance implements HasName<VmInstance> {
       runningInstance.setStateName( this.state.getReference( ).getName( ) );
     }
     runningInstance.setPlatform( this.getPlatform( ) );
-
+    
     runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
     runningInstance.setStateName( this.state.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
@@ -535,22 +548,21 @@ public class VmInstance implements HasName<VmInstance> {
     try {
       runningInstance.setImageId( this.vmTypeInfo.lookupRoot( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setImageId( "unknown" );
     }
     try {
       runningInstance.setKernel( this.vmTypeInfo.lookupKernel( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setKernel( "unknown" );
     }
     try {
       runningInstance.setRamdisk( this.vmTypeInfo.lookupRamdisk( ).getId( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       runningInstance.setRamdisk( "unknown" );
     }
-
     
     if ( dns ) {
       runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );
@@ -606,8 +618,8 @@ public class VmInstance implements HasName<VmInstance> {
     return instanceId;
   }
   
-  public String getOwnerId( ) {
-    return ownerId;
+  public FullName getOwner( ) {
+    return owner;
   }
   
   public int getLaunchIndex( ) {
@@ -633,7 +645,7 @@ public class VmInstance implements HasName<VmInstance> {
   public String getConsoleOutputString( ) {
     return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
   }
-
+  
   public StringBuffer getConsoleOutput( ) {
     return this.consoleOutput;
   }
@@ -678,7 +690,7 @@ public class VmInstance implements HasName<VmInstance> {
   public String getPublicAddress( ) {
     return networkConfig.getIgnoredPublicIp( );
   }
-
+  
   public String getPrivateDnsName( ) {
     return networkConfig.getPrivateDnsName( );
   }
@@ -764,7 +776,7 @@ public class VmInstance implements HasName<VmInstance> {
         return true;
       }
     } );
-    for( AttachedVolume v : volMap.values( ) ) {
+    for ( AttachedVolume v : volMap.values( ) ) {
       LOG.warn( "Restoring volume attachment state for " + this.getInstanceId( ) + " with " + v.toString( ) );
       this.addVolumeAttachment( v );
     }
@@ -800,7 +812,7 @@ public class VmInstance implements HasName<VmInstance> {
     return String
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.ownerId,
+                          this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
                           this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes );
   }
@@ -808,26 +820,26 @@ public class VmInstance implements HasName<VmInstance> {
   public int getNetworkIndex( ) {
     return this.getNetworkConfig( ).getNetworkIndex( );
   }
-
+  
   /**
    * @return the platform
    */
   public String getPlatform( ) {
     return this.platform;
   }
-
+  
   /**
    * @param platform the platform to set
    */
   public void setPlatform( String platform ) {
     this.platform = platform;
   }
-
+  
   /**
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return this.bundleTask.getReference();
+    return this.bundleTask.getReference( );
   }
   
   /**
@@ -843,28 +855,28 @@ public class VmInstance implements HasName<VmInstance> {
   public void setUuid( String uuid ) {
     this.uuid = uuid;
   }
-
+  
   /**
    * @return the networkBytes
    */
   public Long getNetworkBytes( ) {
     return this.networkBytes;
   }
-
+  
   /**
    * @param networkBytes the networkBytes to set
    */
   public void setNetworkBytes( Long networkBytes ) {
     this.networkBytes = networkBytes;
   }
-
+  
   /**
    * @return the blockBytes
    */
   public Long getBlockBytes( ) {
     return this.blockBytes;
   }
-
+  
   /**
    * @param blockBytes the blockBytes to set
    */

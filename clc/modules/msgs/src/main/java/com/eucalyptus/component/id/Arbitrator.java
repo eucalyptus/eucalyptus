@@ -63,9 +63,14 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Arbitrator extends ComponentId {
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Any.LIST;
+  }
 
   @Override
   public Boolean isCloudLocal( ) {

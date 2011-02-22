@@ -83,9 +83,10 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.auth.X509Cert;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -156,8 +157,17 @@ public class DASManager implements LogicalStorageManager {
 			String dasDevice = DASInfo.getStorageInfo().getDASDevice();
 			if(dasDevice != null) {
 				try {
-					String returnValue = getVolumeGroup(dasDevice);
-					if(returnValue.length() > 0) {
+					boolean volumeGroupFound = false;
+					String returnValue = null;
+					try {
+						returnValue = getVolumeGroup(dasDevice);
+						if(returnValue.length() > 0) {
+							volumeGroupFound = true;
+						}
+					} catch(ExecutionException e) {
+						LOG.warn(e);
+					}
+					if(volumeGroupFound) {
 						Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
 						Matcher m = volumeGroupPattern.matcher(returnValue);
 						if(m.find()) 
@@ -165,20 +175,35 @@ public class DASManager implements LogicalStorageManager {
 						else
 							throw new EucalyptusCloudException("Not a volume group: " + dasDevice);
 					} else {
-						returnValue = getPhysicalVolume(dasDevice);
-						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+						boolean physicalVolumeGroupFound = false;
+						try {
+							returnValue = getPhysicalVolume(dasDevice);
+							if(returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+								physicalVolumeGroupFound = true;
+							}
+						} catch(ExecutionException e) {
+							LOG.warn(e);
+						}
+						if(!physicalVolumeGroupFound) {
 							returnValue = createPhysicalVolume(dasDevice);
 							if(returnValue.length() == 0) {
 								throw new EucalyptusCloudException("Unable to create physical volume on device: " + dasDevice);
 							}
 						}
-						//PV is initialized at this point.
+						//PV should be initialized at this point.
 						returnValue = getPhysicalVolumeVerbose(dasDevice);
-						if(!returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
-							volumeGroup = "vg-" + Hashes.getRandom(10);
-							returnValue = createVolumeGroup(dasDevice, volumeGroup);
-							if(returnValue.length() == 0) {
-								throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+						if(returnValue.matches("(?s:.*)PV Name.*" + dasDevice + "(?s:.*)")) {
+							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
+							Matcher m = volumeGroupPattern.matcher(returnValue);
+							if(m.find()) { 
+								volumeGroup = m.group(1).trim();
+							}
+							if((volumeGroup == null) || (volumeGroup.length() == 0)) {
+								volumeGroup = "vg-" + Hashes.getRandom(10);
+								returnValue = createVolumeGroup(dasDevice, volumeGroup);
+								if(returnValue.length() == 0) {
+									throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);
+								}
 							}
 						} else {
 							Pattern volumeGroupPattern = Pattern.compile("(?s:.*VG Name)(.*)\n.*");
@@ -358,9 +383,13 @@ public class DASManager implements LogicalStorageManager {
 
 	//creates a logical volume (and a new physical volume and volume group)
 	public void createLogicalVolume(String lvName, int size) throws EucalyptusCloudException, ExecutionException {
-		String returnValue = createLogicalVolume(volumeGroup, lvName, size);
-		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + volumeGroup);
+		if(volumeGroup != null) {
+			String returnValue = createLogicalVolume(volumeGroup, lvName, size);
+			if(returnValue.length() == 0) {
+				throw new EucalyptusCloudException("Unable to create logical volume " + lvName + " in volume group " + volumeGroup);
+			}
+		} else {
+			throw new EucalyptusCloudException("Volume group is null! This should never happen");
 		}
 	}
 
@@ -825,17 +854,15 @@ public class DASManager implements LogicalStorageManager {
 		}
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
-			EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
 			try {
-				ClusterCredentials credentials = credDb.getUnique( new ClusterCredentials( StorageProperties.NAME ) );
-				PublicKey ncPublicKey = X509Cert.toCertificate(credentials.getNodeCertificate()).getPublicKey();
-				credDb.commit();
+				List<ClusterConfiguration> partitionConfigs = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
+				ClusterConfiguration clusterConfig = partitionConfigs.get( 0 );
+				PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
 				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
-			} catch ( Exception e ) {
+			} catch ( Throwable e ) {
 				LOG.error( "Unable to encrypt storage target password" );
-				credDb.rollback( );
 				throw new EucalyptusCloudException(e.getMessage(), e);
 			}
 		}
@@ -1070,24 +1097,24 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void checkReady() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 }

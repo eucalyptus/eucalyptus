@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.address;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -77,15 +78,25 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.HasOwner;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
@@ -94,7 +105,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address implements HasName<Address> {
+public class Address implements HasName<Address>, HasOwner<Address> {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -151,9 +162,9 @@ public class Address implements HasName<Address> {
   @Transient
   private String                          instanceAddress;
   @Transient
-  public static String                    UNALLOCATED_USERID      = "nobody";
+  public static String                    UNALLOCATED_USERID      = FakePrincipals.NOBODY_USER_ERN.getName( );
   @Transient
-  public static String                    SYSTEM_ALLOCATED_USERID = "eucalyptus";
+  public static String                    SYSTEM_ALLOCATED_USERID = FakePrincipals.SYSTEM_USER.getId( );
   @Transient
   public static String                    UNASSIGNED_INSTANCEID   = "available";
   @Transient
@@ -176,6 +187,8 @@ public class Address implements HasName<Address> {
                                                                   };
   @Transient
   private volatile SplitTransition        transition;
+  @Transient
+  private FullName                        owner;
   
   public Address( ) {}
   
@@ -186,11 +199,11 @@ public class Address implements HasName<Address> {
   
   public Address( String address, String cluster ) {
     this( address );
-    this.userId = UNALLOCATED_USERID;
+    this.setUserId( UNALLOCATED_USERID );
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     this.cluster = cluster;
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
@@ -198,19 +211,19 @@ public class Address implements HasName<Address> {
   public Address( String address, String cluster, String userId, String instanceId, String instanceAddress ) {
     this( address );
     this.cluster = cluster;
-    this.userId = userId;
+    this.setUserId( userId );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
   public void init( ) {//Should only EVER be called externally after loading from the db
     this.state = new AtomicMarkableReference<State>( State.unallocated, false );
-    this.transition = QUIESCENT;
+    this.transition = this.QUIESCENT;
     if ( this.userId == null ) {
-      this.userId = UNALLOCATED_USERID;
+      this.setUserId( UNALLOCATED_USERID );
     }
     if ( this.instanceAddress == null || this.instanceId == null ) {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
@@ -230,7 +243,7 @@ public class Address implements HasName<Address> {
       this.state.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.userId = UNALLOCATED_USERID;
+        this.setUserId(  UNALLOCATED_USERID );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.name );
@@ -261,7 +274,7 @@ public class Address implements HasName<Address> {
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.userId = userId;
+        Address.this.setUserId( userId );
         Address.addAddress( Address.this );
         try {
           Addresses.getInstance( ).register( Address.this );
@@ -290,7 +303,7 @@ public class Address implements HasName<Address> {
                                                                                                         : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.userId = UNALLOCATED_USERID;
+        Address.this.setUserId( UNALLOCATED_USERID );
         Address.removeAddress( Address.this.name );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.state.attemptMark( State.unallocated, false );
@@ -329,7 +342,7 @@ public class Address implements HasName<Address> {
         try {
           VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
-                     .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                     .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                      .withDetails( "type", Address.this.isSystemOwned( )
                        ? "SYSTEM"
                        : "USER" )
@@ -362,7 +375,7 @@ public class Address implements HasName<Address> {
                        public void top( ) {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                         Address.this.userId = SYSTEM_ALLOCATED_USERID;
+                         Address.this.setUserId( SYSTEM_ALLOCATED_USERID );
                          Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
@@ -384,7 +397,7 @@ public class Address implements HasName<Address> {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
-                   .withDetails( vm.getOwnerId( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
+                   .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                    .withDetails( "type", Address.this.isSystemOwned( )
                      ? "SYSTEM"
                      : "USER" )
@@ -436,7 +449,7 @@ public class Address implements HasName<Address> {
       try {
         this.transition.bottom( );
       } finally {
-        this.transition = QUIESCENT;
+        this.transition = this.QUIESCENT;
         this.state.set( this.state.getReference( ), false );
       }
     }
@@ -448,7 +461,7 @@ public class Address implements HasName<Address> {
   }
   
   public boolean isSystemOwned( ) {
-    return SYSTEM_ALLOCATED_USERID.equals( this.getUserId( ) );
+    return SYSTEM_ALLOCATED_USERID.equals( this.getOwner( ).getUniqueId( ) );
   }
   
   public boolean isAssigned( ) {
@@ -460,15 +473,19 @@ public class Address implements HasName<Address> {
   }
   
   private static void addAddress( Address address ) {
-    Address addr = new Address( address.getName( ), address.getCluster( ) );
+    Address addr = address;
     EntityWrapper<Address> db = new EntityWrapper<Address>( );
     try {
       addr = db.getUnique( new Address( address.getName( ) ) );
-      addr.setUserId( address.getUserId( ) );
+      addr.setUserId( address.getOwner( ).getUniqueId( ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( RuntimeException e ) {
+      db.rollback( );
+      LOG.error( e, e );
+    } catch ( EucalyptusCloudException e ) {
+      addr = new Address( address.getName( ), address.getCluster( ) );
       try {
-        db.add( address );
+        db.add( addr );
         db.commit( );
       } catch ( Throwable e1 ) {
         db.rollback( );
@@ -485,15 +502,15 @@ public class Address implements HasName<Address> {
   }
   
   public String getCluster( ) {
-    return cluster;
+    return this.cluster;
   }
   
   public String getUserId( ) {
-    return userId;
+    return this.owner.getUniqueId( );
   }
   
   public String getInstanceAddress( ) {
-    return instanceAddress;
+    return this.instanceAddress;
   }
   
   private void setInstanceAddress( String instanceAddress ) {
@@ -502,6 +519,23 @@ public class Address implements HasName<Address> {
   
   public void setUserId( final String userId ) {
     this.userId = userId;
+    if ( UNALLOCATED_USERID.equals( this.userId ) ) {
+      this.owner = FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( UNALLOCATED_USERID ).end( );
+    } else if ( SYSTEM_ALLOCATED_USERID.equals( this.userId ) ) {
+      this.owner = FakePrincipals.SYSTEM_USER_ERN;
+    } else {
+      this.owner = Accounts.lookupUserFullNameById( userId );
+    }
+  }
+
+  @Override
+  public FullName getOwner( ) {
+    if( this.userId == null ) {
+      return FakePrincipals.NOBODY_USER_ERN;
+    } else if( this.owner == null ) {
+      this.setUserId( this.userId );
+    }
+    return this.owner;
   }
   
   public String getStateUuid( ) {
@@ -509,7 +543,7 @@ public class Address implements HasName<Address> {
   }
   
   public Long getId( ) {
-    return id;
+    return this.id;
   }
   
   public void setId( final Long id ) {
@@ -542,7 +576,7 @@ public class Address implements HasName<Address> {
     if ( this == o ) return true;
     if ( !( o instanceof Address ) ) return false;
     Address address = ( Address ) o;
-    if ( !name.equals( address.name ) ) return false;
+    if ( !this.name.equals( address.name ) ) return false;
     return true;
   }
   
@@ -551,16 +585,17 @@ public class Address implements HasName<Address> {
     return this.name.hashCode( );
   }
   
-  public DescribeAddressesResponseItemType getDescription( boolean isAdmin ) {
+  public DescribeAddressesResponseItemType getAdminDescription( ) {
     String name = this.getName( );
-    String desc = null;
-    if ( isAdmin ) {
-      desc = String.format( "%s (%s)", this.getInstanceId( ), this.getUserId( ) );
-    } else {
-      desc = UNASSIGNED_INSTANCEID.equals( this.getInstanceId( ) )
+    String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
+    return new DescribeAddressesResponseItemType( name, desc );
+  }
+  
+  public DescribeAddressesResponseItemType getDescription( ) {
+    String name = this.getName( );
+    String desc = UNASSIGNED_INSTANCEID.equals( this.getInstanceId( ) )
         ? null
         : this.getInstanceId( );
-    }
     return new DescribeAddressesResponseItemType( name, desc );
   }
   
@@ -589,5 +624,16 @@ public class Address implements HasName<Address> {
                             Address.this.state.isMarked( ) );
     }
   }
-
+  
+  @Override
+  public String getPartition( ) {
+    return this.cluster;//GRZE:BUG:BUG:TODO:
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
+                                                                                                                                        this.getName( ) );
+  }
+  
 }

@@ -264,8 +264,8 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   private void fireHeartbeat( ) {
     Multimap<String,ServiceConfiguration> services = Multimaps.newArrayListMultimap( );
     for( Component c : Components.list( ) ) {
-      if( !c.getIdentity( ).isCloudLocal( ) && !c.getIdentity( ).isAlwaysLocal( ) ) {
-        for( Service s : c.getServices( ) ) {
+      if( !c.getComponentId( ).isCloudLocal( ) && !c.getComponentId( ).isAlwaysLocal( ) ) {
+        for( Service s : c.lookupServices( ) ) {
           if( s.isLocal( ) ) {
             services.put( s.getHost( ), s.getServiceConfiguration( ) );
           }

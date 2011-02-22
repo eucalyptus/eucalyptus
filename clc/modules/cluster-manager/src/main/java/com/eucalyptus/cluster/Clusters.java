@@ -67,17 +67,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Authentication;
-import com.eucalyptus.auth.ClusterCredentials;
-import com.eucalyptus.cluster.event.NewClusterEvent;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -93,28 +84,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return singleton;
   }
     
-  public static Cluster start( ClusterConfiguration c ) throws EucalyptusCloudException {
-    String clusterName = c.getName( );
-    if ( Clusters.getInstance( ).contains( clusterName ) ) {
-      return Clusters.getInstance( ).lookup( clusterName );
-    } else {
-      ClusterCredentials credentials = null;//ASAP: fix it.
-      EntityWrapper<ClusterCredentials> credDb = Authentication.getEntityWrapper( );
-      try {
-        credentials = credDb.getUnique( new ClusterCredentials( c.getName( ) ) );
-        credDb.rollback( );
-      } catch ( EucalyptusCloudException e ) {
-        LOG.error( "Failed to load credentials for cluster: " + c.getName( ) );
-        credDb.rollback( );
-        throw e;
-      }
-      Cluster newCluster = new Cluster( c, credentials );
-      Clusters.getInstance( ).register( newCluster );
-      newCluster.start( );
-      return newCluster;
-    }
-  }
-
   public boolean hasNetworking( ) {
     return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
       @Override
@@ -138,10 +107,5 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return Lists.newArrayList( hostOrdered );
   }
   
-  public static void stop( String name ) {
-    Cluster cluster = Clusters.getInstance( ).lookup( name );
-    cluster.stop( );
-    Clusters.getInstance( ).deregister( name );
-  }
   
 }

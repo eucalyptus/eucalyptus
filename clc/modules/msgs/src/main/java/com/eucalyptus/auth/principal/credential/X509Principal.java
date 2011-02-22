@@ -1,36 +1,76 @@
 package com.eucalyptus.auth.principal.credential;
 
+import java.io.Serializable;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import com.eucalyptus.auth.AuthException;
 
 /**
+ * Interface for a principal with X509 certificates.
+ * 
  * @author decker
  */
-public interface X509Principal extends CredentialPrincipal, java.io.Serializable {
-  /**
-   * Get the authorized X509 credentials for this principal.
-   * 
-   * @return
-   */
-  public abstract X509Certificate getX509Certificate( );
+public interface X509Principal extends CredentialPrincipal, Serializable {
   
   /**
-   * Get the list of all certificates that have ever been associated with this user identity. In the case the underlying implementation does not record past
-   * certificates this method may return a list consisting of the single currently valid certificate.
-   * 
-   * @return
+   * @param id The certificate ID.
+   * @return The X509 certificate for this principal by its ID
+   */
+  public X509Certificate getX509Certificate( String id );
+  
+  /**
+   * @return The full list of X509 certificates for this user, including revoked and inactive ones.
    */
   public List<X509Certificate> getAllX509Certificates( );
   
   /**
-   * Change the authorized X509 certificate for this principal.
+   * Add a new certificate.
    * 
-   * @param cert
+   * @param cert The new certificate.
    */
-  public abstract void setX509Certificate( X509Certificate cert );
+  public void addX509Certificate( X509Certificate cert ) throws AuthException;
   
   /**
-   * Revoke the X509 credentials for this principal.
+   * Set a certificate to be active.
+   * 
+   * @param id The certificate ID.
    */
-  public abstract void revokeX509Certificate( );
+  public void activateX509Certificate( String id ) throws AuthException;
+  
+  /**
+   * Set a certificate to be inactive.
+   * 
+   * @param id The certificate ID.
+   */
+  public void deactivateX509Certificate( String id ) throws AuthException;
+  
+  /**
+   * Revoke a certificate.
+   * 
+   * @param id The ID of certificate to revoke.
+   */
+  public void revokeX509Certificate( String id ) throws AuthException;
+  
+  /**
+   * Lookup the ID of a certificate.
+   * 
+   * @param cert The certificate to lookup.
+   * @return the ID of the certificate.
+   */
+  public String lookupX509Certificate( X509Certificate cert );
+  
+  /**
+   * Get IDs of active certificates.
+   * 
+   * @return the list of IDs of the certificates.
+   */
+  public List<String> getActiveX509CertificateIds( );
+  
+  /**
+   * Get IDs of inactive certificates.
+   * 
+   * @return the list of IDs of the certificates.
+   */
+  public List<String> getInactiveX509CertificateIds( );
+  
 }

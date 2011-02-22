@@ -72,6 +72,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.VmType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -104,7 +106,7 @@ public class ClusterNodeState {
     this.redeemedTokens = new ConcurrentSkipListSet<ResourceToken>();
   }
 
-  public synchronized ResourceToken getResourceAllocation( String requestId, String userName, String vmTypeName, Integer min, Integer max ) throws NotEnoughResourcesAvailable {
+  public synchronized ResourceToken getResourceAllocation( String requestId, UserFullName userFullName, String vmTypeName, Integer min, Integer max ) throws NotEnoughResourcesAvailable {
     VmTypeAvailability vmType = this.typeMap.get( vmTypeName );
     Integer available = vmType.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted();
@@ -131,7 +133,7 @@ public class ClusterNodeState {
     LOG.debug( LogUtil.header("AFTER ALLOCATE") );
     LOG.debug( sorted );
 
-    ResourceToken token = new ResourceToken( this.clusterName, requestId, userName, quantity, this.virtualTimer++, vmTypeName );
+    ResourceToken token = new ResourceToken( userFullName, requestId, this.clusterName, quantity, this.virtualTimer++, vmTypeName );
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
     this.pendingTokens.add( token );
     return token;
@@ -145,7 +147,7 @@ public class ClusterNodeState {
     List<ResourceToken> childTokens = Lists.newArrayList( );
     for( int index = 0; index < token.getAmount( ); index++ ) {
       NetworkToken primaryNet = token.getPrimaryNetwork( );
-      ResourceToken childToken = new ResourceToken( token.getCluster( ), token.getCorrelationId( )+index, token.getUserName( ), 1, this.virtualTimer++, token.getVmType( ) );
+      ResourceToken childToken = new ResourceToken( token.getUserFullName( ), token.getCorrelationId( )+index, token.getCluster( ), 1, this.virtualTimer++, token.getVmType( ) );
       if( token.getAddresses( ).size( ) > index ) {
         childToken.getAddresses( ).add( token.getAddresses( ).get( index ) );
       }
@@ -153,7 +155,7 @@ public class ClusterNodeState {
         childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
       }
       if( primaryNet != null ) {
-        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getAccountId( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
         childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
         childToken.getNetworkTokens( ).add( childNet );
       }

@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -86,12 +87,12 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
   private static AtomicReference<String> topoString = new AtomicReference<String>( null );
   
   private String getNetworkTopology( ) {
-    if ( topoString.get( ) != null && ( lastTime + ( 10 * 1000l ) ) > System.currentTimeMillis( ) ) {
+    if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
       return topoString.get( );
     } else {
       lock.lock( );
       try {
-        if ( topoString.get( ) != null && ( lastTime + ( 10 * 1000l ) ) > System.currentTimeMillis( ) ) {
+        if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
           return topoString.get( );
         } else {
           lastTime = System.currentTimeMillis( );
@@ -99,10 +100,10 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
           Multimap<String, String> networks = Multimaps.newArrayListMultimap( );
           Multimap<String, String> rules = Multimaps.newArrayListMultimap( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-            if( !VmState.RUNNING.equals( vm.getState( ) ) ) continue;
+            if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
-              network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserName( ), network.getNetworkName( ) ).getVmNetwork( );
+              network = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameById( network.getAccountId( ) ), network.getNetworkName( ) ).getVmNetwork( );
               networks.put( network.getName( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( network.getName( ) ) ) {
                 

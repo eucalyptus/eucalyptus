@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -81,19 +82,22 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage( "one" )
 public abstract class RestfulMarshallingHandler extends MessageStackHandler {
-  private static Logger LOG            = Logger.getLogger( RestfulMarshallingHandler.class );
-  private String        namespace;
-  private final String  namespacePattern;
-  private String        defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
-  private Binding       defaultBinding = BindingManager.getDefaultBinding( );
-  private Binding       binding;
+  private static Logger        LOG                     = Logger.getLogger( RestfulMarshallingHandler.class );
+  private String               namespace;
+  private final String         namespacePattern;
+  private String               defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
+  private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
+  private Binding              binding;
+  private ChannelLocal<String> requestType             = new ChannelLocal<String>( );
   
   public RestfulMarshallingHandler( String namespacePattern ) {
     this.namespacePattern = namespacePattern;
@@ -108,7 +112,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     try {
       this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
     } catch ( BindingException ex ) {
-      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
+      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
     }
   }
   
@@ -122,10 +126,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else {
         this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
       }
-      String userName = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( ).getName( );
       try {
-        BaseMessage msg = ( BaseMessage ) this.bind( userName, true, httpRequest );
+        BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );
         httpRequest.setMessage( msg );
+        this.requestType.set( ctx.getChannel( ), msg.getClass( ).getSimpleName( ) );
       } catch ( Exception e ) {
         if ( !( e instanceof BindingException ) ) {
           e = new BindingException( e );
@@ -155,7 +159,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     this.setNamespace( newNs );
   }
   
-  public abstract Object bind( String user, boolean admin, MappingHttpRequest httpRequest ) throws Exception;
+  public abstract Object bind( MappingHttpRequest httpRequest ) throws Exception;
   
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
@@ -165,30 +169,44 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       HoldMe.canHas.lock( );
       try {
         if ( httpResponse.getMessage( ) == null ) {
-          //TODO: do nothing here? really?
+/** TODO:GRZE: doing nothing here may be needed for streaming? double check... **/
+//          String response = Binding.createRestFault( this.requestType.get( ctx.getChannel( ) ), "Recieved an response from the service which has no content.", "" );
+//          byteOut.write( response.getBytes( ) );
+//          httpResponse.setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
         } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
           EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
           byteOut.write( Binding.createRestFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getCorrelationId( ) ).getBytes( ) );
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
-        } else {
-          try {
-            OMElement omMsg = this.binding.toOM( httpResponse.getMessage( ), this.namespace );/**<--- wtf is this second arg doing here? should be the fast path. TODO **/
-            omMsg.serialize( byteOut );
-          } catch ( Throwable e ) {
+        } else if ( httpResponse.getMessage( ) instanceof ExceptionResponseType ) {//handle error case specially
+          ExceptionResponseType msg = ( ExceptionResponseType ) httpResponse.getMessage( );
+          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
+          byteOut.write( response.getBytes( ) );
+          httpResponse.setStatus( msg.getHttpStatus( ) );
+        } else {//actually try to bind response
+          try {//use request binding
+            this.binding.toOM( httpResponse.getMessage( ) ).serialize( byteOut );
+          } catch ( BindingException ex ) {
+            try {//use default binding with request namespace
+              BindingManager.getDefaultBinding( ).toOM( httpResponse.getMessage( ), this.namespace ).serialize( byteOut );
+            } catch ( BindingException ex1 ) {//use default binding
+              BindingManager.getDefaultBinding( ).toOM( httpResponse.getMessage( ) ).serialize( byteOut );
+            }
+          } catch ( Exception e ) {
             LOG.debug( e );
-            LOG.error( e, e );
-            OMElement omMsg = this.defaultBinding.toOM( httpResponse.getMessage( ), this.namespace );
-            omMsg.serialize( byteOut );
+            if ( LogLevels.DEBUG ) {
+              LOG.error( e, e );
+            }
+            throw e;
           }
         }
+        byte[] req = byteOut.toByteArray( );
+        ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
+        httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
+        httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
+        httpResponse.setContent( buffer );
       } finally {
         HoldMe.canHas.unlock( );
       }
-      byte[] req = byteOut.toByteArray( );
-      ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
-      httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
-      httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
-      httpResponse.setContent( buffer );
     }
   }
   

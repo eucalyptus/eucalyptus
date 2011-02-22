@@ -98,29 +98,35 @@ import com.google.common.collect.Maps;
 
 public class Binding {
   
-  private static Logger      LOG               = Logger.getLogger( Binding.class );
-  private final String       name;
-  private IBindingFactory    bindingFactory;
-  private Map<String, Class> elementToClassMap = Maps.newHashMap( );
+  private static Logger       LOG                 = Logger.getLogger( Binding.class );
+  private final String        name;
+  private IBindingFactory     bindingFactory;
+  private Map<String, Class>  elementToClassMap   = Maps.newHashMap( );
+  private Map<String, String> classToElementMap   = Maps.newHashMap( );
+  private Map<String, String> classToNamespaceMap = Maps.newHashMap( );
+  
   protected Binding( final String name ) throws BindingException {
     this.name = name;
   }
   
   public Class getElementClass( String elementName ) throws BindingException {
-    if( !this.elementToClassMap.containsKey( elementName ) ) {
+    if ( !this.elementToClassMap.containsKey( elementName ) ) {
       BindingException ex = new BindingException( "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );
       throw ex;
     }
     return this.elementToClassMap.get( elementName );
   }
+  
   public IBindingFactory seed( final Class seed ) throws BindingException {
     try {
       this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
-      String[] mappedClasses = bindingFactory.getMappedClasses( );
+      String[] mappedClasses = this.bindingFactory.getMappedClasses( );
       for ( int i = 0; i < mappedClasses.length; i++ ) {
-        if ( bindingFactory.getElementNames( )[i] != null ) {
+        if ( this.bindingFactory.getElementNames( )[i] != null ) {
           try {
-            elementToClassMap.put( bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader().loadClass( mappedClasses[i] ) );
+            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader( ).loadClass( mappedClasses[i] ) );
+            this.classToElementMap.put( mappedClasses[i], this.bindingFactory.getElementNames( )[i] );
+            this.classToNamespaceMap.put( mappedClasses[i], this.bindingFactory.getElementNamespaces( )[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }
@@ -154,12 +160,19 @@ public class Binding {
     
     final OMFactory factory = HoldMe.getOMFactory( );
     final IMarshallable mrshable = ( IMarshallable ) param;
-    final int index = mrshable.JiBX_getIndex( );
-    if( this.bindingFactory == null || this.bindingFactory.getElementNamespaces( ) == null ) {
+    final String fqName = mrshable.JiBX_getName( );
+    if ( this.bindingFactory == null ) {
+      LOG.error( "Binding factory is empty" );
       throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
     }
-    final String origNs = this.bindingFactory.getElementNamespaces( )[index];
-    final String useNs = altNs != null ? altNs : origNs;
+    if ( this.bindingFactory.getElementNamespaces( ) == null ) {
+      LOG.error( "Binding factory's element namespace is empty" );
+      throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + altNs );
+    }
+    final String origNs = this.classToNamespaceMap.get( fqName );
+    final String useNs = altNs != null
+      ? altNs
+      : origNs;
     final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
     final OMElement retVal;
     HoldMe.canHas.lock( );
@@ -172,7 +185,7 @@ public class Binding {
       mctx.getXmlWriter( ).flush( );
       final OMNamespace appns = factory.createOMNamespace( origNs, "" );
       final OMDataSource inds = new InputStreamDataSource( new ByteArrayInputStream( bos.toByteArray( ) ), altNs );
-      if( origNs.equals( altNs ) || altNs == null ) {
+      if ( origNs.equals( altNs ) || altNs == null ) {
 //        retVal = factory.createOMElement( inds, this.bindingFactory.getElementNames( )[index], appns );
         final StAXOMBuilder stAXOMBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( bos.toString( ) ) );
         retVal = stAXOMBuilder.getDocumentElement( );
@@ -187,16 +200,19 @@ public class Binding {
           HoldMe.canHas.unlock( );
         }
       }
-
+      
     } catch ( XMLStreamException e ) {
       LOG.error( e, e );
-      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
+                                  + e.getMessage( ), e );
     } catch ( JiBXException e ) {
       LOG.error( e, e );
-      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
+                                  + e.getMessage( ), e );
     } catch ( IOException e ) {
       LOG.error( e, e );
-      throw new BindingException( this.name +  " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: " + e.getMessage( ), e );
+      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
+                                  + e.getMessage( ), e );
     } finally {
       HoldMe.canHas.unlock( );
     }
@@ -225,8 +241,8 @@ public class Binding {
     }
   }
   
-  public static <T> List<T> listFactory() {
-    return (List<T>) new ArrayList();
+  public static <T> List<T> listFactory( ) {
+    return ( List<T> ) new ArrayList( );
   }
   
   public Object fromOM( final OMElement param, final Class type ) throws WebServicesException {
@@ -250,9 +266,8 @@ public class Binding {
   }
   
   public static String createRestFault( String faultCode, String faultReason, String faultDetails ) {
-    return new StringBuffer( ).append( "<?xml version=\"1.0\"?><Response><Errors><Error><Code>" ).append(
-                                                                                                          faultCode.replaceAll( "<", "&lt;" )
-                                                                                                                   .replaceAll( ">", "&gt;" ) )
+    return new StringBuffer( ).append( "<?xml version=\"1.0\"?><Response><Errors><Error><Code>" )
+                              .append( faultCode.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
                               .append( "</Code><Message>" ).append( faultReason.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
                               .append( "</Message></Error></Errors><RequestID>" ).append( faultDetails.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
                               .append( "</RequestID></Response>" ).toString( );
@@ -278,5 +293,5 @@ public class Binding {
     soapEnv.getBody( ).addFault( soapFault );
     return soapEnv;
   }
-    
+  
 }

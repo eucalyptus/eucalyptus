@@ -63,13 +63,14 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Ldap extends ComponentId {
 
   @Override
   public Boolean isCloudLocal( ) {
-    return true;
+    return false;
   }
 
   @Override
@@ -79,7 +80,11 @@ public class Ldap extends ComponentId {
 
   @Override
   public Boolean isAlwaysLocal( ) {
-    return false;
+    return true;
   }
 
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Eucalyptus.LIST;
+  }
 }

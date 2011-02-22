@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Dns extends ComponentId {
@@ -85,5 +86,10 @@ public class Dns extends ComponentId {
   @Override
   public Boolean isCloudLocal( ) {
     return true;
+  }
+
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return Eucalyptus.LIST;
   }
 }

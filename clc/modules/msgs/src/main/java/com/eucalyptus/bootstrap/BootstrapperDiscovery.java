@@ -62,14 +62,14 @@
  */
 package com.eucalyptus.bootstrap;
 
-import static com.eucalyptus.system.Ats.From;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventType;
-import com.google.common.collect.Lists;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Ats;
+import com.google.common.collect.Lists;
 
 public class BootstrapperDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( BootstrapperDiscovery.class );
@@ -88,9 +88,9 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
   public boolean processClass( Class candidate ) throws Throwable {
     String bc = candidate.getCanonicalName( );
     Class bootstrapper = this.getBootstrapper( candidate );
-    if ( !From( candidate ).has( RunDuring.class ) ) {
+    if ( !Ats.from( candidate ).has( RunDuring.class ) ) {
       throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + bc );
-    } else if ( !From( candidate ).has( Provides.class ) ) {
+    } else if ( !Ats.from( candidate ).has( Provides.class ) ) {
       throw BootstrapException.throwFatal( "Bootstrap class does not specify provided component (Provides.value=Component): " + bc );
     }
     this.bootstrappers.add( bootstrapper );

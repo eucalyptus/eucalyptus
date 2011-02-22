@@ -63,51 +63,68 @@
 package com.eucalyptus.system;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import com.eucalyptus.util.Classes;
+import com.google.common.collect.Lists;
 
 /**
- *
+ * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
+ * of {@link AnnotatedElement}s.
  */
 public class Ats {
-  private final Class c;
-  private Annotation a;
-  public Ats( Class c ) {
-    this.c = c;
+  private final List<AnnotatedElement> ancestry = Lists.newArrayList( );
+  
+  public Ats( AnnotatedElement... ancestry ) {
+    for( AnnotatedElement c : ancestry ) {
+      if( c instanceof AnnotatedElement ) {
+        this.ancestry.add( c );
+      }
+    }
   }
   
-  /**
-   * TODO: DOCUMENT Ats.java
-   * @param <A>
-   * @param annotation
-   * @return
-   */
   public <A extends Annotation> boolean has( Class<A> annotation ) {
-    return c.isAnnotationPresent( annotation );
+    for( AnnotatedElement a : this.ancestry ) {
+      if( a.isAnnotationPresent( annotation ) ) {
+        return true;
+      }
+    }
+    return false;
   }
   
-  /**
-   * TODO: DOCUMENT Ats.java
-   * @param <A>
-   * @param annotation
-   * @return
-   */
   public <A extends Annotation> A get( Class<A> annotation ) {
-    return ( A ) (a=c.getAnnotation( annotation ));
+    for( AnnotatedElement a : this.ancestry ) {
+      if( a.isAnnotationPresent( annotation ) ) {
+        return ( A ) a.getAnnotation( annotation );
+      }
+    }
+    return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );    
   }
   
-  /**
-   * TODO: DOCUMENT Ats.java
-   * @param o
-   * @return
-   */
   public static Ats From( Object o ) {
     return from( o );
   }
-  /**
-   * TODO: DOCUMENT Ats.java
-   * @param o
-   * @return
-   */
+  
   public static Ats from( Object o ) {
-    return o instanceof Class ? new Ats( ( Class ) o ) : new Ats( o.getClass( ) );
+    if ( o instanceof Class ) {
+      return new Ats( (AnnotatedElement) o );
+    } else if ( o instanceof AnnotatedElement ) {
+      return new Ats( (AnnotatedElement) o );
+    } else {
+      return new Ats( (AnnotatedElement) o.getClass( ) );
+    }
   }
+  
+  public static Ats inClassHierarchy( Object o ) {
+    if ( o instanceof AnnotatedElement ) {
+      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
+    } else {
+      return new Ats( o.getClass( ) );
+    }
+  }
+
 }

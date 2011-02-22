@@ -62,16 +62,18 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.VmTypes;
+import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DeregisterComponentType;
 import com.eucalyptus.config.DeregisterStorageControllerType;
@@ -112,14 +114,14 @@ public class RemoteInfoHandler {
     List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
     for ( ClusterInfoWeb clusterWeb : newClusterList ) {
       try {
-        ClusterConfiguration ccConfig = Configuration.getClusterConfiguration( clusterWeb.getName( ) );
+        ClusterConfiguration ccConfig = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, clusterWeb.getName( ) );
         ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
         ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
         ServiceConfigurations.getEntityWrapper( ).mergeAndCommit( ccConfig );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
-      clusterConfig.add( new ClusterConfiguration( null /**ASAP: FIXME: GRZE **/, clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
+      clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ) /**ASAP: FIXME: GRZE **/, clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
                                                    clusterWeb.getMaxVlans( ) ) );
     }
     updateClusterConfigurations( clusterConfig );
@@ -128,7 +130,7 @@ public class RemoteInfoHandler {
   public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
     try {
-      for ( ClusterConfiguration c : Configuration.getClusterConfigurations( ) )
+      for ( ClusterConfiguration c : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) )
         clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinVlan( ), c.getMaxVlan( ) ) );
     } catch ( Throwable e ) {
       LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
@@ -161,7 +163,7 @@ public class RemoteInfoHandler {
   
   public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
-    for ( ClusterConfiguration cc : Configuration.getClusterConfigurations( ) ) {
+    for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
       try {
         if ( NetworkUtil.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isRunningLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
@@ -172,7 +174,7 @@ public class RemoteInfoHandler {
       }
       StorageControllerConfiguration c;
       try {
-        c = Configuration.getStorageControllerConfiguration( cc.getName( ) );
+        c = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cc.getName( ) );
         StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
@@ -204,7 +206,7 @@ public class RemoteInfoHandler {
   public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
     List<WalrusConfiguration> walrusConfig = Lists.newArrayList( );
     for ( WalrusInfoWeb walrusControllerWeb : newWalrusList ) {
-      walrusConfig.add( new WalrusConfiguration( null /**ASAP: FIXME: GRZE **/, walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
+      walrusConfig.add( new WalrusConfiguration( walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
     }
     updateWalrusConfigurations( walrusConfig );
     
@@ -219,14 +221,22 @@ public class RemoteInfoHandler {
   
   public static synchronized List<WalrusInfoWeb> getWalrusList( ) throws EucalyptusCloudException {
     List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>( );
-    for ( WalrusConfiguration c : Configuration.getWalrusConfigurations( ) ) {
-      GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
-      GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
-      walrusList.add( new WalrusInfoWeb( c.getName( ), 
-    		  c.getHostName( ), 
-    		  c.getPort( ),
-    		  convertParams(getWalrusConfigResponse.getProperties())));
+    try {
+      for ( WalrusConfiguration c : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
+        GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
+        Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
+        GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
+        walrusList.add( new WalrusInfoWeb( c.getName( ), 
+      		  c.getHostName( ), 
+      		  c.getPort( ),
+      		  convertParams(getWalrusConfigResponse.getProperties())));
+      }
+    } catch ( PersistenceException ex ) {
+      LOG.error( ex , ex );
+      throw new EucalyptusCloudException( ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      throw new EucalyptusCloudException( ex );
     }
     return walrusList;
   }
@@ -251,16 +261,16 @@ public class RemoteInfoHandler {
   }
   
   public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( Configuration.getClusterConfigurations( ), clusterConfigs );
+    updateComponentConfigurations( ServiceConfigurations.getConfigurations( ClusterConfiguration.class ), clusterConfigs );
     ClusterState.trim( );
   }
   
   public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( Configuration.getStorageControllerConfigurations( ), storageControllerConfigs );
+    updateComponentConfigurations( ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class ), storageControllerConfigs );
   }
   
   public static void updateWalrusConfigurations( List<WalrusConfiguration> walrusConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( Configuration.getWalrusConfigurations( ), walrusConfigs );
+    updateComponentConfigurations( ServiceConfigurations.getConfigurations( WalrusConfiguration.class ), walrusConfigs );
   }
   
   private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {
@@ -279,34 +289,36 @@ public class RemoteInfoHandler {
       LOG.info( "-> add: " + addComponents );
       LOG.info( "-> remove: " + removeComponents );
       for ( ComponentConfiguration config : removeComponents ) {
-        DeregisterComponentType regComponent = null;
-        if ( config instanceof StorageControllerConfiguration ) {
-          regComponent = new DeregisterStorageControllerType( );
-        } else if ( config instanceof WalrusConfiguration ) {
-          regComponent = new DeregisterWalrusType( );
-        } else if ( config instanceof ClusterConfiguration ) {
-          regComponent = new DeregisterClusterType( );
-        } else {
-          regComponent = new DeregisterComponentType( );
-        }
-        regComponent.setName( config.getName( ) );
-        new Configuration( ).deregisterComponent( regComponent );
+//        DeregisterComponentType regComponent = null;
+//        if ( config instanceof StorageControllerConfiguration ) {
+//          regComponent = new DeregisterStorageControllerType( );
+//        } else if ( config instanceof WalrusConfiguration ) {
+//          regComponent = new DeregisterWalrusType( );
+//        } else if ( config instanceof ClusterConfiguration ) {
+//          regComponent = new DeregisterClusterType( );
+//        } else {
+//          regComponent = new DeregisterComponentType( );
+//        }
+//        regComponent.setName( config.getName( ) );
+        ComponentRegistrationHandler.deregister( Components.oneWhichHandles( config.getClass( ) ), 
+                                                 config.getPartition( ), config.getHostName( ) );
       }
       for ( ComponentConfiguration config : addComponents ) {
-        RegisterComponentType regComponent = null;
-        if ( config instanceof StorageControllerConfiguration ) {
-          regComponent = new RegisterStorageControllerType( );
-        } else if ( config instanceof WalrusConfiguration ) {
-          regComponent = new RegisterWalrusType( );
-        } else if ( config instanceof ClusterConfiguration ) {
-          regComponent = new RegisterClusterType( );
-        } else {
-          regComponent = new RegisterComponentType( );
-        }
-        regComponent.setName( config.getName( ) );
-        regComponent.setHost( config.getHostName( ) );
-        regComponent.setPort( config.getPort( ) );
-        new Configuration( ).registerComponent( regComponent );
+//        RegisterComponentType regComponent = null;
+//        if ( config instanceof StorageControllerConfiguration ) {
+//          regComponent = new RegisterStorageControllerType( );
+//        } else if ( config instanceof WalrusConfiguration ) {
+//          regComponent = new RegisterWalrusType( );
+//        } else if ( config instanceof ClusterConfiguration ) {
+//          regComponent = new RegisterClusterType( );
+//        } else {
+//          regComponent = new RegisterComponentType( );
+//        }
+//        regComponent.setName( config.getName( ) );
+//        regComponent.setHost( config.getHostName( ) );
+//        regComponent.setPort( config.getPort( ) );
+        ComponentRegistrationHandler.register( Components.oneWhichHandles( config.getClass( ) ), 
+                                               config.getPartition( ), config.getName( ), config.getHostName( ), config.getPort( ) );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );

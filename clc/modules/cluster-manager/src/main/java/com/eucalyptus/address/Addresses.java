@@ -80,6 +80,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
@@ -170,24 +171,24 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     getProvider( );
   }
   
-  private static void policyLimits( String userId, boolean isAdministrator ) throws EucalyptusCloudException {
+  private static void policyLimits( FullName userId, boolean isAdministrator ) throws EucalyptusCloudException {
     int addrCount = 0;
     for ( Address a : Addresses.getInstance( ).listValues( ) ) {
-      if ( userId.equals( a.getUserId( ) ) ) addrCount++;
+      if ( userId.getUniqueId( ).equals( a.getOwner( ).getUniqueId( ) ) ) addrCount++;
     }
     if ( addrCount >= Addresses.getUserMaxAddresses( ) && !isAdministrator ) {
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
     }
     
   }
-  public static Address restrictedLookup( String userId, boolean isAdmin, String addr ) throws EucalyptusCloudException {
+  public static Address restrictedLookup( FullName userId, boolean isAdmin, String addr ) throws EucalyptusCloudException {
     Address address = null;
     try {
       address = Addresses.getInstance( ).lookup( addr );
     } catch ( NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
     }
-    if ( !isAdmin && !address.getUserId( ).equals( userId ) ) {
+    if ( !isAdmin && !address.getOwner( ).getUniqueId( ).equals( userId.getUniqueId( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
       //    } else if ( address.isPending( ) ) {
       //      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
@@ -197,7 +198,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( String userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+  public static Address allocate( FullName userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
     Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
   }

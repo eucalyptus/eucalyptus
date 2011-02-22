@@ -12,7 +12,7 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-NC_LIBS 		= $(LIBS) -lvirt -lcurl -lssl
+NC_LIBS	= $(LIBS) -lvirt -lcurl -lssl -lcrypto -lrampart
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 
 all: server client clientlib test_nc test
@@ -44,6 +44,9 @@ server: $(SERVICE_SO)
 ../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
 	make -C ../storage
 
+../storage/http.o: ../storage/http.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
 ../net/vnetwork.o: ../net/vnetwork.c
 	make -C ../net
 
@@ -59,24 +62,24 @@ server: $(SERVICE_SO)
 ../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o ../util/windows-bundle.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o
+$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/http.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o ../util/windows-bundle.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o
 	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../net/*.o ../util/*.o
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
-$(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(AXIS2C_HOME)/lib/libaxutil.so $(CLIENT).c
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o $(CLIENT).c
+$(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o $(CLIENT).c
 
 $(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
+	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
 
 test: test.c ../util/misc.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o ../util/euca_auth.o
 
 test_nc: test_nc.c ../util/misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../util/euca_auth.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

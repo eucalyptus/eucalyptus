@@ -1,9 +1,11 @@
 package com.eucalyptus.reporting.instance;
 
-import java.util.*;
-
-import com.eucalyptus.reporting.*;
-import com.eucalyptus.reporting.units.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.units.Units;
 
 public class InstanceDisplayDb
 {
