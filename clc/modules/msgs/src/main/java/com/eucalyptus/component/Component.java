@@ -725,7 +725,7 @@ public class Component implements HasName<Component> {
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
               if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
-                getUris( ).add( s.getParent( ).getComponentId( ).makeRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+                getUris( ).add( s.getParent( ).getComponentId( ).makeRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ).replaceAll( "Internal\\Z", "" ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
               }
@@ -738,7 +738,7 @@ public class Component implements HasName<Component> {
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
               if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
-                getUris( ).add( s.getParent( ).getComponentId( ).makeRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+                getUris( ).add( s.getParent( ).getComponentId( ).makeRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ).replaceAll( "Internal\\Z", "" ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
               }
