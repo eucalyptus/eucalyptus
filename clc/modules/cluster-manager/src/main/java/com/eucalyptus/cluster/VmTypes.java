@@ -97,7 +97,7 @@ public class VmTypes {
     if ( newVmTypes.size( ) != newList.size( ) ) throw new EucalyptusCloudException( "Proposed VmTypes fail to satisfy well-ordering requirement." );
     for ( VmType newVm : newVmTypes ) {
       if ( !getSingleton( ).vmTypeMap.containsValue( newVm ) ) {
-        EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
+        EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
         try {
           VmType oldVm = db.getUnique( new VmType( newVm.getName( ) ) );
           oldVm.setCpu( newVm.getCpu( ) );
