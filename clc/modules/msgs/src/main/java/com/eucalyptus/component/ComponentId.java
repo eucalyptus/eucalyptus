@@ -66,6 +66,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   private final Integer       port;
   private final String        modelContent;
   private String              uriPattern;
+  private String              externalUriPattern;
   private String              uriLocal;
   
   protected ComponentId( String name ) {
@@ -74,6 +75,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
+    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
@@ -255,7 +257,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), hostName, port, this.getLocalEndpointName( ).replaceAll("vm://","").replaceAll( "RequestQueue", "Internal" ) );
+      uri = String.format( this.getUriPattern( ), hostName, port, this.getCapitalizedName( ) );
     }
     try {
       URI u = new URI( uri );
@@ -266,7 +268,24 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return URI.create( uri );
     }
   }
-  
+
+  public final URI makeExternalRemoteUri( String hostName, Integer port ) {
+    String uri;
+    try {
+      uri = String.format( this.getExternalUriPattern( ), hostName, port );
+    } catch ( MissingFormatArgumentException e ) {
+      uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+    }
+    try {
+      URI u = new URI( uri );
+      u.parseServerAuthority( );
+      return u;
+    } catch ( URISyntaxException e ) {
+      LOG.error( e, e );
+      return URI.create( uri );
+    }
+  }
+
   @Override
   public final int compareTo( ComponentId that ) {
     return this.name.compareTo( that.name );
@@ -298,5 +317,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public String toString( ) {
     return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
                           this.getLocalEndpointName( ) );
+  }
+
+  public String getExternalUriPattern( ) {
+    return this.externalUriPattern;
   }
 }
