@@ -14,6 +14,7 @@ notifications
 storage-common
 walrus
 storage-controller
+storage-san
 dns
 vmware-broker
 www

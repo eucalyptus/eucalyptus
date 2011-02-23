@@ -1,2 +1,0 @@
-55-openiscsi.rules needs to go in /etc/udev/rules.d
-iscsidev-*.sh needs to be renamed to /etc/udev/scripts/iscsidev.sh

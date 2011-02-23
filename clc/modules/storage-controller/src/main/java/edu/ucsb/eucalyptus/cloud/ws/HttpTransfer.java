@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.util.StorageProperties;
 
 
@@ -55,7 +55,7 @@ public class HttpTransfer {
 			method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
 		}
 		try {
-			PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
+			PrivateKey ccPrivateKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getPrivateKey();
 			Signature sign = Signature.getInstance("SHA1withRSA");
 			sign.initSign(ccPrivateKey);
 			sign.update(data.getBytes());
