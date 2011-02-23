@@ -131,7 +131,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				if(queryId != null) {
 					user = Accounts.lookupUserByAccessKeyId(queryId);  
 				} else {
-					user = com.eucalyptus.auth.principal.FakePrincipals.SYSTEM_USER; //Accounts.lookupSystemAdmin( );	
+					user = Accounts.lookupSystemAdmin( );	
 				}
 				super.setCredential(queryId);
 				super.setPrincipal(user);
