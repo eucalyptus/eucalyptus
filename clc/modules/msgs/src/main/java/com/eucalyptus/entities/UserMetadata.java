@@ -66,6 +66,7 @@ package com.eucalyptus.entities;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasOwningUser;
@@ -93,8 +94,10 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   
   @Override
   public FullName getOwner( ) {
-    if ( super.owner == null ) {
-      return ( super.owner = Accounts.lookupUserFullNameById( this.ownerAccountId ) );
+    if ( super.owner == null && this.ownerUserId != null ) {
+      return ( super.owner = Accounts.lookupUserFullNameById( this.ownerUserId ) );
+    } else if ( super.owner == null && this.ownerUserId != null ) {
+      return FakePrincipals.NOBODY_USER_ERN;
     } else {
       return super.owner;
     }

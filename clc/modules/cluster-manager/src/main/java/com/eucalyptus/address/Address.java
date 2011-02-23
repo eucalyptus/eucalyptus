@@ -464,7 +464,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public boolean isSystemOwned( ) {
-    return SYSTEM_ALLOCATED_USERID.equals( this.getOwner( ).getUniqueId( ) );
+    return SYSTEM_ALLOCATED_USERID.equals( ((UserFullName)this.getOwner( )).getUserId( ) );
   }
   
   public boolean isAssigned( ) {
