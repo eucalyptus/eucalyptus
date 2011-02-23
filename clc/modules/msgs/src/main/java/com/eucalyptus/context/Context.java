@@ -82,7 +82,7 @@ public class Context {
   }
   
   public boolean hasSystemPrivileges( ) {
-    return this.getUser( ).isAccountAdmin( ) || this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( );
+    return this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( );
   }
   
   public User getUser( ) {
