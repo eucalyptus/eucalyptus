@@ -63,6 +63,7 @@
 
 package com.eucalyptus.images;
 
+import java.util.NoSuchElementException;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -84,28 +85,32 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
 public class ImageConfiguration extends AbstractPersistent {
   @Transient
-  private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
+  private static Logger LOG               = Logger.getLogger( ImageConfiguration.class );
   @ConfigurableField( description = "The default value used to determine whether or not images are marked 'public' when first registered." )
-  private Boolean defaultVisibility = true;
-
+  private Boolean       defaultVisibility = true;
+  
   public ImageConfiguration( ) {
     super( );
   }
-
+  
   public Boolean getDefaultVisibility( ) {
     return this.defaultVisibility;
   }
-
+  
   public void setDefaultVisibility( Boolean defaultVisibility ) {
     this.defaultVisibility = defaultVisibility;
   }
+  
   public static ImageConfiguration getInstance( ) {
     ImageConfiguration ret = null;
-    if( ( ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) ) ) == null ) {
+    try {
+      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
+    } catch ( NoSuchElementException ex1 ) {
       try {
         ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
       } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex , ex );
+        ret = new ImageConfiguration( );
       }
     }
     return ret;
