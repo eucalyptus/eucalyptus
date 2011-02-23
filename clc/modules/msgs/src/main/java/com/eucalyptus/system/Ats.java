@@ -80,29 +80,41 @@ public class Ats {
   private final List<AnnotatedElement> ancestry = Lists.newArrayList( );
   
   public Ats( AnnotatedElement... ancestry ) {
-    for( AnnotatedElement c : ancestry ) {
-      if( c instanceof AnnotatedElement ) {
+    for ( AnnotatedElement c : ancestry ) {
+      if ( c instanceof AnnotatedElement ) {
         this.ancestry.add( c );
       }
     }
   }
   
   public <A extends Annotation> boolean has( Class<A> annotation ) {
-    for( AnnotatedElement a : this.ancestry ) {
-      if( a.isAnnotationPresent( annotation ) ) {
+    for ( AnnotatedElement a : this.ancestry ) {
+      if ( a.isAnnotationPresent( annotation ) ) {
         return true;
+      } else if ( a instanceof Class ) {
+        for ( Class inter : ( ( Class ) a ).getInterfaces( ) ) {
+          if ( inter.isAnnotationPresent( annotation ) ) {
+            return true;
+          }
+        }
       }
     }
     return false;
   }
   
   public <A extends Annotation> A get( Class<A> annotation ) {
-    for( AnnotatedElement a : this.ancestry ) {
-      if( a.isAnnotationPresent( annotation ) ) {
+    for ( AnnotatedElement a : this.ancestry ) {
+      if ( a.isAnnotationPresent( annotation ) ) {
         return ( A ) a.getAnnotation( annotation );
+      } else if ( a instanceof Class ) {
+        for ( Class inter : ( ( Class ) a ).getInterfaces( ) ) {
+          if ( inter.isAnnotationPresent( annotation ) ) {
+            return ( A ) inter.getAnnotation( annotation );
+          }
+        }
       }
     }
-    return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );    
+    return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );
   }
   
   public static Ats From( Object o ) {
@@ -111,11 +123,11 @@ public class Ats {
   
   public static Ats from( Object o ) {
     if ( o instanceof Class ) {
-      return new Ats( (AnnotatedElement) o );
+      return new Ats( ( AnnotatedElement ) o );
     } else if ( o instanceof AnnotatedElement ) {
-      return new Ats( (AnnotatedElement) o );
+      return new Ats( ( AnnotatedElement ) o );
     } else {
-      return new Ats( (AnnotatedElement) o.getClass( ) );
+      return new Ats( ( AnnotatedElement ) o.getClass( ) );
     }
   }
   
@@ -126,5 +138,5 @@ public class Ats {
       return new Ats( o.getClass( ) );
     }
   }
-
+  
 }

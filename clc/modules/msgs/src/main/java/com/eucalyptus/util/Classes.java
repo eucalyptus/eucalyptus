@@ -79,7 +79,9 @@ public class Classes {
       }
     };
     List<Class> ret = Lists.newArrayList( );
-    for( Class t = ( o instanceof Class ? (Class)o : o.getClass() ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
+    for ( Class t = ( o instanceof Class
+      ? ( Class ) o
+      : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
     return ret;
   }
   
