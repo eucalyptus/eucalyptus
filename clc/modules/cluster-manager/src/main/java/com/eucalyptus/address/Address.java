@@ -105,7 +105,7 @@ import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address extends UserMetadata<Address.State> implements AddressMetadata {
