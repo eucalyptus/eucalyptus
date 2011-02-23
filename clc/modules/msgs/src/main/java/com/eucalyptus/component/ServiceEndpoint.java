@@ -81,6 +81,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.component.id.Cluster;
@@ -315,42 +316,43 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     return false;
   }
   
-  private final ChannelHandler systemStateHandler = new ChannelDownstreamHandler( ) {
-                                                    
-                                                    @Override
-                                                    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-                                                      try {
-                                                        if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof BaseMessage ) {
-                                                          BaseMessage msg = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-                                                          InetSocketAddress localSocketAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
-                                                          final String locahostAddr = localSocketAddr.getAddress( ).getHostAddress( );
-                                                          List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-                                                            {
-                                                              addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( locahostAddr ) );
-                                                              addAll( Components.lookup( Walrus.class ).getServiceSnapshot( locahostAddr ) );
-                                                              for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( locahostAddr ) ) {
-                                                                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                                                                  add( s );
-                                                                }
-                                                              }
-                                                              for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( locahostAddr ) ) {
-                                                                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                                                                  add( s );
-                                                                }
-                                                              }
-                                                            }
-                                                          };
-                                                          for ( ServiceInfoType serviceInfo : serviceInfos ) {
-                                                            List<String> uris = Lists.newArrayList( serviceInfo.getUris( ) );
-                                                          }
-                                                          msg.getBaseServices( ).clear( );
-                                                          msg.getBaseServices( ).addAll( serviceInfos );
-                                                        }
-                                                      } catch ( Exception ex ) {
-                                                        LOG.error( ex , ex );
-                                                      }
-                                                    }
-                                                  };
+  @ChannelPipelineCoverage( "one" )
+  private class SystemStateHandler implements ChannelDownstreamHandler {
+    
+    @Override
+    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      try {
+        if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof BaseMessage ) {
+          BaseMessage msg = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
+          InetSocketAddress localSocketAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
+          final String locahostAddr = localSocketAddr.getAddress( ).getHostAddress( );
+          List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+            {
+              addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( locahostAddr ) );
+              addAll( Components.lookup( Walrus.class ).getServiceSnapshot( locahostAddr ) );
+              for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( locahostAddr ) ) {
+                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                  add( s );
+                }
+              }
+              for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( locahostAddr ) ) {
+                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                  add( s );
+                }
+              }
+            }
+          };
+          for ( ServiceInfoType serviceInfo : serviceInfos ) {
+            List<String> uris = Lists.newArrayList( serviceInfo.getUris( ) );
+          }
+          msg.getBaseServices( ).clear( );
+          msg.getBaseServices( ).addAll( serviceInfos );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+  };
   
   public ChannelPipelineFactory getPipelineFactory( ) {
     return new ChannelPipelineFactory( ) {
@@ -358,7 +360,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       @Override
       public ChannelPipeline getPipeline( ) throws Exception {
         ChannelPipeline pipeline = ServiceEndpoint.this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( ).getPipeline( );
-        pipeline.addLast( "system-state-info", systemStateHandler );
+        pipeline.addLast( "system-state-info", new SystemStateHandler( ) );
         return pipeline;
       }
     };
