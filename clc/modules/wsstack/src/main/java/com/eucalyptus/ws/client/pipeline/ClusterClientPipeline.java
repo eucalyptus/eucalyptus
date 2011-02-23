@@ -94,7 +94,7 @@ public class ClusterClientPipeline extends NioClientPipeline {
     pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusCC#" ) );
     pipeline.addLast( "soap", new SoapHandler( ) );
     pipeline.addLast( "binding", this.getBindingHandler( ) );
-//    pipeline.addLast( "handler", this.getHandler( ) );
+    pipeline.addLast( "handler", this.getHandler( ) );
     return pipeline;
   }
   
