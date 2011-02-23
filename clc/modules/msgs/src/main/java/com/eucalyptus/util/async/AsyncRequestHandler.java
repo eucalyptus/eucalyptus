@@ -93,9 +93,6 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public ChannelPipeline getPipeline( ) throws Exception {
             ChannelPipeline pipeline = factory.getPipeline( );
             ChannelUtil.addPipelineMonitors( pipeline, 30 );
-//            if( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-//              pipeline.addLast( "system-info-handler", endpoint.getServiceInfoHandler( ) );
-//            }
             pipeline.addLast( "request-handler", AsyncRequestHandler.this );
             return pipeline;
           }
@@ -110,27 +107,27 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           @Override
           public void operationComplete( ChannelFuture future ) throws Exception {
             if ( future.isSuccess( ) ) {
-              LOG.debug( "Connected as: " + ((InetSocketAddress)future.getChannel( ).getLocalAddress( )) );
-              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
-              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-                  {
-                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
-                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
-                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
-                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                        add( s );
-                      }
-                    }
-                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
-                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                        add( s );
-                      }
-                    }
-                  }
-                };
-                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
-              }
+              LOG.debug( "Connected as: " + (future.getChannel( ).getLocalAddress( )) );
+//              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
+//              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+//                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+//                  {
+//                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
+//                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
+//                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
+//                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+//                        add( s );
+//                      }
+//                    }
+//                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
+//                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+//                        add( s );
+//                      }
+//                    }
+//                  }
+//                };
+//                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
+//              }
               EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                 request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                 "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
