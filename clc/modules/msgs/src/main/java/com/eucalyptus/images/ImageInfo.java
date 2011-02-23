@@ -111,7 +111,7 @@ import com.google.common.base.Function;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
+@Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<Image.State> implements Image {

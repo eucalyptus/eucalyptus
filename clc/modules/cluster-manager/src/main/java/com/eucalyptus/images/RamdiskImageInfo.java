@@ -81,7 +81,6 @@ import com.eucalyptus.cloud.Image;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )
 public class RamdiskImageInfo extends ImageInfo {

@@ -79,7 +79,6 @@ import com.eucalyptus.cloud.Image;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "machine" )
 public class MachineImageInfo extends ImageInfo {
