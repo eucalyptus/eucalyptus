@@ -10,7 +10,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "image_authorization" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImageAuthorization {
