@@ -74,7 +74,6 @@
 		<javah classpath="${build.dir}" destdir="include" force="yes">
 			<class name="com.eucalyptus.storage.OverlayManager" />
 			<class name="com.eucalyptus.storage.AOEManager" />
-			<class name="com.eucalyptus.storage.DASManager" />
 		</javah>
 	</target>
 
@@ -83,7 +82,6 @@
 		<delete dir="include" />
 	</target>
 	<!--================================== install target ==================================-->
-	<property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev" />
 	<target name="install">
     <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
       <fileset dir="conf">
@@ -93,13 +91,6 @@
     <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
       <fileset file="${jar.file}" />
     </copy>
-		<!-- copy udev config over -->
-		<mkdir dir="${DESTDIR}${euca.udev.dir}" />
-		<copy todir="${DESTDIR}${euca.udev.dir}" overwrite="true">
-			<fileset dir="${basedir}/udev">
-				<include name="**/*" />
-			</fileset>
-		</copy>
 	</target>
 </project>
 
