@@ -109,8 +109,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         this.connectFuture.addListener( new ChannelFutureListener( ) {
           @Override
           public void operationComplete( ChannelFuture future ) throws Exception {
-            if ( future.isSuccess( ) ) {
-              LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
+            try {
+              if ( future.isSuccess( ) ) {
+                LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
 //              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
 //              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
 //                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
@@ -131,28 +132,32 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
 //                };
 //                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
 //              }
-              EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
-                                request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
-              future.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener( ) {
-                @Override
-                public void operationComplete( ChannelFuture future ) throws Exception {
-                  EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, request.getClass( ).getSimpleName( ),
-                                    request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                    "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
-                }
-              } );
-              
-              future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
-                @Override
-                public void operationComplete( ChannelFuture future ) throws Exception {
-                  AsyncRequestHandler.this.writeComplete.set( true );
-                  EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_WRITE, request.getClass( ).getSimpleName( ),
-                                    request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                    "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
-                }
-              } );
-            } else {
+                EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
+                                  request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
+                                  "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                future.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener( ) {
+                  @Override
+                  public void operationComplete( ChannelFuture future ) throws Exception {
+                    EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, request.getClass( ).getSimpleName( ),
+                                      request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
+                                      "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                  }
+                } );
+                
+                future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
+                  @Override
+                  public void operationComplete( ChannelFuture future ) throws Exception {
+                    AsyncRequestHandler.this.writeComplete.set( true );
+                    EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_WRITE, request.getClass( ).getSimpleName( ),
+                                      request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
+                                      "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                  }
+                } );
+              } else {
+                AsyncRequestHandler.this.teardown( future.getCause( ) );
+              }
+            } catch ( RuntimeException ex ) {
+              LOG.error( ex , ex );
               AsyncRequestHandler.this.teardown( future.getCause( ) );
             }
           }
