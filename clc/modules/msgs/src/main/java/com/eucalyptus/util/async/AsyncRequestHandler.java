@@ -47,6 +47,8 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NetworkUtil;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
@@ -108,7 +110,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           @Override
           public void operationComplete( ChannelFuture future ) throws Exception {
             if ( future.isSuccess( ) ) {
-              LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
+              LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
 //              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
 //              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
 //                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
