@@ -66,7 +66,6 @@ package com.eucalyptus.auth.policy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import org.codehaus.janino.Java.ThisReference;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 
@@ -76,16 +75,12 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   
   public static PolicyResourceType extractResourceType( Object classOrInstance ) throws NoSuchElementException {
     Class type = classOrInstance instanceof Class ? (Class) classOrInstance : classOrInstance.getClass( );
-    if( classToPolicyRscType.containsKey( type ) ) {
-      return classToPolicyRscType.get( type );
+    PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromSuperclass( type );
+    if( rscPolicy != null ) {
+      classToPolicyRscType.put( type, rscPolicy );
+      return rscPolicy;
     } else {
-      PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromSuperclass( type );
-      if( rscPolicy != null ) {
-        classToPolicyRscType.put( type, rscPolicy );
-        return rscPolicy;
-      } else {
-        throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
-      }
+      throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
     }
   }
   
