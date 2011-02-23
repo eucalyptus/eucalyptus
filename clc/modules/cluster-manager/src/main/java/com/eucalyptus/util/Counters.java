@@ -95,9 +95,9 @@ public class Counters extends AbstractPersistent implements Serializable {
     } else {
       synchronized ( Counters.class ) {
         if ( singleton == null ) {
-          EntityWrapper<Counters> db = new EntityWrapper<Counters>( "eucalyptus_general" );
+          EntityWrapper<Counters> db = EntityWrapper.get( Counters.class );
           try {
-            singleton = db.getUnique( new Counters() );
+            singleton = db.getUnique( new Counters( ) );
           } catch ( EucalyptusCloudException e ) {
             singleton = new Counters( 0l );
             try {
@@ -129,7 +129,8 @@ public class Counters extends AbstractPersistent implements Serializable {
   private Long                    messageId;
   
   public Counters( ) {}
-  public Counters( Long start ) { 
+  
+  public Counters( Long start ) {
     this.messageId = start;
   }
   
@@ -148,7 +149,7 @@ public class Counters extends AbstractPersistent implements Serializable {
       idStart = tempId.addAndGet( length );
       if ( ( idStart - lastSave.get( ) ) > 1000 ) {
         try {
-          Transactions.one( Counters.uninitialized( ), new Tx<Counters>() {
+          Transactions.one( Counters.uninitialized( ), new Tx<Counters>( ) {
             @Override
             public void fire( Counters t ) throws Throwable {
               t.setMessageId( idStart );
