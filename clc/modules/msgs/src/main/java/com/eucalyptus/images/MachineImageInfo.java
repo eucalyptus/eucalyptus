@@ -82,8 +82,6 @@ import com.eucalyptus.images.Images.Platform;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
-@DiscriminatorColumn( name = "image_type", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "machine" )
 public class MachineImageInfo extends ImageInfo {
   @Column( name = "image_kernel_id" )
@@ -93,25 +91,24 @@ public class MachineImageInfo extends ImageInfo {
   
   public MachineImageInfo( ) {
     super( );
+    this.setImageType( Images.Type.machine );
   }
 
   public MachineImageInfo( String imageId ) {
     super( imageId );
+    this.setImageType( Images.Type.machine );
   }
 
   public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
     super( userFullName, imageId, imageLocation, arch, platform );
+    this.setImageType( Images.Type.machine );
   }
 
   public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
     super( userFullName, imageId, imageLocation, arch, platform );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
-  }
-
-  @Override
-  public Images.Type getImageType( ) {
-    return Images.Type.machine;
+    this.setImageType( Images.Type.machine );
   }
 
   public String getKernelId( ) {

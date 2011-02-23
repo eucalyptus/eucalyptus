@@ -63,44 +63,53 @@
 
 package com.eucalyptus.images;
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorType;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.images.Images.Architecture;
-import com.eucalyptus.images.Images.Platform;
-import com.eucalyptus.images.Images.Type;
+import java.util.List;
+import org.apache.log4j.Logger;
+import com.eucalyptus.entities.EntityWrapper;
 
-@Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "Images" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "ramdisk" )
-public class RamdiskImageInfo extends ImageInfo {
-
-  public RamdiskImageInfo( ) {
-    super( );
-    this.setImageType( Images.Type.ramdisk );
+public class ForwardImages {
+  private static Logger LOG = Logger.getLogger( ForwardImages.class );
+  public static String defaultRamdisk( ) {
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    try {
+      List<ImageInfo> images = db.query( new ImageInfo( ) {
+        {
+          setImageType( Images.Type.ramdisk );
+        }
+      } );
+      if( images.size( ) > 0 ) {
+        db.commit( );
+        return images.get( 0 ).getDisplayName( );
+      } else {
+        db.commit( );
+        return null;
+      }
+    } catch ( Exception ex ) {
+      db.rollback( );
+      LOG.error( ex , ex );
+      return null;
+    }
   }
-
-  public RamdiskImageInfo( String imageId ) {
-    super( imageId );
-    this.setImageType( Images.Type.ramdisk );
+  public static String defaultKernel( ) {
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    try {
+      List<ImageInfo> images = db.query( new ImageInfo( ) {
+        {
+          setImageType( Images.Type.kernel );
+        }
+      } );
+      if( images.size( ) > 0 ) {
+        db.commit( );
+        return images.get( 0 ).getDisplayName( );
+      } else {
+        db.commit( );
+        return null;
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      db.rollback( );
+      return null;
+    }
   }
-
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
-    this.setImageType( Images.Type.ramdisk );
-  }
-
+  
 }

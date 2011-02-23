@@ -86,7 +86,9 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.ForwardImages;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.KernelImageInfo;
@@ -356,26 +358,10 @@ public class SystemConfiguration {
       sysConf.setCloudHost(ipAddr);
     }
     if(sysConf.getDefaultKernel() == null) {
-      EntityWrapper<KernelImageInfo> db2 = EntityWrapper.get( KernelImageInfo.class );
-      try {
-        List<KernelImageInfo> res = db2.query(Images.exampleKernelWithImageId( null ));
-        if( res.size() > 0 )
-          sysConf.setDefaultKernel(res.get(0).getDisplayName());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultKernel( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDefaultRamdisk() == null) {
-      EntityWrapper<RamdiskImageInfo> db2 = EntityWrapper.get( RamdiskImageInfo.class );
-      try {
-        List<RamdiskImageInfo> res = db2.query(Images.exampleRamdiskWithImageId( null ));
-        if( res.size() > 0 )
-          sysConf.setDefaultRamdisk(res.get(0).getDisplayName());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultRamdisk( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDnsDomain() == null) {
       sysConf.setDnsDomain(DNSProperties.DOMAIN);

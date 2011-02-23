@@ -100,6 +100,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.images.Images.Architecture;
+import com.eucalyptus.images.Images.Type;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.JoinTx;
@@ -111,11 +112,11 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
-@DiscriminatorColumn( name = "image_type", discriminatorType = DiscriminatorType.STRING )
+@DiscriminatorColumn( name = "image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @Transient
@@ -133,6 +134,9 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @Column( name = "image_platform" )
   @Enumerated( EnumType.STRING )
   private Images.Platform         platform;
+  @Column( name = "image_type" )
+  @Enumerated( EnumType.STRING )
+  private Type                    imageType;
   @Lob
   @Column( name = "image_signature" )
   private String                  signature;
@@ -149,7 +153,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
   @Transient
-  private FullName          fullName;
+  private FullName                fullName;
   
   public ImageInfo( ) {}
   
@@ -158,7 +162,8 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Images.Architecture arch, final Images.Platform platform ) {
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Images.Architecture arch,
+                    final Images.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     this.imageLocation = imageLocation;
     this.imageState = Images.State.pending;
@@ -166,7 +171,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   }
   
   public Images.Type getImageType( ) {
-    return null;
+    return this.imageType;
   }
   
   public Images.Platform getPlatform( ) {
@@ -421,10 +426,16 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null ? this.fullName = FullName.create.vendor( "euca" )
-      .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-      .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountId( ) )
-      .relativeId( "image", this.getDisplayName( ) ) : this.fullName;
+    return this.fullName == null
+      ? this.fullName = FullName.create.vendor( "euca" )
+                                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                                       .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountId( ) )
+                                       .relativeId( "image", this.getDisplayName( ) )
+      : this.fullName;
+  }
+  
+  public void setImageType( Type imageType ) {
+    this.imageType = imageType;
   }
   
 }
