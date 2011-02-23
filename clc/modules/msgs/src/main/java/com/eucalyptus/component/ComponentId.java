@@ -86,6 +86,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
+    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
