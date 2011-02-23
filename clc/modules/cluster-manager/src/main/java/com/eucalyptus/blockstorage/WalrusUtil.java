@@ -73,6 +73,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -122,7 +123,7 @@ public class WalrusUtil {
   
   public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    imgInfo.setImageState( Images.State.deregistered );
+    imgInfo.setImageState( Image.State.deregistered );
     try {
       RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}

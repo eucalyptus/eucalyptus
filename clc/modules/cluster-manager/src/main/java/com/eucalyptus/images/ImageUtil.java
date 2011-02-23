@@ -87,6 +87,7 @@ import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
@@ -462,7 +463,7 @@ public class ImageUtil {
   public static void cleanDeregistered( ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
-      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( Images.State.deregistered ) );
+      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( Image.State.deregistered ) );
       for ( ImageInfo deregImg : imgList ) {
         try {
           db.delete( deregImg );
