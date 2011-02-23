@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 public class Assertions {
   private static Logger LOG = Logger.getLogger( Assertions.class );
 
-  public static final void assertNotNull( Object arg, String formatString, String... args ) throws IllegalArgumentException {
+  public static final void assertNotNull( Object arg, String formatString, Object... args ) throws IllegalArgumentException {
     if ( arg == null ) {
       String errMsg = String.format( formatString, args );
       IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
