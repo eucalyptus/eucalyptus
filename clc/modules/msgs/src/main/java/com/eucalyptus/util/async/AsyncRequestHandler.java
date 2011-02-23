@@ -1,6 +1,7 @@
 package com.eucalyptus.util.async;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -107,7 +108,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           @Override
           public void operationComplete( ChannelFuture future ) throws Exception {
             if ( future.isSuccess( ) ) {
-              LOG.debug( "Connected as: " + (future.getChannel( ).getLocalAddress( )) );
+              LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
 //              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
 //              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
 //                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
