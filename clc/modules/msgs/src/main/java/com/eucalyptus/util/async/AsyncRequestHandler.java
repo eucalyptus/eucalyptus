@@ -146,7 +146,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
 
       }
       this.response.setException( t );
-    } else if ( this.response.isDone( ) ) {
+    } else if ( t != null && this.response.isDone( ) ) {
       LOG.error( t.getMessage( ) );
     }
     if ( this.connectFuture != null ) {
