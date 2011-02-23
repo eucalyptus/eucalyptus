@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,130 +53,133 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.blockstorage;
 
-import java.util.Date;
+package com.eucalyptus.keys;
+
+import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.SnapshotMetadata;
+import com.eucalyptus.cloud.KeyPair;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
-import edu.ucsb.eucalyptus.cloud.state.State;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasOwningAccount;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_images" )
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_keypair" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Column( name = "parentvolume" )
-  private String   parentVolume;
-  @Column( name = "cluster" )
-  private String   cluster;
+public class SshKeyPair extends UserMetadata implements KeyPair {
+  @Column( name = "metadata_keypair_user_keyname", unique = true )
+  String                   uniqueName;                                                                 //bogus field to enforce uniqueness
+  @Lob
+  @Column( name = "metadata_keypair_public_key" )
+  String                   publicKey;
+  @Column( name = "metadata_keypair_finger_print" )
+  String                   fingerPrint;
   @Transient
-  private FullName fullName;
+  private FullName          fullName;
+  @Transient
+  public static String     NO_KEY_NAME = "";
+  @Transient
+  public static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
   
-  public Snapshot( ) {
-    super( );
+  public SshKeyPair( ) {}
+  
+  public SshKeyPair( UserFullName user ) {
+    super( user );
   }
   
-  private Snapshot( final UserFullName userFullName, final String displayName ) {
-    super( userFullName, displayName );
+  public SshKeyPair( UserFullName user, String keyName ) {
+    super( user, keyName );
+    this.uniqueName = this.fullName.toString( );
   }
   
-  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume ) {
-    this( userFullName, displayName );
-    this.parentVolume = parentVolume;
-    super.setState( State.NIHIL );
-    super.setCreationTime( new Date( ) );
+  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
+    this( user, keyName );
+    this.publicKey = publicKey;
+    this.fingerPrint = fingerPrint;
   }
   
-  public static Snapshot named( final String snapshotId ) {
-    return new Snapshot( ) {{ 
-      setDisplayName( snapshotId );
-    }};
+  public String getUniqueName( ) {
+    return this.uniqueName;
   }
 
-  public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
-    return new Snapshot( userFullName, snapshotId );
+  public void setUniqueName( String uniqueName ) {
+    this.uniqueName = uniqueName;
+  }
+
+  public String getPublicKey( ) {
+    return this.publicKey;
+  }
+
+  public void setPublicKey( String publicKey ) {
+    this.publicKey = publicKey;
+  }
+
+  public String getFingerPrint( ) {
+    return this.fingerPrint;
+  }
+
+  public void setFingerPrint( String fingerPrint ) {
+    this.fingerPrint = fingerPrint;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
   }
   
-  public static Snapshot ownedBy( final UserFullName userFullName ) {
-    return new Snapshot( userFullName, null );
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.uniqueName == null )
+      ? 0
+      : this.uniqueName.hashCode( ) );
+    return result;
   }
   
-  public String mapState( ) {
-    switch ( this.getState( ) ) {
-      case GENERATING:
-        return "pending";
-      case EXTANT:
-        return "completed";
-      default:
-        return "failed";
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
     }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    SshKeyPair other = ( SshKeyPair ) obj;
+    if ( this.uniqueName == null ) {
+      if ( other.uniqueName != null ) {
+        return false;
+      }
+    } else if ( !this.uniqueName.equals( other.uniqueName ) ) {
+      return false;
+    }
+    return true;
   }
   
-  public void setMappedState( final String state ) {
-    if ( StorageProperties.Status.creating.toString( ).equals( state ) )
-      this.setState( State.GENERATING );
-    else if ( StorageProperties.Status.pending.toString( ).equals( state ) )
-      this.setState( State.GENERATING );
-    else if ( StorageProperties.Status.completed.toString( ).equals( state ) )
-      this.setState( State.EXTANT );
-    else if ( StorageProperties.Status.available.toString( ).equals( state ) )
-      this.setState( State.EXTANT );
-    else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) this.setState( State.FAIL );
-  }
   
-  public Object morph( final Object o ) {
-    return null;
-  }
-  
-  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
-    snap.setSnapshotId( this.getDisplayName( ) );
-    snap.setStatus( this.mapState( ) );
-    snap.setStartTime( this.getCreationTime( ) );
-    snap.setVolumeId( this.getParentVolume( ) );
-    snap.setProgress( this.getState( ).equals( State.EXTANT )
-      ? "100%"
-      : "" );
-    return snap;
-  }
-  
-  public String getParentVolume( ) {
-    return parentVolume;
-  }
-  
-  public void setParentVolume( final String parentVolume ) {
-    this.parentVolume = parentVolume;
-  }
-  
-  public String getCluster( ) {
-    return cluster;
-  }
-  
-  public void setCluster( String cluster ) {
-    this.cluster = cluster;
-  }
-  
-  /**
-   * @see com.eucalyptus.util.Mappable#getName()
-   */
   @Override
   public String getName( ) {
     return this.getDisplayName( );
@@ -188,18 +191,15 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   }
   
   @Override
-  public int compareTo( SnapshotMetadata o ) {
-    return this.getDisplayName( ).compareTo( o.getName( ) );
-  }
-  
-  @Override
   public FullName getFullName( ) {
-    return this.fullName == null
-      ? this.fullName = FullName.create.vendor( "euca" )
-                                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( this.getOwnerAccountId( ) )
-                                       .relativeId( "snapshot", this.getDisplayName( ) )
-      : this.fullName;
+    return this.fullName == null ? this.fullName = FullName.create.vendor( "euca" )
+      .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+      .namespace( this.getOwnerAccountId( ) )
+      .relativeId( "keypair", this.getDisplayName( ) ) : this.fullName;
   }
-  
+  @Override
+  public int compareTo( KeyPair that ) {
+    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+
 }

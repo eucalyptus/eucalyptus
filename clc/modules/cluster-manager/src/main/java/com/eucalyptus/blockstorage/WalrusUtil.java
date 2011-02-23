@@ -81,9 +81,10 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
@@ -103,7 +104,7 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
-  public static void checkValid( Image imgInfo ) {
+  public static void checkValid( ImageInfo imgInfo ) {
 //    String[] parts = imgInfo.getImageLocation( ).split( "/" );
 //    CheckImageType check = new CheckImageType( ).regarding( );
 //    check.setBucket( parts[0] );
@@ -111,7 +112,7 @@ public class WalrusUtil {
 //    RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( check );
   }
   
-  public static void triggerCaching( Image imgInfo ) {
+  public static void triggerCaching( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
     CacheImageType cache = new CacheImageType( ).regarding( );
     cache.setBucket( parts[0] );
@@ -119,9 +120,9 @@ public class WalrusUtil {
     RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
   }
   
-  public static void invalidate( Image imgInfo ) {
+  public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    imgInfo.setImageState( "deregistered" );
+    imgInfo.setImageState( Images.State.deregistered );
     try {
       RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
@@ -159,22 +160,22 @@ public class WalrusUtil {
     return null;
   }
   
-  public static void verifyManifestIntegrity( final Image imgInfo ) throws EucalyptusCloudException {
+  public static void verifyManifestIntegrity( User user, String imageLocation ) throws EucalyptusCloudException {
     if( true ) return;//TODO:GRZE:BUG:BUG
-    String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
+    String[] imagePathParts = imageLocation.split( "/" );
     GetObjectResponseType reply = null;
     GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true );
     msg.setUser( FakePrincipals.SYSTEM_USER );
     try {
       reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
       if ( reply == null || reply.getBase64Data( ) == null ) {
-        throw new EucalyptusCloudException( "No data: " + imgInfo.getImageLocation( ) );
+        throw new EucalyptusCloudException( "No data: " + imageLocation );
       } else {
         if ( LogLevels.DEBUG ) {
           LOG.debug( "Got the manifest to verify: " );
           LOG.debug( Hashes.base64decode( reply.getBase64Data( ) ) );
         }
-        if( checkManifest( imgInfo, reply.getBase64Data( ) ) ) {
+        if( checkManifest( user, reply.getBase64Data( ) ) ) {
           return;
         } else {
           throw new EucalyptusCloudException( "Failed to verify signature." );
@@ -183,11 +184,11 @@ public class WalrusUtil {
     } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
       LOG.debug( e );
-      throw new EucalyptusCloudException( "Invalid manifest reference: " + imgInfo.getImageLocation( ) + " because of " + e.getMessage( ), e );
+      throw new EucalyptusCloudException( "Invalid manifest reference: " + imageLocation + " because of " + e.getMessage( ), e );
     }
   }
 
-  private static boolean checkManifest( final Image imgInfo, String manifest ) throws EucalyptusCloudException {
+  private static boolean checkManifest( User user, String manifest ) throws EucalyptusCloudException {
     XMLParser parser = new XMLParser( Hashes.base64decode( manifest ) );
     String encryptedKey = parser.getValue( "//ec2_encrypted_key" );
     String encryptedIV = parser.getValue( "//ec2_encrypted_iv" );
@@ -196,7 +197,6 @@ public class WalrusUtil {
     String machineConfiguration = parser.getXML( "machine_configuration" );
     String pad = (machineConfiguration + image);
     try {
-      User user = Accounts.lookupUserById( imgInfo.getImageOwnerId( ) );
       for ( Certificate cert : user.getCertificates( ) ) {
         if ( cert != null && cert instanceof X509Certificate && ImageUtil.verifyManifestSignature( (X509Certificate) cert, signature, pad  )) {
           return true;

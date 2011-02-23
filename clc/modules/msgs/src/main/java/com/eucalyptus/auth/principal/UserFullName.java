@@ -71,9 +71,11 @@ import com.google.common.collect.ImmutableList;
 
 public class UserFullName extends AccountFullName implements FullName {
   private final String userId;
+  private final String userName;
   private UserFullName( User user ) {
     super( Accounts.lookupAccount( user ), "user", user.getName( ) );
     this.userId = user.getId( );
+    this.userName = user.getName( );
   }
   
   public static UserFullName getInstance( User user ) {
@@ -111,5 +113,13 @@ public class UserFullName extends AccountFullName implements FullName {
       if ( other.userId != null ) return false;
     } else if ( !this.userId.equals( other.userId ) ) return false;
     return true;
+  }
+
+  public String getUserId( ) {
+    return this.userId;
+  }
+
+  public String getUserName( ) {
+    return this.userName;
   }
 }

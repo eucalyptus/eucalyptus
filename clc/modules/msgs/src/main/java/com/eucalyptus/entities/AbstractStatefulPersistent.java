@@ -1,5 +1,3 @@
-package com.eucalyptus.util;
-
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -55,19 +53,92 @@ package com.eucalyptus.util;
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface Mappable<T,K> extends Comparable<T> {
-  public abstract K getName( );
-  public abstract boolean equals( final Object o );  
-  public abstract int hashCode( );
-  public abstract String toString( );
+package com.eucalyptus.entities;
 
+import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.MappedSuperclass;
+import org.hibernate.annotations.NaturalId;
+
+@MappedSuperclass
+public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
+  @Column( name = "metadata_state" )
+  @Enumerated( EnumType.STRING )
+  STATE            state;
+  @NaturalId
+  @Column( name = "metadata_display_name" )
+  protected String displayName;
+  @Column( name = "metadata_creation_time" )
+  private Date     creationTime;
+  
+  public AbstractStatefulPersistent( ) {
+    super( );
+  }
+  
+  public AbstractStatefulPersistent( STATE state, String displayName ) {
+    super( );
+    this.state = state;
+    this.displayName = displayName;
+  }
+  
+  public AbstractStatefulPersistent( String displayName ) {
+    super( );
+    this.displayName = displayName;
+  }
+  
+  public STATE getState( ) {
+    return this.state;
+  }
+  
+  public void setState( STATE state ) {
+    this.state = state;
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( displayName == null )
+      ? 0
+      : displayName.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    AbstractStatefulPersistent other = ( AbstractStatefulPersistent ) obj;
+    if ( displayName == null ) {
+      if ( other.displayName != null ) return false;
+    } else if ( !displayName.equals( other.displayName ) ) return false;
+    return true;
+  }
+  
+  public String getDisplayName( ) {
+    return this.displayName;
+  }
+  
+  public void setDisplayName( String displayName ) {
+    this.displayName = displayName;
+  }
+  
+  public Date getCreationTime( ) {
+    return this.creationTime;
+  }
+  
+  public void setCreationTime( Date creationTime ) {
+    this.creationTime = creationTime;
+  }
+  
 }

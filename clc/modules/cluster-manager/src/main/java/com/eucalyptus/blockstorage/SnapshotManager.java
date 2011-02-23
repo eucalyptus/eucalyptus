@@ -122,7 +122,7 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( request.getUserErn( ).getUniqueId( ), request.getVolumeId( ) ) );
+    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( request.getUserErn( ), request.getVolumeId( ) ) );
     String partition = vol.getCluster( );
     Service sc = null;
     try {
@@ -159,9 +159,9 @@ public class SnapshotManager {
     while ( true ) {
       newId = Crypto.generateId( request.getUserErn( ).getUniqueId( ), ID_PREFIX );
       try {
-        db.getUnique( Snapshot.ownedBy( newId ) );
+        db.getUnique( Snapshot.named( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        snap = new Snapshot( request.getUserErn( ).getUniqueId( ), newId, vol.getDisplayName( ) );
+        snap = new Snapshot( request.getUserErn( ), newId, vol.getDisplayName( ) );
         db.add( snap );
         break;
       }
@@ -179,14 +179,14 @@ public class SnapshotManager {
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ) );
     }
     db.commit( );
-    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getUserName( ),
+    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getOwner( ),
                       "snapshot=" + snap.getDisplayName( ),
                       "volume=" + snap.getParentVolume( ) ).info( );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
-    snapMsg.setOwnerId( snap.getUserName( ) );
+    snapMsg.setOwnerId( snap.getOwnerAccountId( ) );
     snapMsg.setVolumeSize( vol.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
@@ -197,7 +197,7 @@ public class SnapshotManager {
     reply.set_return( false );
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     try {
-      Snapshot snap = db.getUnique( Snapshot.named( request.getUserErn( ).getUniqueId( ), request.getSnapshotId( ) ) );
+      Snapshot snap = db.getUnique( Snapshot.named( request.getUserErn( ) , request.getSnapshotId( ) ) );
       if ( !State.EXTANT.equals( snap.getState( ) ) ) {
         db.rollback( );
         reply.set_return( false );
@@ -209,7 +209,7 @@ public class SnapshotManager {
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
-        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getUserName( ),
+        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getOwner( ),
                           "snapshot=" + snap.getDisplayName( ) ).info( );
       } else {
         db.rollback( );
@@ -229,7 +229,7 @@ public class SnapshotManager {
     
     EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( request.getUserErn( ).getUniqueId( ) ) );
+      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( request.getUserErn( ) ) );
       
       for ( Snapshot v : snapshots ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
@@ -242,7 +242,7 @@ public class SnapshotManager {
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
               if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
               snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-              snapReply.setOwnerId( v.getUserName( ) );
+              snapReply.setOwnerId( v.getOwnerAccountId( ) );
               reply.getSnapshotSet( ).add( snapReply );
             }
           } catch ( NoSuchElementException e ) {

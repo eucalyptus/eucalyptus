@@ -95,7 +95,7 @@ public class Lookups {
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  public static <T extends HasOwner> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends HasOwningAccount> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
     if( lookupTypes.size( ) != 1 ) {

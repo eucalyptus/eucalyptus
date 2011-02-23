@@ -1,5 +1,3 @@
-package com.eucalyptus.util;
-
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -55,19 +53,88 @@ package com.eucalyptus.util;
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface Mappable<T,K> extends Comparable<T> {
-  public abstract K getName( );
-  public abstract boolean equals( final Object o );  
-  public abstract int hashCode( );
-  public abstract String toString( );
+package com.eucalyptus.images;
 
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.DiscriminatorType;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.images.Images.Architecture;
+import com.eucalyptus.images.Images.Platform;
+
+@Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "Images" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
+@DiscriminatorColumn( name = "image_type", discriminatorType = DiscriminatorType.STRING )
+@DiscriminatorValue( value = "machine" )
+public class MachineImageInfo extends ImageInfo {
+  @Column( name = "image_kernel_id" )
+  private String kernelId;
+  @Column( name = "image_ramdisk_id" )
+  private String ramdiskId;
+  
+  public MachineImageInfo( ) {
+    super( );
+  }
+
+  public MachineImageInfo( String imageId ) {
+    super( imageId );
+  }
+
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
+    super( userFullName, imageId, imageLocation, arch, platform );
+  }
+
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
+    super( userFullName, imageId, imageLocation, arch, platform );
+    this.kernelId = kernelId;
+    this.ramdiskId = ramdiskId;
+  }
+
+  @Override
+  public Images.Type getImageType( ) {
+    return Images.Type.machine;
+  }
+
+  public String getKernelId( ) {
+    return kernelId;
+  }
+  
+  public void setKernelId( String kernelId ) {
+    this.kernelId = kernelId;
+  }
+  
+  public String getRamdiskId( ) {
+    return ramdiskId;
+  }
+  
+  public void setRamdiskId( String ramdiskId ) {
+    this.ramdiskId = ramdiskId;
+  }
+  
+  public boolean hasKernel( ) {
+    return this.getKernelId( ) != null;
+  }
+
+  public boolean hasRamdisk( ) {
+    return this.getRamdiskId( ) != null;
+  }
 }

@@ -61,74 +61,14 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth;
+package com.eucalyptus.cloud;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.Counters;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.VmType;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasOwningAccount;
 
-@Provides( Eucalyptus.class )
-@RunDuring( Bootstrap.Stage.UserCredentialsInit )
-public class MetadataStateBootstrapper extends Bootstrapper {
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ensureCountersExist( );
-    ensureVmTypesExist( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
+@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_VOLUME )
+public interface VolumeMetadata extends HasFullName<VolumeMetadata>, HasOwningAccount {
 
-  private static void ensureCountersExist( ) {
-    Counters.getNextId( );
-  }
-
-  private static void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
-    try {
-      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
-        db.add( new VmType( "m1.small", 1, 2, 128 ) );
-        db.add( new VmType( "c1.medium", 1, 5, 256 ) );
-        db.add( new VmType( "m1.large", 2, 10, 512 ) );
-        db.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
-        db.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
-      }
-      db.commit( );
-    } catch ( Exception e ) {
-      db.rollback( );
-    }
-  }
-  
 }

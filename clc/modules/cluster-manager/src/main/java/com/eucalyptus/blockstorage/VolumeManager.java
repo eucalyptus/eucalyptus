@@ -73,6 +73,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -133,7 +134,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );
     if ( request.getSnapshotId( ) != null ) {
       try {
-        db.recast( Snapshot.class ).getUnique( Snapshot.named( request.getUserErn( ).getUniqueId( ), request.getSnapshotId( ) ) );
+        db.recast( Snapshot.class ).getUnique( Snapshot.named( request.getUserErn( ), request.getSnapshotId( ) ) );
       } catch ( EucalyptusCloudException e ) {
         LOG.debug( e, e );
         db.rollback( );
@@ -143,12 +144,12 @@ public class VolumeManager {
     String newId = null;
     Volume newVol = null;
     while ( true ) {
-      newId = Crypto.generateId( request.getUserErn( ).getUniqueId( ), ID_PREFIX );
+      newId = Crypto.generateId( request.getUserErn( ).getAccountId( ), ID_PREFIX );
       try {
         db.getUnique( Volume.named( null, newId ) );
       } catch ( EucalyptusCloudException e ) {
         try {
-          newVol = new Volume( request.getUserErn( ).getUniqueId( ), newId, new Integer( request.getSize( ) != null ? request.getSize( ) : "-1" ),
+          newVol = new Volume( request.getUserErn( ), newId, new Integer( request.getSize( ) != null ? request.getSize( ) : "-1" ),
                                request.getAvailabilityZone( ), request.getSnapshotId( ) );
           db.add( newVol );
           db.commit( );
@@ -165,13 +166,13 @@ public class VolumeManager {
       req.setUser( request.getUser( ) );
       StorageUtil.send( sc.getName( ), req );
       EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE )
-                 .withDetails( newVol.getUserName( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )
+                 .withDetails( newVol.getOwner( ).toString( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )
                  .withDetails( "cluster", newVol.getCluster( ) ).withDetails( "snapshot", newVol.getParentSnapshot( ) ).info( );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {
         db = VolumeManager.getEntityWrapper( );
-        Volume d = db.getUnique( Volume.named( newVol.getUserName( ), newVol.getDisplayName( ) ) );
+        Volume d = db.getUnique( Volume.named( (UserFullName) newVol.getOwner( ), newVol.getDisplayName( ) ) );
         db.delete( d );
         db.commit( );
       } catch ( Throwable e1 ) {
@@ -192,7 +193,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );
     boolean reallyFailed = false;
     try {
-      Volume vol = db.getUnique( Volume.named( request.getUserErn( ).getUniqueId( ), request.getVolumeId( ) ) );
+      Volume vol = db.getUnique( Volume.named( request.getUserErn( ), request.getVolumeId( ) ) );
       for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
         try {
           vm.lookupVolumeAttachment( request.getVolumeId( ) );
@@ -211,7 +212,7 @@ public class VolumeManager {
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
         db.commit( );
-        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE ).withDetails( vol.getUserName( ), vol.getDisplayName( ) , "size", vol.getSize( ).toString( ) )
+        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE ).withDetails( vol.getOwner( ).toString( ), vol.getDisplayName( ) , "size", vol.getSize( ).toString( ) )
                           .withDetails( "cluster", vol.getCluster( ) ).withDetails( "snapshot", vol.getParentSnapshot( ) ).info( );
       } else {
         reallyFailed = true;
@@ -244,14 +245,14 @@ public class VolumeManager {
           }} );
       }
       
-      List<Volume> volumes = db.query( Volume.ownedBy( request.getUserErn( ).getUniqueId( ) ) );
+      List<Volume> volumes = db.query( Volume.ownedBy( request.getUserErn( ) ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : volumes ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
           EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE )
-                     .withDetails( v.getUserName( ), v.getDisplayName( ), "size", v.getSize( ).toString( ) ).withDetails( "cluster", v.getCluster( ) )
+                     .withDetails( v.getOwner( ).toString( ), v.getDisplayName( ), "size", v.getSize( ).toString( ) ).withDetails( "cluster", v.getCluster( ) )
                      .withDetails( "snapshot", v.getParentSnapshot( ) ).info( );
           db.delete( v );
         }
@@ -312,10 +313,9 @@ public class VolumeManager {
     }
     
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );
-    FullName userName = request.getUserErn( );
     Volume volume = null;
     try {
-      volume = db.getUnique( Volume.named( userName.getUniqueId( ), request.getVolumeId( ) ) );
+      volume = db.getUnique( Volume.named( request.getUserErn( ), request.getVolumeId( ) ) );
       if ( volume.getRemoteDevice( ) == null ) {
         StorageUtil.getVolumeReply( new HashMap<String,AttachedVolume>(), Lists.newArrayList( volume ) );
       }
@@ -325,7 +325,7 @@ public class VolumeManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
     }
-    if ( !userName.equals( vm.getOwner( ) ) ) {
+    if ( !request.getUserErn( ).equals( vm.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Can only attach volume " + request.getVolumeId() + " to your own instance" );
     }
     ServiceConfiguration sc;
@@ -362,7 +362,7 @@ public class VolumeManager {
     attachVol.setStatus( "attaching" );
     vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
-               .withDetails( volume.getUserName( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
+               .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "cluster", vm.getPlacement( ) ).info( );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
@@ -374,7 +374,7 @@ public class VolumeManager {
     
     EntityWrapper<Volume> db = VolumeManager.getEntityWrapper( );
     try {
-      db.getUnique( Volume.named( request.getUserErn( ).getUniqueId( ), request.getVolumeId( ) ) );
+      db.getUnique( Volume.named( request.getUserErn( ), request.getVolumeId( ) ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );

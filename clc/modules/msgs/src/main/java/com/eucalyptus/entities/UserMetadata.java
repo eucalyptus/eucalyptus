@@ -64,64 +64,66 @@
 package com.eucalyptus.entities;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import javax.persistence.MappedSuperclass;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasOwningUser;
 
-@Entity
-@PersistenceContext(name="eucalyptus_general")
-@Table( name = "metadata_network_rule_ip_range" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange {
-  @Id
-  @GeneratedValue
-  @Column( name = "metadata_network_rule_ip_range_id" )
-  Long id = -1l;
-  @Column( name = "metadata_network_rule_ip_range_value" )
-  String value;
-  public IpRange(){
+@MappedSuperclass
+public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
+  @Column( name = "metadata_user_id" )
+  protected String ownerUserId;
+  @Column( name = "metadata_user_name" )
+  protected String ownerUserName;
+  
+  public UserMetadata( ) {}
+  
+  public UserMetadata( UserFullName user ) {
+    super( user );
+    this.ownerUserId = user != null ? user.getUniqueId( ) : null;
+    this.ownerUserName = user != null ? user.getName( ) : null;
   }
-  public IpRange( final String value ) {
-    this.value = value;
+  
+  public UserMetadata( UserFullName user, String displayName ) {
+    super( user, displayName );
+    this.ownerUserId = user != null ? user.getUniqueId( ) : null;
+    this.ownerUserName = user != null ? user.getName( ) : null;
   }
-
-  public Long getId( ) {
-    return this.id;
-  }
-  public void setId( Long id ) {
-    this.id = id;
-  }
-  public String getValue( ) {
-    return this.value;
-  }
-  public void setValue( String value ) {
-    this.value = value;
-  }
+  
   @Override
-  public String toString( ) {
-    return String.format( "IpRange:%s", this.value );
+  public FullName getOwner( ) {
+    if ( super.owner == null ) {
+      return ( super.owner = Accounts.lookupUserFullNameById( this.ownerAccountId ) );
+    } else {
+      return super.owner;
+    }
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    int result = super.hashCode( );
+    result = prime * result + ( ( ownerUserId == null )
+      ? 0
+      : ownerUserId.hashCode( ) );
     return result;
   }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    IpRange other = ( IpRange ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) return false;
-    } else if ( !this.value.equals( other.value ) ) return false;
-    return true;
-  }  
+  
+  public String getOwnerUserId( ) {
+    return this.ownerUserId;
+  }
+  
+  public void setOwnerUserId( String ownerUserId ) {
+    this.ownerUserId = ownerUserId;
+  }
+  
+  public String getOwnerUserName( ) {
+    return this.ownerUserName;
+  }
+  
+  public void setOwnerUserName( String ownerUserName ) {
+    this.ownerUserName = ownerUserName;
+  }
+  
 }

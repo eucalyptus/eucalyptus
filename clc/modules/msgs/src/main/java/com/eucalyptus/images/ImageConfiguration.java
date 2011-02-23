@@ -61,8 +61,44 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util;
+package com.eucalyptus.images;
 
-public interface HasOwner<T> extends HasFullName<T> {
-  public abstract FullName getOwner( );
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.util.EucalyptusCloudException;
+
+@ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
+public class ImageConfiguration extends AbstractPersistent {
+  @Transient
+  private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
+  @ConfigurableField( description = "The default value used to determine whether or not images are marked 'public' when first registered." )
+  private Boolean defaultVisibility = true;
+
+  public ImageConfiguration( ) {
+    super( );
+  }
+
+  public Boolean getDefaultVisibility( ) {
+    return this.defaultVisibility;
+  }
+
+  public void setDefaultVisibility( Boolean defaultVisibility ) {
+    this.defaultVisibility = defaultVisibility;
+  }
+  public static ImageConfiguration getInstance( ) {
+    ImageConfiguration ret = null;
+    if( ( ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) ) ) == null ) {
+      try {
+        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+      } catch ( RecoverablePersistenceException ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    return ret;
+  }
 }

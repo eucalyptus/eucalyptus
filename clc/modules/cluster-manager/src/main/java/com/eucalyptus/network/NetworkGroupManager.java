@@ -16,8 +16,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.ResourceOwnerLookup;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.NetworkRule;
-import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;

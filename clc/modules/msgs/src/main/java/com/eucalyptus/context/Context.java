@@ -81,6 +81,10 @@ public class Context {
     return UserFullName.getInstance( this.getUser( ) );
   }
   
+  public boolean hasSystemPrivileges( ) {
+    return this.getUser( ).isAccountAdmin( ) || this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( );
+  }
+  
   public User getUser( ) {
     return check( this.user );
   }

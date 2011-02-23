@@ -57,91 +57,118 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
+ *******************************************************************************
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sla;
 
-import java.util.List;
+package com.eucalyptus.util;
+
+import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.util.Counters;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 
-public class VmAdmissionControl {
+@Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "counters" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class Counters extends AbstractPersistent implements Serializable {
+  private static Logger   LOG = Logger.getLogger( Counters.class );
+  private static Counters singleton;
   
-  private static Logger LOG = Logger.getLogger( VmAdmissionControl.class );
-  
-  public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
-    //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
-    VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
-    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
-      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
-    }
-    vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
-    
-    byte[] userData = new byte[0];
-    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
-      try {
-        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
-      } catch ( Exception e ) {
-      }
-    }
-    vmAllocInfo.setUserData( userData );
-    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
-    return vmAllocInfo;
-  }
-  
-  public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    List<ResourceAllocator> pending = Lists.newArrayList( );
-    pending.add( new NodeResourceAllocator() );
-    if( Clusters.getInstance( ).hasNetworking( ) ) {
-      pending.add( new AddressAllocator() );
-      pending.add( new PrivateNetworkAllocator( ) );
-      pending.add( new SubnetIndexAllocator( ) );
-    }
-    List<ResourceAllocator> finished = Lists.newArrayList( );
-    
-    for( ResourceAllocator allocator : pending ) {
-      try {
-        allocator.allocate( vmAllocInfo );
-        finished.add( allocator );
-      } catch (ScriptExecutionFailedException e) {
-        if( e.getCause() != null ) {
-          throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
-        } else {
-          throw new EucalyptusCloudException( e.getMessage( ), e );
-        }
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
-        try {
-          allocator.fail( vmAllocInfo, e );
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-        }
-        for( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
+  public static long getIdBlock( int length ) {
+    if ( singleton != null ) {
+      return singleton.getBlock( length );
+    } else {
+      synchronized ( Counters.class ) {
+        if ( singleton == null ) {
+          EntityWrapper<Counters> db = new EntityWrapper<Counters>( "eucalyptus_general" );
           try {
-            rollback.fail( vmAllocInfo, e );
-          } catch ( Throwable e1 ) {
-            LOG.debug( e1, e1 );
+            singleton = db.getUnique( new Counters() );
+          } catch ( EucalyptusCloudException e ) {
+            singleton = new Counters( 0l );
+            try {
+              db.add( singleton );
+              db.commit( );
+            } catch ( Exception e1 ) {
+              LOG.fatal( e1, e1 );
+              LOG.fatal( "Failed to initialize system counters.  These are important." );
+              System.exit( -1 );
+            }
           }
         }
-        throw new EucalyptusCloudException( e.getMessage( ), e );
+      }
+      return singleton.getBlock( length );
+    }
+  }
+  
+  public static String getNextId( ) {
+    return Crypto.getDigestBase64( Long.toString( Counters.getIdBlock( 1 ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
+  }
+  
+  @Transient
+  private static Long             period   = 1000l;
+  @Transient
+  private static final AtomicLong tempId   = new AtomicLong( -1 );
+  @Transient
+  private static final AtomicLong lastSave = new AtomicLong( -1 );
+  @Column( name = "msg_count" )
+  private Long                    messageId;
+  
+  public Counters( ) {}
+  public Counters( Long start ) { 
+    this.messageId = start;
+  }
+  
+  public static Counters uninitialized( ) {
+    Counters c = new Counters( );
+    c.setMessageId( null );
+    return c;
+  }
+  
+  Long getBlock( int length ) {
+    final Long idStart;
+    if ( tempId.compareAndSet( -1l, this.messageId ) ) {
+      lastSave.set( tempId.addAndGet( Counters.period ) );
+      idStart = tempId.addAndGet( length );
+    } else {
+      idStart = tempId.addAndGet( length );
+      if ( ( idStart - lastSave.get( ) ) > 1000 ) {
+        try {
+          Transactions.one( Counters.uninitialized( ), new Tx<Counters>() {
+            @Override
+            public void fire( Counters t ) throws Throwable {
+              t.setMessageId( idStart );
+            }
+          } );
+        } catch ( EucalyptusCloudException e ) {
+          LOG.debug( e, e );
+        }
+        lastSave.set( idStart );
       }
     }
-    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ).trace( );
-    return vmAllocInfo;
+    return idStart;
+  }
+  
+  public Long getMessageId( ) {
+    return messageId;
+  }
+  
+  public void setMessageId( Long messageId ) {
+    this.messageId = messageId;
   }
   
 }

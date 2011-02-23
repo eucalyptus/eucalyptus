@@ -82,8 +82,9 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.HasOwner;
+import com.eucalyptus.util.HasOwningAccount;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
@@ -93,7 +94,7 @@ import edu.ucsb.eucalyptus.cloud.Network.FQDN;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
-public class Network implements HasOwner<Network> {
+public class Network implements HasFullName<Network>, HasOwningAccount {
   public String getNetworkName( ) {
     return this.networkName;
   }
@@ -326,6 +327,10 @@ public class Network implements HasOwner<Network> {
   }
   public List<PacketFilterRule> getRules( ) {
     return this.rules;
+  }
+  @Override
+  public String getOwnerAccountId( ) {
+    return this.account.getAccountId( );
   }
 
 }

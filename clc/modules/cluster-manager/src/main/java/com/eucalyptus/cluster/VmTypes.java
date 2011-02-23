@@ -64,8 +64,8 @@
 package com.eucalyptus.cluster;
 
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmType;
 
 import java.util.List;
 import java.util.NavigableSet;

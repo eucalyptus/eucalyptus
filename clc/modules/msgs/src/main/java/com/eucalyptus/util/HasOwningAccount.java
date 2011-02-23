@@ -1,5 +1,3 @@
-package com.eucalyptus.util;
-
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -55,19 +53,17 @@ package com.eucalyptus.util;
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface Mappable<T,K> extends Comparable<T> {
-  public abstract K getName( );
-  public abstract boolean equals( final Object o );  
-  public abstract int hashCode( );
-  public abstract String toString( );
+package com.eucalyptus.util;
 
+public interface HasOwningAccount {
+  public abstract String getOwnerAccountId( );
+  public abstract FullName getOwner( );
 }

@@ -65,20 +65,23 @@
 package com.eucalyptus.images;
 
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.DiscriminatorType;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.Lob;
-import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -89,55 +92,50 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.images.Images.Architecture;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.JoinTx;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.util.TypeMapping;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ImageInfo implements Image {
+@Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
+@DiscriminatorColumn( name = "image_type", discriminatorType = DiscriminatorType.STRING )
+@DiscriminatorValue( value = "kernel_or_ramdisk" )
+public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @Transient
   private static Logger           LOG          = Logger.getLogger( ImageInfo.class );
-  @Transient
-  public static ImageInfo         ALL          = new ImageInfo( );
-  @Id
-  @GeneratedValue
-  @Column( name = "image_id" )
-  private Long                    id           = -1l;
-  @Column( name = "image_name" )
-  private String                  imageId;
   @Column( name = "image_path" )
   private String                  imageLocation;
   @Column( name = "image_availability" )
-  private String                  imageState;
-  @Column( name = "image_owner_id" )
-  private String                  imageOwnerId;
+  @Enumerated( EnumType.STRING )
+  private Images.State            imageState;
   @Column( name = "image_arch" )
-  private String                  architecture;
-  @Column( name = "image_type" )
-  private String                  imageType;
-  @Column( name = "image_kernel_id" )
-  private String                  kernelId;
-  @Column( name = "image_ramdisk_id" )
-  private String                  ramdiskId;
+  @Enumerated( EnumType.STRING )
+  private Images.Architecture     architecture;
   @Column( name = "image_is_public" )
   private Boolean                 imagePublic;
+  @Column( name = "image_platform" )
+  @Enumerated( EnumType.STRING )
+  private Images.Platform         platform;
   @Lob
   @Column( name = "image_signature" )
   private String                  signature;
-  @Column( name = "image_platform" )
-  private String                  platform;
   @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -151,198 +149,70 @@ public class ImageInfo implements Image {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
   @Transient
-  private FullName                owner;
-  
-  public static ImageInfo deregistered( ) {
-    ImageInfo img = new ImageInfo( );
-    img.setImageState( "deregistered" );
-    return img;
-  }
-  
-  public static ImageInfo byOwnerId( String ownerId ) {
-    ImageInfo img = new ImageInfo( );
-    img.setImageOwnerId( ownerId );
-    return img;
-  }
+  private FullName          fullName;
   
   public ImageInfo( ) {}
   
   public ImageInfo( final String imageId ) {
-    this.imageId = imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( );
+    super( );
+    this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
-  public ImageInfo( final String imageLocation, final String imageOwnerId, final String imageState, final Boolean aPublic ) {
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Images.Architecture arch, final Images.Platform platform ) {
+    super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     this.imageLocation = imageLocation;
-    this.imageOwnerId = imageOwnerId;
+    this.imageState = Images.State.pending;
+    this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
+  }
+  
+  public Images.Type getImageType( ) {
+    return null;
+  }
+  
+  public Images.Platform getPlatform( ) {
+    return this.platform;
+  }
+  
+  public void setPlatform( Images.Platform platform ) {
+    this.platform = platform;
+  }
+  
+  public Images.State getImageState( ) {
+    return this.imageState;
+  }
+  
+  public void setImageState( Images.State imageState ) {
     this.imageState = imageState;
-    this.imagePublic = aPublic;
   }
   
-  public ImageInfo( String architecture, String imageId, String imageLocation, String imageOwnerId, String imageState, String imageType, Boolean aPublic,
-                    String kernelId, String ramdiskId ) {
-    this.architecture = architecture;
-    this.imageId = imageId;
-    this.imageLocation = imageLocation;
-    this.imageOwnerId = imageOwnerId;
-    this.imageState = imageState;
-    this.imageType = imageType;
-    this.imagePublic = aPublic;
-    this.kernelId = kernelId;
-    this.ramdiskId = ramdiskId;
-  }
-  
-  public Long getId( ) {
-    return this.id;
-  }
-  
-  public String getArchitecture( ) {
+  public Architecture getArchitecture( ) {
     return this.architecture;
   }
   
-  public void setArchitecture( String architecture ) {
+  public void setArchitecture( Architecture architecture ) {
     this.architecture = architecture;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#getImageId()
-   * @return
-   */
-  public String getImageId( ) {
-    return imageId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setImageId(java.lang.String)
-   * @param imageId
-   */
-  public void setImageId( String imageId ) {
-    this.imageId = imageId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getImageLocation()
-   * @return
-   */
   public String getImageLocation( ) {
     return imageLocation;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#setImageLocation(java.lang.String)
-   * @param imageLocation
-   */
   public void setImageLocation( String imageLocation ) {
     this.imageLocation = imageLocation;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#getImageOwnerId()
-   * @return
-   */
-  @Deprecated public String getImageOwnerId( ) {
-    return this.getOwner( ).getUniqueId( );
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setImageOwnerId(java.lang.String)
-   * @param imageOwnerId
-   */
-  @Deprecated public void setImageOwnerId( String imageOwnerId ) {
-    this.imageOwnerId = imageOwnerId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getImageState()
-   * @return
-   */
-  public String getImageState( ) {
-    return imageState;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setImageState(java.lang.String)
-   * @param imageState
-   */
-  public void setImageState( String imageState ) {
-    this.imageState = imageState;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getImageType()
-   * @return
-   */
-  public String getImageType( ) {
-    return imageType;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setImageType(java.lang.String)
-   * @param imageType
-   */
-  public void setImageType( String imageType ) {
-    this.imageType = imageType;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getPublic()
-   * @return
-   */
   public Boolean getImagePublic( ) {
     return imagePublic;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#setPublic(java.lang.Boolean)
-   * @param aPublic
-   */
   public void setImagePublic( Boolean aPublic ) {
     imagePublic = aPublic;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#getKernelId()
-   * @return
-   */
-  public String getKernelId( ) {
-    return kernelId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setKernelId(java.lang.String)
-   * @param kernelId
-   */
-  public void setKernelId( String kernelId ) {
-    this.kernelId = kernelId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getRamdiskId()
-   * @return
-   */
-  public String getRamdiskId( ) {
-    return ramdiskId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#setRamdiskId(java.lang.String)
-   * @param ramdiskId
-   */
-  public void setRamdiskId( String ramdiskId ) {
-    this.ramdiskId = ramdiskId;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getSignature()
-   * @return
-   */
   public String getSignature( ) {
     return signature;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#setSignature(java.lang.String)
-   * @param signature
-   */
   public void setSignature( final String signature ) {
     this.signature = signature;
   }
@@ -363,19 +233,10 @@ public class ImageInfo implements Image {
     this.permissions = permissions;
   }
   
-  public String getPlatform( ) {
-    return this.platform;
-  }
-  
-  public void setPlatform( String platform ) {
-    this.platform = platform;
-  }
-  
   @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Principal prin ) {
     try {
-      ImageInfo search = new ImageInfo( );
-      search.setImageId( this.imageId );
+      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
@@ -407,8 +268,7 @@ public class ImageInfo implements Image {
   public boolean checkPermission( final Principal prin ) throws EucalyptusCloudException {
     final boolean[] result = { false };
     try {
-      ImageInfo search = new ImageInfo( );
-      search.setImageId( this.imageId );
+      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
@@ -427,8 +287,7 @@ public class ImageInfo implements Image {
   
   public ImageInfo revokePermission( final Principal prin ) {
     try {
-      ImageInfo search = new ImageInfo( );
-      search.setImageId( this.imageId );
+      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
@@ -451,43 +310,17 @@ public class ImageInfo implements Image {
     return this;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#getAsImageDetails()
-   * @return
-   */
-  public ImageDetails getAsImageDetails( ) {
-    ImageDetails i = new ImageDetails( );
-    i.setArchitecture( this.getArchitecture( ) );
-    i.setImageId( this.getImageId( ) );
-    i.setImageLocation( this.getImageLocation( ) );
-    i.setImageOwnerId( this.getImageOwnerId( ) );
-    i.setImageState( this.getImageState( ) );
-    i.setImageType( this.getImageType( ) );
-    i.setIsPublic( this.getImagePublic( ) );
-    i.setKernelId( this.getKernelId( ) );
-    i.setRamdiskId( this.getRamdiskId( ) );
-    i.setPlatform( this.getPlatform( ) );
-    return i;
-  }
-  
-  /**
-   * @see com.eucalyptus.images.Image#getProductCodes()
-   * @return
-   */
   public Set<ProductCode> getProductCodes( ) {
     return this.productCodes;
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#setProductCodes(java.util.List)
-   * @param productCodes
-   */
   public void setProductCodes( final Set<ProductCode> productCodes ) {
     this.productCodes = productCodes;
   }
   
   /**
-   * @see com.eucalyptus.images.Image#equals(java.lang.Object)
+   * @see com.eucalyptus.util.Mappable#getName()
+   * @see com.eucalyptus.entities.UserMetadata#equals(java.lang.Object)
    * @param o
    * @return
    */
@@ -498,25 +331,21 @@ public class ImageInfo implements Image {
     
     ImageInfo imageInfo = ( ImageInfo ) o;
     
-    if ( !this.imageId.equals( imageInfo.imageId ) ) return false;
+    if ( !this.getDisplayName( ).equals( imageInfo.getDisplayName( ) ) ) return false;
     
     return true;
   }
   
   /**
-   * @see com.eucalyptus.images.Image#hashCode()
+   * @see com.eucalyptus.entities.UserMetadata#hashCode()
+   * @see com.eucalyptus.util.Mappable#hashCode()
    * @return
    */
   @Override
   public int hashCode( ) {
-    return this.imageId.hashCode( );
+    return this.getDisplayName( ).hashCode( );
   }
   
-  /**
-   * @see com.eucalyptus.images.Image#isAllowed(com.eucalyptus.auth.UserInfo)
-   * @param user
-   * @return
-   */
   public boolean isAllowed( User user ) {
     //try {
     //  if ( Users.lookupUser( user.getUserName( ) ).isAdministrator( ) || user.getUserName( ).equals( this.getImageOwnerId( ) ) ) return true;
@@ -533,7 +362,7 @@ public class ImageInfo implements Image {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo image = null;
     try {
-      image = db.getUnique( new ImageInfo( imageId ) );
+      image = db.getUnique( Images.exampleWithImageId( imageId ) );
       db.commit( );
     } catch ( Throwable t ) {
       db.commit( );
@@ -542,20 +371,33 @@ public class ImageInfo implements Image {
   }
   
   /**
-   * @see com.eucalyptus.images.Image#toString()
+   * @see com.eucalyptus.util.Mappable#toString()
    * @return
    */
   @Override
   public String toString( ) {
-    return this.imageId;
+    return this.getFullName( ).toString( );
   }
   
   public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
   
-  static class ImageInfoToDetails implements Function<ImageInfo, ImageDetails> {
+  static class ImageInfoToDetails implements TypeMapping<ImageInfo, ImageDetails> {
     @Override
     public ImageDetails apply( ImageInfo arg0 ) {
-      return arg0.getAsImageDetails( );
+      ImageDetails i = new ImageDetails( );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageOwnerId( arg0.getOwner( ).toString( ) );
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      if ( arg0 instanceof MachineImageInfo ) {
+        i.setImageType( ( ( MachineImageInfo ) arg0 ).getImageType( ).toString( ) );
+        i.setKernelId( ( ( MachineImageInfo ) arg0 ).getKernelId( ) );
+        i.setRamdiskId( ( ( MachineImageInfo ) arg0 ).getRamdiskId( ) );
+        i.setPlatform( ( ( MachineImageInfo ) arg0 ).getPlatform( ).toString( ) );
+      }
+      return i;
     }
   }
   
@@ -564,28 +406,12 @@ public class ImageInfo implements Image {
    */
   @Override
   public String getName( ) {
-    return this.getImageId( );
+    return this.getDisplayName( );
   }
   
-  /**
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
   @Override
   public int compareTo( Image o ) {
-    return this.getImageId( ).compareTo( o.getImageId( ) );
-  }
-  
-  /**
-   * @see com.eucalyptus.util.HasOwner#getOwner()
-   * @return
-   */
-  @Override
-  public FullName getOwner( ) {
-    if ( this.owner == null ) {
-      return ( this.owner = Accounts.lookupUserFullNameById( imageOwnerId ) );
-    } else {
-      return this.owner;
-    }
+    return this.getDisplayName( ).compareTo( o.getName( ) );
   }
   
   @Override
@@ -595,6 +421,10 @@ public class ImageInfo implements Image {
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Eucalyptus.class ).name( ) ).namespace( this.getOwner( ).getNamespace( ) ).relativeId( "image", this.getImageId( ) );
+    return this.fullName == null ? this.fullName = FullName.create.vendor( "euca" )
+      .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+      .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountId( ) )
+      .relativeId( "image", this.getDisplayName( ) ) : this.fullName;
   }
+  
 }

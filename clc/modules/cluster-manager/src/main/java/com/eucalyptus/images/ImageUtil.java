@@ -82,6 +82,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -89,7 +90,6 @@ import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
@@ -116,14 +116,14 @@ public class ImageUtil {
   }
   
   public static String newImageId( final String imagePrefix, final String imageLocation ) {
-    EntityWrapper<Image> db = new EntityWrapper<Image>( );
-    Image query = new ImageInfo( );
-    query.setImageId( generateImageId( imagePrefix, imageLocation ) );
-    LOG.info( "Trying to lookup using created AMI id=" + query.getImageId( ) );
-    for ( ; db.query( query ).size( ) != 0; query.setImageId( generateImageId( imagePrefix, imageLocation ) ) );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    String testId = generateImageId( imagePrefix, imageLocation );
+    ImageInfo query = Images.exampleWithImageId( testId );
+    LOG.info( "Trying to lookup using created AMI id=" + query.getDisplayName( ) );
+    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( generateImageId( imagePrefix, imageLocation ) ) );
     db.commit( );
-    LOG.info( "Assigning imageId=" + query.getImageId( ) );
-    return query.getImageId( );
+    LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
+    return query.getDisplayName( );
   }
   
   public static boolean verifyManifestSignature( final X509Certificate cert, final String signature, String pad ) {
@@ -239,7 +239,7 @@ public class ImageUtil {
   private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     if ( isSet( searchId ) ) try {
-      Image img = db.getUnique( new ImageInfo( searchId ) );
+      ImageInfo img = db.getUnique( Images.exampleWithImageId( searchId ) );
       WalrusUtil.invalidate( img );
       db.commit( );
       } catch ( EucalyptusCloudException e ) {
@@ -248,10 +248,10 @@ public class ImageUtil {
       }
   }
   
-  public static Image getImageInfobyId( String searchId ) throws EucalyptusCloudException {
+  public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     if ( isSet( searchId ) ) try {
-      Image imgInfo = db.getUnique( new ImageInfo( searchId ) );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( searchId ) );
       db.commit( );
       return imgInfo;
       } catch ( EucalyptusCloudException e ) {
@@ -360,16 +360,18 @@ public class ImageUtil {
     }
   }
   
-  public static boolean modifyImageInfo( final String imageId, final String userId, final boolean isAdmin, final List<LaunchPermissionItemType> addList, final List<LaunchPermissionItemType> remList ) {
+  public static boolean modifyImageInfo( final User requestUser, final String imageId, final List<LaunchPermissionItemType> addList, final List<LaunchPermissionItemType> remList ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo imgInfo = null;
     try {
-      imgInfo = db.getUnique( new ImageInfo( imageId ) );
+      imgInfo = db.getUnique( Images.exampleWithImageId( imageId ) );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       return false;
     }
-    if ( !userId.equals( imgInfo.getImageOwnerId( ) ) && !isAdmin ) return false;
+    Account account = Accounts.lookupAccount( requestUser );
+    String accountId = account.getId( );
+    if ( !accountId.equals( imgInfo.getOwnerAccountId( ) ) && !requestUser.isSystemAdmin( ) ) return false;
     try {
       applyImageAttributes( db, imgInfo, addList, true );
       applyImageAttributes( db, imgInfo, remList, false );
@@ -396,9 +398,9 @@ public class ImageUtil {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     List<ImageDetails> repList = Lists.newArrayList( );
     try {
-      List<ImageInfo> results = db.query( new ImageInfo( ) );
+      List<ImageInfo> results = db.query( Images.ALL );
       for ( ImageInfo img : results ) {
-        ImageDetails imgDetails = img.getAsImageDetails( );
+        ImageDetails imgDetails = ImageInfo.TO_IMAGE_DETAILS.apply( img );
         if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( img ) ) ) {
           repList.add( imgDetails );
         }
@@ -417,7 +419,7 @@ public class ImageUtil {
     if ( owners.remove( "self" ) ) owners.add( user.getId( ) );
     try {
       for ( String userName : owners ) {
-        Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.byOwnerId( userName ) ), new Predicate<ImageInfo>( ) {
+        Iterable<ImageInfo> results = Iterables.filter( db.query( Images.exampleWithOwnerAccountId( user.getAccount( ).getId( ) ) ), new Predicate<ImageInfo>( ) {
           @Override
           public boolean apply( ImageInfo arg0 ) {
             return ( imgList.isEmpty( ) || imgList.contains( arg0 ) )
@@ -441,7 +443,7 @@ public class ImageUtil {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
         final User execUser = Accounts.lookupUserById( execUserId );
-        Iterable<ImageInfo> results = Iterables.filter( db.query( ImageInfo.ALL ), new Predicate<ImageInfo>( ) {
+        Iterable<ImageInfo> results = Iterables.filter( db.query( Images.ALL ), new Predicate<ImageInfo>( ) {
           @Override
           public boolean apply( ImageInfo arg0 ) {
             return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
@@ -460,7 +462,7 @@ public class ImageUtil {
   public static void cleanDeregistered( ) {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     try {
-      List<ImageInfo> imgList = db.query( ImageInfo.deregistered( ) );
+      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( Images.State.deregistered ) );
       for ( ImageInfo deregImg : imgList ) {
         try {
           db.delete( deregImg );

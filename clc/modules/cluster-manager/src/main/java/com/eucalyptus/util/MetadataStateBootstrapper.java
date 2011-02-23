@@ -1,5 +1,3 @@
-package com.eucalyptus.util;
-
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -55,19 +53,81 @@ package com.eucalyptus.util;
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-public interface Mappable<T,K> extends Comparable<T> {
-  public abstract K getName( );
-  public abstract boolean equals( final Object o );  
-  public abstract int hashCode( );
-  public abstract String toString( );
+package com.eucalyptus.util;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.vm.VmType;
+
+@Provides( Eucalyptus.class )
+@RunDuring( Bootstrap.Stage.UserCredentialsInit )
+public class MetadataStateBootstrapper extends Bootstrapper {
+  
+  @Override
+  public boolean load( ) throws Exception {
+    ensureCountersExist( );
+    ensureVmTypesExist( );
+    return true;
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+
+  private static void ensureCountersExist( ) {
+    Counters.getNextId( );
+  }
+
+  private static void ensureVmTypesExist( ) {
+    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
+    try {
+      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
+        db.add( new VmType( "m1.small", 1, 2, 128 ) );
+        db.add( new VmType( "c1.medium", 1, 5, 256 ) );
+        db.add( new VmType( "m1.large", 2, 10, 512 ) );
+        db.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
+        db.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
+      }
+      db.commit( );
+    } catch ( Exception e ) {
+      db.rollback( );
+    }
+  }
+  
 }

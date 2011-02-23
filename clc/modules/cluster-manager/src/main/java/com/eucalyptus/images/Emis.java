@@ -82,38 +82,47 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
-  public static String                   IMAGE_MACHINE          = "machine";
-  public static String                   IMAGE_KERNEL           = "kernel";
-  public static String                   IMAGE_RAMDISK          = "ramdisk";
-  public static String                   IMAGE_MACHINE_PREFIX   = "emi";
-  public static String                   IMAGE_KERNEL_PREFIX    = "eki";
-  public static String                   IMAGE_RAMDISK_PREFIX   = "eri";
-  public static String                   IMAGE_PLATFORM_DEFAULT = "linux";
-  public static String                   IMAGE_PLATFORM_WINDOWS = "windows";
-  private static final Lookup<ImageInfo> lookupImg              = new Lookup<ImageInfo>( ) {
-                                                                  @Override
-                                                                  public ImageInfo lookup( String identifier ) {
-                                                                    return EntityWrapper.get( ImageInfo.class ).lookupAndClose( new ImageInfo( identifier ) );
-                                                                  }
-                                                                };
-  private static Logger                  LOG                    = Logger.getLogger( Emis.class );
+  public static String                          IMAGE_MACHINE          = "machine";
+  public static String                          IMAGE_KERNEL           = "kernel";
+  public static String                          IMAGE_RAMDISK          = "ramdisk";
+  public static String                          IMAGE_PLATFORM_DEFAULT = "linux";
+  public static String                          IMAGE_PLATFORM_WINDOWS = "windows";
+  public static final Lookup<MachineImageInfo> lookupMachineImg              = new Lookup<MachineImageInfo>( ) {
+    @Override
+    public MachineImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
+    }
+  };
+  public static final Lookup<KernelImageInfo> lookupKernelImg              = new Lookup<KernelImageInfo>( ) {
+    @Override
+    public KernelImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
+    }
+  };
+  public static final Lookup<RamdiskImageInfo> lookupRamdiskImg              = new Lookup<RamdiskImageInfo>( ) {
+    @Override
+    public RamdiskImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
+    }
+  };
+  private static Logger                         LOG                    = Logger.getLogger( Emis.class );
   
   public static class BootableSet {
-    private final ImageInfo disk;
+    private final MachineImageInfo disk;
     
-    private BootableSet( ImageInfo disk ) {
+    private BootableSet( MachineImageInfo disk ) {
       this.disk = disk;
     }
     
-    public ImageInfo getMachine( ) {
+    public MachineImageInfo getMachine( ) {
       return this.disk;
     }
     
-    public ImageInfo getRamdisk( ) {
+    public RamdiskImageInfo getRamdisk( ) {
       throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
     }
     
-    public ImageInfo getKernel( ) {
+    public KernelImageInfo getKernel( ) {
       throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
     }
     
@@ -158,47 +167,47 @@ public class Emis {
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
       
-      vmType.setRoot( this.getMachine( ).getImageId( ), this.getMachine( ).getImageLocation( ), imgSize * 1024 );
+      vmType.setRoot( this.getMachine( ).getDisplayName( ), this.getMachine( ).getImageLocation( ), imgSize * 1024 );
       if ( this.hasKernel( ) ) {
-        vmType.setKernel( this.getKernel( ).getImageId( ), this.getKernel( ).getImageLocation( ) );
+        vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getImageLocation( ) );
       }
       if ( this.hasRamdisk( ) ) {
-        vmType.setRamdisk( this.getRamdisk( ).getImageId( ), this.getRamdisk( ).getImageLocation( ) );
+        vmType.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getImageLocation( ) );
       }
     }
   }
   
   static class NoRamdiskBootableSet extends BootableSet {
-    private final ImageInfo kernel;
+    private final KernelImageInfo kernel;
     
-    private NoRamdiskBootableSet( ImageInfo disk, ImageInfo kernel ) {
+    private NoRamdiskBootableSet( MachineImageInfo disk, KernelImageInfo kernel ) {
       super( disk );
       this.kernel = kernel;
     }
     
     @Override
-    public ImageInfo getKernel( ) {
+    public KernelImageInfo getKernel( ) {
       return this.kernel;
     }
   }
   
   static class TrifectaBootableSet extends NoRamdiskBootableSet {
-    private final ImageInfo ramdisk;
+    private final RamdiskImageInfo ramdisk;
     
-    public TrifectaBootableSet( ImageInfo disk, ImageInfo kernel, ImageInfo ramdisk ) {
+    public TrifectaBootableSet( MachineImageInfo disk, KernelImageInfo kernel, RamdiskImageInfo ramdisk ) {
       super( disk, kernel );
       this.ramdisk = ramdisk;
     }
     
     @Override
-    public ImageInfo getRamdisk( ) {
+    public RamdiskImageInfo getRamdisk( ) {
       return this.ramdisk;
     }
   }
   
   public static BootableSet newBootableSet( String imageId ) throws EucalyptusCloudException {
     try {
-      return new BootableSet( Lookups.doPrivileged( imageId, lookupImg ) );
+      return new BootableSet( Lookups.doPrivileged( imageId, lookupMachineImg ) );
     } catch ( AuthException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( ex );
@@ -218,7 +227,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      ImageInfo kernel = Lookups.doPrivileged( kernelId, lookupImg );
+      KernelImageInfo kernel = Lookups.doPrivileged( kernelId, lookupKernelImg );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( AuthException ex ) {
       LOG.error( ex, ex );
@@ -238,11 +247,11 @@ public class Emis {
   public static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws EucalyptusCloudException {
     String ramdiskId = determineRamdiskId( bootSet );
     LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + bootSet.toString( ) );
-    if( ramdiskId == null ) {
+    if ( ramdiskId == null ) {
       return bootSet;
     } else {
       try {
-        ImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, lookupImg );
+        RamdiskImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, lookupRamdiskImg );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( AuthException ex ) {
         LOG.error( ex, ex );
@@ -261,7 +270,7 @@ public class Emis {
   }
   
   private static String determineKernelId( BootableSet bootSet ) throws EucalyptusCloudException {
-    ImageInfo disk = bootSet.getMachine( );
+    MachineImageInfo disk = bootSet.getMachine( );
     String kernelId = null;
     Context ctx = null;
     try {
@@ -283,7 +292,7 @@ public class Emis {
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getName( ) );
-    } else if ( !kernelId.startsWith( Emis.IMAGE_KERNEL_PREFIX ) ) {
+    } else if ( !kernelId.startsWith( Images.IMAGE_KERNEL_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
@@ -299,13 +308,13 @@ public class Emis {
     try {
       ctx = Contexts.lookup( );
       if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-        RunInstancesType msg = (RunInstancesType)ctx.getRequest( );
-        if( ImageUtil.isSet( msg.getKernelId( ) ) ) {
+        RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
+        if ( ImageUtil.isSet( msg.getKernelId( ) ) ) {
           skipRamdisk |= ( !ImageUtil.isSet( msg.getRamdiskId( ) ) );//explicit kernel given w/o rd
         } else {
-          skipRamdisk |= ( ImageUtil.isSet( bootSet.getMachine( ).getKernelId( ) ) 
-              && !ImageUtil.isSet( bootSet.getMachine( ).getRamdiskId( ) ) 
-              && !ImageUtil.isSet( msg.getRamdiskId( ) ) );//no explicit kernel, skip default ramdiskId if none other given
+          skipRamdisk |= ( ImageUtil.isSet( bootSet.getMachine( ).getKernelId( ) )
+                           && !ImageUtil.isSet( bootSet.getMachine( ).getRamdiskId( ) )
+                         && !ImageUtil.isSet( msg.getRamdiskId( ) ) );//no explicit kernel, skip default ramdiskId if none other given
         }
         ramdiskId = ( ( RunInstancesType ) ctx.getRequest( ) ).getRamdiskId( );
       }
@@ -322,8 +331,8 @@ public class Emis {
         ? ctx.getRequest( ).toSimpleString( )
         : "UNKNOWN" ) );
     if ( ramdiskId == null ) {
-      throw new EucalyptusCloudException( "Unable to determine required ramdisk image for " + bootSet.toString( )  );
-    } else if ( !ramdiskId.startsWith( Emis.IMAGE_RAMDISK_PREFIX ) ) {
+      throw new EucalyptusCloudException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
+    } else if ( !ramdiskId.startsWith( Images.IMAGE_RAMDISK_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskId );
     }
     return ramdiskId;

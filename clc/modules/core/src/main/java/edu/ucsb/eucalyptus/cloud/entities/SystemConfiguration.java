@@ -87,8 +87,10 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.Images;
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NetworkUtil;
@@ -354,26 +356,22 @@ public class SystemConfiguration {
       sysConf.setCloudHost(ipAddr);
     }
     if(sysConf.getDefaultKernel() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
+      EntityWrapper<KernelImageInfo> db2 = EntityWrapper.get( KernelImageInfo.class );
       try {
-        q.setImageType( "kernel" );
-        List<ImageInfo> res = db2.query(q);
+        List<KernelImageInfo> res = db2.query(Images.exampleKernelWithImageId( null ));
         if( res.size() > 0 )
-          sysConf.setDefaultKernel(res.get(0).getImageId());
+          sysConf.setDefaultKernel(res.get(0).getDisplayName());
         db2.commit( );
       } catch ( Exception e ) {
         db2.rollback( );
       }
     }
     if(sysConf.getDefaultRamdisk() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
+      EntityWrapper<RamdiskImageInfo> db2 = EntityWrapper.get( RamdiskImageInfo.class );
       try {
-        q.setImageType( "ramdisk" );
-        List<ImageInfo> res = db2.query(q);
+        List<RamdiskImageInfo> res = db2.query(Images.exampleRamdiskWithImageId( null ));
         if( res.size() > 0 )
-          sysConf.setDefaultRamdisk(res.get(0).getImageId());
+          sysConf.setDefaultRamdisk(res.get(0).getDisplayName());
         db2.commit( );
       } catch ( Exception e ) {
         db2.rollback( );

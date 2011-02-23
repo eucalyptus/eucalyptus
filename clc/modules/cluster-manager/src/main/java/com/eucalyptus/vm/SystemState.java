@@ -86,6 +86,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;
@@ -97,10 +98,9 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.SshKeyPair;
-import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
@@ -337,7 +337,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ), networks,
+      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ), networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );

@@ -95,8 +95,9 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.HasOwner;
+import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
@@ -105,7 +106,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address implements HasName<Address>, HasOwner<Address> {
+public class Address implements HasFullName<Address>, HasOwningAccount {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -634,6 +635,16 @@ public class Address implements HasName<Address>, HasOwner<Address> {
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
                                                                                                                                         this.getName( ) );
+  }
+
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.util.HasOwningAccount#getOwnerAccountId()
+   * @return
+   */
+  @Override
+  public String getOwnerAccountId( ) {
+    return null;
   }
   
 }

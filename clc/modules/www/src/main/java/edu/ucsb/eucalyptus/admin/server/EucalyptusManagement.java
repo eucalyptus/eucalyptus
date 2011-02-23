@@ -88,14 +88,14 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
-import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.images.NoSuchImageException;
 import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -144,7 +144,7 @@ public class EucalyptusManagement {
 	/* TODO: for now 'pattern' is ignored and all images are returned */
 	public static List <ImageInfoWeb> getWebImages (String pattern) throws SerializableException {
 		List<ImageInfoWeb> ret = Lists.newArrayList( );
-	  for( Image i : Images.listAllImages( ) ) {
+	  for( ImageInfo i : Images.listAllImages( ) ) {
         ret.add( Composites.update( i, new ImageInfoWeb( ) ) );
 	  }
     return ret;
@@ -284,32 +284,20 @@ public class EucalyptusManagement {
 	public static void deleteImage(String imageId)
 	throws SerializableException
 	{
-		ImageInfo searchImg = new ImageInfo( imageId );
-		EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>();
-		List<ImageInfo> imgList= db.query( searchImg );
-
-		if ( imgList.size() > 0 && !imgList.isEmpty() )
-		{
-			Image foundimgSearch = imgList.get( 0 );
-			foundimgSearch.setImageState( "deregistered" );
-			db.commit();
-		}
-		else
-		{
-			db.rollback();
-			throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
-		}
+	  try {
+      Images.deregisterImage( imageId );
+    } catch ( NoSuchImageException ex ) {
+      LOG.error( ex , ex );
+      throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
+    }
 	}
 	public static void disableImage(String imageId)
 	throws SerializableException
 	{
-	  try {
-      new Images._byId( imageId ) {{ new _mutator() {
-          @Override public void set( ImageInfo e ) {
-            e.setImageState( "deregistered" );
-          }}.set( );
-      }};
-    } catch ( EucalyptusCloudException e ) {
+    try {
+      Images.deregisterImage( imageId );
+    } catch ( NoSuchImageException ex ) {
+      LOG.error( ex , ex );
       throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
     }
 	}
@@ -317,12 +305,9 @@ public class EucalyptusManagement {
 	throws SerializableException
 	{
     try {
-      new Images._byId( imageId ) {{ new _mutator() {
-          @Override public void set( ImageInfo e ) {
-            e.setImageState( "available" );
-          }}.set( );
-      }};
-    } catch ( EucalyptusCloudException e ) {
+      Images.enableImage( imageId );
+    } catch ( NoSuchImageException ex ) {
+      LOG.error( ex , ex );
       throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
     }
 	}

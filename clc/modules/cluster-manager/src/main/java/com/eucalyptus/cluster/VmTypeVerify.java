@@ -67,8 +67,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmType;
 
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;

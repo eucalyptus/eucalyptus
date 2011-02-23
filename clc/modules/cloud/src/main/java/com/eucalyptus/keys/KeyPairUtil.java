@@ -12,7 +12,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
