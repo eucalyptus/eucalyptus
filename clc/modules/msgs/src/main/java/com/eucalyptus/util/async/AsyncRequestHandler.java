@@ -66,7 +66,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
    * @return
    */
   @Override
-  public boolean fire( ServiceEndpoint endpoint, final ChannelPipelineFactory factory, final Q request ) {
+  public boolean fire( final ServiceEndpoint endpoint, final ChannelPipelineFactory factory, final Q request ) {
     final ServiceEndpoint serviceEndpoint;
     if ( factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
       serviceEndpoint = new ServiceEndpoint( endpoint.getParent( ), false, URI.create( endpoint.getUri( ).toASCIIString( ).replaceAll( "EucalyptusCC",
@@ -84,6 +84,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public ChannelPipeline getPipeline( ) throws Exception {
             ChannelPipeline pipeline = factory.getPipeline( );
             ChannelUtil.addPipelineMonitors( pipeline, 30 );
+            if( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+              pipeline.addLast( "system-info-handler", endpoint.getServiceInfoHandler( ) );
+            }
             pipeline.addLast( "request-handler", AsyncRequestHandler.this );
             return pipeline;
           }

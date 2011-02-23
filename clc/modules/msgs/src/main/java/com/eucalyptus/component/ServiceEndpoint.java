@@ -355,16 +355,11 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   };
   
   public ChannelPipelineFactory getPipelineFactory( ) {
-    return new ChannelPipelineFactory( ) {
-      
-      @Override
-      public ChannelPipeline getPipeline( ) throws Exception {
-        ChannelPipeline pipeline = ServiceEndpoint.this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( ).getPipeline( );
-        pipeline.addLast( "system-state-info", new SystemStateHandler( ) );
-        return pipeline;
-      }
-    };
-    
+    return this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( );    
+  }
+  
+  public ChannelHandler getServiceInfoHandler( ) {
+    return new SystemStateHandler( );
   }
   
 }
