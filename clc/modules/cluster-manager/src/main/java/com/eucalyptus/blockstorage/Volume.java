@@ -78,11 +78,9 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
-import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
-import edu.ucsb.eucalyptus.cloud.state.State;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_images" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
