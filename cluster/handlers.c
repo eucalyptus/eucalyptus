@@ -2373,6 +2373,11 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     } else {
       // instance is not in cache, try all resources
       myInstance = malloc(sizeof(ccInstance));
+      if (!myInstance) {
+	logprintfl(EUCAFATAL, "TerminateInstances(): out of memory!\n");
+	unlock_exit(1);
+      }
+      bzero(myInstance, sizeof(ccInstance));
       snprintf(myInstance->instanceId, 16, "%s", instId);
 
       start = 0;
@@ -3450,6 +3455,10 @@ int init_config(void) {
   tmpstr = getConfString(configFiles, 2, "CC_IMAGE_PROXY");
   if (tmpstr) {
     proxyIp = strdup(tmpstr);
+    if (!proxyIp) {
+      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      unlock_exit(1);
+    }
     use_proxy=1;
   }
   if (tmpstr) free(tmpstr);
@@ -3716,6 +3725,10 @@ int reconfigureNetworkFromCLC() {
     cloudIp = hex2dot(vnetconfig->cloudIp);
   } else {
     cloudIp = strdup("localhost");
+    if (!cloudIp) {
+      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      unlock_exit(1);
+    }
   }
   snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
   rc = http_get_timeout(url, tmpfile, 0, 0);
@@ -3758,6 +3771,10 @@ int reconfigureNetworkFromCLC() {
 	    if (tok) {
 	      //	      logprintfl(EUCADEBUG, "PROTOCOL: %s\n", tok);
 	      protocol = strdup(tok);
+	      if (!protocol) {
+		logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	    }
 	  } else if (tok && !strcmp(tok, "-p")) {
 	    tok = strtok_r(NULL, " ", &save);
@@ -3776,21 +3793,45 @@ int reconfigureNetworkFromCLC() {
 	    if (tok) {
 	      //	      logprintfl(EUCADEBUG, "DGROUP: %s\n", tok);
 	      sgroup = malloc(sizeof(char *));
+	      if (!sgroup) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	      sgroup[0] = strdup(tok);
+	      if (!sgroup[0]) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	    }
 	  } else if (tok && !strcmp(tok, "-u")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
 	      //	      logprintfl(EUCADEBUG, "DUSER: %s\n", tok);
 	      suser = malloc(sizeof(char *));
+	      if (!suser) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	      suser[0] = strdup(tok);
+	      if (!suser[0]) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	    }
 	  } else if (tok && !strcmp(tok, "-s")) {
 	    tok = strtok_r(NULL, " ", &save);
 	    if (tok) {
 	      //	      logprintfl(EUCADEBUG, "SNET: %s\n", tok);
 	      snet = malloc(sizeof(char *));
+	      if (!snet) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	      snet[0] = strdup(tok);
+	      if (!snet[0]) {
+		logprintfl(EUCAFATAL, "reconfigureNetworkFromCLC(): out of memory!\n");
+		unlock_exit(1);
+	      }
 	      snetset=1;
 	    }
 	  }
@@ -4161,9 +4202,17 @@ void print_ccInstance(char *tag, ccInstance *in) {
   int i;
 
   volbuf = malloc(sizeof(ncVolume)*EUCA_MAX_VOLUMES*2);
+  if (!volbuf) {
+    logprintfl(EUCAFATAL, "print_ccInstance(): out of memory!\n");
+    unlock_exit(1);
+  }
   bzero(volbuf, sizeof(ncVolume)*EUCA_MAX_VOLUMES*2);
 
   groupbuf = malloc(64*32*2);
+  if (!groupbuf) {
+    logprintfl(EUCAFATAL, "print_ccInstance(): out of memory!\n");
+    unlock_exit(1);
+  }
   bzero(groupbuf, 64*32*2);
   
   for (i=0; i<64; i++) {
@@ -4605,6 +4654,10 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
   int i, rc;
 
   nodestr = malloc(( (*numHosts) * 128) + (*numHosts) + 1);
+  if (!nodestr) {
+    logprintfl(EUCAFATAL, "image_cache_proxykick(): out of memory!\n");
+    unlock_exit(1);
+  }
   
   bzero(nodestr, ( (*numHosts) * 128 ) + (*numHosts) + 1);
   for (i=0; i<(*numHosts); i++) {
