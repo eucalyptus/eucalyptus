@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -75,7 +76,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
@@ -109,7 +116,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   private final AtomicBoolean                running;
   @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
-  private ThreadPool workers;
+  private ThreadPool                         workers;
   
   public ServiceEndpoint( Service parent, Boolean local, URI uri ) {
     super( uri );
@@ -126,13 +133,13 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
     this.workers = Threads.lookup( parent.getParent( ).getName( ) + "-" + parent.getName( ) + "-" + uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
   }
-
+  
   public Boolean isRunning( ) {
     return this.running.get( );
   }
   
   public void start( ) {
-    if( this.running.compareAndSet( false, true ) ) {
+    if ( this.running.compareAndSet( false, true ) ) {
       for ( int i = 0; i < NUM_WORKERS; i++ ) {
         this.workers.execute( new ServiceEndpointWorker( ) );
       }
@@ -148,7 +155,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if( LogLevels.TRACE ) {
+          if ( LogLevels.TRACE ) {
             Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
@@ -159,23 +166,6 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     }
   }
   
-  private List<ServiceInfoType> buildMessageServiceList( ) {
-    return new ArrayList<ServiceInfoType>() {{
-      addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( ) );
-      addAll( Components.lookup( Walrus.class ).getServiceSnapshot( ) );
-      for( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( ) ) {
-        if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-          add( s );
-        }
-      }
-      for( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( ) ) {
-        if( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-          add( s );
-        }
-      }
-    }};
-  }
-  
   class ServiceEndpointWorker implements Runnable {
     @SuppressWarnings( "unchecked" )
     public void run( ) {
@@ -184,11 +174,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         try {
           QueuedRequest event;
           if ( ( event = ServiceEndpoint.this.msgQueue.poll( ServiceEndpoint.this.pollInterval, TimeUnit.MILLISECONDS ) ) != null ) {
-            EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ), event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
+            EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ),
+                              event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
-            {//ASAP: FIXME: GRZE: clean up this implementation              
-              event.getRequest( ).getRequest( ).getBaseServices( ).addAll( ServiceEndpoint.this.buildMessageServiceList( ) );
-            }
             event.getRequest( ).sendSync( ServiceEndpoint.this );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
             .append( event.getCallback( ).getClass( ).getSimpleName( ) )//
@@ -246,10 +234,12 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   
   @Override
   public String toString( ) {
-    return String.format( "ServiceEndpoint %s %s %s mq:%d url:%s", this.parent.getName( ), this.local ? "local" : "remote", this.running.get()
+    return String.format( "ServiceEndpoint %s %s %s mq:%d url:%s", this.parent.getName( ), this.local
+      ? "local"
+      : "remote", this.running.get( )
       ? "running"
       : "stopped",
-      this.msgQueue.size( ), this.get( ) );
+                          this.msgQueue.size( ), this.get( ) );
   }
   
   static class QueuedRequest {
@@ -324,8 +314,53 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     }
     return false;
   }
-
+  
+  private final ChannelHandler systemStateHandler = new ChannelDownstreamHandler( ) {
+                                                    
+                                                    @Override
+                                                    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+                                                      if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof BaseMessage ) {
+                                                        BaseMessage msg = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
+                                                        InetSocketAddress localSocketAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
+                                                        final String locahostAddr = localSocketAddr.getAddress( ).getHostAddress( );
+                                                        List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+                                                          {
+                                                            addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( locahostAddr ) );
+                                                            addAll( Components.lookup( Walrus.class ).getServiceSnapshot( locahostAddr ) );
+                                                            for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( locahostAddr ) ) {
+                                                              if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                                                                add( s );
+                                                              }
+                                                            }
+                                                            for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( locahostAddr ) ) {
+                                                              if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                                                                add( s );
+                                                              }
+                                                            }
+                                                          }
+                                                        };
+                                                        for ( ServiceInfoType serviceInfo : serviceInfos ) {
+                                                          List<String> uris = Lists.newArrayList( serviceInfo.getUris( ) );
+                                                        }
+                                                        msg.getBaseServices( ).clear( );
+                                                        msg.getBaseServices( ).addAll( serviceInfos );
+                                                      }
+                                                    }
+                                                  };
+  
   public ChannelPipelineFactory getPipelineFactory( ) {
-    return this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( );
+    return new ChannelPipelineFactory( ) {
+      
+      @Override
+      public ChannelPipeline getPipeline( ) throws Exception {
+        ChannelPipeline pipeline = ServiceEndpoint.this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( ).getPipeline( );
+        ChannelHandler last = pipeline.removeLast( );
+        pipeline.addLast( "system-state-info", systemStateHandler );
+        pipeline.addLast( "handler", last );
+        return null;
+      }
+    };
+    
   }
+  
 }
