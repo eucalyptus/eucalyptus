@@ -111,27 +111,27 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public void operationComplete( ChannelFuture future ) throws Exception {
             try {
               if ( future.isSuccess( ) ) {
-//                LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
-//              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
-//              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-//                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-//                  {
-//                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
-//                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
-//                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
-//                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-//                        add( s );
-//                      }
-//                    }
-//                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
-//                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-//                        add( s );
-//                      }
-//                    }
-//                  }
-//                };
-//                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
-//              }
+                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
+              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
+              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+                  {
+                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
+                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
+                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
+                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                        add( s );
+                      }
+                    }
+                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
+                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                        add( s );
+                      }
+                    }
+                  }
+                };
+                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
+              }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                   "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
@@ -391,14 +391,4 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     
   }
 
-  /**
-   * TODO: DOCUMENT
-   * @see org.jboss.netty.channel.ChannelDownstreamHandler#handleDownstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
-   * @param arg0
-   * @param arg1
-   * @throws Exception
-   */
-  @Override
-  public void handleDownstream( ChannelHandlerContext arg0, ChannelEvent arg1 ) throws Exception {}
-  
 }
