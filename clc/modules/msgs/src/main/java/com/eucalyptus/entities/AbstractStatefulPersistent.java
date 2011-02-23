@@ -74,7 +74,7 @@ import org.hibernate.annotations.NaturalId;
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
-  Enum<STATE>      state;
+  STATE            state;
   @NaturalId
   @Column( name = "metadata_display_name" )
   protected String displayName;
@@ -97,7 +97,7 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   }
   
   public STATE getState( ) {
-    return ( STATE ) this.state;
+    return this.state;
   }
   
   public void setState( STATE state ) {

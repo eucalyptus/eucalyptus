@@ -96,7 +96,8 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkRulesGroup extends AccountMetadata implements NetworkSecurityGroup {
+public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> implements NetworkSecurityGroup {
+  enum State { available, removing }
   @Column( name = "metadata_network_group_user_network_group_name", unique = true )
   private String            uniqueName;                                          //bogus field to enforce uniqueness
   @Column( name = "metadata_network_group_description" )

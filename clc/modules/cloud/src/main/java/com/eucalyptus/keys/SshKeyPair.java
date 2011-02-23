@@ -86,7 +86,8 @@ import com.eucalyptus.util.HasOwningAccount;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypair" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata implements KeyPair {
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPair {
+  enum State { available, removing }
   @Column( name = "metadata_keypair_user_keyname", unique = true )
   String                   uniqueName;                                                                 //bogus field to enforce uniqueness
   @Lob
