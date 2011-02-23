@@ -125,11 +125,6 @@ public class WalrusUtil {
   public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
     try {
-      Images.deregisterImage( imgInfo.getDisplayName( ) );
-    } catch ( NoSuchImageException ex ) {
-      LOG.debug( ex );
-    }
-    try {
       RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
   }

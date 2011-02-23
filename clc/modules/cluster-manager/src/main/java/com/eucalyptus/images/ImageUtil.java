@@ -238,17 +238,17 @@ public class ImageUtil {
     return false;
   }
   */
-  private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    if ( isSet( searchId ) ) try {
-      ImageInfo img = db.getUnique( Images.exampleWithImageId( searchId ) );
-      WalrusUtil.invalidate( img );
-      db.commit( );
-      } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
-      }
-  }
+//  private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
+//    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+//    if ( isSet( searchId ) ) try {
+//      ImageInfo img = db.getUnique( Images.exampleWithImageId( searchId ) );
+//      WalrusUtil.invalidate( img );
+//      db.commit( );
+//      } catch ( EucalyptusCloudException e ) {
+//      db.rollback( );
+//      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
+//      }
+//  }
   
   public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
