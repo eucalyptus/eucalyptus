@@ -354,9 +354,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       @Override
       public ChannelPipeline getPipeline( ) throws Exception {
         ChannelPipeline pipeline = ServiceEndpoint.this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( ).getPipeline( );
-        ChannelHandler last = pipeline.removeLast( );
         pipeline.addLast( "system-state-info", systemStateHandler );
-        pipeline.addLast( "handler", last );
         return pipeline;
       }
     };
