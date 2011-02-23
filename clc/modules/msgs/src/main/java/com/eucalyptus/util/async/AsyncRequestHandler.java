@@ -101,8 +101,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           }
         } );
         LOG.debug( request.getClass( ).getSimpleName( ) + ":" + request.getCorrelationId( ) + " connecting to " + serviceEndpoint.getSocketAddress( ) );
-        EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
-                          request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ) ).trace( );
+//        EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
+//                          request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ) ).trace( );
         this.connectFuture = this.clientBootstrap.connect( serviceEndpoint.getSocketAddress( ) );
         final HttpRequest httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, serviceEndpoint, this.request.get( ) );
         
