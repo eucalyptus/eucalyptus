@@ -68,8 +68,6 @@ import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
@@ -77,30 +75,62 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.images.Images.Architecture;
-import com.eucalyptus.images.Images.Platform;
-import com.eucalyptus.images.Images.Type;
+import com.eucalyptus.cloud.Image;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "ramdisk" )
-public class RamdiskImageInfo extends ImageInfo {
-
-  public RamdiskImageInfo( ) {
+@DiscriminatorValue( value = "machine" )
+public class MachineImageInfo extends ImageInfo {
+  @Column( name = "image_kernel_id" )
+  private String kernelId;
+  @Column( name = "image_ramdisk_id" )
+  private String ramdiskId;
+  
+  public MachineImageInfo( ) {
     super( );
-    this.setImageType( Images.Type.ramdisk );
+    this.setImageType( Image.Type.machine );
   }
 
-  public RamdiskImageInfo( String imageId ) {
+  public MachineImageInfo( String imageId ) {
     super( imageId );
-    this.setImageType( Images.Type.ramdisk );
+    this.setImageType( Image.Type.machine );
   }
 
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
     super( userFullName, imageId, imageLocation, arch, platform );
-    this.setImageType( Images.Type.ramdisk );
+    this.setImageType( Image.Type.machine );
   }
 
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
+    super( userFullName, imageId, imageLocation, arch, platform );
+    this.kernelId = kernelId;
+    this.ramdiskId = ramdiskId;
+    this.setImageType( Image.Type.machine );
+  }
+
+  public String getKernelId( ) {
+    return kernelId;
+  }
+  
+  public void setKernelId( String kernelId ) {
+    this.kernelId = kernelId;
+  }
+  
+  public String getRamdiskId( ) {
+    return ramdiskId;
+  }
+  
+  public void setRamdiskId( String ramdiskId ) {
+    this.ramdiskId = ramdiskId;
+  }
+  
+  public boolean hasKernel( ) {
+    return this.getKernelId( ) != null;
+  }
+
+  public boolean hasRamdisk( ) {
+    return this.getRamdiskId( ) != null;
+  }
 }

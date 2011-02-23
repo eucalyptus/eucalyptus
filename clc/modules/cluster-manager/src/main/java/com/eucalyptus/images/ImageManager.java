@@ -213,8 +213,8 @@ public class ImageManager {
     String kernelId = ImageUtil.extractKernelId( inputSource, xpath );
     String ramdiskId = ImageUtil.extractRamdiskId( inputSource, xpath );
     List<ProductCode> prodCodes = extractProductCodes( inputSource, xpath );
-    Images.Type imageType = Images.Type.machine;
-    Images.Platform platform = Images.Platform.linux;
+    Image.Type imageType = Image.Type.machine;
+    Image.Platform platform = Image.Platform.linux;
     String newImageId = null;
     String signature = null;
     try {
@@ -226,18 +226,18 @@ public class ImageManager {
       if ( Contexts.lookup( ).hasSystemPrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       }
-      imageType = Images.Type.kernel;
-      imageInfo = new KernelImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Images.Architecture.valueOf( arch.toLowerCase( ) ), Images.Platform.linux );      
+      imageType = Image.Type.kernel;
+      imageInfo = new KernelImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Image.Architecture.valueOf( arch.toLowerCase( ) ), Image.Platform.linux );      
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
       if ( Contexts.lookup( ).hasSystemPrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
-      imageType = Images.Type.ramdisk;
-      imageInfo = new RamdiskImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Images.Architecture.valueOf( arch.toLowerCase( ) ), Images.Platform.linux );      
+      imageType = Image.Type.ramdisk;
+      imageInfo = new RamdiskImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Image.Architecture.valueOf( arch.toLowerCase( ) ), Image.Platform.linux );      
     } else {
-      if ( imagePathParts[1].startsWith( Images.Platform.windows.toString( ) ) && System.getProperty( "euca.disable.windows" ) == null ) {
-        imageType = Images.Type.machine;
-        imageInfo = new MachineImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Images.Architecture.valueOf( arch.toLowerCase( ) ), Images.Platform.windows );      
+      if ( imagePathParts[1].startsWith( Image.Platform.windows.toString( ) ) && System.getProperty( "euca.disable.windows" ) == null ) {
+        imageType = Image.Type.machine;
+        imageInfo = new MachineImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Image.Architecture.valueOf( arch.toLowerCase( ) ), Image.Platform.windows );      
       } else {
         if ( kernelId != null ) {
           try {
@@ -253,8 +253,8 @@ public class ImageManager {
             throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
           }
         }
-        imageType = Images.Type.machine;
-        imageInfo = new MachineImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Images.Architecture.valueOf( arch.toLowerCase( ) ), Images.Platform.windows, kernelId, ramdiskId );      
+        imageType = Image.Type.machine;
+        imageInfo = new MachineImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Image.Architecture.valueOf( arch.toLowerCase( ) ), Image.Platform.windows, kernelId, ramdiskId );      
       }
     }
     imageInfo.setSignature( signature );

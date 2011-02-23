@@ -65,16 +65,21 @@ package com.eucalyptus.images;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.entities.EntityWrapper;
 
 public class ForwardImages {
   private static Logger LOG = Logger.getLogger( ForwardImages.class );
+  /**
+   * Transitional while pulling out forward references.
+   * @deprecated
+   */
   public static String defaultRamdisk( ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       List<ImageInfo> images = db.query( new ImageInfo( ) {
         {
-          setImageType( Images.Type.ramdisk );
+          setImageType( Image.Type.ramdisk );
         }
       } );
       if( images.size( ) > 0 ) {
@@ -90,12 +95,16 @@ public class ForwardImages {
       return null;
     }
   }
+  /**
+   * Transitional while pulling out forward references.
+   * @deprecated
+   */
   public static String defaultKernel( ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       List<ImageInfo> images = db.query( new ImageInfo( ) {
         {
-          setImageType( Images.Type.kernel );
+          setImageType( Image.Type.kernel );
         }
       } );
       if( images.size( ) > 0 ) {
@@ -110,6 +119,18 @@ public class ForwardImages {
       db.rollback( );
       return null;
     }
+  }
+  /**
+   * Transitional while pulling out forward references.
+   * @deprecated
+   */
+  @Deprecated
+  public static ImageInfo exampleWithImageId( final String imageId ) {
+    return new ImageInfo( ) {
+      {
+        setDisplayName( imageId );
+      }
+    };
   }
   
 }

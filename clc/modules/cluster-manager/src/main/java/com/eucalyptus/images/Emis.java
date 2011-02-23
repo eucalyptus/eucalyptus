@@ -67,6 +67,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -292,7 +293,7 @@ public class Emis {
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getName( ) );
-    } else if ( !kernelId.startsWith( Images.IMAGE_KERNEL_PREFIX ) ) {
+    } else if ( !kernelId.startsWith( Image.IMAGE_KERNEL_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
@@ -332,7 +333,7 @@ public class Emis {
         : "UNKNOWN" ) );
     if ( ramdiskId == null ) {
       throw new EucalyptusCloudException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
-    } else if ( !ramdiskId.startsWith( Images.IMAGE_RAMDISK_PREFIX ) ) {
+    } else if ( !ramdiskId.startsWith( Image.IMAGE_RAMDISK_PREFIX ) ) {
       throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskId );
     }
     return ramdiskId;

@@ -63,10 +63,13 @@
 
 package com.eucalyptus.images;
 
+import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
@@ -74,29 +77,28 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.images.Images.Architecture;
-import com.eucalyptus.images.Images.Platform;
+import com.eucalyptus.cloud.Image;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "Images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "kernel" )
-public class KernelImageInfo extends ImageInfo {
+@DiscriminatorValue( value = "ramdisk" )
+public class RamdiskImageInfo extends ImageInfo {
 
-  public KernelImageInfo( ) {
+  public RamdiskImageInfo( ) {
     super( );
-    this.setImageType( Images.Type.kernel );
+    this.setImageType( Image.Type.ramdisk );
   }
 
-  public KernelImageInfo( String imageId ) {
+  public RamdiskImageInfo( String imageId ) {
     super( imageId );
-    this.setImageType( Images.Type.kernel );
+    this.setImageType( Image.Type.ramdisk );
   }
 
-  public KernelImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
+  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
     super( userFullName, imageId, imageLocation, arch, platform );
-    this.setImageType( Images.Type.kernel );
+    this.setImageType( Image.Type.ramdisk );
   }
 
 }

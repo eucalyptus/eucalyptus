@@ -99,17 +99,13 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.images.Images.Architecture;
-import com.eucalyptus.images.Images.Type;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.JoinTx;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.util.TypeMapping;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -118,22 +114,22 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "kernel_or_ramdisk" )
-public class ImageInfo extends UserMetadata<Images.State> implements Image {
+public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Transient
   private static Logger           LOG          = Logger.getLogger( ImageInfo.class );
   @Column( name = "image_path" )
   private String                  imageLocation;
   @Column( name = "image_availability" )
   @Enumerated( EnumType.STRING )
-  private Images.State            imageState;
+  private Image.State             imageState;
   @Column( name = "image_arch" )
   @Enumerated( EnumType.STRING )
-  private Images.Architecture     architecture;
+  private Image.Architecture      architecture;
   @Column( name = "image_is_public" )
   private Boolean                 imagePublic;
   @Column( name = "image_platform" )
   @Enumerated( EnumType.STRING )
-  private Images.Platform         platform;
+  private Image.Platform          platform;
   @Column( name = "image_type" )
   @Enumerated( EnumType.STRING )
   private Type                    imageType;
@@ -162,31 +158,31 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Images.Architecture arch,
-                    final Images.Platform platform ) {
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Image.Architecture arch,
+                    final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     this.imageLocation = imageLocation;
-    this.imageState = Images.State.pending;
+    this.imageState = Image.State.pending;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
   
-  public Images.Type getImageType( ) {
+  public Image.Type getImageType( ) {
     return this.imageType;
   }
   
-  public Images.Platform getPlatform( ) {
+  public Image.Platform getPlatform( ) {
     return this.platform;
   }
   
-  public void setPlatform( Images.Platform platform ) {
+  public void setPlatform( Image.Platform platform ) {
     this.platform = platform;
   }
   
-  public Images.State getImageState( ) {
+  public Image.State getImageState( ) {
     return this.imageState;
   }
   
-  public void setImageState( Images.State imageState ) {
+  public void setImageState( Image.State imageState ) {
     this.imageState = imageState;
   }
   
@@ -241,7 +237,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Principal prin ) {
     try {
-      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
@@ -273,7 +269,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   public boolean checkPermission( final Principal prin ) throws EucalyptusCloudException {
     final boolean[] result = { false };
     try {
-      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
@@ -292,7 +288,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   
   public ImageInfo revokePermission( final Principal prin ) {
     try {
-      ImageInfo search = Images.exampleWithImageId( this.getDisplayName( ) );
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
@@ -367,7 +363,7 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
     EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
     ImageInfo image = null;
     try {
-      image = db.getUnique( Images.exampleWithImageId( imageId ) );
+      image = db.getUnique( ForwardImages.exampleWithImageId( imageId ) );
       db.commit( );
     } catch ( Throwable t ) {
       db.commit( );
@@ -382,28 +378,6 @@ public class ImageInfo extends UserMetadata<Images.State> implements Image {
   @Override
   public String toString( ) {
     return this.getFullName( ).toString( );
-  }
-  
-  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
-  
-  static class ImageInfoToDetails implements TypeMapping<ImageInfo, ImageDetails> {
-    @Override
-    public ImageDetails apply( ImageInfo arg0 ) {
-      ImageDetails i = new ImageDetails( );
-      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
-      i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
-      i.setImageOwnerId( arg0.getOwner( ).toString( ) );
-      i.setImageState( arg0.getState( ).toString( ) );
-      i.setIsPublic( arg0.getImagePublic( ) );
-      if ( arg0 instanceof MachineImageInfo ) {
-        i.setImageType( ( ( MachineImageInfo ) arg0 ).getImageType( ).toString( ) );
-        i.setKernelId( ( ( MachineImageInfo ) arg0 ).getKernelId( ) );
-        i.setRamdiskId( ( ( MachineImageInfo ) arg0 ).getRamdiskId( ) );
-        i.setPlatform( ( ( MachineImageInfo ) arg0 ).getPlatform( ).toString( ) );
-      }
-      return i;
-    }
   }
   
   /**

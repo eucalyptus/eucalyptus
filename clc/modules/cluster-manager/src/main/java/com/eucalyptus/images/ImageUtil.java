@@ -400,7 +400,7 @@ public class ImageUtil {
     try {
       List<ImageInfo> results = db.query( Images.ALL );
       for ( ImageInfo img : results ) {
-        ImageDetails imgDetails = ImageInfo.TO_IMAGE_DETAILS.apply( img );
+        ImageDetails imgDetails = Images.TO_IMAGE_DETAILS.apply( img );
         if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( img ) ) ) {
           repList.add( imgDetails );
         }
@@ -426,7 +426,7 @@ public class ImageUtil {
                    && ( arg0.getImagePublic( ) || arg0.isAllowed( user ) );
           }
         } );
-        repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
+        repList.addAll( Lists.transform( Lists.newArrayList( results ), Images.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
     } catch ( Throwable e ) {
@@ -449,7 +449,7 @@ public class ImageUtil {
             return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
           }
         } );
-        repList.addAll( Lists.transform( Lists.newArrayList( results ), ImageInfo.TO_IMAGE_DETAILS ) );
+        repList.addAll( Lists.transform( Lists.newArrayList( results ), Images.TO_IMAGE_DETAILS ) );
       }
       db.commit( );
     } catch ( AuthException e ) {

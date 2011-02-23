@@ -2,73 +2,39 @@ package com.eucalyptus.images;
 
 import java.util.List;
 import javax.persistence.Transient;
+import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.State;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TypeMapping;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
  * @author decker
  */
 public class Images {
-  public static String IMAGE_RAMDISK_PREFIX = "eri";
-  public static String IMAGE_KERNEL_PREFIX  = "eki";
-  public static String IMAGE_MACHINE_PREFIX = "emi";
   
-  public enum Architecture {
-    i386, x86_64
-  }
-  
-  public enum Platform {
-    linux {
-      public String toString( ) {
-        return "";
+  public static class ImageInfoToDetails implements TypeMapping<ImageInfo, ImageDetails> {
+    @Override
+    public ImageDetails apply( ImageInfo arg0 ) {
+      ImageDetails i = new ImageDetails( );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageOwnerId( arg0.getOwner( ).toString( ) );
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      if ( arg0 instanceof MachineImageInfo ) {
+        i.setImageType( ( ( MachineImageInfo ) arg0 ).getImageType( ).toString( ) );
+        i.setKernelId( ( ( MachineImageInfo ) arg0 ).getKernelId( ) );
+        i.setRamdiskId( ( ( MachineImageInfo ) arg0 ).getRamdiskId( ) );
+        i.setPlatform( ( ( MachineImageInfo ) arg0 ).getPlatform( ).toString( ) );
       }
-    },
-    windows {
-      public String toString( ) {
-        return this.name( );
-      }
-    };
+      return i;
+    }
   }
-  
-  public enum Type {
-    machine {
-      @Override
-      public String getTypePrefix( ) {
-        return IMAGE_MACHINE_PREFIX;
-      }
-    },
-    kernel {
-      @Override
-      public String getTypePrefix( ) {
-        return IMAGE_KERNEL_PREFIX;
-      }
-    },
-    ramdisk {
-      @Override
-      public String getTypePrefix( ) {
-        return IMAGE_RAMDISK_PREFIX;
-      }
-    };
-    public abstract String getTypePrefix( );
-  }
-  
-  public enum State {
-    pending, available, failed, deregistered
-  }
-  
-  public enum VirtualizationType {
-    paravirtualized, hvm
-  }
-  
-  public enum Hypervisor {
-    xen, kvm, vmware
-  }
-  
-  public static EntityWrapper<ImageInfo> getEntityWrapper( ) {
-    return new EntityWrapper<ImageInfo>( "eucalyptus_cloud" );
-  }
-  
+
   /**
    * TODO: DOCUMENT Images.java
    * 
@@ -91,7 +57,7 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      img.setImageState( Images.State.available );
+      img.setImageState( Image.State.available );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
@@ -102,7 +68,7 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      img.setImageState( Images.State.deregistered );
+      img.setImageState( Image.State.deregistered );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
@@ -142,7 +108,7 @@ public class Images {
   }
   
 
-  public static ImageInfo exampleWithImageState( final State state ) {
+  public static ImageInfo exampleWithImageState( final Image.State state ) {
     ImageInfo img = new ImageInfo( ) {
       {
         setState( state );
@@ -162,5 +128,6 @@ public class Images {
 
   @Transient
   public static ImageInfo         ALL          = exampleWithImageId( null );
+  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
 
 }
