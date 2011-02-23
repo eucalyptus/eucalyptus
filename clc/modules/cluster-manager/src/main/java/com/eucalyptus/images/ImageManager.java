@@ -162,7 +162,7 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     for ( String imageId : request.getImagesSet( ) ) {
       try {
-        imgList.add( db.getUnique( ImageInfo.named( imageId ) ) );
+        imgList.add( db.getUnique( Images.exampleWithImageId( imageId ) ) );
       } catch ( Throwable e ) {}
     }
     db.commit( );
@@ -258,7 +258,7 @@ public class ImageManager {
       }
     }
     imageInfo.setSignature( signature );
-    
+    imageInfo.setState( Image.State.available );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       db.add( imageInfo );

@@ -84,7 +84,7 @@ import com.eucalyptus.util.HasOwningAccount;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_keypair" )
+@Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPair {
   enum State { available, removing }

@@ -245,7 +245,7 @@ public class ImageUtil {
       db.commit( );
       } catch ( EucalyptusCloudException e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
+      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
       }
   }
   
@@ -258,7 +258,7 @@ public class ImageUtil {
       } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
       db.commit( );
-      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId );
+      throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
       } catch ( Throwable t ) {
       LOG.error( t, t );
       db.commit( );

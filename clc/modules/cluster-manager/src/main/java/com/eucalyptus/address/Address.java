@@ -106,7 +106,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "addresses" )
+@Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address extends UserMetadata<Address.State> implements AddressMetadata {
   public enum State {
@@ -152,13 +152,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
   @Id
   @GeneratedValue
-  @Column( name = "address_id" )
+  @Column( name = "metadata_address_id" )
   private Long                            id                      = -1l;
-  @Column( name = "address_name" )
+  @Column( name = "metadata_address_name" )
   private String                          name;
-  @Column( name = "address_cluster" )
+  @Column( name = "metadata_address_cluster" )
   private String                          cluster;
-  @Column( name = "address_owner_id" )
+  @Column( name = "metadata_address_owner_id" )
   private String                          userId;
   @Transient
   private String                          instanceId;
@@ -246,7 +246,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.state.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.setUserId(  UNALLOCATED_USERID );
+        this.setUserId( UNALLOCATED_USERID );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.name );
@@ -619,7 +619,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
-                                                                                                                                        this.getName( ) );
+                                                                                                                                               this.getName( ) );
   }
   
 }

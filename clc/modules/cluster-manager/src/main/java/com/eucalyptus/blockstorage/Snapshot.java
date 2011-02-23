@@ -67,6 +67,7 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -80,6 +81,7 @@ import com.eucalyptus.util.StorageProperties;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @Column( name = "parentvolume" )

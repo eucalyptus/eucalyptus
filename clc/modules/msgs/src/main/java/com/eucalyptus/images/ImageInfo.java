@@ -109,49 +109,53 @@ import com.google.common.base.Function;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "Images" )
+@Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
-@DiscriminatorColumn( name = "image_discriminator", discriminatorType = DiscriminatorType.STRING )
-@DiscriminatorValue( value = "kernel_or_ramdisk" )
+@DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
+@DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Transient
   private static Logger           LOG          = Logger.getLogger( ImageInfo.class );
-  @Column( name = "image_path" )
+  @Column( name = "metadata_image_path" )
   private String                  imageLocation;
-  @Column( name = "image_availability" )
+  @Column( name = "metadata_image_availability" )
   @Enumerated( EnumType.STRING )
   private Image.State             imageState;
-  @Column( name = "image_arch" )
+  @Column( name = "metadata_image_arch" )
   @Enumerated( EnumType.STRING )
   private Image.Architecture      architecture;
-  @Column( name = "image_is_public" )
+  @Column( name = "metadata_image_is_public" )
   private Boolean                 imagePublic;
-  @Column( name = "image_platform" )
+  @Column( name = "metadata_image_platform" )
   @Enumerated( EnumType.STRING )
   private Image.Platform          platform;
-  @Column( name = "image_type" )
+  @Column( name = "metadata_image_type" )
   @Enumerated( EnumType.STRING )
   private Type                    imageType;
   @Lob
   @Column( name = "image_signature" )
   private String                  signature;
   @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
+  @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ImageAuthorization> userGroups   = new HashSet<ImageAuthorization>( );
   @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_user_auth", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
+  @JoinTable( name = "image_has_user_auth", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ImageAuthorization> permissions  = new HashSet<ImageAuthorization>( );
   @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_product_codes", joinColumns = { @JoinColumn( name = "image_id" ) }, inverseJoinColumns = @JoinColumn( name = "image_product_code_id" ) )
+  @JoinTable( name = "image_has_product_codes", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_product_code_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
   @Transient
   private FullName                fullName;
   
-  public ImageInfo( ) {}
+  public ImageInfo( ) {
+    this.userGroups = null;
+    this.permissions = null;
+    this.productCodes = null;
+  }
   
   public ImageInfo( final String imageId ) {
     super( );
@@ -357,18 +361,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     //      if ( "all".equals( g.getName() ) )
     return true;
     //    return this.getPermissions().contains( user );
-  }
-  
-  public static ImageInfo named( String imageId ) throws EucalyptusCloudException {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    ImageInfo image = null;
-    try {
-      image = db.getUnique( ForwardImages.exampleWithImageId( imageId ) );
-      db.commit( );
-    } catch ( Throwable t ) {
-      db.commit( );
-    }
-    return image;
   }
   
   /**

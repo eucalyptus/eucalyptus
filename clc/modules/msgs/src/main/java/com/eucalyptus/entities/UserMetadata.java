@@ -82,13 +82,13 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public UserMetadata( UserFullName user ) {
     super( user );
     this.ownerUserId = user != null ? user.getUniqueId( ) : null;
-    this.ownerUserName = user != null ? user.getName( ) : null;
+    this.ownerUserName = user != null ? user.getUserName( ) : null;
   }
   
   public UserMetadata( UserFullName user, String displayName ) {
     super( user, displayName );
     this.ownerUserId = user != null ? user.getUniqueId( ) : null;
-    this.ownerUserName = user != null ? user.getName( ) : null;
+    this.ownerUserName = user != null ? user.getUserName( ) : null;
   }
   
   @Override

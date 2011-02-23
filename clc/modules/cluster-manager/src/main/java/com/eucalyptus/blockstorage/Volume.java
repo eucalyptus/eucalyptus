@@ -68,6 +68,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.StorageProperties;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
