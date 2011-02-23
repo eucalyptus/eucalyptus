@@ -85,7 +85,7 @@ import com.eucalyptus.util.StorageProperties;
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
-  @Column( name = "metadata_volume_size" )
+  @Column( name = "metadata_volume_cluster" )
   private String   cluster;
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
