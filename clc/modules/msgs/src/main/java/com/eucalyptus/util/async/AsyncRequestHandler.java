@@ -1,11 +1,7 @@
 package com.eucalyptus.util.async;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,21 +30,13 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
-import com.eucalyptus.component.id.Cluster;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
