@@ -1,7 +1,10 @@
 package com.eucalyptus.util.async;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,7 +33,13 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
+import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
@@ -101,6 +110,24 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           @Override
           public void operationComplete( ChannelFuture future ) throws Exception {
             if ( future.isSuccess( ) ) {
+              LOG.debug( "Connected as: " + ((InetSocketAddress)future.getChannel( ).getLocalAddress( )) );
+              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
+              List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+                {
+                  addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
+                  addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
+                  for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
+                    if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                      add( s );
+                    }
+                  }
+                  for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
+                    if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                      add( s );
+                    }
+                  }
+                }
+              };
               EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                 request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                 "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
@@ -355,5 +382,15 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     }
     
   }
+
+  /**
+   * TODO: DOCUMENT
+   * @see org.jboss.netty.channel.ChannelDownstreamHandler#handleDownstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
+   * @param arg0
+   * @param arg1
+   * @throws Exception
+   */
+  @Override
+  public void handleDownstream( ChannelHandlerContext arg0, ChannelEvent arg1 ) throws Exception {}
   
 }
