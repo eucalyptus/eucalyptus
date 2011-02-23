@@ -324,22 +324,29 @@ public class ImageManager {
   }
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
-    DeregisterImageResponseType reply = ( DeregisterImageResponseType ) request.getReply( );
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    
-    ImageInfo imgInfo = null;
+    DeregisterImageResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account requestAccount = ctx.getAccount( );
     try {
-      imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( !imgInfo.getOwner( ).getUniqueId( ).equals( request.getUserErn( ).getUniqueId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException(
-                                                                                                                                                                   "Only the owner of a registered image or the administrator can deregister it." );
-      WalrusUtil.invalidate( imgInfo );
-      db.commit( );
-      reply.set_return( true );
-    } catch ( EucalyptusCloudException e ) {
+      ImageInfo imgInfo = EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( request.getImageId( ) ) );
+      if( requestUser.isAccountAdmin( ) && imgInfo.getOwnerAccountId( ).equals( ctx.getAccount( ).getId( ) ) ) {
+        Images.deregisterImage( imgInfo.getDisplayName( ) );
+      } else if( ctx.hasSystemPrivileges( ) ) {
+        Images.deregisterImage( imgInfo.getDisplayName( ) );
+     } else {
+        throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );        
+      }
+      return reply;
+    } catch ( NoSuchImageException ex ) {
+      LOG.trace( ex );
       reply.set_return( false );
-      db.rollback( );
+      return reply;
+    } catch ( NoSuchElementException ex ) {
+      LOG.trace( ex );
+      reply.set_return( false );
+      return reply;
     }
-    return reply;
   }
   
   public ConfirmProductInstanceResponseType confirmProductInstance( ConfirmProductInstanceType request ) throws EucalyptusCloudException {

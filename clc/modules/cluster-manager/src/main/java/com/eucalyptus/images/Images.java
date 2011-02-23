@@ -2,6 +2,7 @@ package com.eucalyptus.images;
 
 import java.util.List;
 import javax.persistence.Transient;
+import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.State;
 import com.eucalyptus.entities.EntityWrapper;
@@ -72,6 +73,7 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
+      WalrusUtil.invalidate( img );
       img.setState( Image.State.deregistered );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
@@ -80,18 +82,18 @@ public class Images {
     }
   }
   
-  public static void deleteImage( String imageId ) throws NoSuchImageException {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    try {
-      ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      db.delete( img );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
-    }
-  }
-  
+//  public static void deleteImage( String imageId ) throws NoSuchImageException {
+//    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+//    try {
+//      ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
+//      db.delete( img );
+//      db.commit( );
+//    } catch ( EucalyptusCloudException e ) {
+//      db.rollback( );
+//      throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
+//    }
+//  }
+//  
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }

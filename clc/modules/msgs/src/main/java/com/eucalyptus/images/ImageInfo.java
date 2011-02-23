@@ -94,6 +94,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;

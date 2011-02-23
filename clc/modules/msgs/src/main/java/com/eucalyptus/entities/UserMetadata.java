@@ -96,7 +96,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public FullName getOwner( ) {
     if ( super.owner == null && this.ownerUserId != null ) {
       return ( super.owner = Accounts.lookupUserFullNameById( this.ownerUserId ) );
-    } else if ( super.owner == null && this.ownerUserId != null ) {
+    } else if ( super.owner == null && this.ownerUserId == null ) {
       return FakePrincipals.NOBODY_USER_ERN;
     } else {
       return super.owner;

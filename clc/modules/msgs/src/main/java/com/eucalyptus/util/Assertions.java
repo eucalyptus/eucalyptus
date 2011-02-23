@@ -77,6 +77,14 @@ public class Assertions {
     }
   }
   
+  public static final void assertNotNull( Object arg, String errMsg ) throws IllegalArgumentException {
+    if ( arg == null ) {
+      IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
+      LOG.error( ex, ex );
+      throw ex;
+    }
+  }
+
   public static final void assertNotNull( Object arg ) throws IllegalArgumentException {
     if( arg == null ) {
       String msg = "The argument to " + Thread.currentThread( ).getStackTrace( )[2].getMethodName( ) + " cannot be null.";
