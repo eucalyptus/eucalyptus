@@ -89,7 +89,9 @@ import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -106,7 +108,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address implements HasFullName<Address>, HasOwningAccount {
+public class Address extends UserMetadata<Address.State> implements AddressMetadata {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -528,27 +530,9 @@ public class Address implements HasFullName<Address>, HasOwningAccount {
       this.owner = Accounts.lookupUserFullNameById( userId );
     }
   }
-
-  @Override
-  public FullName getOwner( ) {
-    if( this.userId == null ) {
-      return FakePrincipals.NOBODY_USER_ERN;
-    } else if( this.owner == null ) {
-      this.setUserId( this.userId );
-    }
-    return this.owner;
-  }
   
   public String getStateUuid( ) {
     return this.stateUuid;
-  }
-  
-  public Long getId( ) {
-    return this.id;
-  }
-  
-  public void setId( final Long id ) {
-    this.id = id;
   }
   
   public void setCluster( final String cluster ) {
@@ -568,7 +552,8 @@ public class Address implements HasFullName<Address>, HasOwningAccount {
       : "" ) + " " + this.transition;
   }
   
-  public int compareTo( final Address that ) {
+  @Override
+  public int compareTo( final AddressMetadata that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   
@@ -628,23 +613,13 @@ public class Address implements HasFullName<Address>, HasOwningAccount {
   
   @Override
   public String getPartition( ) {
-    return this.cluster;//GRZE:BUG:BUG:TODO:
+    return this.cluster;//GRZE:BUG:BUG:TODO: this is almost certainly wrong
   }
   
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
                                                                                                                                         this.getName( ) );
-  }
-
-  /**
-   * TODO: DOCUMENT
-   * @see com.eucalyptus.util.HasOwningAccount#getOwnerAccountId()
-   * @return
-   */
-  @Override
-  public String getOwnerAccountId( ) {
-    return null;
   }
   
 }
