@@ -88,6 +88,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.Architecture;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
@@ -282,14 +283,17 @@ public class ImageUtil {
   public static BlockDeviceMappingItemType SWAP      = new BlockDeviceMappingItemType( "swap", "sda3" );
   public static BlockDeviceMappingItemType ROOT      = new BlockDeviceMappingItemType( "root", "/dev/sda1" );
   
-  public static String extractArchitecture( Document inputSource, XPath xpath ) {
+  public static Architecture extractArchitecture( Document inputSource, XPath xpath ) {
     String arch = null;
     try {
       arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       LOG.warn( e.getMessage( ) );
     }
-    return arch;
+    String architecture = ( ( arch == null )
+        ? "i386"
+        : arch );
+    return Image.Architecture.valueOf( architecture );
   }
   
   public static String extractRamdiskId( Document inputSource, XPath xpath ) {
@@ -393,71 +397,6 @@ public class ImageUtil {
       throw e;
     }
     return inputSource;
-  }
-  
-  public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, User user ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    List<ImageDetails> repList = Lists.newArrayList( );
-    try {
-      List<ImageInfo> results = db.query( Images.ALL );
-      for ( ImageInfo img : results ) {
-        ImageDetails imgDetails = Images.TO_IMAGE_DETAILS.apply( img );
-        if ( img.isAllowed( user ) && ( imgList.isEmpty( ) || imgList.contains( img ) ) ) {
-          repList.add( imgDetails );
-        }
-      }
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.commit( );
-      LOG.debug( e, e );
-    }
-    return repList;
-  }
-  
-  public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final User user, final ArrayList<String> owners ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    List<ImageDetails> repList = Lists.newArrayList( );
-    if ( owners.remove( "self" ) ) owners.add( user.getId( ) );
-    try {
-      for ( String userName : owners ) {
-        Iterable<ImageInfo> results = Iterables.filter( db.query( Images.exampleWithOwnerAccountId( user.getAccount( ).getId( ) ) ), new Predicate<ImageInfo>( ) {
-          @Override
-          public boolean apply( ImageInfo arg0 ) {
-            return ( imgList.isEmpty( ) || imgList.contains( arg0 ) )
-                   && ( arg0.getImagePublic( ) || arg0.isAllowed( user ) );
-          }
-        } );
-        repList.addAll( Lists.transform( Lists.newArrayList( results ), Images.TO_IMAGE_DETAILS ) );
-      }
-      db.commit( );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
-      db.rollback( );
-    }
-    return repList;
-  }
-  
-  public static List<ImageDetails> getImagesByExec( User user, ArrayList<String> executable ) {
-    List<ImageDetails> repList = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    try {
-      for ( String execUserId : executable ) {
-        if ( "all".equals( execUserId ) ) continue;
-        final User execUser = Accounts.lookupUserById( execUserId );
-        Iterable<ImageInfo> results = Iterables.filter( db.query( Images.ALL ), new Predicate<ImageInfo>( ) {
-          @Override
-          public boolean apply( ImageInfo arg0 ) {
-            return arg0.isAllowed( execUser ) || arg0.getImagePublic( );
-          }
-        } );
-        repList.addAll( Lists.transform( Lists.newArrayList( results ), Images.TO_IMAGE_DETAILS ) );
-      }
-      db.commit( );
-    } catch ( AuthException e ) {
-      LOG.debug( e, e );
-      db.commit( );
-    }
-    return repList;
   }
   
   public static void cleanDeregistered( ) {

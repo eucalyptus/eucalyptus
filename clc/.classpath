@@ -20,7 +20,6 @@
 	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/storage-san/build" path="modules/storage-san/src/main/java"/>
 	<classpathentry kind="src" path="modules/configuration/conf/scripts"/>
-	<classpathentry kind="src" path="modules/core/conf/upgrade"/>
 	<classpathentry kind="src" path="modules/core/conf/scripts"/>
 	<classpathentry kind="src" path="modules/www/conf/reports"/>
 	<classpathentry kind="src" path="modules/reporting/src/main/java"/>

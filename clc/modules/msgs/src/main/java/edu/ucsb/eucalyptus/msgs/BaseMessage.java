@@ -136,6 +136,7 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
+    this.setCorrelationId( UUID.randomUUID( ).toString( ) );
     this.setUser( FakePrincipals.SYSTEM_USER );
     return ( TYPE ) this;
   }
@@ -149,8 +150,9 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
+    this.setUser( FakePrincipals.SYSTEM_USER );
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
-    return ( TYPE ) regarding( );
+    return ( TYPE ) this;
   }
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
@@ -211,11 +213,11 @@ public class BaseMessage {
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
+      reply.setCorrelationId( this.getCorrelationId( ) );
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( this.correlationId, e );
     }
-    reply.setCorrelationId( this.getCorrelationId( ) );
     return reply;
   }
   

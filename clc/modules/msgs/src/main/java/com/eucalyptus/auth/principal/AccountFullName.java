@@ -85,7 +85,7 @@ public class AccountFullName implements FullName {
     this.qName = this.authority + this.relativeId;
   }
   protected AccountFullName( Account account, String... relativePath ) {
-    Assertions.assertArgumentNotNull( account );
+    Assertions.assertNotNull( account );
     this.accountId = account.getId( );
     this.name = accountId;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );

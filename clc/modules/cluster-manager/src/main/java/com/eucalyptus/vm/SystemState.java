@@ -99,6 +99,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroupUtil;
@@ -281,7 +282,7 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
-      ImageInfo img = Transactions.one( ImageInfo.named( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
+      ImageInfo img = Transactions.one( Images.exampleMachineWithImageId( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {

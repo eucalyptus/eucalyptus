@@ -90,6 +90,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -99,6 +100,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.JoinTx;
@@ -106,6 +108,7 @@ import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -119,9 +122,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   private static Logger           LOG          = Logger.getLogger( ImageInfo.class );
   @Column( name = "metadata_image_path" )
   private String                  imageLocation;
-  @Column( name = "metadata_image_availability" )
-  @Enumerated( EnumType.STRING )
-  private Image.State             imageState;
   @Column( name = "metadata_image_arch" )
   @Enumerated( EnumType.STRING )
   private Image.Architecture      architecture;
@@ -151,23 +151,25 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Transient
   private FullName                fullName;
   
-  public ImageInfo( ) {
-    this.userGroups = null;
-    this.permissions = null;
-    this.productCodes = null;
-  }
+  public ImageInfo( ) {}
   
   public ImageInfo( final String imageId ) {
-    super( );
+    this( );
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
   public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Image.Architecture arch,
                     final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    Assertions.assertNotNull( arch );
+    Assertions.assertNotNull( arch );
+    Assertions.assertNotNull( imageLocation );
+    Assertions.assertNotNull( platform );
+    this.setState( Image.State.pending );
     this.imageLocation = imageLocation;
-    this.imageState = Image.State.pending;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
+    this.architecture = arch;
+    this.platform = platform;
   }
   
   public Image.Type getImageType( ) {
@@ -180,14 +182,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public void setPlatform( Image.Platform platform ) {
     this.platform = platform;
-  }
-  
-  public Image.State getImageState( ) {
-    return this.imageState;
-  }
-  
-  public void setImageState( Image.State imageState ) {
-    this.imageState = imageState;
   }
   
   public Architecture getArchitecture( ) {
@@ -351,7 +345,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.getDisplayName( ).hashCode( );
   }
   
-  public boolean isAllowed( User user ) {
+  public boolean isAllowed( Account account ) {
     //try {
     //  if ( Users.lookupUser( user.getUserName( ) ).isAdministrator( ) || user.getUserName( ).equals( this.getImageOwnerId( ) ) ) return true;
     //} catch ( NoSuchUserException e ) {

@@ -128,13 +128,13 @@ public class NetworkUtil {
   }
 
   public static boolean testReachability( String addr ) throws Exception {
-    Assertions.assertArgumentNotNull( addr );
+    Assertions.assertNotNull( addr );
     InetAddress inetAddr = Inet4Address.getByName( addr );
     return inetAddr.isReachable( 10000 );
   }
 
   public static InetAddress toAddress( URI uri ) {
-    Assertions.assertArgumentNotNull( uri );
+    Assertions.assertNotNull( uri );
     try {
       return InetAddress.getByName( uri.getHost( ) );
     } catch ( UnknownHostException e ) {
@@ -143,7 +143,7 @@ public class NetworkUtil {
   }
 
   public static InetAddress toAddress( String maybeUrlMaybeHostname ) {
-    Assertions.assertArgumentNotNull( maybeUrlMaybeHostname );
+    Assertions.assertNotNull( maybeUrlMaybeHostname );
     if( maybeUrlMaybeHostname.startsWith( "vm:" ) ) {
       maybeUrlMaybeHostname = "localhost";
     }
@@ -165,7 +165,7 @@ public class NetworkUtil {
   }
   
   public static boolean testLocal( final InetAddress addr ) {
-    Assertions.assertArgumentNotNull( addr );
+    Assertions.assertNotNull( addr );
     try {
       Boolean result = addr.isAnyLocalAddress( ); 
       result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>() {
@@ -182,7 +182,7 @@ public class NetworkUtil {
   }
 
   public static boolean testLocal( String address ) {
-    Assertions.assertArgumentNotNull( address );
+    Assertions.assertNotNull( address );
     InetAddress addr;
       try {
         addr = InetAddress.getByName( address );

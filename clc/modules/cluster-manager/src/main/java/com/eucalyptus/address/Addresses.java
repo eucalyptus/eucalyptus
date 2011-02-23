@@ -199,7 +199,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static Address allocate( FullName userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
-    Addresses.policyLimits( userId, isAdministrator );
+//TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( userId );
   }
   

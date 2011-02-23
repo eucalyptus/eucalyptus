@@ -84,6 +84,7 @@ import com.eucalyptus.cloud.NetworkSecurityGroup;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
@@ -127,15 +128,18 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
                                    .namespace( this.getOwnerAccountId( ) )
                                    .relativeId( "security-group", this.getDisplayName( ) );
     this.uniqueName = this.fullName.toString( );
+    this.setState( State.available );
   }
   
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
     this( account, groupName );
+    Assertions.assertNotNull( groupDescription );
     this.description = groupDescription;
   }
   
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String description, final List<NetworkRule> networkRules ) {
     this( account, groupName, description );
+    Assertions.assertNotNull( networkRules );
     this.networkRules = networkRules;
   }
   

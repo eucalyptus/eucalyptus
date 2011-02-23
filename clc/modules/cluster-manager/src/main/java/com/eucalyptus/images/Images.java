@@ -22,7 +22,7 @@ public class Images {
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getImageLocation( ) );
-      i.setImageOwnerId( arg0.getOwner( ).toString( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );
       i.setImageState( arg0.getState( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       if ( arg0 instanceof MachineImageInfo ) {
@@ -34,7 +34,10 @@ public class Images {
       return i;
     }
   }
-
+  
+  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
+  public static ImageInfo          ALL              = new ImageInfo( );
+  
   /**
    * TODO: DOCUMENT Images.java
    * 
@@ -52,30 +55,31 @@ public class Images {
     }
     return images;
   }
-
+  
   public static void enableImage( String imageId ) throws NoSuchImageException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      img.setImageState( Image.State.available );
+      img.setState( Image.State.available );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
     }
   }
+  
   public static void deregisterImage( String imageId ) throws NoSuchImageException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      img.setImageState( Image.State.deregistered );
+      img.setState( Image.State.deregistered );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
     }
   }
-
+  
   public static void deleteImage( String imageId ) throws NoSuchImageException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
@@ -88,26 +92,26 @@ public class Images {
     }
   }
   
-
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }
+  
   public static KernelImageInfo exampleKernelWithImageId( final String imageId ) {
     return new KernelImageInfo( imageId );
   }
+  
   public static RamdiskImageInfo exampleRamdiskWithImageId( final String imageId ) {
     return new RamdiskImageInfo( imageId );
   }
-
-  public static ImageInfo exampleWithImageId( final String imageId ) {
-    return new ImageInfo( ) {
-      {
-        setDisplayName( imageId );
-      }
-    };
+  
+  public static ImageInfo lookupImage( String imageId ) {
+    return EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( imageId ) );
   }
   
-
+  public static ImageInfo exampleWithImageId( final String imageId ) {
+    return new ImageInfo( imageId );
+  }
+  
   public static ImageInfo exampleWithImageState( final Image.State state ) {
     ImageInfo img = new ImageInfo( ) {
       {
@@ -125,9 +129,5 @@ public class Images {
       }
     };
   }
-
-  @Transient
-  public static ImageInfo         ALL          = exampleWithImageId( null );
-  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
-
+  
 }

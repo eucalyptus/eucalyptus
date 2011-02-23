@@ -852,7 +852,7 @@ public class Component implements HasName<Component> {
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
     public Service getService( String name ) throws NoSuchElementException {
-      Assertions.assertArgumentNotNull( name );
+      Assertions.assertNotNull( name );
       for ( Service s : this.services.values( ) ) {
         if ( s.getServiceConfiguration( ).getName( ).equals( name ) ) {
           return s;

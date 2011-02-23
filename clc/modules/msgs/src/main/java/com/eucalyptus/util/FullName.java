@@ -167,7 +167,7 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
       if ( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
         StringBuilder rId = new StringBuilder( );
         for ( String s : relativePath ) {
-          rId.append( relativePath ).append( SEP_PATH );
+          rId.append( s ).append( SEP_PATH );
         }
         this.partMap.put( part.DONE, this.buf.toString( ) );
         this.buf.append( rId.toString( ) );
@@ -219,6 +219,11 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
         
         @Override
         public String getName( ) {
+          return create.this.buf.toString( );
+        }
+        
+        @Override
+        public String toString( ) {
           return create.this.buf.toString( );
         }
       };

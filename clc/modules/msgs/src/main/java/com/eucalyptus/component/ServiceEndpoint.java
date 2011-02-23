@@ -123,7 +123,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     super( uri );
     this.parent = parent;
     this.local = local;
-    Assertions.assertArgumentNotNull( uri );
+    Assertions.assertNotNull( uri );
     try {
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {

@@ -86,6 +86,7 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.images.NoSuchImageException;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
@@ -123,7 +124,11 @@ public class WalrusUtil {
   
   public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    imgInfo.setImageState( Image.State.deregistered );
+    try {
+      Images.deregisterImage( imgInfo.getDisplayName( ) );
+    } catch ( NoSuchImageException ex ) {
+      LOG.debug( ex );
+    }
     try {
       RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
