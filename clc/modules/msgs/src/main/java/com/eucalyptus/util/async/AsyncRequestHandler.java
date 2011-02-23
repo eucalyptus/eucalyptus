@@ -84,9 +84,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public ChannelPipeline getPipeline( ) throws Exception {
             ChannelPipeline pipeline = factory.getPipeline( );
             ChannelUtil.addPipelineMonitors( pipeline, 30 );
-            if( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-              pipeline.addLast( "system-info-handler", endpoint.getServiceInfoHandler( ) );
-            }
+//            if( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+//              pipeline.addLast( "system-info-handler", endpoint.getServiceInfoHandler( ) );
+//            }
             pipeline.addLast( "request-handler", AsyncRequestHandler.this );
             return pipeline;
           }
