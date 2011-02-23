@@ -110,7 +110,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   
   public SshKeyPair( UserFullName user, String keyName ) {
     super( user, keyName );
-    this.uniqueName = this.fullName.toString( );
+    this.uniqueName = this.getFullName( ).toString( );
   }
   
   public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
