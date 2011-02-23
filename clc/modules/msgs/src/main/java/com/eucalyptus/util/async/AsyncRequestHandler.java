@@ -112,22 +112,25 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
             if ( future.isSuccess( ) ) {
               LOG.debug( "Connected as: " + ((InetSocketAddress)future.getChannel( ).getLocalAddress( )) );
               final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
-              List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-                {
-                  addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
-                  addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
-                  for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
-                    if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                      add( s );
+              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+                  {
+                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
+                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
+                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
+                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                        add( s );
+                      }
+                    }
+                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
+                      if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                        add( s );
+                      }
                     }
                   }
-                  for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
-                    if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                      add( s );
-                    }
-                  }
-                }
-              };
+                };
+                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
+              }
               EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                 request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                 "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
