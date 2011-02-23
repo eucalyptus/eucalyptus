@@ -223,13 +223,13 @@ public class ImageManager {
       LOG.warn( e.getMessage( ) );
     }
     if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[1].startsWith( "vmlinuz" ) ) {
-      if ( Contexts.lookup( ).hasSystemPrivileges( ) ) {
+      if ( !Contexts.lookup( ).hasSystemPrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       }
       imageType = Image.Type.kernel;
       imageInfo = new KernelImageInfo( request.getUserErn( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation, Image.Architecture.valueOf( arch.toLowerCase( ) ), Image.Platform.linux );      
     } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
-      if ( Contexts.lookup( ).hasSystemPrivileges( ) ) {
+      if ( !Contexts.lookup( ).hasSystemPrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
       }
       imageType = Image.Type.ramdisk;
