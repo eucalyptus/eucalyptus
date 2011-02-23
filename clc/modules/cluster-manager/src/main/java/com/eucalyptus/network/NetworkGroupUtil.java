@@ -21,7 +21,7 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 public class NetworkGroupUtil {
   
   public static EntityWrapper<NetworkRulesGroup> getEntityWrapper( ) {
-    EntityWrapper<NetworkRulesGroup> db = new EntityWrapper<NetworkRulesGroup>( );
+    EntityWrapper<NetworkRulesGroup> db = EntityWrapper.get( NetworkRulesGroup.class );
     return db;
   }
   

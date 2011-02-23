@@ -328,7 +328,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } catch ( NoSuchElementException e1 ) {
       LOG.debug( e1 );
     }
-    EntityWrapper<Address> db = new EntityWrapper<Address>( );
+    EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
       Address dbAddr = db.getUnique( new Address( name ) );
       db.delete( dbAddr );
@@ -477,7 +477,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   private static void addAddress( Address address ) {
     Address addr = address;
-    EntityWrapper<Address> db = new EntityWrapper<Address>( );
+    EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
       addr = db.getUnique( new Address( address.getName( ) ) );
       addr.setUserId( address.getOwner( ).getUniqueId( ) );

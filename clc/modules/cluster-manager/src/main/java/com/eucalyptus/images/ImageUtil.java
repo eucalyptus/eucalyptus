@@ -238,7 +238,7 @@ public class ImageUtil {
   }
   */
   private static void invalidateImageById( String searchId ) throws EucalyptusCloudException {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     if ( isSet( searchId ) ) try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( searchId ) );
       WalrusUtil.invalidate( img );
@@ -250,7 +250,7 @@ public class ImageUtil {
   }
   
   public static ImageInfo getImageInfobyId( String searchId ) throws EucalyptusCloudException {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     if ( isSet( searchId ) ) try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( searchId ) );
       db.commit( );
@@ -362,7 +362,7 @@ public class ImageUtil {
   }
   
   public static boolean modifyImageInfo( final User requestUser, final String imageId, final List<LaunchPermissionItemType> addList, final List<LaunchPermissionItemType> remList ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
       imgInfo = db.getUnique( Images.exampleWithImageId( imageId ) );
@@ -396,7 +396,7 @@ public class ImageUtil {
   }
   
   public static List<ImageDetails> getImageOwnedByUser( List<ImageInfo> imgList, User user ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     List<ImageDetails> repList = Lists.newArrayList( );
     try {
       List<ImageInfo> results = db.query( Images.ALL );
@@ -415,7 +415,7 @@ public class ImageUtil {
   }
   
   public static List<ImageDetails> getImagesByOwner( final List<ImageInfo> imgList, final User user, final ArrayList<String> owners ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     List<ImageDetails> repList = Lists.newArrayList( );
     if ( owners.remove( "self" ) ) owners.add( user.getId( ) );
     try {
@@ -439,7 +439,7 @@ public class ImageUtil {
   
   public static List<ImageDetails> getImagesByExec( User user, ArrayList<String> executable ) {
     List<ImageDetails> repList = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       for ( String execUserId : executable ) {
         if ( "all".equals( execUserId ) ) continue;
@@ -461,7 +461,7 @@ public class ImageUtil {
   }
   
   public static void cleanDeregistered( ) {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       List<ImageInfo> imgList = db.query( Images.exampleWithImageState( Image.State.deregistered ) );
       for ( ImageInfo deregImg : imgList ) {

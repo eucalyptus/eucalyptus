@@ -116,7 +116,7 @@ public class VmTypes {
   }
 
   private synchronized void update( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
+    EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
     try {
       List<VmType> vmTypeList = db.query( new VmType( ) );
 

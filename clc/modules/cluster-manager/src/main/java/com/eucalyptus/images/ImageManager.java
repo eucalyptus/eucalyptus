@@ -159,7 +159,7 @@ public class ImageManager {
     DescribeImagesResponseType reply = ( DescribeImagesResponseType ) request.getReply( );
     ImageUtil.cleanDeregistered( );
     List<ImageInfo> imgList = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     for ( String imageId : request.getImagesSet( ) ) {
       try {
         imgList.add( db.getUnique( ImageInfo.named( imageId ) ) );
@@ -259,7 +259,7 @@ public class ImageManager {
     }
     imageInfo.setSignature( signature );
     
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       db.add( imageInfo );
       db.commit( );
@@ -298,7 +298,7 @@ public class ImageManager {
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
     DeregisterImageResponseType reply = ( DeregisterImageResponseType ) request.getReply( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     
     ImageInfo imgInfo = null;
     try {
@@ -322,7 +322,7 @@ public class ImageManager {
     try {
       vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
 //ASAP: FIXME: GRZE: RESTORE!
-//      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+//      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
 //      try {
 //        ImageInfo found = db.getUnique( new ImageInfo( vm.getImageInfo( ).getImageId( ) ) );
 //        if ( found.getProductCodes( ).contains( new ProductCode( request.getProductCode( ) ) ) ) {
@@ -343,7 +343,7 @@ public class ImageManager {
     
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !imgInfo.isAllowed( request.getUser( ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
@@ -396,7 +396,7 @@ public class ImageManager {
     if ( request.getProductCodes( ).isEmpty( ) ) {
       reply.set_return( ImageUtil.modifyImageInfo( request.getUser( ), request.getImageId( ), request.getAdd( ), request.getRemove( ) ) );
     } else {
-      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
       ImageInfo imgInfo = null;
       try {
         imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
@@ -419,7 +419,7 @@ public class ImageManager {
   public ResetImageAttributeResponseType resetImageAttribute( ResetImageAttributeType request ) throws EucalyptusCloudException {
     ResetImageAttributeResponseType reply = ( ResetImageAttributeResponseType ) request.getReply( );
     reply.set_return( true );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( request.getUserErn( ).getUniqueId( ).equals( imgInfo.getOwner( ).getUniqueId( ) ) || request.isAdministrator( ) ) {

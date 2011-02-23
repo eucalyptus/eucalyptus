@@ -255,7 +255,7 @@ public class SystemConfiguration {
   }
 
   public static SystemConfiguration getSystemConfiguration() {
-  	EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
+  	EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
   	SystemConfiguration conf = null;
   	try {
   		conf = confDb.getUnique( new SystemConfiguration());

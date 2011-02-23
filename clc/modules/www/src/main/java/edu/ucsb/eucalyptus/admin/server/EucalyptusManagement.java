@@ -330,7 +330,7 @@ public class EucalyptusManagement {
 
 	public static void setSystemConfig( final SystemConfigWeb systemConfig )
 	{
-		EntityWrapper<SystemConfiguration> db = new EntityWrapper<SystemConfiguration>();
+		EntityWrapper<SystemConfiguration> db = EntityWrapper.get( SystemConfiguration.class );
 		SystemConfiguration sysConf = null;
 		try
 		{

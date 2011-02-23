@@ -215,7 +215,7 @@ public abstract class AbstractSystemAddressManager {
     
     protected static void loadStoredAddresses( Cluster cluster ) {
       try {
-        EntityWrapper<Address> db = new EntityWrapper<Address>( );
+        EntityWrapper<Address> db = EntityWrapper.get( Address.class );
         Address clusterAddr = new Address( );
         clusterAddr.setCluster( cluster.getName( ) );
         List<Address> addrList = Lists.newArrayList( );

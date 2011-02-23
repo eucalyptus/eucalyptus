@@ -360,7 +360,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   public static ImageInfo named( String imageId ) throws EucalyptusCloudException {
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo image = null;
     try {
       image = db.getUnique( ForwardImages.exampleWithImageId( imageId ) );
