@@ -98,6 +98,7 @@ doInitialize (struct nc_state_t *nc)
 	return OK;
 }
 
+static int
 prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName)
 {
     int i;
@@ -853,6 +854,7 @@ static void change_bundling_state (ncInstance * instance, bundling_progress stat
 	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
+/*
 static void set_bundling_env(struct bundling_params_t *params) {
   char buf[MAX_PATH];
 
@@ -893,6 +895,7 @@ static void unset_bundling_env(void) {
   unsetenv("EUCA_CERT");  
   unsetenv("EUCA_PRIVATE_KEY");
 }
+*/
 
 // helper for cleaning up 
 static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, instance_states state, bundling_progress result)
