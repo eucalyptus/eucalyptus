@@ -70,7 +70,7 @@ public class Assertions {
 
   public static final void assertNotNull( Object arg, String formatString, String... args ) throws IllegalArgumentException {
     if ( arg == null ) {
-      String errMsg = args.length == 0 ? formatString : String.format( formatString, args );
+      String errMsg = String.format( formatString, args );
       IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
       LOG.error( ex, ex );
       throw ex;
