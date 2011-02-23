@@ -357,7 +357,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
         ChannelHandler last = pipeline.removeLast( );
         pipeline.addLast( "system-state-info", systemStateHandler );
         pipeline.addLast( "handler", last );
-        return null;
+        return pipeline;
       }
     };
     
