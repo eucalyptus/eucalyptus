@@ -319,31 +319,35 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
                                                     
                                                     @Override
                                                     public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-                                                      if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof BaseMessage ) {
-                                                        BaseMessage msg = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-                                                        InetSocketAddress localSocketAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
-                                                        final String locahostAddr = localSocketAddr.getAddress( ).getHostAddress( );
-                                                        List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-                                                          {
-                                                            addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( locahostAddr ) );
-                                                            addAll( Components.lookup( Walrus.class ).getServiceSnapshot( locahostAddr ) );
-                                                            for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( locahostAddr ) ) {
-                                                              if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                                                                add( s );
+                                                      try {
+                                                        if ( e instanceof MessageEvent && ( ( MessageEvent ) e ).getMessage( ) instanceof BaseMessage ) {
+                                                          BaseMessage msg = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
+                                                          InetSocketAddress localSocketAddr = ( InetSocketAddress ) ctx.getChannel( ).getLocalAddress( );
+                                                          final String locahostAddr = localSocketAddr.getAddress( ).getHostAddress( );
+                                                          List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+                                                            {
+                                                              addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( locahostAddr ) );
+                                                              addAll( Components.lookup( Walrus.class ).getServiceSnapshot( locahostAddr ) );
+                                                              for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( locahostAddr ) ) {
+                                                                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                                                                  add( s );
+                                                                }
+                                                              }
+                                                              for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( locahostAddr ) ) {
+                                                                if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
+                                                                  add( s );
+                                                                }
                                                               }
                                                             }
-                                                            for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( locahostAddr ) ) {
-                                                              if ( ServiceEndpoint.this.parent.getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
-                                                                add( s );
-                                                              }
-                                                            }
+                                                          };
+                                                          for ( ServiceInfoType serviceInfo : serviceInfos ) {
+                                                            List<String> uris = Lists.newArrayList( serviceInfo.getUris( ) );
                                                           }
-                                                        };
-                                                        for ( ServiceInfoType serviceInfo : serviceInfos ) {
-                                                          List<String> uris = Lists.newArrayList( serviceInfo.getUris( ) );
+                                                          msg.getBaseServices( ).clear( );
+                                                          msg.getBaseServices( ).addAll( serviceInfos );
                                                         }
-                                                        msg.getBaseServices( ).clear( );
-                                                        msg.getBaseServices( ).addAll( serviceInfos );
+                                                      } catch ( Exception ex ) {
+                                                        LOG.error( ex , ex );
                                                       }
                                                     }
                                                   };
