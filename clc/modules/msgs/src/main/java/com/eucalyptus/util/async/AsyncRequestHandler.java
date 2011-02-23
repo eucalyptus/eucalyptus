@@ -111,7 +111,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public void operationComplete( ChannelFuture future ) throws Exception {
             try {
               if ( future.isSuccess( ) ) {
-                LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
+//                LOG.debug( "Connected as: " + NetworkUtil.getAllAddresses( ) );
 //              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getHostName( );
 //              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
 //                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
