@@ -156,7 +156,6 @@ public class BaseMessage {
     this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
     this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
     this.correlationId = corrId + "-" + subCorrelationId;
-    Contexts.child( corrId, this.correlationId );
     return ( TYPE ) this;
   }
   
