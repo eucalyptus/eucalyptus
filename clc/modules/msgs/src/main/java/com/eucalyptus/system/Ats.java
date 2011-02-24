@@ -117,10 +117,6 @@ public class Ats {
     return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );
   }
   
-  public static Ats From( Object o ) {
-    return from( o );
-  }
-  
   public static Ats from( Object o ) {
     if ( o instanceof Class ) {
       return new Ats( ( AnnotatedElement ) o );
@@ -135,7 +131,7 @@ public class Ats {
     if ( o instanceof AnnotatedElement ) {
       return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
     } else {
-      return new Ats( o.getClass( ) );
+      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
     }
   }
   

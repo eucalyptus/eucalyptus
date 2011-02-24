@@ -98,7 +98,7 @@ public class Lookups {
   public static <T extends HasOwningAccount> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
-    if( lookupTypes.size( ) != 1 ) {
+    if( lookupTypes.isEmpty( ) ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( ) + " so the policy type for looking up " + identifier + " cannot be determined." );
     } else {
       PolicyResourceType type = PolicyAnnotationRegistry.extractResourceType( lookupTypes.get( 0 ) );
