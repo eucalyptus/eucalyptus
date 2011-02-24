@@ -75,22 +75,20 @@ public class Contexts {
     }
   }
   
-  public static void clear( Context context ) {
-    Context ctx = uuidContexts.remove( context.getCorrelationId( ) );
+  public static void clear( String corrId ) {
+    Assertions.assertNotNull( corrId );
+    Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
       channelContexts.remove( channel );
     } else {
-      throw new RuntimeException( "Missing reference to channel for the request." );
+      LOG.debug( "Context.clear() failed for correlationId=" + corrId, new RuntimeException( "Missing reference to channel for the request." ) );
     }
     ctx.clear( );
   }
-  
-  public static void clear( String correlationId ) {
-    try {
-      clear( lookup( correlationId ) );
-    } catch ( NoSuchContextException e ) {
-      LOG.error( e, e );
-    }
+
+  public static void clear( Context context ) {
+    clear( context.getCorrelationId( ) );
   }
+  
 }

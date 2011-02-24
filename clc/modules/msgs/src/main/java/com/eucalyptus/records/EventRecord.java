@@ -5,6 +5,7 @@ import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -18,7 +19,8 @@ public class EventRecord extends EucalyptusMessage {
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
     UserFullName userFn = FakePrincipals.NOBODY_USER_ERN;
     try {
-      userFn = Contexts.lookup( msg.getCorrelationId( ) ).getUserFullName( );
+      Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
+      userFn = ctx.getUserFullName( );
     } catch ( Exception ex ) {
     }
     return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "nobody" : userFn.toString( ), msg.getCorrelationId( ), other );
