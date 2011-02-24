@@ -219,15 +219,12 @@ public class BaseMessage {
   
   public String toSimpleString( ) {
     StringBuilder buf = new StringBuilder( );
-    buf.append( this.getClass( ).getSimpleName( ) ).append( ":" ).append( this.correlationId ).append( ":" ).append( this.userId );
-    try {
-      Context ctx = Contexts.lookup( this.correlationId );
-      buf.append( ":" ).append( ctx.getUserFullName( ) ).append( ":" ).append( this.effectiveUserId ).append( ":" ).append( ctx.getEffectiveUserFullName( ) );
-    } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
-      buf.append( ":" ).append( this.effectiveUserId );
-    }
-    buf.append( ":return=" ).append( this.get_return( ) ).append( ":status=" ).append( this.getStatusMessage( ) );
+    buf.append( this.getClass( ).getSimpleName( ) )
+       .append( ":" ).append( this.correlationId )
+       .append( ":" ).append( this.userId )
+       .append( ":" ).append( this.effectiveUserId )
+       .append( ":return=" ).append( this.get_return( ) )
+       .append( ":status=" ).append( this.getStatusMessage( ) );
     return buf.toString( );
   }
   
