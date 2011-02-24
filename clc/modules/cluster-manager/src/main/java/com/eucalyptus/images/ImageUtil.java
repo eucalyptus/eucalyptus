@@ -333,7 +333,7 @@ public class ImageUtil {
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
       if ( reply != null ) {
-        if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
+        if ( !Contexts.lookup().getUserFullName().getUserId().equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
                                                                                                                                                  "Image registration failed: you must own the bucket containing the image." );
         userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
       }

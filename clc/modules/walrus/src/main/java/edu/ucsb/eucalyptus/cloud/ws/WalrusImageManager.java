@@ -1056,7 +1056,7 @@ public class WalrusImageManager {
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 		User user = Contexts.lookup().getUser( );
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1189,7 +1189,7 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
     User user = Contexts.lookup().getUser( );
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -1231,7 +1231,7 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
     User user = Contexts.lookup().getUser( );
 
 
@@ -1305,7 +1305,7 @@ public class WalrusImageManager {
 		ValidateImageResponseType reply = (ValidateImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);

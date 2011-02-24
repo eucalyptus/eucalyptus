@@ -80,6 +80,7 @@ public class BaseMessage {
     this.userId = userId;
   }
   
+  @Deprecated
   public String getUserId( ) {
     return this.userId;
   }
