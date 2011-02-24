@@ -215,6 +215,10 @@
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="org.mule.config.spring.SpringRegistry" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="org.mule.DefaultMuleMessage" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
