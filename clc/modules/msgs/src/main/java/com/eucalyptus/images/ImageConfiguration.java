@@ -64,6 +64,7 @@
 package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -80,14 +81,15 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "image_configuration" )
+@Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
 public class ImageConfiguration extends AbstractPersistent {
   @Transient
   private static Logger LOG               = Logger.getLogger( ImageConfiguration.class );
   @ConfigurableField( description = "The default value used to determine whether or not images are marked 'public' when first registered." )
-  private Boolean       defaultVisibility = true;
+  @Column( name = "metadata_image_is_public", nullable=false, columnDefinition="boolean default true" )
+  private Boolean       defaultVisibility = Boolean.TRUE;
   
   public ImageConfiguration( ) {
     super( );

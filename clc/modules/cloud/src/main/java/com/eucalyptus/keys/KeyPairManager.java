@@ -33,20 +33,6 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
 
-//  public VmKeyInfo resolve( VmInfo vmInfo ) throws EucalyptusCloudException {
-//    SshKeyPair kp = null;
-//    if ( vmInfo.getKeyValue() != null || !"".equals( vmInfo.getKeyValue() ) ) {
-//      try {
-//        kp = KeyPairUtil.getUserKeyPairByValue( UserFullName.getInstance( Accounts.lookupUserByName( vmInfo.getOwnerId( ) ) ), vmInfo.getKeyValue( ) );
-//      } catch ( Exception e ) {
-//        kp = SshKeyPair.NO_KEY;
-//      }
-//    } else {
-//      kp = SshKeyPair.NO_KEY;
-//    }
-//    return new VmKeyInfo( kp.getDisplayName(), kp.getPublicKey(), kp.getFingerPrint() );
-//  }
-
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
 //ASAP:FIXME:GRZE
