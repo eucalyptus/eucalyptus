@@ -111,7 +111,7 @@ public class Context {
   
   void setMuleEvent( MuleEvent event ) {
     if ( event != null ) {
-      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
+//      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }
