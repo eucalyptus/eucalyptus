@@ -140,5 +140,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   public void setCreationTime( Date creationTime ) {
     this.creationTime = creationTime;
   }
-  
+
+  public final String getName( ) {
+    return this.getDisplayName( );
+  }
+
 }

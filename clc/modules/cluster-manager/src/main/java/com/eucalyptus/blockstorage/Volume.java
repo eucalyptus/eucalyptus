@@ -228,10 +228,6 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
       : this.fullName;
   }
   
-  @Override
-  public String getName( ) {
-    return getDisplayName( );
-  }
   
   @Override
   public int compareTo( VolumeMetadata o ) {

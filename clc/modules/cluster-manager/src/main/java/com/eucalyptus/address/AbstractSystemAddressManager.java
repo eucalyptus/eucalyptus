@@ -6,13 +6,12 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmState;
@@ -23,8 +22,8 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 public abstract class AbstractSystemAddressManager {
   static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
   
-  public Address allocateNext( FullName userId ) throws NotEnoughResourcesAvailable {
-    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId.getUniqueId( ) );
+  public Address allocateNext( UserFullName userId ) throws NotEnoughResourcesAvailable {
+    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -47,7 +46,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         Address address = Helper.lookupOrCreate( cluster, addrInfo );
         if ( address.isAssigned( ) && !address.isPending( ) ) {
-          if ( Address.UNALLOCATED_USERID.equals( address.getOwner( ).getUniqueId( ) ) ) {
+          if ( FakePrincipals.NOBODY_USER_ERN.equals( address.getOwner( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
@@ -64,7 +63,7 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState( ).handleOrphan( addrInfo );
             }
           }
-        } else if ( address.isAllocated( ) && Address.UNALLOCATED_USERID.equals( address.getOwner( ).getUniqueId( ) ) && !address.isPending( ) ) {
+        } else if ( address.isAllocated( ) && FakePrincipals.NOBODY_USER_ERN.equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
       } catch ( Throwable e ) {
@@ -97,7 +96,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), ComponentIds.lookup( Eucalyptus.class ).name( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), FakePrincipals.SYSTEM_USER_ERN, vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if( addr == null && vm == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );

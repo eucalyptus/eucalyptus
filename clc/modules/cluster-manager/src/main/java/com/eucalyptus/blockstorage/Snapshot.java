@@ -172,14 +172,6 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.cluster = cluster;
   }
   
-  /**
-   * @see com.eucalyptus.util.Mappable#getName()
-   */
-  @Override
-  public String getName( ) {
-    return this.getDisplayName( );
-  }
-  
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );

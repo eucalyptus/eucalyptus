@@ -182,11 +182,6 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   
   
   @Override
-  public String getName( ) {
-    return this.getDisplayName( );
-  }
-  
-  @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
   }

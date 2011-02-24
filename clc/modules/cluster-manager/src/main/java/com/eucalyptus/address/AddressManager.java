@@ -65,6 +65,7 @@
 package com.eucalyptus.address;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -123,7 +124,7 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new DescribeAddressesResponseItemType( address.getName( ), Address.UNALLOCATED_USERID ) );
+        reply.getAddressesSet( ).add( new DescribeAddressesResponseItemType( address.getName( ), FakePrincipals.NOBODY_USER_ERN ) );
       }
     }
     return reply;

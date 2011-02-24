@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -83,15 +84,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callback.Success;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
@@ -198,9 +196,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( FullName userId, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+  public static Address allocate( UserFullName userFullName, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
 //TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
-    return Addresses.getAddressManager( ).allocateNext( userId );
+    return Addresses.getAddressManager( ).allocateNext( userFullName );
   }
   
   //TODO: add return of callback, use reassign, special case for now

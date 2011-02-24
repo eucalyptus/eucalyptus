@@ -70,13 +70,11 @@ import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.DiscriminatorType;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
@@ -89,16 +87,13 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Assertions;
@@ -108,8 +103,6 @@ import com.eucalyptus.util.JoinTx;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -367,13 +360,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.getFullName( ).toString( );
   }
   
-  /**
-   * @see com.eucalyptus.util.Mappable#getName()
-   */
-  @Override
-  public String getName( ) {
-    return this.getDisplayName( );
-  }
   
   @Override
   public int compareTo( Image o ) {

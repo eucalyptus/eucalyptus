@@ -179,11 +179,6 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
   }
   
   @Override
-  public String getName( ) {
-    return this.getDisplayName( );
-  }
-  
-  @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
   }

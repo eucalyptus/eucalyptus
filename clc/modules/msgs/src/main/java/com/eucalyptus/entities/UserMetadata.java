@@ -128,5 +128,14 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void setOwnerUserName( String ownerUserName ) {
     this.ownerUserName = ownerUserName;
   }
+
+  @Override
+  protected void setOwner( FullName owner ) {
+    UserFullName userFullName = ( UserFullName ) owner;
+    this.setOwnerUserId( userFullName.getUserId( ) );
+    this.setOwnerUserName( userFullName.getUserName( ) );
+    super.setOwner( owner );
+  }
+
   
 }
