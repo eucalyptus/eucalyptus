@@ -78,6 +78,8 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -114,14 +116,11 @@ public class SnapshotManager {
   private static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   private static String ID_PREFIX = "snap";
   
-  public static EntityWrapper<Snapshot> getEntityWrapper( ) {
-    return new EntityWrapper<Snapshot>( VolumeManager.PERSISTENCE_CONTEXT );
-  }
-  
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
     
-    EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
-    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( request.getUserErn( ), request.getVolumeId( ) ) );
+    Context ctx = Contexts.lookup( );
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    Volume vol = db.recast( Volume.class ).getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
     String partition = vol.getCluster( );
     Service sc = null;
     try {
@@ -156,11 +155,11 @@ public class SnapshotManager {
     String newId = null;
     Snapshot snap = null;
     while ( true ) {
-      newId = Crypto.generateId( request.getUserErn( ).getUniqueId( ), ID_PREFIX );
+      newId = Crypto.generateId( ctx.getUserFullName( ).getUniqueId( ), ID_PREFIX );
       try {
         db.getUnique( Snapshot.named( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        snap = new Snapshot( request.getUserErn( ), newId, vol.getDisplayName( ) );
+        snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ) );
         db.add( snap );
         break;
       }
@@ -194,9 +193,10 @@ public class SnapshotManager {
   public DeleteSnapshotResponseType delete( DeleteSnapshotType request ) throws EucalyptusCloudException {
     DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     reply.set_return( false );
-    EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
+    Context ctx = Contexts.lookup( );
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      Snapshot snap = db.getUnique( Snapshot.named( request.getUserErn( ) , request.getSnapshotId( ) ) );
+      Snapshot snap = db.getUnique( Snapshot.named( ctx.getUserFullName( ) , request.getSnapshotId( ) ) );
       if ( !State.EXTANT.equals( snap.getState( ) ) ) {
         db.rollback( );
         reply.set_return( false );
@@ -225,10 +225,11 @@ public class SnapshotManager {
   
   public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup( );
     
-    EntityWrapper<Snapshot> db = SnapshotManager.getEntityWrapper( );
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( request.getUserErn( ) ) );
+      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
       
       for ( Snapshot v : snapshots ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );

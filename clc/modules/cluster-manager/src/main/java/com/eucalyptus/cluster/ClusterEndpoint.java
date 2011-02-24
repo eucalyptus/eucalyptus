@@ -76,6 +76,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.VmType;
@@ -114,7 +115,7 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
     DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
-    if ( request.isAdministrator( ) && request.getAvailabilityZoneSet( ).lastIndexOf( "help" ) == 0 ) {
+    if ( Contexts.lookup().hasAdministrativePrivileges() && request.getAvailabilityZoneSet( ).lastIndexOf( "help" ) == 0 ) {
       reply.getAvailabilityZoneInfo( ).addAll( this.addHelpInfo( ) );
       return reply;
     }
@@ -139,7 +140,7 @@ public class ClusterEndpoint implements Startable {
   }
   
   private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, DescribeAvailabilityZonesType request ) {
-    boolean admin = request.isAdministrator( );
+    boolean admin = Contexts.lookup().hasAdministrativePrivileges();
     List<String> args = request.getAvailabilityZoneSet( );
     String clusterName = c.getName( );
     reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );

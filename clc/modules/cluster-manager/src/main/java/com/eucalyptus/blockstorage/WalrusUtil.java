@@ -134,7 +134,8 @@ public class WalrusUtil {
     try {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
       User user = Accounts.lookupUserById( userName.getUniqueId( ) );
-      msg.setUser( user );
+//      msg.setUserId( user.getName( ) );
+      msg.regarding( );
       
       reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
     } catch ( Exception e ) {
@@ -165,8 +166,7 @@ public class WalrusUtil {
     if( true ) return;//TODO:GRZE:BUG:BUG
     String[] imagePathParts = imageLocation.split( "/" );
     GetObjectResponseType reply = null;
-    GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true );
-    msg.setUser( FakePrincipals.SYSTEM_USER );
+    GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true ).regarding( );
     try {
       reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
       if ( reply == null || reply.getBase64Data( ) == null ) {

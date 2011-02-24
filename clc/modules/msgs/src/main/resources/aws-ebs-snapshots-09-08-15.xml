@@ -97,7 +97,7 @@
   <mapping name="DeleteSnapshotResponse" class="edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
     ordered="false">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
 
   <mapping name="DescribeSnapshots" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType" ordered="false"
@@ -151,7 +151,7 @@
   <mapping name="ModifySnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType"
       extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="ResetSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType"
       extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -161,7 +161,7 @@
   <mapping name="ResetSnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType"
       extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="DescribeSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType"
       extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

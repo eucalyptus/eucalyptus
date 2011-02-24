@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -93,9 +94,10 @@ public class AddressManager {
   
   public AllocateAddressResponseType allocate( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup( );
     Address address;
     try {
-      address = Addresses.allocate( request.getUserErn( ), request.isAdministrator( ) );
+      address = Addresses.allocate( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ) );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -108,7 +110,8 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Context ctx = Contexts.lookup( );
+    Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -117,9 +120,10 @@ public class AddressManager {
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     Addresses.updateAddressingMode( );
-    boolean isAdmin = Contexts.lookup( ).hasSystemPrivileges( );
+    Context ctx = Contexts.lookup( );
+    boolean isAdmin = ctx.hasAdministrativePrivileges( );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( isAdmin || address.getOwner( ).equals( request.getUserErn( ) ) ) {
+      if ( isAdmin || address.getOwner( ).equals( ctx.getUserFullName( ) ) ) {
         reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
       }
     }
@@ -136,8 +140,9 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getInstanceId( ) );
+    Context ctx = Contexts.lookup( );
+    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );//TODO: test should throw error.
+    final VmInstance vm = VmInstances.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
@@ -201,10 +206,11 @@ public class AddressManager {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Context ctx = Contexts.lookup( );
+    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
-    if ( address.isSystemOwned( ) && !request.isAdministrator( ) ) {
+    if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {
       throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
     } else {
       try {

@@ -182,15 +182,17 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
   
   public EucalyptusMessage( EucalyptusMessage msg ) {
     this();
-    this.userId = msg.userId;
-    this.effectiveUserId = msg.effectiveUserId;
-    this.correlationId = msg.correlationId;
+    regarding(msg);
+    regardingUserRequest(msg);
+    this.setUserId( msg.getUserId( ) );
+    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
   }
   
   public  EucalyptusMessage(final String userId) {
     this();
-    this.userId = userId;
-    this.effectiveUserId = userId;
+    this.setUserId( msg.getUserId( ) );
+    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
   }
 
   public MetaClass getMetaClass() {
@@ -208,8 +210,8 @@ public class ExceptionResponseType extends BaseMessage {
   public ExceptionResponseType() {}
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
     this.message = message!=null?message:"not available";
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    this.setUserId( msg.getUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
@@ -217,8 +219,8 @@ public class ExceptionResponseType extends BaseMessage {
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     this.httpStatus = httpStatus;
     this.message = message!=null?message:"not available"
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    this.setUserId( msg.getUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
@@ -242,8 +244,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
   public EucalyptusErrorMessageType(String source, BaseMessage msg, String message) {
     this(source, message);
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    regardingUserRequest( msg );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
   }
   

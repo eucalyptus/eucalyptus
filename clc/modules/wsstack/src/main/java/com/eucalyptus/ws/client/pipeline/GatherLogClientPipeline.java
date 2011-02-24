@@ -82,7 +82,7 @@ public final class GatherLogClientPipeline implements ChannelPipelineFactory {
     final ChannelPipeline pipeline = Channels.pipeline( );
 //    ChannelUtil.addPipelineMonitors( pipeline, 60 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 5242880 ) );
+    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1024*1024*20 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );

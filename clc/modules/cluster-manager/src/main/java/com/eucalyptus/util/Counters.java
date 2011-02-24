@@ -83,7 +83,7 @@ import com.eucalyptus.util.Tx;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "counters" )
+@Table( name = "metadata_counters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Counters extends AbstractPersistent implements Serializable {
   private static Logger   LOG = Logger.getLogger( Counters.class );

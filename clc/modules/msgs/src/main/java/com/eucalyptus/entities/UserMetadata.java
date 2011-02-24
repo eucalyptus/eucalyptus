@@ -94,14 +94,14 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   
   @Override
   public FullName getOwner( ) {
-    if ( super.getOwner( ) == null && this.getOwnerUserId( ) == null ) {
+    if ( super.owner == null && this.getOwnerUserId( ) == null ) {
       this.setOwner( FakePrincipals.NOBODY_USER_ERN );
-    } else if( this.getOwner( ) == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+    } else if( super.owner == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
       this.setOwner( FakePrincipals.NOBODY_USER_ERN );
-    } else if( this.getOwner( ) == null && this.getOwnerUserId( ) != null ) {
+    } else if( super.owner == null && this.getOwnerUserId( ) != null ) {
       this.setOwner( Accounts.lookupUserFullNameById( this.ownerUserId ) );
     }
-    return super.getOwner( );
+    return super.owner;
   }
   
   @Override

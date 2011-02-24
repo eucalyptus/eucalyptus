@@ -7,6 +7,7 @@ import org.jboss.netty.channel.Channel;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.Assertions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Contexts {
@@ -40,6 +41,7 @@ public class Contexts {
   }
   
   public static Context lookup( String correlationId ) throws NoSuchContextException {
+    Assertions.assertNotNull( correlationId );
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {

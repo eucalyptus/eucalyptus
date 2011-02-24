@@ -210,18 +210,18 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
         final BaseMessage msg = ( BaseMessage ) request.getMessage( );
         final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
         if ( msg.getCorrelationId( ) == null ) {
-          String corrId = null;
+//          String corrId = null;
           try {
-            corrId = Contexts.lookup( ctx.getChannel( ) ).getCorrelationId( );
+//            corrId = Contexts.lookup( ctx.getChannel( ) ).getCorrelationId( );
           } catch ( Exception e1 ) {
-            corrId = UUID.randomUUID( ).toString( );
+//            corrId = UUID.randomUUID( ).toString( );
           }
-          msg.setCorrelationId( corrId );
+//          msg.setCorrelationId( corrId );
         }
         if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
 //          msg.setEffectiveUserId( msg.getUserId( ) );
         } else if ( ( user != null ) && ( this.msgReceiver == null ) ) {
-          msg.setUser( user );
+//          msg.setUser( user );
         }
         EventRecord.here( ServiceSinkHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
         if ( this.msgReceiver == null ) {

@@ -120,7 +120,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   def VmAllocationInfo(final RunInstancesType request) {
     this.request = request;
     this.reply = request.getReply();
-    this.setCorrelationId( request.getCorrelationId() )
+    regardingUserRequest(request);
   }
   
   public EucalyptusMessage getRequestMessage() {
@@ -220,18 +220,16 @@ public class VmRunType extends EucalyptusMessage {
   }
   
   def VmRunType(RunInstancesType request) {
-    this.effectiveUserId = request.effectiveUserId;
-    this.correlationId = request.correlationId;
-    this.userId = request.userId;
+    this.setUserId( msg.getUserId( ) );
+    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
   }
   
   public VmRunType(RunInstancesType request, String reservationId, String userData,
   int amount, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
   ArrayList<String> instanceIds, List<String> macAddresses, int vlan,
   List<String> networkNames, ArrayList<String> networkIndexList) {
-    this.correlationId = request.correlationId;
-    this.userId = request.userId;
-    this.effectiveUserId = request.effectiveUserId;
+    this( request );
     this.reservationId = reservationId;
     this.userData = userData;
     this.min = amount;

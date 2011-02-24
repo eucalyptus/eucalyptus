@@ -91,6 +91,8 @@ import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.Architecture;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -327,7 +329,8 @@ public class ImageUtil {
   
   public static void checkBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
     String userName = null;
-    if ( !request.isAdministrator( ) ) {
+    Context ctx = Contexts.lookup( );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
       if ( reply != null ) {
         if ( !request.getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(

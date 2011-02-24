@@ -13,6 +13,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -55,16 +57,17 @@ public class KeyPairManager {
         return vmAllocInfo;
       }
     }
+    Context ctx = Contexts.lookup();
     RunInstancesType request = vmAllocInfo.getRequest( );
     String action = PolicySpec.requestToAction( request );
     String keyName = request.getKeyName( );
-    Account account = request.getAccount( );
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( request.getUserErn( ), keyName );
+    Account account = ctx.getAccount( );
+    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), keyName );
     if ( keypair == null ) {
       throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, request.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + request.getUser( ).getName( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
     }
     vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey(), keypair.getFingerPrint() ) );
     return vmAllocInfo;
@@ -73,7 +76,8 @@ public class KeyPairManager {
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
-    for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( request.getUserErn( ) ) ) {
+    Context ctx = Contexts.lookup();
+    for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( ctx.getUserFullName( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
         reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
       }
@@ -83,8 +87,9 @@ public class KeyPairManager {
 
   public DeleteKeyPairResponseType delete( DeleteKeyPairType request ) throws EucalyptusCloudException {
     DeleteKeyPairResponseType reply = ( DeleteKeyPairResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup();
     try {
-      SshKeyPair key = KeyPairUtil.deleteUserKeyPair( request.getUserErn( ), request.getKeyName( ) );
+      SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       reply.set_return( true );
     } catch ( Exception e1 ) {
       reply.set_return( true );
@@ -94,10 +99,11 @@ public class KeyPairManager {
 
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException {
     CreateKeyPairResponseType reply = request.getReply( );
+    com.eucalyptus.context.Context ctx = Contexts.lookup();
     try {
-      KeyPairUtil.getUserKeyPair( request.getUserErn( ), request.getKeyName( ) );
+      KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
-      PrivateKey pk = KeyPairUtil.createUserKeyPair( request.getUserErn( ), request.getKeyName( ) );
+      PrivateKey pk = KeyPairUtil.createUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
       ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
       PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );

@@ -69,7 +69,7 @@
              class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="DeleteSecurityGroup" class="edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -81,7 +81,7 @@
              class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="CreateSecurityGroup" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -142,7 +142,7 @@
              class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="AuthorizeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -159,7 +159,7 @@
              class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="RevokeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
