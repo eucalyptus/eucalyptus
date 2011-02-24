@@ -131,9 +131,7 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    this.setCorrelationId( UUID.randomUUID( ).toString( ) );
-    this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
-    this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    regarding( null, null );
     return ( TYPE ) this;
   }
   
@@ -146,8 +144,19 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
-    this.setUser( FakePrincipals.SYSTEM_USER );
-    this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
+    String corrId = null;
+    if( msg == null ) {
+      this.correlationId = UUID.randomUUID( ).toString( );
+    } else {
+      corrId = msg.correlationId;
+    }
+    if( subCorrelationId == null ) {
+      subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
+    }    
+    this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    this.correlationId = corrId + "-" + subCorrelationId;
+    Contexts.child( corrId, this.correlationId );
     return ( TYPE ) this;
   }
   

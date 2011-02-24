@@ -1,11 +1,17 @@
 package com.eucalyptus.context;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
+import com.eucalyptus.auth.Contract;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Assertions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -89,6 +95,105 @@ public class Contexts {
 
   public static void clear( Context context ) {
     clear( context.getCorrelationId( ) );
+  }
+
+  public static void child( String parentId, String childId ) {
+    Context ctx;
+    if( ( ctx = uuidContexts.get( parentId ) ) != null ) {
+      final Context parentCtxRef = ctx;
+      uuidContexts.put( childId, new Context( parentCtxRef.getHttpRequest( ), parentCtxRef.getChannel( ) ) {
+        private final Context pctx = parentCtxRef; 
+
+      @Override
+      void clear( ) {
+        if( uuidContexts.containsKey( parentCtxRef.getCorrelationId( ) ) ) {
+          try {
+            Contexts.clear( parentCtxRef.getCorrelationId( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+          }
+        }
+        super.clear( );
+      }
+
+      public int hashCode( ) {
+        return this.pctx.hashCode( );
+      }
+
+      public Channel getChannel( ) {
+        return this.pctx.getChannel( );
+      }
+
+      public MappingHttpRequest getHttpRequest( ) {
+        return this.pctx.getHttpRequest( );
+      }
+
+      public String getCorrelationId( ) {
+        return this.pctx.getCorrelationId( );
+      }
+
+      public Long getCreationTime( ) {
+        return this.pctx.getCreationTime( );
+      }
+
+      public void setRequest( BaseMessage msg ) {
+        this.pctx.setRequest( msg );
+      }
+
+      public BaseMessage getRequest( ) {
+        return this.pctx.getRequest( );
+      }
+
+      public void setUser( User user ) {
+        this.pctx.setUser( user );
+      }
+
+      public UserFullName getUserFullName( ) {
+        return this.pctx.getUserFullName( );
+      }
+
+      public UserFullName getEffectiveUserFullName( ) {
+        return this.pctx.getEffectiveUserFullName( );
+      }
+
+      public boolean equals( Object obj ) {
+        return this.pctx.equals( obj );
+      }
+
+      public boolean hasAdministrativePrivileges( ) {
+        return this.pctx.hasAdministrativePrivileges( );
+      }
+
+      public User getUser( ) {
+        return this.pctx.getUser( );
+      }
+
+      public String getServiceName( ) {
+        return this.pctx.getServiceName( );
+      }
+
+      public Subject getSubject( ) {
+        return this.pctx.getSubject( );
+      }
+
+      public void setSubject( Subject subject ) {
+        this.pctx.setSubject( subject );
+      }
+
+      public Map<String, Contract> getContracts( ) {
+        return this.pctx.getContracts( );
+      }
+
+      public Account getAccount( ) {
+        return this.pctx.getAccount( );
+      }
+
+      public String toString( ) {
+        return this.pctx.toString( );
+      }} );
+    } else {
+      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
+    }
   }
   
 }

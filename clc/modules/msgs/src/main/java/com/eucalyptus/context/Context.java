@@ -66,7 +66,7 @@ public class Context {
   }
   
   public BaseMessage getRequest( ) {
-    if( this.request == null && this.httpRequest != null ) {
+    if( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
       this.request = ( BaseMessage ) this.httpRequest.getMessage( );
     }
     return check( this.request );
