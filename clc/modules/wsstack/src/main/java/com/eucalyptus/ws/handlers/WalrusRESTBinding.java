@@ -81,6 +81,8 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -159,10 +161,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private WalrusDataQueue<WalrusDataMessage> putQueue;
 
 	public WalrusRESTBinding( ) {
-    super( "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
-  }
+		super( "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
+	}
 
-  @Override
+	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
 		LOG.trace( LogUtil.dumpObject( channelEvent ) );
 		if ( channelEvent instanceof MessageEvent ) {
@@ -315,7 +317,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			//:: try to create the target class :://
 			targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
 			if( !GroovyObject.class.isAssignableFrom( targetType ) ) {
-			  throw new Exception( );
+				throw new Exception( );
 			}
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
@@ -376,7 +378,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void setRequiredParams(final GroovyObject msg, User user) throws Exception {
 		if(user != null) {
-		  // YE TODO: can we just use any key here?
+			// YE TODO: can we just use any key here?
 			msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
 		}
 		msg.setProperty("timeStamp", new Date());
@@ -503,11 +505,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				objectKey += splitOn + target[i];
 				splitOn = "/";
 			}
-			try {
-				objectKey = WalrusUtil.URLdecode(objectKey);
-			} catch (UnsupportedEncodingException e) {
-				throw new BindingException("Unable to get key: " + e.getMessage());
-			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
 			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
@@ -530,8 +527,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 								sourceSplitOn = "/";
 							}
 							try {
-								sourceObjectKey = WalrusUtil.URLdecode(sourceObjectKey);
-							} catch (UnsupportedEncodingException e) {
+								sourceObjectKey = new URLCodec().decode(sourceObjectKey);
+							} catch (DecoderException e) {
 								throw new BindingException("Unable to get source key: " + e.getMessage());
 							}
 							operationParams.put("SourceBucket", sourceTarget[0]);
