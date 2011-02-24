@@ -184,15 +184,15 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
     this();
     regarding(msg);
     regardingUserRequest(msg);
-    this.setUserId( msg.getUserId( ) );
-    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
-    this.setCorrelationId( msg.getCorrelationId( ) );
+    this.userId = msg.userId;
+    this.effectiveUserId = msg.effectiveUserId;
+    this.correlationId = msg.correlationId;
   }
   
   public  EucalyptusMessage(final String userId) {
     this();
-    this.setUserId( msg.getUserId( ) );
-    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
+    this.userId = userId;
+    this.effectiveUserId = userId;
   }
 
   public MetaClass getMetaClass() {
