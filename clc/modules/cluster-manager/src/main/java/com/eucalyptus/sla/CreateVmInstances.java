@@ -81,6 +81,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
+  
   public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     int quantity = getVmAllocationNumber( vmAllocInfo );
     RunInstancesType request = vmAllocInfo.getRequest( );
@@ -88,10 +89,15 @@ public class CreateVmInstances {
     try {
       ctx = Contexts.lookup( vmAllocInfo.getCorrelationId( ) );
     } catch ( NoSuchContextException ex ) {
-      LOG.error( ex , ex );
-      throw new EucalyptusCloudException("CreateVmInstances failed because the user could not be looked up: " + ex.getMessage( ), ex );
+      LOG.debug( ex );
+      try {
+        ctx = Contexts.lookup( vmAllocInfo.getRequest( ).getCorrelationId( ) );
+      } catch ( NoSuchContextException ex1 ) {
+        LOG.debug( ex );
+        throw new EucalyptusCloudException( "CreateVmInstances failed because the user could not be looked up: " + ex.getMessage( ), ex );
+      }
     }
-    User requestUser = ctx.getUser( ); 
+    User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
     String action = PolicySpec.requestToAction( request );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
@@ -106,7 +112,7 @@ public class CreateVmInstances {
     String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
     int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
-      if( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( Clusters.getInstance( ).hasNetworking( ) ) {
         for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
           VmInstance vmInst = getVmInstance( userFullName, vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
           VmInstances.getInstance( ).register( vmInst );
@@ -123,11 +129,11 @@ public class CreateVmInstances {
     vmAllocInfo.setReservationId( reservationId );
     return vmAllocInfo;
   }
-
+  
   private int getVmAllocationNumber( VmAllocationInfo vmAllocInfo ) {
     int vmNum = 0;
     for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
-      if( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( Clusters.getInstance( ).hasNetworking( ) ) {
         vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
       } else {
         vmNum += token.getAmount( );
@@ -139,14 +145,14 @@ public class CreateVmInstances {
   private VmInstance getVmInstance( UserFullName userFullName, VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
     VmInstance vmInst = new VmInstance( reservationId,
                                         index - 1,
-                                        VmInstances.getId( vmAllocInfo.getReservationIndex(), index ),
+                                        VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ),
                                         userFullName,
-                                        token.getCluster(),
-                                        vmAllocInfo.getUserData(),
-                                        vmAllocInfo.getKeyInfo(),
-                                        vmAllocInfo.getVmTypeInfo(),
+                                        token.getCluster( ),
+                                        vmAllocInfo.getUserData( ),
+                                        vmAllocInfo.getKeyInfo( ),
+                                        vmAllocInfo.getVmTypeInfo( ),
                                         vmAllocInfo.getPlatform( ),
-                                        vmAllocInfo.getNetworks(),
+                                        vmAllocInfo.getNetworks( ),
                                         networkIndex.toString( ) );
     return vmInst;
   }
