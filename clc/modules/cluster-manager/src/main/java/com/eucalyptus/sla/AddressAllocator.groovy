@@ -25,17 +25,19 @@ public class AddressAllocator implements ResourceAllocator {
   @Override
   public void allocate( VmAllocationInfo vmInfo ) {
     if ( isPublic( vmInfo.getRequest( ).getAddressingType( ) ) ) {
-      vmInfo.allocationTokens.each{ ResourceToken it ->
-        it.addresses += alloc( it.cluster, it.amount ).collect{ it.getDisplayName() };
+      vmInfo.allocationTokens.each{ ResourceToken rsc ->
+        it.addresses += alloc( rscrsc.cluster, rsc.amount ).collect{ Address addr ->
+          addr.getDisplayName()
+        };
       };
     }
   }
   @Override
   public void fail(VmAllocationInfo vmInfo, Throwable t) {
-    vmInfo.allocationTokens.each{ ResourceToken it -> 
+    vmInfo.allocationTokens.each{ ResourceToken it ->
       it.addresses.each{ String addr ->
         Addresses.release( Addresses.getInstance().lookup( addr ) );
       }
     }
   }
-}  
+}
