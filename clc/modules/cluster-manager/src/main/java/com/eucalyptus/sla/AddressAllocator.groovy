@@ -26,7 +26,7 @@ public class AddressAllocator implements ResourceAllocator {
   public void allocate( VmAllocationInfo vmInfo ) {
     if ( isPublic( vmInfo.getRequest( ).getAddressingType( ) ) ) {
       vmInfo.allocationTokens.each{ ResourceToken rsc ->
-        it.addresses += alloc( rscrsc.cluster, rsc.amount ).collect{ Address addr ->
+        rsc.addresses += alloc( rscrsc.cluster, rsc.amount ).collect{ Address addr ->
           addr.getDisplayName()
         };
       };
