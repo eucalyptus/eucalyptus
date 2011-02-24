@@ -66,11 +66,12 @@ package com.eucalyptus.auth.policy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 
 public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
-  
+  private static Logger LOG = Logger.getLogger( PolicyAnnotationRegistry.class );
   private static final Map<Class,PolicyResourceType> classToPolicyRscType = new HashMap<Class,PolicyResourceType>();
   
   public static PolicyResourceType extractResourceType( Object classOrInstance ) throws NoSuchElementException {
@@ -85,8 +86,11 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   }
   
   private static PolicyResourceType extractPolicyResourceTypeFromSuperclass( Class type ) {
+    LOG.trace( "PolicyAnnotationRegistry: looking for annotations starting at " + type );
     for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      LOG.trace( "PolicyAnnotationRegistry: check -> " + c );
       if( classToPolicyRscType.containsKey( c ) ) {
+        LOG.trace( "PolicyAnnotationRegistry: FOUND => " + c );
         return classToPolicyRscType.get( c );
       } else {
         PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromInterfaces( type.getInterfaces( ) );
@@ -99,7 +103,9 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   }
   private static PolicyResourceType extractPolicyResourceTypeFromInterfaces( Class[] interfaces ) {
     for( Class i : interfaces ) {
+      LOG.trace( "PolicyAnnotationRegistry: check => " + i );
       if( classToPolicyRscType.containsKey( i ) ) {
+        LOG.trace( "PolicyAnnotationRegistry: FOUND => " + i );
         return classToPolicyRscType.get( i );
       }
     }

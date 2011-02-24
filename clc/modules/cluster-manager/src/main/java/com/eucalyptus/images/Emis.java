@@ -83,30 +83,30 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
-  public static String                          IMAGE_MACHINE          = "machine";
-  public static String                          IMAGE_KERNEL           = "kernel";
-  public static String                          IMAGE_RAMDISK          = "ramdisk";
-  public static String                          IMAGE_PLATFORM_DEFAULT = "linux";
-  public static String                          IMAGE_PLATFORM_WINDOWS = "windows";
-  public static final Lookup<MachineImageInfo> lookupMachineImg              = new Lookup<MachineImageInfo>( ) {
-    @Override
-    public MachineImageInfo lookup( String identifier ) {
-      return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
-    }
-  };
-  public static final Lookup<KernelImageInfo> lookupKernelImg              = new Lookup<KernelImageInfo>( ) {
-    @Override
-    public KernelImageInfo lookup( String identifier ) {
-      return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
-    }
-  };
-  public static final Lookup<RamdiskImageInfo> lookupRamdiskImg              = new Lookup<RamdiskImageInfo>( ) {
-    @Override
-    public RamdiskImageInfo lookup( String identifier ) {
-      return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
-    }
-  };
-  private static Logger                         LOG                    = Logger.getLogger( Emis.class );
+  public static String                         IMAGE_MACHINE          = "machine";
+  public static String                         IMAGE_KERNEL           = "kernel";
+  public static String                         IMAGE_RAMDISK          = "ramdisk";
+  public static String                         IMAGE_PLATFORM_DEFAULT = "linux";
+  public static String                         IMAGE_PLATFORM_WINDOWS = "windows";
+  public static final Lookup<MachineImageInfo> lookupMachineImg       = new Lookup<MachineImageInfo>( ) {
+                                                                        @Override
+                                                                        public MachineImageInfo lookup( String identifier ) {
+                                                                          return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
+                                                                        }
+                                                                      };
+  public static final Lookup<KernelImageInfo>  lookupKernelImg        = new Lookup<KernelImageInfo>( ) {
+                                                                        @Override
+                                                                        public KernelImageInfo lookup( String identifier ) {
+                                                                          return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
+                                                                        }
+                                                                      };
+  public static final Lookup<RamdiskImageInfo> lookupRamdiskImg       = new Lookup<RamdiskImageInfo>( ) {
+                                                                        @Override
+                                                                        public RamdiskImageInfo lookup( String identifier ) {
+                                                                          return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
+                                                                        }
+                                                                      };
+  private static Logger                        LOG                    = Logger.getLogger( Emis.class );
   
   public static class BootableSet {
     private final MachineImageInfo disk;
