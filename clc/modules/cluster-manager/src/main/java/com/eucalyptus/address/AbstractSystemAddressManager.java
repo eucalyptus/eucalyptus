@@ -96,7 +96,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ), FakePrincipals.SYSTEM_USER_ERN, vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( FakePrincipals.SYSTEM_USER_ERN, addrInfo.getAddress( ), cluster.getName( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if( addr == null && vm == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );

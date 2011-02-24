@@ -204,7 +204,7 @@ public class ExceptionResponseType extends BaseMessage {
   String message = "not available";
   String requestType = "not available";
   Throwable exception;
-  HttpResponseStatus httpStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+  HttpResponseStatus httpStatus = HttpResponseStatus.BAD_REQUEST;
   public ExceptionResponseType() {}
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
     this.message = message!=null?message:"not available";

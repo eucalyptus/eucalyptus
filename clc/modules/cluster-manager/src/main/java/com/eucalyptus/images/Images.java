@@ -73,9 +73,13 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      WalrusUtil.invalidate( img );
-      img.setState( Image.State.deregistered );
+      if( Image.State.deregistered.equals( img.getState( ) ) ) {
+        db.delete( img );
+      } else {
+        img.setState( Image.State.deregistered );
+      }
       db.commit( );
+      WalrusUtil.invalidate( img );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );

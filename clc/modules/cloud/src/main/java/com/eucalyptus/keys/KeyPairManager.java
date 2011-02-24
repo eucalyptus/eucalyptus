@@ -72,7 +72,7 @@ public class KeyPairManager {
 
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
-    DescribeKeyPairsResponseType reply = ( DescribeKeyPairsResponseType ) request.getReply( );
+    DescribeKeyPairsResponseType reply = request.getReply( );
     for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( request.getUserErn( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
         reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
@@ -93,7 +93,7 @@ public class KeyPairManager {
   }
 
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException {
-    CreateKeyPairResponseType reply = ( CreateKeyPairResponseType ) request.getReply( );
+    CreateKeyPairResponseType reply = request.getReply( );
     try {
       KeyPairUtil.getUserKeyPair( request.getUserErn( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {

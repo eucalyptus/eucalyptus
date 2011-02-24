@@ -100,9 +100,10 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.TypeMapping;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
+import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -197,14 +198,14 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.init( );
   }
   
-  public Address( String address, String cluster, UserFullName userFullName, String instanceId, String instanceAddress ) {
+  public Address( UserFullName userFullName, String address, String cluster, String instanceId, String instanceAddress ) {
     this( address );
     this.cluster = cluster;
     this.setOwner( userFullName );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
     this.transition = this.QUIESCENT;
-    this.atomicState = new AtomicMarkableReference<State>( State.unallocated, false );
+    this.atomicState = new AtomicMarkableReference<State>( State.allocated, false );
     this.init( );
   }
   
@@ -544,18 +545,31 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.getDisplayName( ).hashCode( );
   }
   
-  public DescribeAddressesResponseItemType getAdminDescription( ) {
+  public AddressInfoType getAdminDescription( ) {
     String name = this.getName( );
     String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
-    return new DescribeAddressesResponseItemType( name, desc );
+    return new AddressInfoType( name, desc );
   }
   
-  public DescribeAddressesResponseItemType getDescription( ) {
+  public static final TypeMapping<Address, AddressInfoType> //
+  describeAddressTypeMapping = 
+    new TypeMapping<Address, AddressInfoType>( ) {
+             @Override
+             public AddressInfoType apply( Address from ) {
+               return new AddressInfoType(
+                                                             from.getDisplayName( ),
+                                                             UNASSIGNED_INSTANCEID.equals( from.getInstanceId( ) )
+                                                               ? null
+                                                               : from.getInstanceId( ) );
+                                                                                                         }
+                                                                                                         };
+  
+  public AddressInfoType getDescription( ) {
     String name = this.getName( );
     String desc = UNASSIGNED_INSTANCEID.equals( this.getInstanceId( ) )
         ? null
         : this.getInstanceId( );
-    return new DescribeAddressesResponseItemType( name, desc );
+    return new AddressInfoType( name, desc );
   }
   
   public abstract class SplitTransition {

@@ -74,6 +74,7 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
@@ -137,24 +138,25 @@ public class BindingHandler extends MessageStackHandler {
   
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-      MappingHttpMessage httpRequest = ( MappingHttpMessage ) event.getMessage( );
+    if ( event.getMessage( ) instanceof MappingHttpResponse ) {
+      MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
       OMElement omElem;
-      if ( httpRequest.getMessage( ) instanceof EucalyptusErrorMessageType || httpRequest.getMessage( ) == null ) {
+      if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType || httpResponse.getMessage( ) == null ) {
         return;
-      } else if ( httpRequest.getMessage( ) instanceof ExceptionResponseType ) {
-        ExceptionResponseType msg = ( ExceptionResponseType ) httpRequest.getMessage( );
+      } else if ( httpResponse.getMessage( ) instanceof ExceptionResponseType ) {
+        ExceptionResponseType msg = ( ExceptionResponseType ) httpResponse.getMessage( );
         omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.createFaultDetails( msg.getException( ) ) );
+        httpResponse.setStatus( msg.getHttpStatus( ) );
       } else {
-        Class targetClass = httpRequest.getMessage( ).getClass( );
+        Class targetClass = httpResponse.getMessage( ).getClass( );
         while ( !targetClass.getSimpleName( ).endsWith( "Type" ) ) {
           targetClass = targetClass.getSuperclass( );
         }
         Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( targetClass.getName( ) );
         try {
-          omElem = this.binding.toOM( httpRequest.getMessage( ) );
+          omElem = this.binding.toOM( httpResponse.getMessage( ) );
         } catch ( BindingException ex ) {
-          omElem = BindingManager.getDefaultBinding( ).toOM( httpRequest.getMessage( ) );
+          omElem = BindingManager.getDefaultBinding( ).toOM( httpResponse.getMessage( ) );
         } catch ( Exception ex ) {
           if ( LogLevels.DEBUG ) {
             LOG.debug( ex, ex );
@@ -162,7 +164,7 @@ public class BindingHandler extends MessageStackHandler {
           throw ex;
         }
       }
-      httpRequest.setOmMessage( omElem );
+      httpResponse.setOmMessage( omElem );
     }
   }
   

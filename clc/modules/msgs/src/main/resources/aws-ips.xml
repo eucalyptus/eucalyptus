@@ -98,7 +98,7 @@
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <collection name="addressesSet" field="addressesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType"/>
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AddressInfoType"/>
         </collection>
     </mapping>
     <!--2008-02-01-->
@@ -125,7 +125,7 @@
         <value name="return" field="_return"/>
     </mapping>
     <!--2008-02-01-->
-    <mapping class="edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType" abstract="true">
+    <mapping class="edu.ucsb.eucalyptus.msgs.AddressInfoType" abstract="true">
       <value name="publicIp" field="publicIp"/>
       <value name="instanceId" field="instanceId" usage="optional"/>
     </mapping>
