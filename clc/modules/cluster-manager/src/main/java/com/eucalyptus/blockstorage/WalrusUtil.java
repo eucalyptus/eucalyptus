@@ -82,6 +82,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
@@ -136,6 +137,7 @@ public class WalrusUtil {
       User user = Accounts.lookupUserById( userName.getUniqueId( ) );
 //      msg.setUserId( user.getName( ) );
       msg.regarding( );
+      msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
       
       reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
     } catch ( Exception e ) {

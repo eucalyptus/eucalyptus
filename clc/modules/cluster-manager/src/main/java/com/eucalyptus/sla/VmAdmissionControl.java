@@ -107,7 +107,7 @@ public class VmAdmissionControl {
     List<ResourceAllocator> pending = Lists.newArrayList( );
     pending.add( new NodeResourceAllocator() );
     if( Clusters.getInstance( ).hasNetworking( ) ) {
-      pending.add( new AddressAllocator() );
+      pending.add( new PublicAddressAllocator() );
       pending.add( new PrivateNetworkAllocator( ) );
       pending.add( new SubnetIndexAllocator( ) );
     }
