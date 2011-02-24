@@ -126,6 +126,15 @@ public class VmAllocationInfo extends EucalyptusMessage {
   public EucalyptusMessage getRequestMessage() {
     return this.getRequest();
   }
+
+  public String getCorrelationId( ) {
+    return this.request.getCorrelationId( );
+  }
+
+  public void setCorrelationId( String correlationId ) {
+  }
+  
+  
 }
 
 public class VmDescribeType extends EucalyptusMessage {
