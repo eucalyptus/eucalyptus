@@ -140,7 +140,7 @@ public class BuildBindings extends Task {
               gen.processClass( c );
             }
           }
-          classes.remove( c );
+          classes.remove( c.getName( ) );
         }
       } finally {
         for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
