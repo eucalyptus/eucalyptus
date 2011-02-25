@@ -286,7 +286,7 @@ public class ImageManager {
     imageInfo.setState( Image.State.available );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      db.add( imageInfo );
+      imageInfo = db.merge( imageInfo );
       db.commit( );
       LOG.info( "Registering image pk=" + imageInfo.getDisplayName( ) + " ownerId=" + ctx.getUserFullName( ) );
     } catch ( Exception e ) {
