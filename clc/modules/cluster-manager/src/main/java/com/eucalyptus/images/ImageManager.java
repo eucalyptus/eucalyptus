@@ -263,16 +263,18 @@ public class ImageManager {
       } else {
         if ( kernelId != null ) {
           try {
-            ImageUtil.getImageInfobyId( kernelId );
-          } catch ( EucalyptusCloudException e ) {
-            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
+            Images.lookupImage( kernelId );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId, ex );
           }
         }
         if ( ramdiskId != null ) {
           try {
-            ImageUtil.getImageInfobyId( ramdiskId );
-          } catch ( EucalyptusCloudException e ) {
-            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
+            Images.lookupImage( ramdiskId );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId, ex );
           }
         }
         imageType = Image.Type.machine;
