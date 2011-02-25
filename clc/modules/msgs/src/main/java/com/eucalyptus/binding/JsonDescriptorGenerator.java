@@ -65,6 +65,8 @@ package com.eucalyptus.binding;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -121,29 +123,30 @@ public class JsonDescriptorGenerator extends BindingGenerator {
                                                          }
                                                        };
   
-  private static Map<Class, PrintWriter>  outputMap    = new HashMap<Class, PrintWriter>( );
   public static boolean request = false;
   
-  public static PrintWriter getWriter( Class parentType ) {
+  public static void write( Class parentType, String stuff ) {
     LOG.info( "Preparing JSON descriptor file: " + parentType.getCanonicalName( ) );
-    if ( !outputMap.containsKey( parentType ) ) {
-      File outFile = new File( "modules/msgs/src/main/resources/json/" + parentType.getSimpleName( ).replaceAll("Type\\Z","") + ".json" );
-      if ( !outFile.getParentFile( ).exists( ) ) {
-        outFile.getParentFile( ).mkdirs( );
-      }
-      if ( outFile.exists( ) ) {
-        outFile.delete( );
-      }
-      PrintWriter out;
-      try {
-        out = new PrintWriter( outFile );
-        outputMap.put( parentType, out );
-      } catch ( FileNotFoundException ex ) {
-        LOG.error( ex, ex );
-        throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
-      }
+    File outFile = new File( "modules/msgs/src/main/resources/json/" + parentType.getSimpleName( ).replaceAll("Type\\Z","") + ".json" );
+    if ( !outFile.getParentFile( ).exists( ) ) {
+      outFile.getParentFile( ).mkdirs( );
     }
-    return outputMap.get( parentType );
+    if ( outFile.exists( ) ) {
+      outFile.delete( );
+    }
+    FileWriter out;
+    try {
+      out = new FileWriter( outFile, true );
+      out.write( stuff );
+      out.flush( );
+      out.close( );
+    } catch ( FileNotFoundException ex ) {
+      LOG.error( ex, ex );
+      throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
+    } catch ( IOException ex ) {
+      LOG.error( ex , ex );
+      throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
+    }
   }
   
   public JsonDescriptorGenerator( ) {}
@@ -161,15 +164,9 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     for ( RequestInfo req : RequestInfo.getRequestInfoList( ) ) {
       String reqString = req.toString( );
       if ( req.getRequest( ) != null && reqString != null ) {
-        getWriter( req.getRequest( ) ).write( reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
-        getWriter( req.getRequest( ) ).flush( );
+        write( req.getRequest( ), reqString.replaceAll( "\",\\s*\n(\\s*})", "\"\n$1" ).replaceAll( "},\\s*\n(\\s*])", "}\n$1" ).replaceAll( "],\\s*\n(\\s*})", "]\n$1" ) );
       }
     }
-    for ( PrintWriter p : outputMap.values( ) ) {
-      p.flush( );
-      p.close( );
-    }
-    outputMap.clear( );
     RequestInfo.flush( );
   }
   
