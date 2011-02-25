@@ -360,7 +360,7 @@ public class SystemState {
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( ( !isAdmin && !userId.equals( v.getOwner( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
+        ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
       rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
