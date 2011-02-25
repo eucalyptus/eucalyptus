@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
@@ -116,7 +117,7 @@ public class BuildBindings extends Task {
     try {
       BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      Map<String, Class> classes = new TreeMap<String, Class>( ) {
+      Map<String, Class> classes = new ConcurrentHashMap<String, Class>( ) {
         {
           put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
           put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
