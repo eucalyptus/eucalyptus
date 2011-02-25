@@ -126,7 +126,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   private Image.Architecture    architecture;
   
   @Column( name = "metadata_image_is_public", nullable = false, columnDefinition = "boolean default true" )
-  private Boolean               imagePublic  = Boolean.FALSE;
+  private Boolean               imagePublic;
   
   @Column( name = "metadata_image_platform" )
   @Enumerated( EnumType.STRING )
