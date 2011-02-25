@@ -83,11 +83,6 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
-  public static String                         IMAGE_MACHINE          = "machine";
-  public static String                         IMAGE_KERNEL           = "kernel";
-  public static String                         IMAGE_RAMDISK          = "ramdisk";
-  public static String                         IMAGE_PLATFORM_DEFAULT = "linux";
-  public static String                         IMAGE_PLATFORM_WINDOWS = "windows";
   public static final Lookup<MachineImageInfo> lookupMachineImg       = new Lookup<MachineImageInfo>( ) {
                                                                         @Override
                                                                         public MachineImageInfo lookup( String identifier ) {
@@ -146,7 +141,7 @@ public class Emis {
     }
     
     public boolean isLinux( ) {
-      return IMAGE_PLATFORM_DEFAULT.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
+      return Image.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
     }
     
     @Override
