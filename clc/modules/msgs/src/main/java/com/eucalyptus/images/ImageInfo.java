@@ -227,13 +227,12 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Account account ) {
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new JoinTx<ImageInfo>( ) {
+      Transactions.one( new ImageInfo( this.displayName ), new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
           LaunchPermission imgAuth = new LaunchPermission( t, account.getId( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
-            db.recast( LaunchPermission.class ).add( imgAuth );
+//            db.recast( LaunchPermission.class ).add( imgAuth );
             t.getPermissions( ).add( imgAuth );
           }
         }
@@ -245,26 +244,25 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   public boolean checkPermission( final Account account ) {
-    final boolean[] result = { false };
-    try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
-        @Override
-        public void fire( ImageInfo t ) throws Throwable {
-          result[0] = t.getPermissions( ).contains( new LaunchPermission( t, account.getId( ) ) );
-        }
-      }
-                  );
-    } catch ( TransactionException e ) {
-      return false;
-    }
-    return result[0];
+    return true;
+//    final boolean[] result = { false };
+//    try {
+//      Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
+//        @Override
+//        public void fire( ImageInfo t ) throws Throwable {
+//          result[0] = t.getPermissions( ).contains( new LaunchPermission( t, account.getId( ) ) );
+//        }
+//      }
+//                  );
+//    } catch ( TransactionException e ) {
+//      return false;
+//    }
+//    return result[0];
   }
   
   public ImageInfo resetPermission( ) {
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
           t.getPermissions( ).clear( );

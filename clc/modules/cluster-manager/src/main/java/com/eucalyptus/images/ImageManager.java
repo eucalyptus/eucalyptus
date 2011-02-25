@@ -296,7 +296,8 @@ public class ImageManager {
     for( String p : extractProductCodes( inputSource, xpath ) ) {
       imageInfo.addProductCode( p );
     }
-    imageInfo.grantPermission( ctx.getAccount( ) );
+//TODO:GRZE:RESTORE
+//    imageInfo.grantPermission( ctx.getAccount( ) );
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
     WalrusUtil.checkValid( imageInfo );
