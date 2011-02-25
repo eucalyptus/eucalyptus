@@ -140,11 +140,11 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Column( name = "metadata_image_signature" )
   private String                signature;
   
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "metadata_image_auth_for_image_id" )
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<LaunchPermission> permissions  = new HashSet<LaunchPermission>( );
   
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "metadata_image_productcode_for_image_id" )
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<ProductCode>      productCodes = new HashSet<ProductCode>( );
   
