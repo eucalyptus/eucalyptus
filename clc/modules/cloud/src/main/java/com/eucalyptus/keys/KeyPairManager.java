@@ -13,6 +13,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -36,7 +37,7 @@ public class KeyPairManager {
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
 //ASAP:FIXME:GRZE
-      if( "windows".equals( vmAllocInfo.setPlatform( ) ) ) {
+      if( Image.Platform.windows.name().equals( vmAllocInfo.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest().getImageId() );
       } else {
         vmAllocInfo.setKeyInfo( new VmKeyInfo() );
