@@ -2368,10 +2368,11 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	(*outStatus)[i] = 0;
       }
       
-      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
-      //      free(myInstance);
+      //      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
+      if (myInstance) free(myInstance);
     } else {
       // instance is not in cache, try all resources
+      /*
       myInstance = malloc(sizeof(ccInstance));
       if (!myInstance) {
 	logprintfl(EUCAFATAL, "TerminateInstances(): out of memory!\n");
@@ -2379,6 +2380,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       }
       bzero(myInstance, sizeof(ccInstance));
       snprintf(myInstance->instanceId, 16, "%s", instId);
+      */
 
       start = 0;
       stop = 0;
@@ -2386,13 +2388,15 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     }
     
     // TODO: temporary until networkIdx reuse is resolved
+    /*
     snprintf(myInstance->ccState, 16, "ccTeardown");
     snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
     rc = refresh_instanceCache(myInstance->instanceId, myInstance);
     if (rc) {
       logprintfl(EUCAERROR, "TerminateInstances(): could not set instance ccState to ccTeardown.\n");
     }
-    if (myInstance) free(myInstance);
+    */
+    //    if (myInstance) free(myInstance);
     
     done=0;
     for (j=start; j<stop && !done; j++) {
@@ -4142,7 +4146,14 @@ int privIpSet(ccInstance *inst, void *ip) {
     return(1);
   }
   
+  /*
   if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+    return(0);
+  }
+  */
+
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
     return(0);
   }
@@ -4157,7 +4168,14 @@ int pubIpSet(ccInstance *inst, void *ip) {
     return(1);
   }
 
+  /*
   if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+    return(0);
+  }
+  */
+
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
     return(0);
   }
