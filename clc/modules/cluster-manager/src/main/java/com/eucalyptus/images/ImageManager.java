@@ -190,7 +190,7 @@ public class ImageManager {
         } else if ( !executable.isEmpty( ) ) {
           for ( String accountId : executable ) {
             try {
-              if ( t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
+              if ( ctx.hasAdministrativePrivileges( ) || t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
                 return true;
               }
             } catch ( AuthException ex ) {
