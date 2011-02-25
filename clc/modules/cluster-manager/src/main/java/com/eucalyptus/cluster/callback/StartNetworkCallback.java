@@ -83,8 +83,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
     StartNetworkType msg = new StartNetworkType( networkToken.getAccountId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
-                                                 networkToken.getNetworkUuid( ) );
-    msg.setUser( FakePrincipals.SYSTEM_USER );
+                                                 networkToken.getNetworkUuid( ) ).regarding( );
     msg.setUserId( networkToken.getAccountId( ) );
     this.setRequest( msg );
   }

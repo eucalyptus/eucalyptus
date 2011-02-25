@@ -74,7 +74,7 @@
              class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -149,7 +149,7 @@
              class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
     </mapping>
 
     <mapping name="ResetImageAttribute" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -166,7 +166,7 @@
     <mapping name="ConfirmProductInstanceResponse" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return"/>
+        <value name="return" get-method="get_return" set-method="set_return"/>
         <value name="ownerId" field="ownerId" usage="optional"/>
     </mapping>
 

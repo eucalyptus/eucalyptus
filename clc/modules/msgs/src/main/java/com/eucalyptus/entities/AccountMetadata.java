@@ -63,85 +63,79 @@
 
 package com.eucalyptus.entities;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasOwningAccount;
 
-
-@Entity
-@PersistenceContext(name="eucalyptus_general")
-@Table( name = "network_rule_peer_network" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkPeer {  
-  @Id
-  @GeneratedValue
-  @Column( name = "network_rule_peer_network_id" )
-  Long id = -1l;
-  @Column( name = "network_rule_peer_network_user_query_key" )
-  String otherAccountId;
-  @Column( name = "network_rule_peer_network_user_group" )
-  String groupName;
-  public NetworkPeer() {
-  }
-  public NetworkPeer( final String userQueryKey, final String groupName ) {
-    this.otherAccountId = userQueryKey;
-    this.groupName = groupName;
-  }
-  public Long getId( ) {
-    return this.id;
-  }
-  public void setId( Long id ) {
-    this.id = id;
-  }
-  public String getUserQueryKey( ) {
-    return this.otherAccountId;
-  }
-  public void setUserQueryKey( String userQueryKey ) {
-    this.otherAccountId = userQueryKey;
-  }
-  public String getGroupName( ) {
-    return this.groupName;
-  }
-  public void setGroupName( String groupName ) {
-    this.groupName = groupName;
-  }
-  public boolean equals( final Object o ) {
-    if ( this == o  ) return true;
-    if ( o == null || !getClass().equals(o.getClass()) ) return false;
-      
-    NetworkPeer that = ( NetworkPeer ) o;
-    
-    if ( !groupName.equals( that.groupName ) ) return false;
-    if ( !otherAccountId.equals( that.otherAccountId ) ) return false;
-    
-    return true;
+@MappedSuperclass
+public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
+  @Column( name = "metadata_account_id" )
+  protected String   ownerAccountId;
+  @Transient
+  protected FullName owner;
+  
+  public AccountMetadata( ) {}
+  
+  public AccountMetadata( AccountFullName account ) {
+    this.ownerAccountId = account != null
+      ? account.getAccountId( )
+      : null;
   }
   
-  public int hashCode() {
-    int result;
-    result = otherAccountId.hashCode();
-    result = 31 * result + groupName.hashCode();
+  public AccountMetadata( AccountFullName account, String displayName ) {
+    super( displayName );
+    this.ownerAccountId = account != null
+      ? account.getAccountId( )
+      : null;
+  }
+  
+  @Override
+  public FullName getOwner( ) {
+    if ( this.owner == null ) {
+      return ( this.owner = Accounts.lookupAccountFullNameById( this.ownerAccountId ) );
+    } else {
+      return this.owner;
+    }
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( ownerAccountId == null )
+      ? 0
+      : ownerAccountId.hashCode( ) );
+    result = prime * result + ( ( displayName == null )
+      ? 0
+      : displayName.hashCode( ) );
     return result;
   }
   
-  public List<NetworkRule> getAsNetworkRules() {
-    List<NetworkRule> ruleList = new ArrayList<NetworkRule>();
-    ruleList.add( new NetworkRule( "tcp", 0, 65535, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
-    ruleList.add( new NetworkRule( "udp", 0, 65535, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
-    ruleList.add( new NetworkRule( "icmp", -1, -1, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
-    return ruleList;
-  }
-
   @Override
-  public String toString( ) {
-    return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s", this.otherAccountId, this.groupName );
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    AccountMetadata other = ( AccountMetadata ) obj;
+    if ( ownerAccountId == null ) {
+      if ( other.ownerAccountId != null ) return false;
+    } else if ( !ownerAccountId.equals( other.ownerAccountId ) ) return false;
+    return true;
   }
   
+  public String getOwnerAccountId( ) {
+    return this.ownerAccountId;
+  }
+  
+  public void setOwnerAccountId( String ownerAccountId ) {
+    this.ownerAccountId = ownerAccountId;
+  }
+  
+  protected void setOwner( FullName owner ) {
+    this.owner = owner;
+  }
 }

@@ -64,36 +64,31 @@
 package edu.ucsb.eucalyptus.cloud;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.HasOwner;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasOwningAccount;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SortedSetMultimap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import edu.ucsb.eucalyptus.cloud.Network.FQDN;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
-public class Network implements HasOwner<Network> {
+public class Network implements HasFullName<Network>, HasOwningAccount {
   public String getNetworkName( ) {
     return this.networkName;
   }
@@ -242,15 +237,15 @@ public class Network implements HasOwner<Network> {
   }
   
   public void returnNetworkIndex( Integer index ) {
+    if ( index < 2 ) return;
+    for ( NetworkToken t : this.clusterTokens.values( ) ) {
+      t.removeIndex( index );
+    }
     if ( this.networkIndexes.replace( index, NetworkIndexState.USED, NetworkIndexState.FREE ) ) {
       EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, this.fullName.toString( ), "networkIndex", index ).debug( );
     } else if ( this.networkIndexes.remove( index, NetworkIndexState.OUTLAW ) || this.networkIndexes.remove( index, NetworkIndexState.ILLEGAL ) ) {
       EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, this.fullName.toString( ), "networkIndex", index ).debug( );
     }
-    for ( NetworkToken t : this.clusterTokens.values( ) ) {
-      t.removeIndex( index );
-    }
-    if ( index < 2 ) return;
   }
   
   public NetworkToken addTokenIfAbsent( NetworkToken token ) {
@@ -326,6 +321,10 @@ public class Network implements HasOwner<Network> {
   }
   public List<PacketFilterRule> getRules( ) {
     return this.rules;
+  }
+  @Override
+  public String getOwnerAccountId( ) {
+    return this.account.getAccountId( );
   }
 
 }

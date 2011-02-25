@@ -91,7 +91,7 @@ public class DescribeAddressesType extends VmAddressMessage { //** added 2008-02
   ArrayList<String> publicIpsSet = new ArrayList<String>();
 }
 public class DescribeAddressesResponseType extends VmAddressMessage { //** added 2008-02-01  **/
-  ArrayList<DescribeAddressesResponseItemType> addressesSet = new ArrayList<DescribeAddressesResponseItemType>();
+  ArrayList<AddressInfoType> addressesSet = new ArrayList<AddressInfoType>();
 }
 /** *******************************************************************************/
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
@@ -115,17 +115,17 @@ public class DisassociateAddressType extends VmAddressMessage {  //** added 2008
 public class DisassociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
 }
 /** *******************************************************************************/
-public class DescribeAddressesResponseItemType extends EucalyptusData {  //** added 2008-02-01  **/
+public class AddressInfoType extends EucalyptusData {  //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
 
-  def DescribeAddressesResponseItemType(final publicIp, final instanceId)
+  def AddressInfoType(final publicIp, final instanceId)
   {
     this.publicIp = publicIp;
     this.instanceId = instanceId;
   }
 
-  def DescribeAddressesResponseItemType()
+  def AddressInfoType()
   {
   }
 

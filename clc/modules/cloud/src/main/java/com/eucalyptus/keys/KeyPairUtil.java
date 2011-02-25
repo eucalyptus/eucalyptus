@@ -12,7 +12,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -20,7 +19,7 @@ public class KeyPairUtil {
   private static Logger LOG = Logger.getLogger( KeyPairUtil.class );
 
   public static EntityWrapper<SshKeyPair> getEntityWrapper( ) {
-    EntityWrapper<SshKeyPair> db = new EntityWrapper<SshKeyPair>( );
+    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );
     return db;
   }
 

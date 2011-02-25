@@ -66,32 +66,31 @@ package com.eucalyptus.auth.policy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import org.codehaus.janino.Java.ThisReference;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 
 public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
-  
+  private static Logger LOG = Logger.getLogger( PolicyAnnotationRegistry.class );
   private static final Map<Class,PolicyResourceType> classToPolicyRscType = new HashMap<Class,PolicyResourceType>();
   
   public static PolicyResourceType extractResourceType( Object classOrInstance ) throws NoSuchElementException {
     Class type = classOrInstance instanceof Class ? (Class) classOrInstance : classOrInstance.getClass( );
-    if( classToPolicyRscType.containsKey( type ) ) {
-      return classToPolicyRscType.get( type );
+    PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromSuperclass( type );
+    if( rscPolicy != null ) {
+      classToPolicyRscType.put( type, rscPolicy );
+      return rscPolicy;
     } else {
-      PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromSuperclass( type );
-      if( rscPolicy != null ) {
-        classToPolicyRscType.put( type, rscPolicy );
-        return rscPolicy;
-      } else {
-        throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
-      }
+      throw new NoSuchElementException( "The argument " + type.getName( ) + " does not itself have or inherit from an object with the required @PolicyResourceType annotation." );
     }
   }
   
   private static PolicyResourceType extractPolicyResourceTypeFromSuperclass( Class type ) {
+    LOG.trace( "PolicyAnnotationRegistry: looking for annotations starting at " + type );
     for( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      LOG.trace( "PolicyAnnotationRegistry: check -> " + c );
       if( classToPolicyRscType.containsKey( c ) ) {
+        LOG.trace( "PolicyAnnotationRegistry: FOUND => " + c );
         return classToPolicyRscType.get( c );
       } else {
         PolicyResourceType rscPolicy = PolicyAnnotationRegistry.extractPolicyResourceTypeFromInterfaces( type.getInterfaces( ) );
@@ -104,7 +103,9 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   }
   private static PolicyResourceType extractPolicyResourceTypeFromInterfaces( Class[] interfaces ) {
     for( Class i : interfaces ) {
+      LOG.trace( "PolicyAnnotationRegistry: check => " + i );
       if( classToPolicyRscType.containsKey( i ) ) {
+        LOG.trace( "PolicyAnnotationRegistry: FOUND => " + i );
         return classToPolicyRscType.get( i );
       }
     }

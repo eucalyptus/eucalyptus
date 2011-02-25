@@ -148,6 +148,7 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -1054,8 +1055,8 @@ public class WalrusImageManager {
 		GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		User user = request.getUser( );
-		String userId = request.getUserId();
+		User user = Contexts.lookup().getUser( );
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1067,7 +1068,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(userId) || request.isAdministrator() ) {
+				if(objectInfo.canRead(userId) || Contexts.lookup().hasAdministrativePrivileges() ) {
 					db.commit();
 					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
@@ -1093,7 +1094,7 @@ public class WalrusImageManager {
 						db2.commit();
 						//issue a cache request
 						LOG.info("Image " + bucketName + "/" + objectKey + " not found in cache. Issuing cache request (might take a while...)");
-						cacheImage(bucketName, objectKey, user, request.isAdministrator());
+						cacheImage(bucketName, objectKey, user, Contexts.lookup().hasAdministrativePrivileges());
 						//query db again
 						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
@@ -1188,8 +1189,8 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
-    User user = request.getUser( );
+		String userId = Contexts.lookup().getUserFullName().getUserId();
+    User user = Contexts.lookup().getUser( );
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1230,8 +1231,8 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = request.getUserId();
-    User user = request.getUser( );
+		String userId = Contexts.lookup().getUserFullName().getUserId();
+    User user = Contexts.lookup().getUser( );
 
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -1251,7 +1252,7 @@ public class WalrusImageManager {
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					db2.commit();
 					if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + manifestKey))) {
-						cacheImage(bucketName, manifestKey, user, request.isAdministrator());
+						cacheImage(bucketName, manifestKey, user, Contexts.lookup( ).hasAdministrativePrivileges( ));
 						reply.setSuccess(true);
 					}
 					db.commit( );
@@ -1304,7 +1305,7 @@ public class WalrusImageManager {
 		ValidateImageResponseType reply = (ValidateImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);

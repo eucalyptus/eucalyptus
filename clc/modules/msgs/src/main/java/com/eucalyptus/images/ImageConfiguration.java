@@ -61,67 +61,60 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.images;
 
+import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 @Entity
-@PersistenceContext(name="eucalyptus_general")
-@Table( name = "metadata_network_rule_ip_range" )
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange {
-  @Id
-  @GeneratedValue
-  @Column( name = "metadata_network_rule_ip_range_id" )
-  Long id = -1l;
-  @Column( name = "metadata_network_rule_ip_range_value" )
-  String value;
-  public IpRange(){
+@ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
+public class ImageConfiguration extends AbstractPersistent {
+  @Transient
+  private static Logger LOG               = Logger.getLogger( ImageConfiguration.class );
+  @ConfigurableField( description = "The default value used to determine whether or not images are marked 'public' when first registered." )
+  @Column( name = "metadata_image_is_public", nullable=false, columnDefinition="boolean default true" )
+  private Boolean       defaultVisibility = Boolean.TRUE;
+  
+  public ImageConfiguration( ) {
+    super( );
   }
-  public IpRange( final String value ) {
-    this.value = value;
+  
+  public Boolean getDefaultVisibility( ) {
+    return this.defaultVisibility;
   }
-
-  public Long getId( ) {
-    return this.id;
+  
+  public void setDefaultVisibility( Boolean defaultVisibility ) {
+    this.defaultVisibility = defaultVisibility;
   }
-  public void setId( Long id ) {
-    this.id = id;
+  
+  public static ImageConfiguration getInstance( ) {
+    ImageConfiguration ret = null;
+    try {
+      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
+    } catch ( NoSuchElementException ex1 ) {
+      try {
+        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+      } catch ( RecoverablePersistenceException ex ) {
+        LOG.error( ex , ex );
+        ret = new ImageConfiguration( );
+      }
+    }
+    return ret;
   }
-  public String getValue( ) {
-    return this.value;
-  }
-  public void setValue( String value ) {
-    this.value = value;
-  }
-  @Override
-  public String toString( ) {
-    return String.format( "IpRange:%s", this.value );
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
-    return result;
-  }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    IpRange other = ( IpRange ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) return false;
-    } else if ( !this.value.equals( other.value ) ) return false;
-    return true;
-  }  
 }

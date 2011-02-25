@@ -10,10 +10,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.IpRange;
-import com.eucalyptus.entities.NetworkPeer;
-import com.eucalyptus.entities.NetworkRule;
-import com.eucalyptus.entities.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -25,7 +21,7 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 public class NetworkGroupUtil {
   
   public static EntityWrapper<NetworkRulesGroup> getEntityWrapper( ) {
-    EntityWrapper<NetworkRulesGroup> db = new EntityWrapper<NetworkRulesGroup>( );
+    EntityWrapper<NetworkRulesGroup> db = EntityWrapper.get( NetworkRulesGroup.class );
     return db;
   }
   

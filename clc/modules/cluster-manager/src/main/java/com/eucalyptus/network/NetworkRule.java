@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.network;
 
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +82,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.google.common.collect.Sets;
 
 @Entity
-@PersistenceContext(name="eucalyptus_general")
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkRule {
