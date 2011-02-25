@@ -151,6 +151,10 @@
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
   -->
+  <category name="com.eucalyptus.context.ServiceContextManager" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="com.eucalyptus.cluster" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />

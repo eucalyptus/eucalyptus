@@ -288,18 +288,18 @@ public class ImageManager {
     try {
       db.add( imageInfo );
       db.commit( );
-      LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + ctx.getUserFullName( ) );
+      LOG.info( "Registering image pk=" + imageInfo.getDisplayName( ) + " ownerId=" + ctx.getUserFullName( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( "failed to register image." );
     }
-    for( String p : extractProductCodes( inputSource, xpath ) ) {
-      imageInfo.addProductCode( p );
-    }
 //TODO:GRZE:RESTORE
+//    for( String p : extractProductCodes( inputSource, xpath ) ) {
+//      imageInfo.addProductCode( p );
+//    }
 //    imageInfo.grantPermission( ctx.getAccount( ) );
     
-    LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
+    LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getDisplayName( ) );
     WalrusUtil.checkValid( imageInfo );
     WalrusUtil.triggerCaching( imageInfo );
     
