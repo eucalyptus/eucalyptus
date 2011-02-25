@@ -210,6 +210,8 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
+      sb.append( "\nexport AWSAccessKeyId='" + userAccessKey + "'" );
+      sb.append( "\nexport AWSSecretKey='" + userSecretKey + "'" );
       if ( userNumber != null ) {
         sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
         sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
