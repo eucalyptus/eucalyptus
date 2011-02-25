@@ -66,6 +66,7 @@ package com.eucalyptus.images;
 
 import java.security.Principal;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -103,6 +104,7 @@ import com.eucalyptus.util.JoinTx;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.google.common.collect.Lists;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -112,38 +114,42 @@ import com.eucalyptus.util.Tx;
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<Image.State> implements Image {
+  
   @Transient
-  private static Logger           LOG          = Logger.getLogger( ImageInfo.class );
+  private static Logger         LOG          = Logger.getLogger( ImageInfo.class );
+  
   @Column( name = "metadata_image_path" )
-  private String                  imageLocation;
+  private String                imageLocation;
+  
   @Column( name = "metadata_image_arch" )
   @Enumerated( EnumType.STRING )
-  private Image.Architecture      architecture;
-  @Column( name = "metadata_image_is_public", nullable=false, columnDefinition="boolean default true" )
-  private Boolean                 imagePublic;
+  private Image.Architecture    architecture;
+  
+  @Column( name = "metadata_image_is_public", nullable = false, columnDefinition = "boolean default true" )
+  private Boolean               imagePublic  = Boolean.FALSE;
+  
   @Column( name = "metadata_image_platform" )
   @Enumerated( EnumType.STRING )
-  private Image.Platform          platform;
+  private Image.Platform        platform;
+  
   @Column( name = "metadata_image_type" )
   @Enumerated( EnumType.STRING )
-  private Type                    imageType;
+  private Type                  imageType;
+  
   @Lob
-  @Column( name = "image_signature" )
-  private String                  signature;
-  @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_group_auth", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
+  @Column( name = "metadata_image_signature" )
+  private String                signature;
+  
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "metadata_image_auth_for_image_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<ImageAuthorization> userGroups   = new HashSet<ImageAuthorization>( );
-  @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_user_auth", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_auth_id" ) )
+  private Set<LaunchPermission> permissions  = new HashSet<LaunchPermission>( );
+  
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "metadata_image_productcode_for_image_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<ImageAuthorization> permissions  = new HashSet<ImageAuthorization>( );
-  @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "image_has_product_codes", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = @JoinColumn( name = "image_product_code_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<ProductCode>        productCodes = new HashSet<ProductCode>( );
+  private Set<ProductCode>      productCodes = new HashSet<ProductCode>( );
+  
   @Transient
-  private FullName                fullName;
+  private FullName              fullName;
   
   public ImageInfo( ) {}
   
@@ -210,45 +216,25 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.signature = signature;
   }
   
-  public Set<ImageAuthorization> getUserGroups( ) {
-    return userGroups;
-  }
-  
-  public void setUserGroups( final Set<ImageAuthorization> userGroups ) {
-    this.userGroups = userGroups;
-  }
-  
-  public Set<ImageAuthorization> getPermissions( ) {
+  private Set<LaunchPermission> getPermissions( ) {
     return permissions;
   }
   
-  public void setPermissions( final Set<ImageAuthorization> permissions ) {
+  private void setPermissions( final Set<LaunchPermission> permissions ) {
     this.permissions = permissions;
   }
   
   @SuppressWarnings( "unchecked" )
-  public ImageInfo grantPermission( final Principal prin ) {
+  public ImageInfo grantPermission( final Account account ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth = null;
-          if ( prin instanceof Group ) {
-            imgAuth = new ImageAuthorization( prin.getName( ) );
-            if ( !t.getUserGroups( ).contains( imgAuth ) ) {
-              db.recast( ImageAuthorization.class ).add( imgAuth );
-              t.getUserGroups( ).add( imgAuth );
-            }
-          } else if ( prin instanceof User ) {
-            imgAuth = new ImageAuthorization( ( ( User ) prin ).getId( ) );
-            if ( !t.getPermissions( ).contains( imgAuth ) ) {
-              db.recast( ImageAuthorization.class ).add( imgAuth );
-              t.getPermissions( ).add( imgAuth );
-            }
-          }
-          if ( t.getUserGroups( ).contains( new ImageAuthorization( "all" ) ) ) {
-            t.setImagePublic( true );
+          LaunchPermission imgAuth = new LaunchPermission( t, account.getId( ) );
+          if ( !t.getPermissions( ).contains( imgAuth ) ) {
+            db.recast( LaunchPermission.class ).add( imgAuth );
+            t.getPermissions( ).add( imgAuth );
           }
         }
       } );
@@ -258,43 +244,97 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this;
   }
   
-  public boolean checkPermission( final Principal prin ) throws EucalyptusCloudException {
+  public boolean checkPermission( final Account account ) {
     final boolean[] result = { false };
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          if ( prin instanceof Group ) {
-            result[0] = t.getUserGroups( ).contains( new ImageAuthorization( prin.getName( ) ) );
-          } else if ( prin instanceof User ) {
-            result[0] = t.getPermissions( ).contains( new ImageAuthorization( ( ( User ) prin ).getId( ) ) );
-          }
+          result[0] = t.getPermissions( ).contains( new LaunchPermission( t, account.getId( ) ) );
         }
-      } );
+      }
+                  );
     } catch ( TransactionException e ) {
       return false;
     }
     return result[0];
   }
   
-  public ImageInfo revokePermission( final Principal prin ) {
+  public ImageInfo resetPermission( ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          ImageAuthorization imgAuth;
-          if ( prin instanceof Group ) {
-            imgAuth = new ImageAuthorization( prin.getName( ) );
-            t.getUserGroups( ).remove( imgAuth );
-          } else if ( prin instanceof User ) {
-            imgAuth = new ImageAuthorization( ( ( User ) prin ).getId( ) );
-            t.getPermissions( ).remove( imgAuth );
+          t.getPermissions( ).clear( );
+          t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountId( ) ) );
+          t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return this;
+  }
+  public List<String> listProductCodes( ) {
+    final List<String> prods = Lists.newArrayList( );
+    try {
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          for( ProductCode p : t.getProductCodes( ) ) {
+            prods.add( p.getValue( ) );
           }
-          if ( !t.getPermissions( ).contains( new ImageAuthorization( "all" ) ) ) {
-            t.setImagePublic( false );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return prods;
+  }
+  public List<String> listLaunchPermissions( ) {
+    final List<String> perms = Lists.newArrayList( );
+    try {
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          for( LaunchPermission p : t.getPermissions( ) ) {
+            perms.add( p.getAccountId( ) );
           }
+        }
+      } );
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return perms;
+  }
+
+  public ImageInfo resetProductCodes( ) {
+    try {
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          t.getProductCodes( ).clear( );
+        }
+      } );
+    } catch ( TransactionException e ) {
+      LOG.debug( e, e );
+    }
+    return this;
+  }
+
+  public ImageInfo revokePermission( final Account account ) {
+    try {
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          LaunchPermission imgAuth;
+          t.getPermissions( ).remove( new LaunchPermission( t, account.getId( ) ) );
         }
       } );
     } catch ( TransactionException e ) {
@@ -303,11 +343,11 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this;
   }
   
-  public Set<ProductCode> getProductCodes( ) {
+  private Set<ProductCode> getProductCodes( ) {
     return this.productCodes;
   }
   
-  public void setProductCodes( final Set<ProductCode> productCodes ) {
+  private void setProductCodes( final Set<ProductCode> productCodes ) {
     this.productCodes = productCodes;
   }
   
@@ -340,15 +380,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   public boolean isAllowed( Account account ) {
-    //try {
-    //  if ( Users.lookupUser( user.getUserName( ) ).isAdministrator( ) || user.getUserName( ).equals( this.getImageOwnerId( ) ) ) return true;
-    //} catch ( NoSuchUserException e ) {
-    //  return false;
-    //}
-    //    for ( UserGroupEntity g : this.getUserGroups() )
-    //      if ( "all".equals( g.getName() ) )
-    return true;
-    //    return this.getPermissions().contains( user );
+    return this.getImagePublic( ) || this.checkPermission( account );
   }
   
   /**
@@ -359,7 +391,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public String toString( ) {
     return this.getFullName( ).toString( );
   }
-  
   
   @Override
   public int compareTo( Image o ) {
@@ -384,5 +415,20 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public void setImageType( Type imageType ) {
     this.imageType = imageType;
   }
-  
+
+  public boolean addProductCode( final String prodCode ) {
+    try {
+      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
+      Transactions.one( search, new Tx<ImageInfo>( ) {
+        @Override
+        public void fire( ImageInfo t ) throws Throwable {
+          t.getProductCodes().add( new ProductCode( t, prodCode ) );
+        }
+      }
+                  );
+    } catch ( TransactionException e ) {
+      return false;
+    }
+    return true;
+  }
 }

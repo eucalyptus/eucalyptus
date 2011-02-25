@@ -228,8 +228,8 @@ public class LaunchPermissionItemType extends EucalyptusData {
     return new LaunchPermissionItemType(userId, null);
   }
 
-  public static LaunchPermissionItemType getGroup(String groupId) {
-    return new LaunchPermissionItemType(null, groupId);
+  public static LaunchPermissionItemType getGroup() {
+    return new LaunchPermissionItemType(null, "all" );
   }
 
   public boolean isUser() { return this.userId != null }

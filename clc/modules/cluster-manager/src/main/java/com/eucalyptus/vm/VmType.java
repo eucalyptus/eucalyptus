@@ -86,7 +86,7 @@ import javax.persistence.Table;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "vm_types" )
+@Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
 public class VmType extends AbstractPersistent implements VirtualMachineType {
@@ -98,16 +98,16 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   public static String C1_XLARGE = "c1.xlarge";
   
 //  @ConfigurableIdentifier
-  @Column( name = "vm_type_name" )
+  @Column( name = "metadata_vm_type_name" )
   private String       name;
 //  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
-  @Column( name = "vm_type_cpu" )
+  @Column( name = "metadata_vm_type_cpu" )
   private Integer      cpu;
 //  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
-  @Column( name = "vm_type_disk" )
+  @Column( name = "metadata_vm_type_disk" )
   private Integer      disk;
 //  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
-  @Column( name = "vm_type_memory" )
+  @Column( name = "metadata_vm_type_memory" )
   private Integer      memory;
   
   public VmType( ) {}

@@ -77,7 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "network_rule_peer_network" )
+@Table( name = "metadata_network_rule_peer_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkPeer {  
   @Id

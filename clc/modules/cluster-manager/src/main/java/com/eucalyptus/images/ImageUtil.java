@@ -333,8 +333,8 @@ public class ImageUtil {
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       GetBucketAccessControlPolicyResponseType reply = WalrusUtil.getBucketAcl( request, imagePathParts );
       if ( reply != null ) {
-        if ( !Contexts.lookup().getUserFullName().getUserId().equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
-                                                                                                                                                 "Image registration failed: you must own the bucket containing the image." );
+        if ( !Contexts.lookup( ).getUserFullName( ).getUserId( ).equals( reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( ) ) ) throw new EucalyptusCloudException(
+                                                                                                                                                                               "Image registration failed: you must own the bucket containing the image." );
         userName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
       }
     }
@@ -345,9 +345,9 @@ public class ImageUtil {
       if ( perm.isGroup( ) ) {
         try {
           if ( adding ) {
-            imgInfo.grantPermission( new ImageUserGroup( perm.getGroup( ) ) );
+            //TODO:GRZE:RESTORE            imgInfo.grantPermission( new ImageUserGroup( perm.getGroup( ) ) );
           } else {
-            imgInfo.revokePermission( new ImageUserGroup( perm.getGroup( ) ) );
+            //TODO:GRZE:RESTORE            imgInfo.revokePermission( new ImageUserGroup( perm.getGroup( ) ) );
           }
         } catch ( Exception e ) {
           LOG.debug( e, e );
@@ -356,9 +356,9 @@ public class ImageUtil {
       } else if ( perm.isUser( ) ) {
         try {
           if ( adding ) {
-            imgInfo.grantPermission( Accounts.lookupUserById( perm.getUserId( ) ) );
+            imgInfo.grantPermission( Accounts.lookupAccountById( perm.getUserId( ) ) );
           } else {
-            imgInfo.revokePermission( Accounts.lookupUserById( perm.getUserId( ) ) );
+            imgInfo.revokePermission( Accounts.lookupAccountById( perm.getUserId( ) ) );
           }
         } catch ( AuthException e ) {
           LOG.debug( e, e );

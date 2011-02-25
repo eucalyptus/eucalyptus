@@ -232,7 +232,6 @@ public class ImageManager {
     ImageInfo imageInfo = null;
     String kernelId = ImageUtil.extractKernelId( inputSource, xpath );
     String ramdiskId = ImageUtil.extractRamdiskId( inputSource, xpath );
-    List<ProductCode> prodCodes = extractProductCodes( inputSource, xpath );
     Image.Type imageType = Image.Type.machine;
     Image.Platform platform = Image.Platform.linux;
     String newImageId = null;
@@ -292,8 +291,10 @@ public class ImageManager {
       db.rollback( );
       throw new EucalyptusCloudException( "failed to register image." );
     }
-    imageInfo.grantPermission( ctx.getUser( ) );
-    imageInfo.grantPermission( ImageUserGroup.ALL );
+    for( String p : extractProductCodes( inputSource, xpath ) ) {
+      imageInfo.addProductCode( p );
+    }
+    imageInfo.grantPermission( ctx.getAccount( ) );
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
     WalrusUtil.checkValid( imageInfo );
@@ -304,14 +305,14 @@ public class ImageManager {
     return reply;
   }
   
-  private List<ProductCode> extractProductCodes( Document inputSource, XPath xpath ) {
-    List<ProductCode> prodCodes = Lists.newArrayList( );
+  private List<String> extractProductCodes( Document inputSource, XPath xpath ) {
+    List<String> prodCodes = Lists.newArrayList( );
     NodeList productCodes = null;
     try {
       productCodes = ( NodeList ) xpath.evaluate( "/manifest/machine_configuration/product_codes/product_code/text()", inputSource, XPathConstants.NODESET );
       for ( int i = 0; i < productCodes.getLength( ); i++ ) {
         for ( String productCode : productCodes.item( i ).getNodeValue( ).split( "," ) ) {
-          prodCodes.add( new ProductCode( productCode ) );
+          prodCodes.add( productCode );
         }
       }
     } catch ( XPathExpressionException e ) {
@@ -394,14 +395,16 @@ public class ImageManager {
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
-        for ( ImageAuthorization auth : imgInfo.getUserGroups( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( auth.getValue( ) ) );
-        for ( ImageAuthorization auth : imgInfo.getPermissions( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( auth.getValue( ) ) );
+        if ( imgInfo.getImagePublic( ) ) {
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( ) );
+        }
+//TODO:GRZE:RESTORE
+//        for ( LaunchPermission auth : imgInfo.getPermissions( ) )
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getId( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
-        for ( ProductCode p : imgInfo.getProductCodes( ) ) {
-          reply.getProductCodes( ).add( p.getValue( ) );
+        for ( String p : imgInfo.listProductCodes( ) ) {
+          reply.getProductCodes( ).add( p );
         }
       } else if ( request.getBlockDeviceMapping( ) != null ) {
         reply.setRealResponse( reply.getBlockDeviceMapping( ) );
@@ -433,10 +436,7 @@ public class ImageManager {
       try {
         imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
         for ( String productCode : request.getProductCodes( ) ) {
-          ProductCode prodCode = new ProductCode( productCode );
-          if ( !imgInfo.getProductCodes( ).contains( prodCode ) ) {
-            imgInfo.getProductCodes( ).add( prodCode );
-          }
+          imgInfo.addProductCode( productCode );
         }
         db.commit( );
         reply.set_return( true );
@@ -456,10 +456,8 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.getUserFullName( ).getUniqueId( ).equals( imgInfo.getOwner( ).getUniqueId( ) ) || Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-        imgInfo.getPermissions( ).clear( );
+        imgInfo.resetPermission( );
         db.commit( );
-        imgInfo.grantPermission( ctx.getUser( ) );
-        imgInfo.grantPermission( ImageUserGroup.ALL );
       } else {
         db.rollback( );
         reply.set_return( false );
