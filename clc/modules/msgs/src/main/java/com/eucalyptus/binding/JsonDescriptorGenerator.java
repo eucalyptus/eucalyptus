@@ -372,7 +372,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     
     public String process( ) {
       if ( this.requestInfo.getRequest( ) == null || this.requestInfo.getResponse( ) == null || this.requestInfo.getRequest( ).getCanonicalName( ) == null ) {
-        System.out.println( "Ignoring anonymous class: " + this.requestInfo.getRequest( ) );
+        System.out.println( "IGNORE: anonymous class: " + this.requestInfo.getRequest( ) );
         return null;
       } else {
         JsonDescriptorGenerator.request = true;
