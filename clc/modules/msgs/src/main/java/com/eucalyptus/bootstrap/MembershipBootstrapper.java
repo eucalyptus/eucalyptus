@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,83 +53,95 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+
 package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.id.Database;
+import org.jgroups.JChannel;
+import org.jgroups.Message;
+import org.jgroups.ReceiverAdapter;
+import org.jgroups.View;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.util.SslSetup;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Hmacs;
+import com.eucalyptus.empyrean.Empyrean;
 
-@Provides(Database.class)
-@RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsRemote(Eucalyptus.class)
-public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
-  private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.RemoteConfiguration )
+public class MembershipBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( MembershipBootstrapper.class );
+  private JChannel      membershipChannel;
+  private String        membershipGroupName;
+  
   @Override
-
   public boolean load( ) throws Exception {
-    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-    return true;
+    try {
+      this.membershipGroupName = "Empyrean-" + Hmacs.generateSystemSignature( );
+      this.membershipChannel = MembershipManager.buildChannel( );
+      return true;
+    } catch ( Exception ex ) {
+      LOG.fatal( ex, ex );
+      BootstrapException.throwFatal( "Failed to construct membership channel because of " + ex.getMessage( ), ex );
+      return false;
+    }
   }
-
+  
   @Override
   public boolean start( ) throws Exception {
-    return true;
+    try {
+      this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
+        public void viewAccepted( View new_view ) {
+          LOG.info( "view: " + new_view );
+        }
+        
+        public void receive( Message msg ) {
+          LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        }
+      } );
+      this.membershipChannel.connect( this.membershipGroupName );
+      LOG.info( "Started membership channel " + this.membershipGroupName );
+      if ( !Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+        LOG.warn( "Blocking the bootstrap thread for testing." );
+        this.wait();
+      }
+      return true;
+    } catch ( Exception ex ) {
+      LOG.fatal( ex, ex );
+      BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+      return false;
+    }
   }
-
-  @Override
-  public boolean isRunning( ) {
-    return true;//TODO: track remote connectionf failures.
-  }
-
-  @Override
-  public void hup( ) {
-  }
-
   
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
   @Override
   public boolean enable( ) throws Exception {
-    return true;
+    return false;
   }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
+  
   @Override
   public boolean stop( ) throws Exception {
-    return true;
+    return false;
   }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
+  
   @Override
   public void destroy( ) throws Exception {}
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
+  
   @Override
   public boolean disable( ) throws Exception {
-    return true;
+    return false;
   }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
+  
   @Override
   public boolean check( ) throws Exception {
-    return true;
+    return false;
   }
-
+  
 }

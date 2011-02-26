@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.util;
+package com.eucalyptus.crypto.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

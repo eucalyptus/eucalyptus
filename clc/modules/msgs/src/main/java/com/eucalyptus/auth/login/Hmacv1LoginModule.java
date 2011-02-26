@@ -14,9 +14,9 @@ import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.crypto.Hmac;
 
 public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
   private static Logger LOG = Logger.getLogger( Hmacv1LoginModule.class );

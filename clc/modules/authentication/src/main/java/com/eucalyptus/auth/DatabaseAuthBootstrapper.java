@@ -2,8 +2,6 @@ package com.eucalyptus.auth;
 
 import java.security.AuthProvider;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.api.CryptoProvider;
-import com.eucalyptus.auth.crypto.Certs;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
@@ -14,6 +12,8 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.crypto.CryptoProvider;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.EntityWrapper;
 

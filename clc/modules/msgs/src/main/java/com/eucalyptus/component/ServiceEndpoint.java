@@ -132,7 +132,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getParent( ).getName( ) + "-" + parent.getName( ) + "-" + uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = Threads.lookup( parent.getParent( ).getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {

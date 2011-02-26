@@ -1,8 +1,8 @@
 package com.eucalyptus.auth.login;
 
 import java.util.Map;
-import com.eucalyptus.auth.crypto.Hmac;
-import com.eucalyptus.auth.util.SecurityParameter;
+import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.util.SecurityParameter;
 
 public class HmacCredentials extends WrappedCredentials<String> {
   private Hmac    signatureMethod;
