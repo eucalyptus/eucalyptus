@@ -92,6 +92,7 @@ public class MembershipManager {
         this.addProtocol( new UDP( ) {
           {
             setMulticastAddress( InetAddress.getByName( MembershipConfiguration.getInstance( ).getMulticastAddress( ) ) );
+            setMulticastPort( MembershipConfiguration.getInstance( ).getMulticastPort( ) );
             setDiscardIncompatiblePackets( true );
             setMaxBundleSize( 60000 );
             setMaxBundleTimeout( 30 );
@@ -114,7 +115,9 @@ public class MembershipManager {
             setOOBRejectionPolicy( MembershipConfiguration.getInstance( ).getOobRejectionPolicy( ) );
           }
         } );
-        this.addProtocol( new PING( ) );
+        this.addProtocol( new PING( ) {{
+          setId( ( short ) this.hashCode( ) );
+        }} );
         this.addProtocol( new MERGE2( ) );
         this.addProtocol( new FD_SOCK( ) );
         this.addProtocol( new FD_ALL( ).setValue( "timeout", 12000 ).setValue( "interval", 3000 ) );

@@ -85,7 +85,7 @@ public class MembershipBootstrapper extends Bootstrapper {
   @Override
   public boolean load( ) throws Exception {
     try {
-      this.membershipGroupName = "Empyrean-" + Hmacs.generateSystemSignature( );
+      this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( ).hashCode( );
       this.membershipChannel = MembershipManager.buildChannel( );
       return true;
     } catch ( Exception ex ) {
