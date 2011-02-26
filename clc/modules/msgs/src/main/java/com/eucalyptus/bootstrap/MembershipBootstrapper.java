@@ -109,7 +109,7 @@ public class MembershipBootstrapper extends Bootstrapper {
       } );
       this.membershipChannel.connect( this.membershipGroupName );
       LOG.info( "Started membership channel " + this.membershipGroupName );
-      if ( !Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
+      if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         LOG.warn( "Blocking the bootstrap thread for testing." );
         this.wait();
       }
