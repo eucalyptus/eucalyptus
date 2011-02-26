@@ -88,7 +88,7 @@ public class MembershipManager {
     final JChannel channel = new JChannel( false );
     ProtocolStack stack = new ProtocolStack( ) {
       {
-        this.setChannel( channel );
+        channel.setProtocolStack( this );
         this.addProtocol( new UDP( ) {
           {
             setMulticastAddress( InetAddress.getByName( MembershipConfiguration.getInstance( ).getMulticastAddress( ) ) );
@@ -115,9 +115,7 @@ public class MembershipManager {
             setOOBRejectionPolicy( MembershipConfiguration.getInstance( ).getOobRejectionPolicy( ) );
           }
         } );
-        this.addProtocol( new PING( ) {{
-          setId( ( short ) this.hashCode( ) );
-        }} );
+        this.addProtocol( new PING( ) );
         this.addProtocol( new MERGE2( ) );
         this.addProtocol( new FD_SOCK( ) );
         this.addProtocol( new FD_ALL( ).setValue( "timeout", 12000 ).setValue( "interval", 3000 ) );
@@ -130,10 +128,9 @@ public class MembershipManager {
         this.addProtocol( new UFC( ) );
         this.addProtocol( new MFC( ) );
         this.addProtocol( new FRAG2( ) );
+        this.init( );
       }
     };
-    stack.init( );
-    channel.setProtocolStack( stack );
     return channel;
   }
 }
