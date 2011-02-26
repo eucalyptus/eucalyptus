@@ -64,10 +64,9 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import org.jgroups.JChannel;
-import org.jgroups.protocols.BARRIER;
-import org.jgroups.protocols.FD_ALL;
+import org.jgroups.protocols.FC;
+import org.jgroups.protocols.FD;
 import org.jgroups.protocols.FD_SOCK;
 import org.jgroups.protocols.FRAG2;
 import org.jgroups.protocols.MERGE2;
@@ -75,11 +74,12 @@ import org.jgroups.protocols.MFC;
 import org.jgroups.protocols.PING;
 import org.jgroups.protocols.UDP;
 import org.jgroups.protocols.UFC;
-import org.jgroups.protocols.UNICAST2;
+import org.jgroups.protocols.UNICAST;
 import org.jgroups.protocols.VERIFY_SUSPECT;
 import org.jgroups.protocols.pbcast.GMS;
 import org.jgroups.protocols.pbcast.NAKACK;
 import org.jgroups.protocols.pbcast.STABLE;
+import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.ProtocolStack;
 
 public class MembershipManager {
@@ -115,22 +115,62 @@ public class MembershipManager {
             setOOBRejectionPolicy( MembershipConfiguration.getInstance( ).getOobRejectionPolicy( ) );
           }
         } );
-        this.addProtocol( new PING( ) );
+        this.addProtocol( new PING( ) {
+          {
+            this.setTimeout( 2000 );
+            this.setNumInitialMembers( 2 );
+          }
+        } );
         this.addProtocol( new MERGE2( ) );
         this.addProtocol( new FD_SOCK( ) );
-        this.addProtocol( new FD_ALL( ).setValue( "timeout", 12000 ).setValue( "interval", 3000 ) );
+        this.addProtocol( new FD( ) {
+          {
+            this.setTimeout( 10000 );
+            this.setMaxTries( 5 );
+            this.setShun( true );
+          }
+        } );
         this.addProtocol( new VERIFY_SUSPECT( ) );
-        this.addProtocol( new BARRIER( ) );
-        this.addProtocol( new NAKACK( ) );
-        this.addProtocol( new UNICAST2( ) );
-        this.addProtocol( new STABLE( ) );
-        this.addProtocol( new GMS( ) );
-        this.addProtocol( new UFC( ) );
-        this.addProtocol( new MFC( ) );
-        this.addProtocol( new FRAG2( ) );
-        this.init( );
+//        this.addProtocol( new BARRIER( ) );
+        this.addProtocol( new NAKACK( ) {
+          {
+            this.setUseMcastXmit( false );
+            this.setDiscardDeliveredMsgs( true );
+            this.setGcLag( 0 );
+//            this.setProperty( "retransmit_timeout", "300,600,1200,2400,4800" );
+          }
+        } );
+        this.addProtocol( new UNICAST( ) );
+        this.addProtocol( new STABLE( ) {
+          {
+            this.setDesiredAverageGossip( 50000 );
+            this.setMaxBytes( 400000 );
+//            this.setStabilityDelay( 1000 );
+          }
+        } );
+        this.addProtocol( new GMS( ) {
+          {
+            this.setPrintLocalAddress( true );
+            this.setJoinTimeout( 3000 );
+            this.setShun( false );
+            this.setViewBundling( true );
+          }
+        } );
+        this.addProtocol( new FC( ) {
+          {
+            this.setMaxCredits( 20000000 );
+            this.setMinThreshold( 0.1 );
+          }
+        } );
+//        this.addProtocol( new UFC( ) );
+//        this.addProtocol( new MFC( ) );
+        this.addProtocol( new FRAG2( ) {
+          {}
+        } );
+        this.addProtocol( new STATE_TRANSFER( ) );
       }
     };
+    stack.init( );
     return channel;
   }
 }
