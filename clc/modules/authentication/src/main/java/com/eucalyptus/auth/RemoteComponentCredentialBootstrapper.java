@@ -102,15 +102,15 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   }
 
   private boolean checkAllKeys( ) {
-    for ( com.eucalyptus.component.Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
-        try {
-          if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
-            return false;
-          }
-        } catch ( Exception e ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
+      try {
+        if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
+          LOG.error( "Failed to lookup key for " + c.getCapitalizedName( ) + " with alias=" + c.name( ) + " in file " + EucaKeyStore.getInstance( ).getFileName( ) );
           return false;
         }
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+        return false;
       }
     }
     return true;
