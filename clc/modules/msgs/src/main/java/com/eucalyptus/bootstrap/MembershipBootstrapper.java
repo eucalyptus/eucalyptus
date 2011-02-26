@@ -63,6 +63,9 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
@@ -98,20 +101,37 @@ public class MembershipBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     try {
+      final boolean[] done = { false };
+      final ReentrantLock lock = new ReentrantLock( );
+      final Condition isReady = lock.newCondition( );
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
         public void viewAccepted( View new_view ) {
-          LOG.info( "view: " + new_view );
+          lock.lock( );
+          try {
+            done[0] = true;
+            isReady.signalAll( );
+            LOG.info( "view: " + new_view );
+          } finally {
+            lock.unlock( );
+          }
         }
         
         public void receive( Message msg ) {
           LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         }
       } );
-      this.membershipChannel.connect( this.membershipGroupName );
-      LOG.info( "Started membership channel " + this.membershipGroupName );
-      if ( System.getProperty( "euca.cloud.disable" ) != null ) {
-        LOG.warn( "Blocking the bootstrap thread for testing." );
-        this.wait();
+      lock.lock( );
+      try {
+        this.membershipChannel.connect( this.membershipGroupName );
+        LOG.info( "Started membership channel " + this.membershipGroupName );
+        if ( System.getProperty( "euca.cloud.disable" ) != null ) {
+          LOG.warn( "Blocking the bootstrap thread for testing." );
+          if( !done[0] ) {
+            isReady.await( );
+          }
+        }
+      } finally {
+        lock.unlock( );
       }
       return true;
     } catch ( Exception ex ) {
