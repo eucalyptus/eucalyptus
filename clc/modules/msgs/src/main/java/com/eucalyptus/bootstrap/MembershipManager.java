@@ -130,6 +130,7 @@ public class MembershipManager {
       }
     };
     stack.init( );
+    channel.setProtocolStack( stack );
     return channel;
   }
 }
