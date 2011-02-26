@@ -76,8 +76,8 @@
   </mule:configuration>
   <euca:connector name="eucaws" />
   <vm:connector name="internal-async" queueEvents="false">
+    <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer" responseTransformer="org.mule.transformer.NoActionTransformer"/>
     <vm:queueProfile persistent="false" maxOutstandingMessages="256" />
-    <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer"/>
   </vm:connector>
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
