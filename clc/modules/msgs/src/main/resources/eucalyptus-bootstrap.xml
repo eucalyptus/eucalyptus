@@ -76,7 +76,7 @@
   </mule:configuration>
   <euca:connector name="eucaws" />
   <vm:connector name="internal-async" queueEvents="false">
-    <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer" responseTransformer="org.mule.transformer.NoActionTransformer"/>
+    <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer" responseTransformer="org.mule.transformer.NoActionTransformer" />
     <vm:queueProfile persistent="false" maxOutstandingMessages="256" />
   </vm:connector>
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
@@ -104,16 +104,19 @@
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
+          <mule:no-action-transformer/>
         </filtering-router>
         #foreach( $component in $components )
         <filtering-router>
           <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
           <payload-type-filter expectedType="${component.lookupBaseMessageType().getCanonicalName()}" />
+          <mule:no-action-transformer/>
         </filtering-router>
         #end
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+          <mule:no-action-transformer/>
         </filtering-router>
       </outbound>
     </service>
