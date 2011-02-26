@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import org.jgroups.JChannel;
+import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.FC;
 import org.jgroups.protocols.FD;
 import org.jgroups.protocols.FD_SOCK;
@@ -83,14 +84,16 @@ import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.ProtocolStack;
 
 public class MembershipManager {
-  
+  public static short PROTOCOL_ID = 512;
   public static JChannel buildChannel( ) throws Exception {
+    
     final JChannel channel = new JChannel( false );
     ProtocolStack stack = new ProtocolStack( ) {
       {
         channel.setProtocolStack( this );
         this.addProtocol( new UDP( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             setMulticastAddress( InetAddress.getByName( MembershipConfiguration.getInstance( ).getMulticastAddress( ) ) );
             setMulticastPort( MembershipConfiguration.getInstance( ).getMulticastPort( ) );
             setDiscardIncompatiblePackets( true );
@@ -117,6 +120,7 @@ public class MembershipManager {
         } );
         this.addProtocol( new PING( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setTimeout( 2000 );
             this.setNumInitialMembers( 2 );
           }
@@ -125,6 +129,7 @@ public class MembershipManager {
         this.addProtocol( new FD_SOCK( ) );
         this.addProtocol( new FD( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setTimeout( 10000 );
             this.setMaxTries( 5 );
             this.setShun( true );
@@ -134,6 +139,7 @@ public class MembershipManager {
 //        this.addProtocol( new BARRIER( ) );
         this.addProtocol( new NAKACK( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setUseMcastXmit( false );
             this.setDiscardDeliveredMsgs( true );
             this.setGcLag( 0 );
@@ -143,6 +149,7 @@ public class MembershipManager {
         this.addProtocol( new UNICAST( ) );
         this.addProtocol( new STABLE( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setDesiredAverageGossip( 50000 );
             this.setMaxBytes( 400000 );
 //            this.setStabilityDelay( 1000 );
@@ -150,6 +157,7 @@ public class MembershipManager {
         } );
         this.addProtocol( new GMS( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setPrintLocalAddress( true );
             this.setJoinTimeout( 3000 );
             this.setShun( false );
@@ -158,6 +166,7 @@ public class MembershipManager {
         } );
         this.addProtocol( new FC( ) {
           {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
             this.setMaxCredits( 20000000 );
             this.setMinThreshold( 0.1 );
           }
@@ -165,7 +174,9 @@ public class MembershipManager {
 //        this.addProtocol( new UFC( ) );
 //        this.addProtocol( new MFC( ) );
         this.addProtocol( new FRAG2( ) {
-          {}
+          {
+            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
+          }
         } );
         this.addProtocol( new STATE_TRANSFER( ) );
       }
