@@ -99,7 +99,7 @@ public class Protocols {
   
   public static List<Protocol> getMembershipProtocolStack( ) {
     return Lists.newArrayList( udp.get( ), ping.get( ), merge2.get( ), fdSocket.get( ), fd.get( ), verifySuspect.get( ), nakack.get( ), unicast.get( ),
-                               stable.get( ), groupMemberShip.get( ), flowControl.get( ), fragmentation.get( ) );
+                               stable.get( ), groupMemberShip.get( ), flowControl.get( ), fragmentation.get( ), stateTransfer.get( ) );
   }
   
   private static final Supplier<Protocol> udp                  = new Supplier<Protocol>( ) {
