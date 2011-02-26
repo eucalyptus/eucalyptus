@@ -84,7 +84,7 @@ import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.ProtocolStack;
 
 public class MembershipManager {
-  public static short PROTOCOL_ID = 512;
+  public static short PROTOCOL_ID = 513;
   public static JChannel buildChannel( ) throws Exception {
     
     final JChannel channel = new JChannel( false );
