@@ -88,13 +88,10 @@ public class MembershipManager {
   
   public static JChannel buildChannel( ) throws Exception {
     final JChannel channel = new JChannel( false );
-    channel.setProtocolStack(
-           new ProtocolStack( ) {
-             {
-               this.addProtocols( Protocols.getMembershipProtocolStack( ) );
-               this.init( );
-             }
-           } );
+    ProtocolStack stack = new ProtocolStack( );
+    channel.setProtocolStack( stack );
+    stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
+    stack.init( );
     return channel;
   }
 }
