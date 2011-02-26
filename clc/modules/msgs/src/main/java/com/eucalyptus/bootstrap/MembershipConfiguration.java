@@ -63,130 +63,136 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 
 public class MembershipConfiguration {
-  private String  multicastAddress        = "228.7.7.3";
-  private Integer multicastPort           = 8772;
-  private Integer threadPoolMaxThreads    = 25;
-  private Integer threadPoolMinThreads    = 2;
-  private Integer threadPoolKeepAliveTime = 5000;
-  private Boolean threadPoolQueueEnabled  = Boolean.TRUE;
-  private String  regularRejectionPolicy  = "RUN";
-  private String  oobRejectionPolicy  = "RUN";
-  private Integer oobThreadPoolMaxThreads    = 25;
-  private Integer oobThreadPoolMinThreads    = 2;
-  private Integer oobThreadPoolKeepAliveTime = 5000;
+  private static Logger LOG                        = Logger.getLogger( MembershipConfiguration.class );
+  private static String        multicastAddress           = "228.7.7.3";
+  private static Integer       multicastPort              = 8772;
+  private static Integer       threadPoolMaxThreads       = 25;
+  private static Integer       threadPoolMinThreads       = 2;
+  private static Integer       threadPoolKeepAliveTime    = 5000;
+  private static Boolean       threadPoolQueueEnabled     = Boolean.TRUE;
+  private static String        regularRejectionPolicy     = "RUN";
+  private static String        oobRejectionPolicy         = "RUN";
+  private static Integer       oobThreadPoolMaxThreads    = 25;
+  private static Integer       oobThreadPoolMinThreads    = 2;
+  private static Integer       oobThreadPoolKeepAliveTime = 5000;
   
-  private MembershipConfiguration( ) {}
-  
-  public static MembershipConfiguration getInstance( ) {
-    return new MembershipConfiguration( );
-  }
-  
-  public ThreadPool getThreadPool( ) {
+  public static ThreadPool getThreadPool( ) {
     return Threads.lookup( Empyrean.class, MembershipManager.class );
   }
-
-  public ThreadPool getNormalThreadPool( ) {
+  
+  public static ThreadPool getNormalThreadPool( ) {
     return Threads.lookup( Empyrean.class, MembershipManager.class, "normal-pool" );
   }
-
-  public ThreadPool getOOBThreadPool( ) {
+  
+  public static ThreadPool getOOBThreadPool( ) {
     return Threads.lookup( Empyrean.class, MembershipManager.class, "oob-pool" );
   }
-
   
-  public String getMulticastAddress( ) {
-    return this.multicastAddress;
-  }
-  
-  public void setMulticastAddress( String multicastAddress ) {
-    this.multicastAddress = multicastAddress;
+  public static String getMulticastAddress( ) {
+    return MembershipConfiguration.multicastAddress;
   }
   
-  public Integer getMulticastPort( ) {
-    return this.multicastPort;
+  public static InetAddress getMulticastInetAddress( ) {
+    try {
+      return InetAddress.getByName( MembershipConfiguration.multicastAddress );
+    } catch ( UnknownHostException ex ) {
+      LOG.error( ex, ex );
+      BootstrapException.throwFatal( "Failed to construct membership protocol because of " + ex.getMessage( ), ex );
+      throw new RuntimeException( ex );//never executed because of System.exit( -1 ) in throwFatal.
+    }
   }
   
-  public void setMulticastPort( Integer multicastPort ) {
-    this.multicastPort = multicastPort;
+  public static void setMulticastAddress( String multicastAddress ) {
+    MembershipConfiguration.multicastAddress = multicastAddress;
   }
   
-
-  public Integer getThreadPoolMaxThreads( ) {
-    return this.threadPoolMaxThreads;
+  public static Integer getMulticastPort( ) {
+    return MembershipConfiguration.multicastPort;
   }
-
-  public void setThreadPoolMaxThreads( Integer threadPoolMaxThreads ) {
-    this.threadPoolMaxThreads = threadPoolMaxThreads;
+  
+  public static void setMulticastPort( Integer multicastPort ) {
+    MembershipConfiguration.multicastPort = multicastPort;
   }
-
-  public Integer getThreadPoolMinThreads( ) {
-    return this.threadPoolMinThreads;
+  
+  public static Integer getThreadPoolMaxThreads( ) {
+    return MembershipConfiguration.threadPoolMaxThreads;
   }
-
-  public void setThreadPoolMinThreads( Integer threadPoolMinThreads ) {
-    this.threadPoolMinThreads = threadPoolMinThreads;
+  
+  public static void setThreadPoolMaxThreads( Integer threadPoolMaxThreads ) {
+    MembershipConfiguration.threadPoolMaxThreads = threadPoolMaxThreads;
   }
-
-  public Integer getThreadPoolKeepAliveTime( ) {
-    return this.threadPoolKeepAliveTime;
+  
+  public static Integer getThreadPoolMinThreads( ) {
+    return MembershipConfiguration.threadPoolMinThreads;
   }
-
-  public void setThreadPoolKeepAliveTime( Integer threadPoolKeepAliveTime ) {
-    this.threadPoolKeepAliveTime = threadPoolKeepAliveTime;
+  
+  public static void setThreadPoolMinThreads( Integer threadPoolMinThreads ) {
+    MembershipConfiguration.threadPoolMinThreads = threadPoolMinThreads;
   }
-
-  public Boolean getThreadPoolQueueEnabled( ) {
-    return this.threadPoolQueueEnabled;
+  
+  public static Integer getThreadPoolKeepAliveTime( ) {
+    return MembershipConfiguration.threadPoolKeepAliveTime;
   }
-
-  public void setThreadPoolQueueEnabled( Boolean threadPoolQueueEnabled ) {
-    this.threadPoolQueueEnabled = threadPoolQueueEnabled;
+  
+  public static void setThreadPoolKeepAliveTime( Integer threadPoolKeepAliveTime ) {
+    MembershipConfiguration.threadPoolKeepAliveTime = threadPoolKeepAliveTime;
   }
-
-  public String getRegularRejectionPolicy( ) {
-    return this.regularRejectionPolicy;
+  
+  public static Boolean getThreadPoolQueueEnabled( ) {
+    return MembershipConfiguration.threadPoolQueueEnabled;
   }
-
-  public void setRegularRejectionPolicy( String regularRejectionPolicy ) {
-    this.regularRejectionPolicy = regularRejectionPolicy;
+  
+  public static void setThreadPoolQueueEnabled( Boolean threadPoolQueueEnabled ) {
+    MembershipConfiguration.threadPoolQueueEnabled = threadPoolQueueEnabled;
   }
-
-  public Integer getOobThreadPoolMaxThreads( ) {
-    return this.oobThreadPoolMaxThreads;
+  
+  public static String getRegularRejectionPolicy( ) {
+    return MembershipConfiguration.regularRejectionPolicy;
   }
-
-  public void setOobThreadPoolMaxThreads( Integer oobThreadPoolMaxThreads ) {
-    this.oobThreadPoolMaxThreads = oobThreadPoolMaxThreads;
+  
+  public static void setRegularRejectionPolicy( String regularRejectionPolicy ) {
+    MembershipConfiguration.regularRejectionPolicy = regularRejectionPolicy;
   }
-
-  public Integer getOobThreadPoolMinThreads( ) {
-    return this.oobThreadPoolMinThreads;
+  
+  public static Integer getOobThreadPoolMaxThreads( ) {
+    return MembershipConfiguration.oobThreadPoolMaxThreads;
   }
-
-  public void setOobThreadPoolMinThreads( Integer oobThreadPoolMinThreads ) {
-    this.oobThreadPoolMinThreads = oobThreadPoolMinThreads;
+  
+  public static void setOobThreadPoolMaxThreads( Integer oobThreadPoolMaxThreads ) {
+    MembershipConfiguration.oobThreadPoolMaxThreads = oobThreadPoolMaxThreads;
   }
-
-  public Integer getOobThreadPoolKeepAliveTime( ) {
-    return this.oobThreadPoolKeepAliveTime;
+  
+  public static Integer getOobThreadPoolMinThreads( ) {
+    return MembershipConfiguration.oobThreadPoolMinThreads;
   }
-
-  public void setOobThreadPoolKeepAliveTime( Integer oobThreadPoolKeepAliveTime ) {
-    this.oobThreadPoolKeepAliveTime = oobThreadPoolKeepAliveTime;
+  
+  public static void setOobThreadPoolMinThreads( Integer oobThreadPoolMinThreads ) {
+    MembershipConfiguration.oobThreadPoolMinThreads = oobThreadPoolMinThreads;
   }
-
-  public String getOobRejectionPolicy( ) {
-    return this.oobRejectionPolicy;
+  
+  public static Integer getOobThreadPoolKeepAliveTime( ) {
+    return MembershipConfiguration.oobThreadPoolKeepAliveTime;
   }
-
-  public void setOobRejectionPolicy( String oobRejectionPolicy ) {
-    this.oobRejectionPolicy = oobRejectionPolicy;
+  
+  public static void setOobThreadPoolKeepAliveTime( Integer oobThreadPoolKeepAliveTime ) {
+    MembershipConfiguration.oobThreadPoolKeepAliveTime = oobThreadPoolKeepAliveTime;
   }
-
+  
+  public static String getOobRejectionPolicy( ) {
+    return MembershipConfiguration.oobRejectionPolicy;
+  }
+  
+  public static void setOobRejectionPolicy( String oobRejectionPolicy ) {
+    MembershipConfiguration.oobRejectionPolicy = oobRejectionPolicy;
+  }
+  
 }

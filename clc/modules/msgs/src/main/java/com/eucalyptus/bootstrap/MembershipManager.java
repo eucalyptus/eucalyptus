@@ -81,107 +81,20 @@ import org.jgroups.protocols.pbcast.GMS;
 import org.jgroups.protocols.pbcast.NAKACK;
 import org.jgroups.protocols.pbcast.STABLE;
 import org.jgroups.protocols.pbcast.STATE_TRANSFER;
+import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
 
 public class MembershipManager {
-  public static short PROTOCOL_ID = 513;
+  
   public static JChannel buildChannel( ) throws Exception {
-    
     final JChannel channel = new JChannel( false );
-    ProtocolStack stack = new ProtocolStack( ) {
-      {
-        channel.setProtocolStack( this );
-        this.addProtocol( new UDP( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            setMulticastAddress( InetAddress.getByName( MembershipConfiguration.getInstance( ).getMulticastAddress( ) ) );
-            setMulticastPort( MembershipConfiguration.getInstance( ).getMulticastPort( ) );
-            setDiscardIncompatiblePackets( true );
-            setMaxBundleSize( 60000 );
-            setMaxBundleTimeout( 30 );
-            
-            setDefaultThreadPool( MembershipConfiguration.getInstance( ).getThreadPool( ) );
-            setDefaultThreadPoolThreadFactory( MembershipConfiguration.getInstance( ).getThreadPool( ) );
-            
-            setThreadFactory( MembershipConfiguration.getInstance( ).getNormalThreadPool( ) );
-            setThreadPoolMaxThreads( MembershipConfiguration.getInstance( ).getThreadPoolMaxThreads( ) );
-            setThreadPoolKeepAliveTime( MembershipConfiguration.getInstance( ).getThreadPoolKeepAliveTime( ) );
-            setThreadPoolMinThreads( MembershipConfiguration.getInstance( ).getThreadPoolMinThreads( ) );
-            setThreadPoolQueueEnabled( MembershipConfiguration.getInstance( ).getThreadPoolQueueEnabled( ) );
-            setRegularRejectionPolicy( MembershipConfiguration.getInstance( ).getRegularRejectionPolicy( ) );
-            
-            setOOBThreadPoolThreadFactory( MembershipConfiguration.getInstance( ).getOOBThreadPool( ) );
-            setOOBThreadPool( MembershipConfiguration.getInstance( ).getOOBThreadPool( ) );
-            setOOBThreadPoolMaxThreads( MembershipConfiguration.getInstance( ).getOobThreadPoolMaxThreads( ) );
-            setOOBThreadPoolKeepAliveTime( MembershipConfiguration.getInstance( ).getOobThreadPoolKeepAliveTime( ) );
-            setOOBThreadPoolMinThreads( MembershipConfiguration.getInstance( ).getOobThreadPoolMinThreads( ) );
-            setOOBRejectionPolicy( MembershipConfiguration.getInstance( ).getOobRejectionPolicy( ) );
-          }
-        } );
-        this.addProtocol( new PING( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setTimeout( 2000 );
-            this.setNumInitialMembers( 2 );
-          }
-        } );
-        this.addProtocol( new MERGE2( ) );
-        this.addProtocol( new FD_SOCK( ) );
-        this.addProtocol( new FD( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setTimeout( 10000 );
-            this.setMaxTries( 5 );
-            this.setShun( true );
-          }
-        } );
-        this.addProtocol( new VERIFY_SUSPECT( ) );
-//        this.addProtocol( new BARRIER( ) );
-        this.addProtocol( new NAKACK( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setUseMcastXmit( false );
-            this.setDiscardDeliveredMsgs( true );
-            this.setGcLag( 0 );
-//            this.setProperty( "retransmit_timeout", "300,600,1200,2400,4800" );
-          }
-        } );
-        this.addProtocol( new UNICAST( ) );
-        this.addProtocol( new STABLE( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setDesiredAverageGossip( 50000 );
-            this.setMaxBytes( 400000 );
-//            this.setStabilityDelay( 1000 );
-          }
-        } );
-        this.addProtocol( new GMS( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setPrintLocalAddress( true );
-            this.setJoinTimeout( 3000 );
-            this.setShun( false );
-            this.setViewBundling( true );
-          }
-        } );
-        this.addProtocol( new FC( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-            this.setMaxCredits( 20000000 );
-            this.setMinThreshold( 0.1 );
-          }
-        } );
-//        this.addProtocol( new UFC( ) );
-//        this.addProtocol( new MFC( ) );
-        this.addProtocol( new FRAG2( ) {
-          {
-            ClassConfigurator.addProtocol( PROTOCOL_ID++, this.getClass( ) );
-          }
-        } );
-        this.addProtocol( new STATE_TRANSFER( ) );
-      }
-    };
-    stack.init( );
+    channel.setProtocolStack(
+           new ProtocolStack( ) {
+             {
+               this.addProtocols( Protocols.getMembershipProtocolStack( ) );
+               this.init( );
+             }
+           } );
     return channel;
   }
 }
