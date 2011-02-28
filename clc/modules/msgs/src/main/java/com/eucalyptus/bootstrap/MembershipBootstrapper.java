@@ -108,8 +108,10 @@ public class MembershipBootstrapper extends Bootstrapper {
         public void viewAccepted( View new_view ) {
           lock.lock( );
           try {
-            done[0] = true;
-            isReady.signalAll( );
+            if ( System.getProperty( "euca.cloud.disable" ) != null ) {
+              done[0] = true;
+              isReady.signalAll( );
+            }
             LOG.info( "view: " + new_view );
           } finally {
             lock.unlock( );
