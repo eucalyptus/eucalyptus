@@ -87,7 +87,7 @@ public class ClusterClientPipeline extends NioClientPipeline {
     final ChannelPipeline pipeline = Channels.pipeline( );
     ChannelUtil.addPipelineMonitors( pipeline, 60 );
     pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
+    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1024*1024*20 ) );
     pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
     pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
     pipeline.addLast( "wssec", this.getWssecHandler( ) );

@@ -137,7 +137,7 @@ public class SoapHandler extends MessageStackHandler {
         EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpMessage.getMessage( );
         httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
         if ( httpMessage instanceof MappingHttpResponse ) {
-          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.BAD_REQUEST );
         }
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );

@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,120 +53,75 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.network;
 
-import java.io.Serializable;
-import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.crypto.Crypto;
-import com.eucalyptus.auth.crypto.Digest;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
-@Table( name = "counters" )
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_network_rule_ip_range" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Counters extends AbstractPersistent implements Serializable {
-  private static Logger   LOG = Logger.getLogger( Counters.class );
-  private static Counters singleton;
-  
-  public static long getIdBlock( int length ) {
-    if ( singleton != null ) {
-      return singleton.getBlock( length );
-    } else {
-      synchronized ( Counters.class ) {
-        if ( singleton == null ) {
-          EntityWrapper<Counters> db = new EntityWrapper<Counters>( "eucalyptus_general" );
-          try {
-            singleton = db.getUnique( new Counters() );
-          } catch ( EucalyptusCloudException e ) {
-            singleton = new Counters( 0l );
-            try {
-              db.add( singleton );
-              db.commit( );
-            } catch ( Exception e1 ) {
-              LOG.fatal( e1, e1 );
-              LOG.fatal( "Failed to initialize system counters.  These are important." );
-              System.exit( -1 );
-            }
-          }
-        }
-      }
-      return singleton.getBlock( length );
-    }
+public class IpRange {
+  @Id
+  @GeneratedValue
+  @Column( name = "metadata_network_rule_ip_range_id" )
+  Long id = -1l;
+  @Column( name = "metadata_network_rule_ip_range_value" )
+  String value;
+  public IpRange(){
   }
-  
-  public static String getNextId( ) {
-    return Crypto.getDigestBase64( Long.toString( Counters.getIdBlock( 1 ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
+  public IpRange( final String value ) {
+    this.value = value;
   }
-  
-  @Transient
-  private static Long             period   = 1000l;
-  @Transient
-  private static final AtomicLong tempId   = new AtomicLong( -1 );
-  @Transient
-  private static final AtomicLong lastSave = new AtomicLong( -1 );
-  @Column( name = "msg_count" )
-  private Long                    messageId;
-  
-  public Counters( ) {}
-  public Counters( Long start ) { 
-    this.messageId = start;
+
+  public Long getId( ) {
+    return this.id;
   }
-  
-  public static Counters uninitialized( ) {
-    Counters c = new Counters( );
-    c.setMessageId( null );
-    return c;
+  public void setId( Long id ) {
+    this.id = id;
   }
-  
-  Long getBlock( int length ) {
-    final Long idStart;
-    if ( tempId.compareAndSet( -1l, this.messageId ) ) {
-      lastSave.set( tempId.addAndGet( Counters.period ) );
-      idStart = tempId.addAndGet( length );
-    } else {
-      idStart = tempId.addAndGet( length );
-      if ( ( idStart - lastSave.get( ) ) > 1000 ) {
-        try {
-          Transactions.one( Counters.uninitialized( ), new Tx<Counters>() {
-            @Override
-            public void fire( Counters t ) throws Throwable {
-              t.setMessageId( idStart );
-            }
-          } );
-        } catch ( EucalyptusCloudException e ) {
-          LOG.debug( e, e );
-        }
-        lastSave.set( idStart );
-      }
-    }
-    return idStart;
+  public String getValue( ) {
+    return this.value;
   }
-  
-  public Long getMessageId( ) {
-    return messageId;
+  public void setValue( String value ) {
+    this.value = value;
   }
-  
-  public void setMessageId( Long messageId ) {
-    this.messageId = messageId;
+  @Override
+  public String toString( ) {
+    return String.format( "IpRange:%s", this.value );
   }
-  
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( obj == null ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    IpRange other = ( IpRange ) obj;
+    if ( this.value == null ) {
+      if ( other.value != null ) return false;
+    } else if ( !this.value.equals( other.value ) ) return false;
+    return true;
+  }  
 }

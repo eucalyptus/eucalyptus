@@ -83,16 +83,16 @@ public class ExecPair<V> implements Runnable {
   private final ExecutorService            executor;
   
   ExecPair( Callable callable, ExecutorService executor ) {
-    Assertions.assertArgumentNotNull( "Callable was null.", callable );
-    Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
+    Assertions.assertNotNull( callable, "Callable was null." );
+    Assertions.assertNotNull( executor, "ExecutorService was null." );
     
     this.callable = callable;
     this.executor = executor;
   }
   
   ExecPair( final Runnable runnable, ExecutorService executor ) {
-    Assertions.assertArgumentNotNull( "Runnable was null.", runnable );
-    Assertions.assertArgumentNotNull( "ExecutorService was null.", executor );
+    Assertions.assertNotNull( runnable, "Runnable was null." );
+    Assertions.assertNotNull( executor, "ExecutorService was null." );
 
     this.runnable = runnable;
     this.executor = executor;

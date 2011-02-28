@@ -44,7 +44,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         ? clusterName
         : "default";
       String action = PolicySpec.requestToAction( request );
-      User requestUser = request.getUser( );
+      User requestUser = ctx.getUser( );
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
       int remaining = maxAmount;
       int available = 0;
@@ -68,7 +68,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
             int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
               ? state.getAvailability( vmTypeName ).getAvailable( )
               : remaining;
-            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getRequest( ).getUserErn( ), vmTypeName, tryAmount, maxAmount );
+            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUserFullName( ), vmTypeName, tryAmount, maxAmount );
             remaining -= token.getAmount( );
             tokens.add( token );
           } catch ( Throwable t ) {

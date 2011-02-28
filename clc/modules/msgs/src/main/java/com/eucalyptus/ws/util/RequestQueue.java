@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -75,7 +76,7 @@ public class RequestQueue {
   private static boolean acceptable;
   
   public BaseMessage handle( BaseMessage msg ) throws EucalyptusCloudException {
-    EventRecord.here( RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), msg.getClass( ).getSimpleName( ) ).debug( );
+    LOG.info( String.format( "%s:%s:%s:%s:%s", RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), Contexts.lookup( ).getUserFullName( ), msg.toSimpleString( ) ) );
     return msg;
   }
   

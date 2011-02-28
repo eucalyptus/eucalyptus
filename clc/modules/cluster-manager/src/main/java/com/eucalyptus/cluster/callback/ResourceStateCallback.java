@@ -3,8 +3,8 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmTypes;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 

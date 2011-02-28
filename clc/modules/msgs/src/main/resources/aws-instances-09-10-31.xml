@@ -222,7 +222,7 @@
   <!--2007-01-03 -->
   <mapping name="RebootInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" />
+    <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
   <!--2007-01-03 -->
   <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -356,7 +356,7 @@
   <mapping name="ModifyInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="DescribeInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -387,7 +387,7 @@
   <mapping name="ResetInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
       extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
   </mapping>
 
 
@@ -422,7 +422,7 @@
   <mapping name="CreateTagsResponseType" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType"
   extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
   </mapping>
 
   <mapping name="CreatePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -433,7 +433,7 @@
   <mapping name="CreatePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />  
-    <value name="return" field="_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
   </mapping>
   <mapping name="DeletePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -442,7 +442,7 @@
   <mapping name="DeletePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType"    
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
   </mapping>
   <mapping name="DescribePlacementGroupsType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

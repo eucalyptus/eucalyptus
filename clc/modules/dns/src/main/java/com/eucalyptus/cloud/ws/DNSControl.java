@@ -66,6 +66,7 @@
 package com.eucalyptus.cloud.ws;
 
 import com.eucalyptus.config.Configuration;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
@@ -229,7 +230,7 @@ public class DNSControl {
 	public AddZoneResponseType AddZone(AddZoneType request) throws EucalyptusCloudException {
 		AddZoneResponseType reply = (AddZoneResponseType) request.getReply();
 		String name = request.getName();
-		if(!request.isAdministrator()) {
+		if(!Contexts.lookup().hasAdministrativePrivileges()) {
 			throw new AccessDeniedException(name);
 		}
 
@@ -311,7 +312,7 @@ public class DNSControl {
 	public DeleteZoneResponseType DeleteZone(DeleteZoneType request) throws EucalyptusCloudException {
 		DeleteZoneResponseType reply = (DeleteZoneResponseType) request.getReply();
 		String name = request.getName();
-		if(!request.isAdministrator()) {
+		if(!Contexts.lookup().hasAdministrativePrivileges()) {
 			throw new AccessDeniedException(name);
 		}
 		EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();

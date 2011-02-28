@@ -65,8 +65,11 @@
 package com.eucalyptus.address;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.Callback;
@@ -77,7 +80,7 @@ import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseItemType;
+import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
@@ -89,11 +92,12 @@ public class AddressManager {
   
   public static Logger LOG = Logger.getLogger( AddressManager.class );
   
-  public AllocateAddressResponseType AllocateAddress( AllocateAddressType request ) throws EucalyptusCloudException {
+  public AllocateAddressResponseType allocate( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup( );
     Address address;
     try {
-      address = Addresses.allocate( request.getUserErn( ), request.isAdministrator( ) );
+      address = Addresses.allocate( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ) );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -102,40 +106,43 @@ public class AddressManager {
     return reply;
   }
   
-  public ReleaseAddressResponseType ReleaseAddress( ReleaseAddressType request ) throws EucalyptusCloudException {
+  public ReleaseAddressResponseType release( ReleaseAddressType request ) throws EucalyptusCloudException {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Context ctx = Contexts.lookup( );
+    Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
   }
   
-  public DescribeAddressesResponseType DescribeAddresses( DescribeAddressesType request ) throws EucalyptusCloudException {
+  public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     Addresses.updateAddressingMode( );
-    boolean isAdmin = request.isAdministrator( );
+    Context ctx = Contexts.lookup( );
+    boolean isAdmin = ctx.hasAdministrativePrivileges( );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( isAdmin || address.getOwner( ).equals( request.getUserErn( ) ) ) {
+      if ( isAdmin || address.getOwner( ).equals( ctx.getUserFullName( ) ) ) {
         reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
       }
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new DescribeAddressesResponseItemType( address.getName( ), Address.UNALLOCATED_USERID ) );
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), FakePrincipals.NOBODY_USER_ERN.getUserName( ) ) );
       }
     }
     return reply;
   }
   
   @SuppressWarnings( "unchecked" )
-  public AssociateAddressResponseType AssociateAddress( final AssociateAddressType request ) throws Exception {
+  public AssociateAddressResponseType associate( final AssociateAddressType request ) throws Exception {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getInstanceId( ) );
+    Context ctx = Contexts.lookup( );
+    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );//TODO: test should throw error.
+    final VmInstance vm = VmInstances.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
@@ -195,14 +202,15 @@ public class AddressManager {
     return oldVm;
   }
   
-  public DisassociateAddressResponseType DisassociateAddress( DisassociateAddressType request ) throws EucalyptusCloudException {
+  public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws EucalyptusCloudException {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getUserErn( ), request.isAdministrator( ), request.getPublicIp( ) );
+    Context ctx = Contexts.lookup( );
+    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
-    if ( address.isSystemOwned( ) && !request.isAdministrator( ) ) {
+    if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {
       throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
     } else {
       try {

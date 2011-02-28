@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
@@ -92,11 +93,6 @@ public class BuildBindings extends Task {
     if ( this.classFileSets.isEmpty( ) ) {
       throw new BuildException( "No classes were provided to bind." );
     } else {
-//      try {
-//        System.setProperty( "java.class.path", ( ( AntClassLoader ) BuildBindings.class.getClassLoader( ) ).getClasspath( ) );
-//      } catch ( Exception e ) {
-//        System.err.println( "Failed setting classpath from Ant task" );
-//      }
       Path path = new Path( getProject( ) );
       for ( String p : paths( ) ) {
         path.add( new Path( getProject( ), p ) );
@@ -121,7 +117,7 @@ public class BuildBindings extends Task {
     try {
       BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      Map<String, Class> classes = new TreeMap<String, Class>( ) {
+      Map<String, Class> classes = new ConcurrentHashMap<String, Class>( ) {
         {
           put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
           put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
@@ -133,7 +129,6 @@ public class BuildBindings extends Task {
             if ( !classFileName.endsWith( "class" ) ) continue;
             Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
             classes.put( c.getName( ), c );
-//            System.out.println( "Loaded class: " + c );
           } catch ( ClassNotFoundException e ) {
             e.printStackTrace( );
           }
@@ -146,6 +141,7 @@ public class BuildBindings extends Task {
               gen.processClass( c );
             }
           }
+          classes.remove( c.getName( ) );
         }
       } finally {
         for ( BindingGenerator gen : BindingGenerator.getPreGenerators( ) ) {
