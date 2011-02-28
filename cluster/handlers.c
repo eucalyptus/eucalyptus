@@ -3706,6 +3706,60 @@ int restoreNetworkState() {
 }
 
 int reconfigureNetworkFromCLC() {
+  char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH];
+  char *cloudIp=NULL;
+  int fd, i, rc;
+
+  // get the latest cloud controller IP address
+  if (vnetconfig->cloudIp) {
+    cloudIp = hex2dot(vnetconfig->cloudIp);
+  } else {
+    cloudIp = strdup("localhost");
+    if (!cloudIp) {
+      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      unlock_exit(1);
+    }
+  }
+
+
+  // create and populate network state files
+  snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+  snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
+  
+  fd = mkstemp(clcnetfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open clcnetfile '%s'\n", clcnetfile);
+    return(1);
+  }
+  chmod(clcnetfile, 0644);
+  close(fd);
+
+  fd = mkstemp(chainmapfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    return(1);
+  }
+  chmod(chainmapfile, 0644);
+  close(fd);
+
+  // clcnet populate
+  snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
+  rc = http_get_timeout(url, clcnetfile, 0, 0);
+  if (cloudIp) free(cloudIp);
+  if (rc) {
+    logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    unlink(clcnetfile);
+    return(1);
+  }
+
+  // chainmap populate
+  for (i=0; i<vnetconfig->max_vlan; i++) {
+    logprintfl(EUCADEBUG, "MEH: %s/%s/%d\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, vnetconfig->networks[i].active);
+  }
+  return(0);
+}
+
+int reconfigureNetworkFromCLC_byline() {
   FILE *FH;
   char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH], url[MAX_PATH];
   char **suser, **sgroup, **snet, *protocol=NULL, *cloudIp=NULL;
