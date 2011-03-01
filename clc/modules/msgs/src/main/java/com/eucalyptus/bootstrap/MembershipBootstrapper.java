@@ -102,7 +102,7 @@ public class MembershipBootstrapper extends Bootstrapper {
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
         public void viewAccepted( View newView ) {
           LOG.info( "view: " + newView.printDetails( ) );
-          if( Components.lookup( Database.class ).isRunningLocally( ) ) {
+          if( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
             for( Address addr : newView.getMembers( ) ) {
               if( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
                 try {
