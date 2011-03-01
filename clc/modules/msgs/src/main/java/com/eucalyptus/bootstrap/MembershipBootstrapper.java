@@ -67,6 +67,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
+import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
@@ -89,16 +90,18 @@ public class MembershipBootstrapper extends Bootstrapper {
   @Override
   public boolean load( ) throws Exception {
     try {
-      this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( ).hashCode( );
+      this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( );
       this.membershipChannel = MembershipManager.buildChannel( );
       final boolean[] done = { false };
       final ReentrantLock lock = new ReentrantLock( );
       final Condition isReady = lock.newCondition( );
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
-        public void viewAccepted( View new_view ) {
+        public void viewAccepted( View newView ) {
           lock.lock( );
           try {
-            LOG.info( "view: " + new_view );
+            LOG.info( "view: " + newView );
+            for( Address addr : newView.getMembers( ) ) {
+            }
             if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
               done[0] = true;
               isReady.signalAll( );
