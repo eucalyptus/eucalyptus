@@ -77,6 +77,7 @@ import org.jgroups.View;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
@@ -103,7 +104,7 @@ public class MembershipBootstrapper extends Bootstrapper {
           lock.lock( );
           try {
             LOG.info( "view: " + newView.printDetails( ) );
-            if( Component.State.ENABLED.equals( Components.lookup( Eucalyptus.class ) ) ) {
+            if( Component.State.ENABLED.equals( Components.lookup( Database.class ) ) ) {
               for( Address addr : newView.getMembers( ) ) {
                 try {
                   LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
@@ -134,7 +135,6 @@ public class MembershipBootstrapper extends Bootstrapper {
         LOG.info( "Started membership channel " + this.membershipGroupName );
         if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
           LOG.warn( "Blocking the bootstrap thread for testing." );
-          TimeUnit.SECONDS.sleep( 60 );
           if( !done[0] ) {
             isReady.await( );
           }
