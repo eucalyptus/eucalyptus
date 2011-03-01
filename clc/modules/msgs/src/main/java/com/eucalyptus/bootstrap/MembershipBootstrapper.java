@@ -89,7 +89,6 @@ import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Join;
-import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteConfiguration )
