@@ -103,6 +103,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   RunInstancesType request;
   RunInstancesResponseType reply;
   byte[] userData;
+  String ownerId;
   Long reservationIndex;
   String reservationId;
   VmKeyInfo keyInfo;
@@ -234,30 +235,11 @@ public class VmRunType extends EucalyptusMessage {
     this.setCorrelationId( msg.getCorrelationId( ) );
   }
   
-  public VmRunType(RunInstancesType request, String reservationId, String userData,
-  int amount, VmTypeInfo vmTypeInfo, VmKeyInfo keyInfo,
-  ArrayList<String> instanceIds, List<String> macAddresses, int vlan,
-  List<String> networkNames, ArrayList<String> networkIndexList) {
-    this( request );
-    this.reservationId = reservationId;
-    this.userData = userData;
-    this.min = amount;
-    this.max = amount;
-    this.vlan = vlan;
-    this.vmTypeInfo = vmTypeInfo;
-    this.keyInfo = keyInfo;
-    this.instanceIds = instanceIds;
-    this.macAddresses = macAddresses;
-    this.networkNames = networkNames;
-    this.networkIndexList = networkIndexList;
-    this.platform = imageInfo.getPlatform();
-  }
-  
   @Override
   public String toString( ) {
     return String.format(
-    "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, macAddresses=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
-    this.instanceIds, this.keyInfo, this.launchIndex, this.macAddresses,
+    "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
+    this.instanceIds, this.keyInfo, this.launchIndex, 
     this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
     this.userData, this.vlan, this.vmTypeInfo );
   }  
