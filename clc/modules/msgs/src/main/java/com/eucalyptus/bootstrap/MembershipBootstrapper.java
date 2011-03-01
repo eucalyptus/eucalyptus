@@ -68,10 +68,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
+import org.jgroups.ChannelClosedException;
+import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -99,12 +102,18 @@ public class MembershipBootstrapper extends Bootstrapper {
         public void viewAccepted( View newView ) {
           lock.lock( );
           try {
-            LOG.info( "view: " + newView );
-            for( Address addr : newView.getMembers( ) ) {
-            }
-            if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
-              done[0] = true;
-              isReady.signalAll( );
+            LOG.info( "view: " + newView.printDetails( ) );
+            if( Component.State.ENABLED.equals( Components.lookup( Eucalyptus.class ) ) ) {
+              for( Address addr : newView.getMembers( ) ) {
+                try {
+                  LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
+                  MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, "DBDBDBDBDBDBDBDBDBDBDB" ) );
+                } catch ( ChannelNotConnectedException ex ) {
+                  LOG.error( ex , ex );
+                } catch ( ChannelClosedException ex ) {
+                  LOG.error( ex , ex );
+                }
+              }
             }
           } finally {
             lock.unlock( );
@@ -112,7 +121,11 @@ public class MembershipBootstrapper extends Bootstrapper {
         }
         
         public void receive( Message msg ) {
-          LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
+            LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            done[0] = true;
+            isReady.signalAll( );
+          } 
         }
       } );
       lock.lock( );
