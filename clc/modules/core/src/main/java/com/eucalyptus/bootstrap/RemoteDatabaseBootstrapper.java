@@ -67,11 +67,12 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.SslSetup;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.NetworkUtil;
 
-@Provides(Database.class)
+@Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsRemote(Eucalyptus.class)
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {

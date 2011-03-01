@@ -108,10 +108,10 @@ public class MembershipBootstrapper extends Bootstrapper {
       final Condition isReady = lock.newCondition( );
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
         public void viewAccepted( View newView ) {
-          LOG.info( "view: " + newView.printDetails( ) );
           if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+            LOG.info( "view: " + newView.printDetails( ) );
             for ( Address addr : newView.getMembers( ) ) {
-              if( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
+              if ( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
                 try {
                   LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
                   MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
@@ -124,11 +124,13 @@ public class MembershipBootstrapper extends Bootstrapper {
                 }
               }
             }
+          } else {
+            LOG.info( "view: " + newView );
           }
         }
         
         public void receive( Message msg ) {
-          LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" + msg.getHeaders( ) );
+          LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
           if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
             String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
             for ( String maybeDbAddr : dbAddrs ) {
@@ -149,9 +151,9 @@ public class MembershipBootstrapper extends Bootstrapper {
                   break;
                 }
               } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex , ex );
+                LOG.error( ex, ex );
               } catch ( Exception ex ) {
-                LOG.error( ex , ex );
+                LOG.error( ex, ex );
               }
             }
             lock.lock( );
@@ -168,7 +170,7 @@ public class MembershipBootstrapper extends Bootstrapper {
       try {
         this.membershipChannel.connect( this.membershipGroupName );
         LOG.info( "Started membership channel " + this.membershipGroupName );
-        if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
+        if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
           LOG.warn( "Blocking the bootstrap thread for testing." );
           if ( !done[0] ) {
             isReady.await( );
