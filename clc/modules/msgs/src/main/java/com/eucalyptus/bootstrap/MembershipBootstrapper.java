@@ -104,7 +104,7 @@ public class MembershipBootstrapper extends Bootstrapper {
           lock.lock( );
           try {
             LOG.info( "view: " + newView.printDetails( ) );
-            if( Component.State.ENABLED.equals( Components.lookup( Database.class ) ) ) {
+            if( Components.lookup( Database.class ).isRunningLocally( ) ) {
               for( Address addr : newView.getMembers( ) ) {
                 try {
                   LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
