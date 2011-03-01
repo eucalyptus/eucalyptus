@@ -130,6 +130,14 @@
     <structure name="monitoring" usage="optional">
       <value name="state" field="monitoring" />
     </structure>
+    <value name="privateIpAddress" field="privateIpAddress" usage="required" />
+    <value name="ipAddress" field="ipAddress" usage="required" />
+    <value name="rootDeviceType" field="rootDeviceType" usage="required" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="required" />
+    <collection name="blockDeviceMapping" field="blockDevices" usage="required"
+      factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping" />
+    </collection>
   </mapping>
 
   <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RunInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -182,6 +190,17 @@
     <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
   </mapping>
 
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping" abstract="true">
+    <value name="deviceName" field="deviceName" usage="required" />
+    <structure name="ebs" field="ebs" usage="optional" map-as="edu.ucsb.eucalyptus.msgs.EbsInstanceBlockDeviceMapping" />
+  </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.EbsInstanceBlockDeviceMapping" abstract="true">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="attachTime" field="attachTime" usage="required" />
+    <value name="deleteOnTermination" field="deleteOnTermination" usage="required" />
+  </mapping>
 
   <mapping name="DescribeInstancesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -287,7 +306,7 @@
   <mapping class="edu.ucsb.eucalyptus.msgs.MonitorInstanceState" abstract="true">
     <value name="instanceId" field="instanceId" usage="required" />
     <structure name="monitoring">
-      <value name="state" field="monitoringState"/>
+      <value name="state" field="monitoringState" />
     </structure>
   </mapping>
   <!-- TODO:ADDED -->
@@ -358,7 +377,8 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
-  <mapping name="DescribeInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DescribeInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
@@ -380,23 +400,23 @@
     </structure>
   </mapping>
   <mapping name="ResetInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
   <mapping name="ResetInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
 
 
   <mapping class="edu.ucsb.eucalyptus.msgs.ResourceTag" abstract="true">
-    <value name="key" field="key" usage="required"/>
-    <value name="value" field="value" usage="required"/>
+    <value name="key" field="key" usage="required" />
+    <value name="value" field="value" usage="required" />
   </mapping>
   <mapping class="edu.ucsb.eucalyptus.msgs.FilterType" abstract="true">
-    <value name="name" field="name" usage="required"/>
+    <value name="name" field="name" usage="required" />
     <collection name="valueSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="valueSet"
       item-type="java.lang.String">
       <structure name="item">
@@ -404,8 +424,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="CreateTagsType" class="edu.ucsb.eucalyptus.msgs.CreateTagsType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="CreateTagsType" class="edu.ucsb.eucalyptus.msgs.CreateTagsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
       item-type="java.lang.String">
@@ -419,34 +438,35 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="CreateTagsResponseType" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType"
-  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="CreateTagsResponseType" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
 
   <mapping name="CreatePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="groupName" field="groupName" usage="required"/>
-    <value name="strategy" field="strategy" usage="required"/>
+    <value name="groupName" field="groupName" usage="required" />
+    <value name="strategy" field="strategy" usage="required" />
   </mapping>
   <mapping name="CreatePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />  
-    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="DeletePlacementGroupType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="groupName" field="groupName" usage="required"/>
+    <value name="groupName" field="groupName" usage="required" />
   </mapping>
-  <mapping name="DeletePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType"    
+  <mapping name="DeletePlacementGroupResponseType" class="edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
-  <mapping name="DescribePlacementGroupsType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DescribePlacementGroupsType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <collection name="placementGroupSet" field="placementGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory"  item-type="java.lang.String">
+    <collection name="placementGroupSet" field="placementGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
       <structure name="item">
         <value name="groupName" />
       </structure>
@@ -458,9 +478,9 @@
     </structure>
   </mapping>
   <mapping class="edu.ucsb.eucalyptus.msgs.PlacementGroupInfo" abstract="true">
-    <value name="groupName" field="groupName" usage="required"/>
-    <value name="strategy" field="strategy" usage="required"/>
-    <value name="state" field="state" usage="required"/>
+    <value name="groupName" field="groupName" usage="required" />
+    <value name="strategy" field="strategy" usage="required" />
+    <value name="state" field="state" usage="required" />
   </mapping>
   <mapping name="DescribePlacementGroupsResponseType" class="edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
