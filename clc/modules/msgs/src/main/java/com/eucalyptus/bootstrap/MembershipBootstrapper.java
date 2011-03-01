@@ -104,7 +104,7 @@ public class MembershipBootstrapper extends Bootstrapper {
           LOG.info( "view: " + newView.printDetails( ) );
           if( Components.lookup( Database.class ).isRunningLocally( ) ) {
             for( Address addr : newView.getMembers( ) ) {
-              if( !MembershipBootstrapper.this.membershipChannel.getLocalAddress( ).equals( addr ) ) {
+              if( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
                 try {
                   LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
                   MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, "DBDBDBDBDBDBDBDBDBDBDB" ) );
@@ -120,7 +120,20 @@ public class MembershipBootstrapper extends Bootstrapper {
         
         public void receive( Message msg ) {
           if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
-            LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" + msg.getHeaders( ) );
+//          if( System.getProperty("euca.debug.addr") != null ) {
+//          String host = System.getProperty("euca.debug.addr");
+//          for( Component c : Components.list( ) ) {
+//            if( c.getComponentId( ).isCloudLocal( ) ) {
+//              URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
+//              ServiceBuilder builder = c.getBuilder( );
+//              ServiceConfiguration config = builder.toConfiguration( uri );
+//              c.loadService( config );
+//            }
+//          }
+//          for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+//            stage.updateBootstrapDependencies( );
+//          }
             lock.lock( );
             try {
               done[0] = true;

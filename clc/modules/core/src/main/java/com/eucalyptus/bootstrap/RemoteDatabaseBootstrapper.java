@@ -63,19 +63,40 @@
 package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.SslSetup;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.NetworkUtil;
 
 @Provides(Database.class)
-@RunDuring(Bootstrap.Stage.RemoteConfiguration)
+@RunDuring(Bootstrap.Stage.DatabaseInit)
 @DependsRemote(Eucalyptus.class)
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
   @Override
 
   public boolean load( ) throws Exception {
-    LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+    try {
+      if ( NetworkUtil.testReachability( Components.lookup(Database.class).getUri( ).getHost( ) ) ) {
+        LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+      } else {
+        LOG.error( "Failed with invalid DB address" );
+        System.exit( -1 );
+      }
+    } catch ( Throwable e ) {
+      LOG.error( "Failed with invalid DB address" );
+    }
+    try {
+      GroovyUtil.evaluateScript( "after_database.groovy" );
+    } catch ( ScriptExecutionFailedException e1 ) {
+      LOG.error( "Failed to initialize persistence layer" );
+      LOG.debug( e1, e1 );
+      System.exit( 123 );
+    }
+
     return true;
   }
 
