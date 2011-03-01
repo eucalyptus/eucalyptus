@@ -69,6 +69,7 @@ permission notice:
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <math.h>
 
 #include "axis2_skel_EucalyptusCC.h"
 
@@ -3707,8 +3708,9 @@ int restoreNetworkState() {
 
 int reconfigureNetworkFromCLC() {
   char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH];
-  char *cloudIp=NULL;
-  int fd, i, rc;
+  char *cloudIp=NULL, **users=NULL, **nets=NULL;
+  int fd=0, i=0, rc=0, ret=0, usernetlen=0;
+  FILE *FH=NULL;
 
   // get the latest cloud controller IP address
   if (vnetconfig->cloudIp) {
@@ -3753,10 +3755,62 @@ int reconfigureNetworkFromCLC() {
   }
 
   // chainmap populate
-  for (i=0; i<vnetconfig->max_vlan; i++) {
-    logprintfl(EUCADEBUG, "MEH: %s/%s/%d\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, vnetconfig->networks[i].active);
+  FH = fopen(chainmapfile, "w");
+  if (!FH) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
+    unlink(clcnetfile);
+    unlink(chainmapfile);
+    return(1);
   }
-  return(0);
+
+  rc = vnetGetAllVlans(vnetconfig, &users, &nets, &usernetlen);
+  if (rc) {
+  } else {
+    for (i=0; i<usernetlen; i++) {
+      fprintf(FH, "%s %s\n", users[i], nets[i]);
+    }
+  }
+  fclose(FH);
+
+  /*
+  for (i=0; i<vnetconfig->max_vlan; i++) {
+    char userNetString[MAX_PATH];
+    char *net=NULL, *chain=NULL;
+    int slashnet=0;
+    //    logprintfl(EUCADEBUG, "MEH: %s/%s/%d\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, vnetconfig->networks[i].active);
+    snprintf(userNetString, MAX_PATH, "%s%s", vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+    rc = hash_b64enc_string(userNetString, &chain);
+    if (rc) {
+      logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    } else {
+      net = hex2dot(vnetconfig->networks[i].nw);
+      slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+      if (net && slashnet >= 0 && slashnet <= 32 && vnetconfig->networks[i].active) {
+	fprintf(FH, "%s %s/%d\n", chain, net, slashnet);
+      }
+      if (net) free(net);
+    }
+  }
+  fclose(FH);
+  */
+
+
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "cat %s 1>&2", chainmapfile);
+    system(cmd);
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
+      ret = 1;
+    }
+  }
+
+  unlink(clcnetfile);
+  unlink(chainmapfile);
+
+  return(ret);
 }
 
 int reconfigureNetworkFromCLC_byline() {

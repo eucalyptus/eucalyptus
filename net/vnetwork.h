@@ -162,6 +162,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
+int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, int *len);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
 int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc);

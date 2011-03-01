@@ -185,9 +185,9 @@ sub new_euca_ipt() {
     
     if (!$table || !$rulefile || !$chainmapfile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile || $chainmapfile eq "" || !-f $chainmapfile) {dodie("cannot verify commandline options");}
     
-    my %newchains, %oldchains, %chainmap;
+    my %newchains, %oldchains, %chainmap, %allchains;
     my $ofile = "/tmp/euca_ipt_intermediate.$$";
-    my @workingfiles = ($ofile);
+    @workingfiles = ($ofile);
     
     open(FH, "$chainmapfile") || dodie("cannot open $chainmap");
     while(<FH>) {
@@ -199,6 +199,7 @@ sub new_euca_ipt() {
 	my ($chain, $net) = split(/\s+/, $line);
 	if ($chain && $net) {
 	    $chainmap{$chain} = "$net";
+	    $allchains{$chain} = 1;
 	}
     }
     close(FH);
@@ -214,6 +215,7 @@ sub new_euca_ipt() {
 		chomp(my $chain = encode_base64(md5($chainuser)));
 		$chain = md5_base64($chainuser) . "==";
 		$newchains{$chain} .= ",,," . join(" ", @rule);
+		$allchains{$chain} = 1;
 	    }
 	}
     }
@@ -228,6 +230,13 @@ sub new_euca_ipt() {
 	    my ($add, $chain, @rule) = split(/\s+/, $line);
 	    if ($chain && @rule) {
 		$oldchains{$chain} .= ",,," . join(" ", @rule);
+		$allchains{$chain} = 1;
+	    }
+	} elsif ($line =~ /^:/) {
+	    my ($exchain) = split(/\s+/, $line);
+	    if ($exchain && $exchain ne "") {
+		$exchain =~ s/://g;
+		$allchains{$exchain} = 1;
 	    }
 	}
     }
@@ -265,8 +274,8 @@ sub new_euca_ipt() {
     print OFH "*filter\n:INPUT ACCEPT [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT ACCEPT [0:0]\n";
     
 #write out eucalyptus chains
-    foreach $chain (keys(%chainmap)) {
-	if ($chain && $chain ne "") {
+    foreach $chain (keys(%allchains)) {
+	if ($chain && $chain ne "" && $chain ne "FORWARD" && $chain ne "INPUT" && $chain ne "OUTPUT" && $chain ne "PREROUTING" && $chain ne "POSTROUTING") {
 	    print OFH ":$chain - [0:0]\n";
 	}
     }
