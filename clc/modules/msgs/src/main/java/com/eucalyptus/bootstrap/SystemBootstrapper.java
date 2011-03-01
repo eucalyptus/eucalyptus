@@ -124,6 +124,12 @@ public class SystemBootstrapper {
       LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
       if ( LogLevels.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );
+        System.setProperty( "euca.exhaust.level", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {

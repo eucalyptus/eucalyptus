@@ -174,7 +174,6 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
     try {
       User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser( );    
-      eucaMsg.setUser( user );    
       try {
         msg = BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
       } catch ( RuntimeException e ) {

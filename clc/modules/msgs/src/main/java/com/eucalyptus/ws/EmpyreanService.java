@@ -87,14 +87,61 @@ public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
   public StartServiceResponseType startService( StartServiceType request ) {
     StartServiceResponseType reply = request.getReply( );
+    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+      try {
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        Service service = comp.lookupService( serviceInfo.getName( ) );
+        if( service.isLocal( ) ) {
+          try {
+            comp.startTransition( service.getServiceConfiguration( ) );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }      
+    }
     return reply;
   }
   public StopServiceResponseType stopService( StopServiceType request ) {
     StopServiceResponseType reply = request.getReply( );
+    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+      try {
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        Service service = comp.lookupService( serviceInfo.getName( ) );
+        if( service.isLocal( ) ) {
+          try {
+            LOG.info( "Should be stopping the service instance here: " + service.getServiceConfiguration( ) );
+            //TODO:GRZE:FIXME
+            //            comp.stopService( service.getServiceConfiguration( ) );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }      
+    }
     return reply;
   }
   public EnableServiceResponseType enableService( EnableServiceType request ) {
     EnableServiceResponseType reply = request.getReply( );
+    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+      try {
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        Service service = comp.lookupService( serviceInfo.getName( ) );
+        if( service.isLocal( ) ) {
+          try {
+            comp.enableTransition( service.getServiceConfiguration( ) );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }      
+    }
     return reply;
   }
   public DisableServiceResponseType disableService( DisableServiceType request ) {

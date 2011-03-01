@@ -6,6 +6,8 @@ import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
 public class Transactions {
   private static Logger LOG = Logger.getLogger( Transactions.class );
@@ -102,7 +104,31 @@ public class Transactions {
       throw new TransactionFireException( e.getMessage( ), e );
     }
   }
-  
+
+  public static <T> List<T> filter( T search, Predicate<T> c ) throws TransactionException {
+    if ( search == null ) {
+      TransactionException ex = new TransactionException( "A search object must be supplied" );
+      LOG.warn( ex.getMessage( ), ex );
+      throw ex;
+    }
+    EntityWrapper<T> db = EntityWrapper.get( search );
+    try {
+      List<T> res = Lists.newArrayList( );
+      List<T> queryResults = db.query( search );
+      for( T t : queryResults ) {
+        if( c.apply( t ) ) {
+          res.add( t );
+        }
+      }
+      db.commit( );
+      return res;
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    }
+  }
+
   public static <T> List<T> list( T search, Tx<List<T>> c ) throws TransactionException {
     if ( search == null ) {
       TransactionException ex = new TransactionException( "A search object must be supplied" );

@@ -14,5 +14,6 @@ openssl dgst -sha256 \
 echo export PASS="${PASS}"
 echo
 echo mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP
+mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP
 
 

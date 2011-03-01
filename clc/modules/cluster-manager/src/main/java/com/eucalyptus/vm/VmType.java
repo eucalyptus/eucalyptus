@@ -61,16 +61,22 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.entities;
+package com.eucalyptus.vm;
 
 import java.io.Serializable;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.cloud.VirtualMachineType;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.FullName;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -79,11 +85,11 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
-@Table( name = "vm_types" )
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
-public class VmType extends AbstractPersistent implements Serializable, Comparable {
+public class VmType extends AbstractPersistent implements VirtualMachineType {
   //TODO: enumerate.
   public static String M1_SMALL  = "m1.small";
   public static String M1_LARGE  = "m1.large";
@@ -92,16 +98,16 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   public static String C1_XLARGE = "c1.xlarge";
   
 //  @ConfigurableIdentifier
-  @Column( name = "vm_type_name" )
+  @Column( name = "metadata_vm_type_name" )
   private String       name;
 //  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
-  @Column( name = "vm_type_cpu" )
+  @Column( name = "metadata_vm_type_cpu" )
   private Integer      cpu;
 //  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
-  @Column( name = "vm_type_disk" )
+  @Column( name = "metadata_vm_type_disk" )
   private Integer      disk;
 //  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
-  @Column( name = "vm_type_memory" )
+  @Column( name = "metadata_vm_type_memory" )
   private Integer      memory;
   
   public VmType( ) {}
@@ -173,8 +179,8 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
     return result;
   }
   
-  public int compareTo( final Object o ) {
-    VmType that = ( VmType ) o;
+  @Override
+  public int compareTo( VirtualMachineType that ) {
     if ( this.equals( that ) ) return 0;
     if ( ( this.getCpu( ) <= that.getCpu( ) ) && ( this.getDisk( ) <= that.getDisk( ) ) && ( this.getMemory( ) <= that.getMemory( ) ) ) return -1;
     if ( ( this.getCpu( ) >= that.getCpu( ) ) && ( this.getDisk( ) >= that.getDisk( ) ) && ( this.getMemory( ) >= that.getMemory( ) ) ) return 1;
@@ -191,4 +197,28 @@ public class VmType extends AbstractPersistent implements Serializable, Comparab
   public String toString( ) {
     return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
   }
+
+  @Override
+  public String getPartition( ) {
+    return ComponentIds.lookup( Eucalyptus.class ).name( );
+  }
+
+  @Override
+  public String getOwnerAccountId( ) {
+    return FakePrincipals.SYSTEM_USER_ERN.getAccountId( );
+  }
+
+  @Override
+  public FullName getOwner( ) {
+    return FakePrincipals.SYSTEM_USER_ERN;
+  }
+
+  @Override
+  public FullName getFullName( ) {
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountId( ) )
+                          .relativeId( "vm-type", this.getName( ) );
+  }
+
 }

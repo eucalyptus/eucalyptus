@@ -96,45 +96,50 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory ) {
-    Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + endpoint );
     try {
-      this.callback.initialize( this.request );
-    } catch ( Throwable e ) {
-      Logger.getLogger( this.callback.getClass( ) ).error( e.getMessage( ), e );
-      RequestException ex = ( e instanceof RequestException )
-        ? ( RequestException ) e
-        : new RequestInitializationException( this.callback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
-      this.response.setException( ex );
-      throw ex;
-    }
-    Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + endpoint );
-    if ( !this.handler.fire( endpoint, pipelineFactory, this.request ) ) {
-      if ( this.response.isDone( ) ) {
-        try {
-          R r = this.response.get( 1, TimeUnit.MILLISECONDS );
-          throw new RequestException( "Request failed but produced a response: " + r, this.getRequest( ) );
-        } catch ( ExecutionException e ) {
-          if ( e.getCause( ) != null && e.getCause( ) instanceof RequestException ) {
-            Logger.getLogger( this.callback.getClass( ) ).error( e.getCause( ) );
-            throw ( RequestException ) e.getCause( );
-          } else {
+      Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + endpoint );
+      try {
+        this.callback.initialize( this.request );
+      } catch ( Throwable e ) {
+        Logger.getLogger( this.callback.getClass( ) ).error( e.getMessage( ), e );
+        RequestException ex = ( e instanceof RequestException )
+          ? ( RequestException ) e
+          : new RequestInitializationException( this.callback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
+        this.response.setException( ex );
+        throw ex;
+      }
+      Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + endpoint );
+      if ( !this.handler.fire( endpoint, pipelineFactory, this.request ) ) {
+        if ( this.response.isDone( ) ) {
+          try {
+            R r = this.response.get( 1, TimeUnit.MILLISECONDS );
+            throw new RequestException( "Request failed but produced a response: " + r, this.getRequest( ) );
+          } catch ( ExecutionException e ) {
+            if ( e.getCause( ) != null && e.getCause( ) instanceof RequestException ) {
+              Logger.getLogger( this.callback.getClass( ) ).error( e.getCause( ) );
+              throw ( RequestException ) e.getCause( );
+            } else {
+              Logger.getLogger( this.callback.getClass( ) ).error( e );
+              throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
+            }
+          } catch ( RequestException e ) {
+            Logger.getLogger( this.callback.getClass( ) ).error( e );
+            throw e;
+          } catch ( Throwable e ) {
             Logger.getLogger( this.callback.getClass( ) ).error( e );
             throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
           }
-        } catch ( RequestException e ) {
-          Logger.getLogger( this.callback.getClass( ) ).error( e );
-          throw e;
-        } catch ( Throwable e ) {
-          Logger.getLogger( this.callback.getClass( ) ).error( e );
-          throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
+        } else {
+          RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
+          try {
+            this.response.setException( ex );
+          } catch ( Throwable t ) {}
+          throw ex;
         }
-      } else {
-        RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
-        try {
-          this.response.setException( ex );
-        } catch ( Throwable t ) {}
-        throw ex;
       }
+    } catch ( RuntimeException ex ) {
+      LOG.error( ex , ex );
+      throw ex;
     }
     return this;
   }

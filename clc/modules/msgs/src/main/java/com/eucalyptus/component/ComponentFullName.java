@@ -81,9 +81,9 @@ public class ComponentFullName implements FullName {
   private final String       relativeId;
   
   ComponentFullName( ComponentId componentType, String partition, String name, String... pathPartsArray ) {
-    Assertions.assertArgumentNotNull( componentType );
-    Assertions.assertArgumentNotNull( partition );
-    Assertions.assertArgumentNotNull( name );
+    Assertions.assertNotNull( componentType );
+    Assertions.assertNotNull( partition );
+    Assertions.assertNotNull( name );
     this.componentId = componentType;
     this.partition = partition;
     this.name = name;

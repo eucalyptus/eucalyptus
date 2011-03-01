@@ -86,8 +86,9 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ForwardImages;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -254,7 +255,7 @@ public class SystemConfiguration {
   }
 
   public static SystemConfiguration getSystemConfiguration() {
-  	EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
+  	EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
   	SystemConfiguration conf = null;
   	try {
   		conf = confDb.getUnique( new SystemConfiguration());
@@ -354,30 +355,10 @@ public class SystemConfiguration {
       sysConf.setCloudHost(ipAddr);
     }
     if(sysConf.getDefaultKernel() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-      try {
-        q.setImageType( "kernel" );
-        List<ImageInfo> res = db2.query(q);
-        if( res.size() > 0 )
-          sysConf.setDefaultKernel(res.get(0).getImageId());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultKernel( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDefaultRamdisk() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-      try {
-        q.setImageType( "ramdisk" );
-        List<ImageInfo> res = db2.query(q);
-        if( res.size() > 0 )
-          sysConf.setDefaultRamdisk(res.get(0).getImageId());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultRamdisk( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDnsDomain() == null) {
       sysConf.setDnsDomain(DNSProperties.DOMAIN);

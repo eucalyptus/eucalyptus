@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.network;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -80,25 +80,40 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.NetworkSecurityGroup;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasOwningAccount;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
-@PersistenceContext( name = "eucalyptus_general" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkRulesGroup extends AccountMetadata implements Serializable {
+public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> implements NetworkSecurityGroup {
+  enum State { available, removing }
   @Column( name = "metadata_network_group_user_network_group_name", unique = true )
-  String               uniqueName;                                          //bogus field to enforce uniqueness
+  private String            uniqueName;                                          //bogus field to enforce uniqueness
   @Column( name = "metadata_network_group_description" )
-  String               description;
+  private String            description;
   @OneToMany( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<NetworkRule>    networkRules         = new ArrayList<NetworkRule>( );
-  public static String NETWORK_DEFAULT_NAME = "default";
+  private List<NetworkRule> networkRules         = new ArrayList<NetworkRule>( );
+  @Transient
+  private FullName          fullName;
+  public static String      NETWORK_DEFAULT_NAME = "default";
+  
+  public static NetworkRulesGroup named( AccountFullName account, String groupName ) {
+    return new NetworkRulesGroup( account, groupName );
+  }
   
   public NetworkRulesGroup( ) {}
   
@@ -108,19 +123,27 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
   
   public NetworkRulesGroup( final AccountFullName account, final String groupName ) {
     super( account, groupName );
-    this.uniqueName = account.getAuthority( ) + "/security-groups/" + groupName;
+    this.fullName = FullName.create.vendor( "euca" )
+                                   .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                                   .namespace( this.getOwnerAccountId( ) )
+                                   .relativeId( "security-group", this.getDisplayName( ) );
+    this.uniqueName = this.fullName.toString( );
+    this.setState( State.available );
   }
   
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
     this( account, groupName );
+    Assertions.assertNotNull( groupDescription );
     this.description = groupDescription;
   }
   
   public NetworkRulesGroup( final AccountFullName account, final String groupName, final String description, final List<NetworkRule> networkRules ) {
     this( account, groupName, description );
+    Assertions.assertNotNull( networkRules );
     this.networkRules = networkRules;
   }
   
+  @Deprecated
   public String getUniqueName( ) {
     return this.uniqueName;
   }
@@ -151,13 +174,18 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
   
   public Network getVmNetwork( ) {
     List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
-    Network vmNetwork = new Network( Accounts.lookupAccountFullNameById( this.getAccountId( ) ), this.getDisplayName( ), this.getId( ), pfRules );
-    
+    Network vmNetwork = new Network( Accounts.lookupAccountFullNameById( this.getOwnerAccountId( ) ), this.getDisplayName( ), this.getId( ), pfRules );
     return vmNetwork;
   }
   
-  public static NetworkRulesGroup named( AccountFullName account, String groupName ) {
-    return new NetworkRulesGroup( account, groupName );
+  @Override
+  public String getPartition( ) {
+    return ComponentIds.lookup( Eucalyptus.class ).name( );
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return this.fullName;
   }
   
   @Override
@@ -193,7 +221,7 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
                                                                         @Override
                                                                         public PacketFilterRule apply( NetworkRule from ) {
                                                                           PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                          NetworkRulesGroup.this.getAccountId( ),
+                                                                                                                          NetworkRulesGroup.this.getOwnerAccountId( ),
                                                                                                                           NetworkRulesGroup.this.getDisplayName( ),
                                                                                                                           from.getProtocol( ),
                                                                                                                           from.getLowPort( ),
@@ -205,4 +233,10 @@ public class NetworkRulesGroup extends AccountMetadata implements Serializable {
                                                                           return pfrule;
                                                                         }
                                                                       };
+  
+  @Override
+  public int compareTo( NetworkSecurityGroup that ) {
+    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+  
 }

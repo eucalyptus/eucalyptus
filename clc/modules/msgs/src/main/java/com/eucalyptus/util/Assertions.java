@@ -68,18 +68,27 @@ import org.apache.log4j.Logger;
 public class Assertions {
   private static Logger LOG = Logger.getLogger( Assertions.class );
 
-  public static final void assertArgumentNotNull( String message, Object arg ) throws IllegalArgumentException {
+  public static final void assertNotNull( Object arg, String formatString, Object... args ) throws IllegalArgumentException {
     if ( arg == null ) {
-      IllegalArgumentException ex = Exceptions.illegalArgument( message );
+      String errMsg = String.format( formatString, args );
+      IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
       LOG.error( ex, ex );
       throw ex;
     }
   }
   
-  public static final void assertArgumentNotNull( Object arg ) throws IllegalArgumentException {
+  public static final void assertNotNull( Object arg, String errMsg ) throws IllegalArgumentException {
+    if ( arg == null ) {
+      IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
+      LOG.error( ex, ex );
+      throw ex;
+    }
+  }
+
+  public static final void assertNotNull( Object arg ) throws IllegalArgumentException {
     if( arg == null ) {
       String msg = "The argument to " + Thread.currentThread( ).getStackTrace( )[2].getMethodName( ) + " cannot be null.";
-      assertArgumentNotNull( msg, arg );
+      assertNotNull( arg, msg );
     }
   }
 

@@ -174,7 +174,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       LOG.error( "Internal Error.", cause );
       this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
     } else {
-      this.sendError( ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
+      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
     }
   }
   

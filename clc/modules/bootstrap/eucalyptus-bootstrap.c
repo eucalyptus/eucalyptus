@@ -531,30 +531,41 @@ int java_init(euca_opts *args, java_home_t *data) {
     i = -1;
     while(jvm_default_opts[++i]!= NULL) JVM_ARG(opt[++x],jvm_default_opts[i],GETARG(args,home));
     if(args->exhaustive_flag) {
+        JVM_ARG(opt[++x],"-Deuca.log.exhaustive=TRACE");
         JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
         JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
         JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=TRACE");
         JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=TRACE");
     } else {
+    	int exhaust = 0;
         if(args->exhaustive_db_flag) {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=TRACE");
+            exhaust++;
         } else {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.db=FATAL");
         }
         if(args->exhaustive_cc_flag) {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=TRACE");
+            exhaust++;
         } else {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.cc=FATAL");
         }
         if(args->exhaustive_user_flag) {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=TRACE");
+            exhaust++;
         } else {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.user=FATAL");
         }
         if(args->exhaustive_external_flag) {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=TRACE");
+            exhaust++;
         } else {
             JVM_ARG(opt[++x],"-Deuca.log.exhaustive.external=FATAL");
+        }
+        if(exhaust) {
+            JVM_ARG(opt[++x],"-Deuca.log.exhaustive=TRACE");
+        } else {
+            JVM_ARG(opt[++x],"-Deuca.log.exhaustive=FATAL");
         }
     }
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));

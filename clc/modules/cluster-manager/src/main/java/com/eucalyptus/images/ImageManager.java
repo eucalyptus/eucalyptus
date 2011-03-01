@@ -83,21 +83,27 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.WalrusUtil;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.ResourceLookup;
 import com.eucalyptus.component.ResourceLookupException;
 import com.eucalyptus.component.ResourceOwnerLookup;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.images.Image;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
@@ -126,26 +132,20 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ImageManager {
-  public static Logger                   LOG                    = Logger.getLogger( ImageManager.class );
-  
+  public static Logger LOG = Logger.getLogger( ImageManager.class );
   
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     RunInstancesType msg = vmAllocInfo.getRequest( );
     String imageId = msg.getImageId( );
     BootableSet bootSet = Emis.newBootableSet( imageId );
-    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ) );
-    
+    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ).name( ) );
     
     if ( bootSet.isLinux( ) ) {
       bootSet = Emis.bootsetWithKernel( bootSet );
       bootSet = Emis.bootsetWithRamdisk( bootSet );
-      { //GRZE: legacy.  to be fixed.
-        ImageUtil.checkStoredImage( bootSet.getKernel( ) );
-        ImageUtil.checkStoredImage( bootSet.getRamdisk( ) );
-      }
     }
     ArrayList<String> ancestorIds = Lists.newArrayList( );//GRZE: fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
-
+    
     Emis.checkStoredImage( bootSet );
     
     VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
@@ -155,38 +155,63 @@ public class ImageManager {
   }
   
   public DescribeImagesResponseType describe( DescribeImagesType request ) throws EucalyptusCloudException {
-    DescribeImagesResponseType reply = ( DescribeImagesResponseType ) request.getReply( );
+    DescribeImagesResponseType reply = request.getReply( );
     ImageUtil.cleanDeregistered( );
-    List<ImageInfo> imgList = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    for ( String imageId : request.getImagesSet( ) ) {
-      try {
-        imgList.add( db.getUnique( ImageInfo.named( imageId ) ) );
-      } catch ( Throwable e ) {}
-    }
-    db.commit( );
-    ArrayList<String> imageList = request.getImagesSet( );
-    ArrayList<String> owners = request.getOwnersSet( );
-    ArrayList<String> executable = request.getExecutableBySet( );
-    if ( owners.isEmpty( ) && executable.isEmpty( ) ) {
-      executable.add( "self" );
-    }
-    Set<ImageDetails> repList = Sets.newHashSet( );
-    if ( !owners.isEmpty( ) ) {
-      repList.addAll( ImageUtil.getImagesByOwner( imgList, request.getUser( ), owners ) );
-    }
-    if ( !executable.isEmpty( ) ) {
-      if ( executable.remove( "self" ) ) {
-        repList.addAll( ImageUtil.getImageOwnedByUser( imgList, request.getUser( ) ) );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account requestAccount = ctx.getAccount( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountId( );
+    final List<String> imageList = request.getImagesSet( );
+    final List<String> owners = request.getOwnersSet( );
+    final List<String> executable = request.getExecutableBySet( );
+    final boolean showPublic = executable.remove( "all" );
+    final boolean showMyImages = owners.remove( "self" );
+    final boolean showMyAllowedImages = executable.remove( "self" );
+    List<ImageInfo> images = Transactions.filter( new ImageInfo( ), new Predicate<ImageInfo>( ) {
+      
+      @Override
+      public boolean apply( ImageInfo t ) {
+        if ( showMyImages && requestAccountId.equals( t.getOwnerAccountId( ) ) ) {
+          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their images and is owner." );
+        } else if ( showMyAllowedImages && t.isAllowed( requestAccount ) ) {
+          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their executable images and is allowed." );
+        } else if ( showPublic && t.getImagePublic( ) ) {
+          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see public images and it is public." );
+        } else if ( !t.isAllowed( requestAccount ) ) {
+          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user is not allowed." );
+          return false;
+        }
+        if ( !imageList.isEmpty( ) && !imageList.contains( t.getDisplayName( ) ) ) {
+          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + imageList );
+          return false;
+        } else if ( !owners.isEmpty( ) && !owners.contains( t.getOwnerAccountId( ) ) ) {
+          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + owners );
+          return false;
+        } else if ( !executable.isEmpty( ) ) {
+          for ( String accountId : executable ) {
+            try {
+              if ( ctx.hasAdministrativePrivileges( ) || t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
+                return true;
+              }
+            } catch ( AuthException ex ) {
+              LOG.error( ex );
+            }
+          }
+          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + owners );
+          return false;
+        }
+        return true;
       }
-      repList.addAll( ImageUtil.getImagesByExec( request.getUser( ), executable ) );
-    }
-    reply.getImagesSet( ).addAll( repList );
+    } );
+    List<ImageDetails> imageDetailsList = Lists.transform( images, Images.TO_IMAGE_DETAILS );
+    reply.getImagesSet( ).addAll( imageDetailsList );
     return reply;
   }
   
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
+    final Context ctx = Contexts.lookup( );
     String imageLocation = request.getImageLocation( );
+    User requestUser = Contexts.lookup( ).getUser( );
     String[] imagePathParts;
     try {
       imagePathParts = ImageUtil.getImagePathParts( imageLocation );
@@ -195,99 +220,102 @@ public class ImageManager {
       LOG.trace( e, e );
       throw e;
     }
-    ImageInfo imageInfo = new ImageInfo( imageLocation, request.getUserErn( ).getUniqueId( ), "available", true );
     try {
-      WalrusUtil.verifyManifestIntegrity( imageInfo );
+      WalrusUtil.verifyManifestIntegrity( ctx.getUser( ), imageLocation );
     } catch ( EucalyptusCloudException e ) {
       throw new EucalyptusCloudException( "Image registration failed because the manifest referenced is invalid or unavailable." );
     }
     // FIXME: wrap this manifest junk in a helper class.
-    Document inputSource = ImageUtil.getManifestDocument( imagePathParts, request.getUserErn( ) );
+    Document inputSource = ImageUtil.getManifestDocument( imagePathParts, ctx.getUserFullName( ) );
     XPath xpath = XPathFactory.newInstance( ).newXPath( );
-    String arch = ImageUtil.extractArchitecture( inputSource, xpath );
-    imageInfo.setArchitecture( ( arch == null )
-      ? "i386"
-      : arch );
+    Image.Architecture arch = ImageUtil.extractArchitecture( inputSource, xpath );
+    ImageInfo imageInfo = null;
     String kernelId = ImageUtil.extractKernelId( inputSource, xpath );
     String ramdiskId = ImageUtil.extractRamdiskId( inputSource, xpath );
-    List<ProductCode> prodCodes = extractProductCodes( inputSource, xpath );
-    imageInfo.getProductCodes( ).addAll( prodCodes );
-    
-    if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[1].startsWith( "vmlinuz" ) ) {
-      if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-      imageInfo.setImageType( Emis.IMAGE_KERNEL );
-      imageInfo.setImageId( ImageUtil.newImageId( Emis.IMAGE_KERNEL_PREFIX, imageInfo.getImageLocation( ) ) );
-      imageInfo.setPlatform( Emis.IMAGE_PLATFORM_DEFAULT );
-    } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
-      if ( !request.isAdministrator( ) ) throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
-      imageInfo.setImageType( Emis.IMAGE_RAMDISK );
-      imageInfo.setImageId( ImageUtil.newImageId( Emis.IMAGE_RAMDISK_PREFIX, imageInfo.getImageLocation( ) ) );
-      imageInfo.setPlatform( Emis.IMAGE_PLATFORM_DEFAULT );
-    } else {
-      if ( imagePathParts[1].startsWith( Emis.IMAGE_PLATFORM_WINDOWS ) && System.getProperty( "euca.disable.windows" ) == null ) {
-        imageInfo.setImageId( ImageUtil.newImageId( Emis.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
-        imageInfo.setPlatform( Emis.IMAGE_PLATFORM_WINDOWS );
-        imageInfo.setImageType( Emis.IMAGE_MACHINE );
-      } else {
-        imageInfo.setPlatform( Emis.IMAGE_PLATFORM_DEFAULT );
-        if ( kernelId != null ) {
-          try {
-            ImageUtil.getImageInfobyId( kernelId );
-          } catch ( EucalyptusCloudException e ) {
-            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId );
-          }
-        }
-        if ( ramdiskId != null ) {
-          try {
-            ImageUtil.getImageInfobyId( ramdiskId );
-          } catch ( EucalyptusCloudException e ) {
-            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId );
-          }
-        }
-        imageInfo.setImageType( Emis.IMAGE_MACHINE );
-        imageInfo.setKernelId( kernelId );
-        imageInfo.setRamdiskId( ramdiskId );
-        imageInfo.setImageId( ImageUtil.newImageId( Emis.IMAGE_MACHINE_PREFIX, imageInfo.getImageLocation( ) ) );
-      }
-    }
-    
+    Image.Type imageType = Image.Type.machine;
+    Image.Platform platform = Image.Platform.linux;
+    String newImageId = null;
     String signature = null;
     try {
       signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
     } catch ( XPathExpressionException e ) {
       LOG.warn( e.getMessage( ) );
     }
+    if ( "yes".equals( kernelId ) || "true".equals( kernelId ) || imagePathParts[1].startsWith( "vmlinuz" ) ) {
+      if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can register kernel images." );
+      }
+      imageType = Image.Type.kernel;
+      imageInfo = new KernelImageInfo( ctx.getUserFullName( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation,
+                                       arch, Image.Platform.linux );
+    } else if ( "yes".equals( ramdiskId ) || "true".equals( ramdiskId ) || imagePathParts[1].startsWith( "initrd" ) ) {
+      if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
+      }
+      imageType = Image.Type.ramdisk;
+      imageInfo = new RamdiskImageInfo( ctx.getUserFullName( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation,
+                                        arch, Image.Platform.linux );
+    } else {
+      if ( imagePathParts[1].startsWith( Image.Platform.windows.toString( ) ) ) {
+        imageType = Image.Type.machine;
+        imageInfo = new MachineImageInfo( ctx.getUserFullName( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation,
+                                          arch, Image.Platform.windows );
+      } else {
+        if ( kernelId != null ) {
+          try {
+            Images.lookupImage( kernelId );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+            throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId, ex );
+          }
+        }
+        if ( ramdiskId != null ) {
+          try {
+            Images.lookupImage( ramdiskId );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+            throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId, ex );
+          }
+        }
+        imageType = Image.Type.machine;
+        imageInfo = new MachineImageInfo( ctx.getUserFullName( ), ImageUtil.newImageId( imageType.getTypePrefix( ), imageLocation ), imageLocation,
+                                          arch, Image.Platform.linux, kernelId, ramdiskId );
+      }
+    }
     imageInfo.setSignature( signature );
-    
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    imageInfo.setState( Image.State.available );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      db.add( imageInfo );
+      imageInfo = db.merge( imageInfo );
       db.commit( );
-      LOG.info( "Registering image pk=" + imageInfo.getId( ) + " ownerId=" + request.getUserErn( ) );
+      LOG.info( "Registering image pk=" + imageInfo.getDisplayName( ) + " ownerId=" + ctx.getUserFullName( ) );
     } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( "failed to register image." );
     }
-    imageInfo.grantPermission( request.getUser( ) );
-    imageInfo.grantPermission( ImageUserGroup.ALL );
+//TODO:GRZE:RESTORE
+//    for( String p : extractProductCodes( inputSource, xpath ) ) {
+//      imageInfo.addProductCode( p );
+//    }
+//    imageInfo.grantPermission( ctx.getAccount( ) );
     
-    LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getId( ) );
+    LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getDisplayName( ) );
     WalrusUtil.checkValid( imageInfo );
     WalrusUtil.triggerCaching( imageInfo );
     
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );
-    reply.setImageId( imageInfo.getImageId( ) );
+    reply.setImageId( imageInfo.getDisplayName( ) );
     return reply;
   }
   
-  private List<ProductCode> extractProductCodes( Document inputSource, XPath xpath ) {
-    List<ProductCode> prodCodes = Lists.newArrayList( );
+  private List<String> extractProductCodes( Document inputSource, XPath xpath ) {
+    List<String> prodCodes = Lists.newArrayList( );
     NodeList productCodes = null;
     try {
       productCodes = ( NodeList ) xpath.evaluate( "/manifest/machine_configuration/product_codes/product_code/text()", inputSource, XPathConstants.NODESET );
       for ( int i = 0; i < productCodes.getLength( ); i++ ) {
         for ( String productCode : productCodes.item( i ).getNodeValue( ).split( "," ) ) {
-          prodCodes.add( new ProductCode( productCode ) );
+          prodCodes.add( productCode );
         }
       }
     } catch ( XPathExpressionException e ) {
@@ -297,22 +325,29 @@ public class ImageManager {
   }
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
-    DeregisterImageResponseType reply = ( DeregisterImageResponseType ) request.getReply( );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
-    
-    ImageInfo imgInfo = null;
+    DeregisterImageResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account requestAccount = ctx.getAccount( );
     try {
-      imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.getOwner( ).getUniqueId( ).equals( request.getUserErn( ).getUniqueId( ) ) && !request.isAdministrator( ) ) throw new EucalyptusCloudException(
-                                                                                                                                           "Only the owner of a registered image or the administrator can deregister it." );
-      WalrusUtil.invalidate( imgInfo );
-      db.commit( );
-      reply.set_return( true );
-    } catch ( EucalyptusCloudException e ) {
+      ImageInfo imgInfo = EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( request.getImageId( ) ) );
+      if ( requestUser.isAccountAdmin( ) && imgInfo.getOwnerAccountId( ).equals( ctx.getAccount( ).getId( ) ) ) {
+        Images.deregisterImage( imgInfo.getDisplayName( ) );
+      } else if ( ctx.hasAdministrativePrivileges( ) ) {
+        Images.deregisterImage( imgInfo.getDisplayName( ) );
+      } else {
+        throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
+      }
+      return reply;
+    } catch ( NoSuchImageException ex ) {
+      LOG.trace( ex );
       reply.set_return( false );
-      db.rollback( );
+      return reply;
+    } catch ( NoSuchElementException ex ) {
+      LOG.trace( ex );
+      reply.set_return( false );
+      return reply;
     }
-    return reply;
   }
   
   public ConfirmProductInstanceResponseType confirmProductInstance( ConfirmProductInstanceType request ) throws EucalyptusCloudException {
@@ -322,7 +357,7 @@ public class ImageManager {
     try {
       vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
 //ASAP: FIXME: GRZE: RESTORE!
-//      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+//      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
 //      try {
 //        ImageInfo found = db.getUnique( new ImageInfo( vm.getImageInfo( ).getImageId( ) ) );
 //        if ( found.getProductCodes( ).contains( new ProductCode( request.getProductCode( ) ) ) ) {
@@ -343,30 +378,36 @@ public class ImageManager {
     
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( !imgInfo.isAllowed( request.getUser( ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      if ( !imgInfo.isAllowed( Contexts.lookup( ).getAccount( ) ) ) throw new EucalyptusCloudException( "image attribute: not authorized." );
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
-        if ( imgInfo.getKernelId( ) != null ) {
-          reply.getKernel( ).add( imgInfo.getKernelId( ) );
+        if ( imgInfo instanceof MachineImageInfo ) {
+          if ( ( ( MachineImageInfo ) imgInfo ).getKernelId( ) != null ) {
+            reply.getKernel( ).add( ( ( MachineImageInfo ) imgInfo ).getKernelId( ) );
+          }
         }
       } else if ( request.getRamdisk( ) != null ) {
         reply.setRealResponse( reply.getRamdisk( ) );
-        if ( imgInfo.getRamdiskId( ) != null ) {
-          reply.getRamdisk( ).add( imgInfo.getRamdiskId( ) );
+        if ( imgInfo instanceof MachineImageInfo ) {
+          if ( ( ( MachineImageInfo ) imgInfo ).getRamdiskId( ) != null ) {
+            reply.getRamdisk( ).add( ( ( MachineImageInfo ) imgInfo ).getRamdiskId( ) );
+          }
         }
       } else if ( request.getLaunchPermission( ) != null ) {
         reply.setRealResponse( reply.getLaunchPermission( ) );
-        for ( ImageAuthorization auth : imgInfo.getUserGroups( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( auth.getValue( ) ) );
-        for ( ImageAuthorization auth : imgInfo.getPermissions( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( auth.getValue( ) ) );
+        if ( imgInfo.getImagePublic( ) ) {
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( ) );
+        }
+//TODO:GRZE:RESTORE
+//        for ( LaunchPermission auth : imgInfo.getPermissions( ) )
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getId( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
-        for ( ProductCode p : imgInfo.getProductCodes( ) ) {
-          reply.getProductCodes( ).add( p.getValue( ) );
+        for ( String p : imgInfo.listProductCodes( ) ) {
+          reply.getProductCodes( ).add( p );
         }
       } else if ( request.getBlockDeviceMapping( ) != null ) {
         reply.setRealResponse( reply.getBlockDeviceMapping( ) );
@@ -386,22 +427,19 @@ public class ImageManager {
   
   public ModifyImageAttributeResponseType modifyImageAttribute( ModifyImageAttributeType request ) throws EucalyptusCloudException {
     ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup( );
     
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
     if ( request.getProductCodes( ).isEmpty( ) ) {
-      reply.set_return( ImageUtil.modifyImageInfo( request.getImageId( ), request.getUserErn( ).getUniqueId( ), request.isAdministrator( ), request.getAdd( ),
-                                                   request.getRemove( ) ) );
+      reply.set_return( ImageUtil.modifyImageInfo( ctx.getUser( ), request.getImageId( ), request.getAdd( ), request.getRemove( ) ) );
     } else {
-      EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
       ImageInfo imgInfo = null;
       try {
-        imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
+        imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
         for ( String productCode : request.getProductCodes( ) ) {
-          ProductCode prodCode = new ProductCode( productCode );
-          if ( !imgInfo.getProductCodes( ).contains( prodCode ) ) {
-            imgInfo.getProductCodes( ).add( prodCode );
-          }
+          imgInfo.addProductCode( productCode );
         }
         db.commit( );
         reply.set_return( true );
@@ -415,15 +453,14 @@ public class ImageManager {
   
   public ResetImageAttributeResponseType resetImageAttribute( ResetImageAttributeType request ) throws EucalyptusCloudException {
     ResetImageAttributeResponseType reply = ( ResetImageAttributeResponseType ) request.getReply( );
+    Context ctx = Contexts.lookup( );
     reply.set_return( true );
-    EntityWrapper<ImageInfo> db = new EntityWrapper<ImageInfo>( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( new ImageInfo( request.getImageId( ) ) );
-      if ( request.getUserErn( ).getUniqueId( ).equals( imgInfo.getOwner( ).getUniqueId( ) ) || request.isAdministrator( ) ) {
-        imgInfo.getPermissions( ).clear( );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      if ( ctx.getUserFullName( ).getUniqueId( ).equals( imgInfo.getOwner( ).getUniqueId( ) ) || Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+        imgInfo.resetPermission( );
         db.commit( );
-        imgInfo.grantPermission( request.getUser( ) );
-        imgInfo.grantPermission( ImageUserGroup.ALL );
       } else {
         db.rollback( );
         reply.set_return( false );

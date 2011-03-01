@@ -87,12 +87,6 @@ public class TerminateInstancesType extends VmControlMessage {
     this.instancesSet.add(instanceId);
   }
 
-  def TerminateInstancesType(String instanceId, EucalyptusMessage parent) {
-    this.instancesSet.add(instanceId);
-    this.correlationId = parent.correlationId;
-    this.userId = parent.userId;
-    this.effectiveUserId = parent.effectiveUserId;
-  }
 }
 /** *******************************************************************************/
 public class DescribeInstancesType extends VmControlMessage {
@@ -115,12 +109,6 @@ public class RebootInstancesType extends VmControlMessage {
     this.instancesSet.add(instanceId);
   }
 
-  def RebootInstancesType(String instanceId, EucalyptusMessage parent) {
-    this.instancesSet.add(instanceId);
-    this.correlationId = parent.correlationId;
-    this.userId = parent.userId;
-    this.effectiveUserId = parent.effectiveUserId;
-  }
 }
 public class RebootInstancesResponseType extends VmControlMessage {
 }

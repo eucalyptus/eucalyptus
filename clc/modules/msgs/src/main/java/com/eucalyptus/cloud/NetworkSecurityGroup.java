@@ -61,113 +61,14 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.cloud;
 
-import java.io.Serializable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Lob;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import javax.persistence.Transient;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasOwningAccount;
 
-@Entity
-@PersistenceContext( name = "eucalyptus_general" )
-@Table( name = "metadata_keypair" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata implements Serializable {
-  @Column( name = "metadata_keypair_user_keyname", unique = true )
-  String                   uniqueName;                                                                 //bogus field to enforce uniqueness
-  @Lob
-  @Column( name = "metadata_keypair_public_key" )
-  String                   publicKey;
-  @Column( name = "metadata_keypair_finger_print" )
-  String                   fingerPrint;
-  @Transient
-  public static String     NO_KEY_NAME = "";
-  @Transient
-  public static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
-  
-  public SshKeyPair( ) {}
-  
-  public SshKeyPair( UserFullName user ) {
-    super( user );
-  }
-  
-  public SshKeyPair( UserFullName user, String keyName ) {
-    super( user, keyName );
-    this.uniqueName = user.toString( ) + "/keys/" + keyName;
-  }
-  
-  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
-    this( user, keyName );
-    this.publicKey = publicKey;
-    this.fingerPrint = fingerPrint;
-  }
-  
-  public String getUniqueName( ) {
-    return this.uniqueName;
-  }
-
-  public void setUniqueName( String uniqueName ) {
-    this.uniqueName = uniqueName;
-  }
-
-  public String getPublicKey( ) {
-    return this.publicKey;
-  }
-
-  public void setPublicKey( String publicKey ) {
-    this.publicKey = publicKey;
-  }
-
-  public String getFingerPrint( ) {
-    return this.fingerPrint;
-  }
-
-  public void setFingerPrint( String fingerPrint ) {
-    this.fingerPrint = fingerPrint;
-  }
-
-  @Override
-  public String toString( ) {
-    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.uniqueName == null )
-      ? 0
-      : this.uniqueName.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    SshKeyPair other = ( SshKeyPair ) obj;
-    if ( this.uniqueName == null ) {
-      if ( other.uniqueName != null ) {
-        return false;
-      }
-    } else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-      return false;
-    }
-    return true;
-  }
+@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_SECURITYGROUP )
+public interface NetworkSecurityGroup extends HasFullName<NetworkSecurityGroup>, HasOwningAccount {
 
 }

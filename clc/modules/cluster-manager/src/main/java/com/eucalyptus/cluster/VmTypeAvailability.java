@@ -63,7 +63,8 @@
  */
 package com.eucalyptus.cluster;
 
-import com.eucalyptus.entities.VmType;
+import com.eucalyptus.vm.VmType;
+
 
 public class VmTypeAvailability implements Comparable {
   private VmType type;

@@ -164,8 +164,6 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
     final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
     if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
       msg.markUnprivileged( );
-    } else if ( ( user != null ) ) {//TODO:GRZE:WTH?!?!
-      msg.setUser( user );
     }
   }
   

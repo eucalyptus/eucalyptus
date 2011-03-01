@@ -91,6 +91,7 @@ import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
@@ -247,7 +248,7 @@ public class WalrusManager {
 			ListAllMyBucketsType request) throws EucalyptusCloudException {
 		ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		if (userId == null) {
 			throw new AccessDeniedException("no such user");
@@ -262,7 +263,7 @@ public class WalrusManager {
 		ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
 		for (BucketInfo bucketInfo : bucketInfoList) {
-			if (request.isAdministrator()) {
+			if (Contexts.lookup().hasAdministrativePrivileges()) {
 				EntityWrapper<WalrusSnapshotInfo> dbSnap = db
 				.recast(WalrusSnapshotInfo.class);
 				WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
@@ -296,7 +297,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		CreateBucketResponseType reply = (CreateBucketResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		String bucketName = request.getBucket();
 		String locationConstraint = request.getLocationConstraint();
@@ -317,7 +318,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 
 		if (WalrusProperties.shouldEnforceUsageLimits
-				&& !request.isAdministrator()) {
+				&& !Contexts.lookup().hasAdministrativePrivileges()) {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(userId);
 			List<BucketInfo> bucketList = db.query(searchBucket);
@@ -441,7 +442,7 @@ public class WalrusManager {
 	public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
 		DeleteBucketResponseType reply = (DeleteBucketResponseType) request.getReply();
 		String bucketName = request.getBucket();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo searchBucket = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(searchBucket);
@@ -546,7 +547,7 @@ public class WalrusManager {
 		.getReply();
 
 		String bucketName = request.getBucket();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String ownerId = null;
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -666,7 +667,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		PutObjectResponseType reply = (PutObjectResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
@@ -877,7 +878,7 @@ public class WalrusManager {
 									long newSize = bucketSize + oldBucketSize
 									+ size;
 									if (WalrusProperties.shouldEnforceUsageLimits
-											&& !request.isAdministrator()) {
+											&& !Contexts.lookup().hasAdministrativePrivileges()) {
 										if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
 											messenger.removeQueue(key, randomKey);
 											dbObject.rollback();
@@ -961,7 +962,7 @@ public class WalrusManager {
 		String key = request.getKey();
 
 		PutObjectType putObject = new PutObjectType();
-		putObject.setUserId(request.getUserId());
+		putObject.setUserId(Contexts.lookup().getUserFullName().getUserId());
 		putObject.setBucket(bucketName);
 		putObject.setKey(key);
 		putObject.setRandomKey(request.getRandomKey());
@@ -1024,7 +1025,7 @@ public class WalrusManager {
 			PutObjectInlineType request) throws EucalyptusCloudException {
 		PutObjectInlineResponseType reply = (PutObjectInlineResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
@@ -1118,7 +1119,7 @@ public class WalrusManager {
 							Long size = (long) base64Data.length;
 							foundObject.setSize(size);
 							if (WalrusProperties.shouldEnforceUsageLimits
-									&& !request.isAdministrator()) {
+									&& !Contexts.lookup().hasAdministrativePrivileges()) {
 								Long bucketSize = bucket.getBucketSize();
 								long newSize = bucketSize + oldBucketSize + size;
 								if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
@@ -1175,7 +1176,7 @@ public class WalrusManager {
 		.getReply();
 		String bucketName = request.getBucket();
 		String key = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String objectName = request.getObjectName();
 
 		AccessControlListType accessControlList = request
@@ -1237,7 +1238,7 @@ public class WalrusManager {
 		.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
@@ -1359,7 +1360,7 @@ public class WalrusManager {
 		ListBucketResponseType reply = (ListBucketResponseType) request
 		.getReply();
 		String bucketName = request.getBucket();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String prefix = request.getPrefix();
 		if (prefix == null)
 			prefix = "";
@@ -1390,7 +1391,7 @@ public class WalrusManager {
 							updateLogData(bucket, logData);
 							reply.setLogData(logData);
 						}
-						if (request.isAdministrator()) {
+						if (Contexts.lookup().hasAdministrativePrivileges()) {
 							EntityWrapper<WalrusSnapshotInfo> dbSnap = db
 							.recast(WalrusSnapshotInfo.class);
 							WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
@@ -1516,7 +1517,7 @@ public class WalrusManager {
 
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String ownerId = null;
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -1595,7 +1596,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		SetBucketAccessControlPolicyResponseType reply = (SetBucketAccessControlPolicyResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		AccessControlListType accessControlList = request
 		.getAccessControlList();
 		String bucketName = request.getBucket();
@@ -1640,7 +1641,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		SetRESTBucketAccessControlPolicyResponseType reply = (SetRESTBucketAccessControlPolicyResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		AccessControlPolicyType accessControlPolicy = request
 		.getAccessControlPolicy();
 		String bucketName = request.getBucket();
@@ -1687,7 +1688,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		SetObjectAccessControlPolicyResponseType reply = (SetObjectAccessControlPolicyResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		AccessControlListType accessControlList = request
 		.getAccessControlList();
 		String bucketName = request.getBucket();
@@ -1768,7 +1769,7 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		SetRESTObjectAccessControlPolicyResponseType reply = (SetRESTObjectAccessControlPolicyResponseType) request
 		.getReply();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		AccessControlPolicyType accessControlPolicy = request
 		.getAccessControlPolicy();
 		if (accessControlPolicy == null) {
@@ -1854,10 +1855,10 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		GetObjectResponseType reply = (GetObjectResponseType) request
 		.getReply();
-    User user = request.getUser( );
+    User user = Contexts.lookup().getUser( );
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		Boolean deleteAfterGet = request.getDeleteAfterGet();
 		if (deleteAfterGet == null)
 			deleteAfterGet = false;
@@ -2123,8 +2124,8 @@ public class WalrusManager {
 
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-    User user = request.getUser( );
-		String userId = request.getUserId();
+    User user = Contexts.lookup().getUser( );
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		Status status = new Status();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
@@ -2263,7 +2264,7 @@ public class WalrusManager {
 		GetBucketLocationResponseType reply = (GetBucketLocationResponseType) request
 		.getReply();
 		String bucketName = request.getBucket();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -2299,8 +2300,8 @@ public class WalrusManager {
 	throws EucalyptusCloudException {
 		CopyObjectResponseType reply = (CopyObjectResponseType) request
 		.getReply();
-		User user = request.getUser( );
-		String userId = request.getUserId();
+		User user = Contexts.lookup().getUser( );
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String sourceBucket = request.getSourceBucket();
 		String sourceKey = request.getSourceObject();
 		String sourceVersionId = request.getSourceVersionId();
@@ -2704,7 +2705,7 @@ public class WalrusManager {
 		ListVersionsResponseType reply = (ListVersionsResponseType) request
 		.getReply();
 		String bucketName = request.getBucket();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 		String prefix = request.getPrefix();
 		if (prefix == null)
 			prefix = "";
@@ -2743,7 +2744,7 @@ public class WalrusManager {
 							updateLogData(bucket, logData);
 							reply.setLogData(logData);
 						}
-						if (request.isAdministrator()) {
+						if (Contexts.lookup().hasAdministrativePrivileges()) {
 							EntityWrapper<WalrusSnapshotInfo> dbSnap = db
 							.recast(WalrusSnapshotInfo.class);
 							WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
@@ -2896,7 +2897,7 @@ public class WalrusManager {
 		.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = request.getUserId();
+		String userId = Contexts.lookup().getUserFullName().getUserId();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfos = new BucketInfo(bucketName);

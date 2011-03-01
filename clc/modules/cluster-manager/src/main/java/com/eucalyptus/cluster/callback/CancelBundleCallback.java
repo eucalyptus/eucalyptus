@@ -29,7 +29,7 @@ public class CancelBundleCallback extends MessageCallback<CancelBundleTaskType,C
     } else {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookupByBundleId( this.getRequest().getBundleId( ) );
-        EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).getUserErn( ).toString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
+        EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
         vm.resetBundleTask( );
       } catch ( NoSuchElementException e1 ) {
       }

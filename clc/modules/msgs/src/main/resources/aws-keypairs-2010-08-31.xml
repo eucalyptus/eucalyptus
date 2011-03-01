@@ -42,7 +42,7 @@
 
   <mapping name="DeleteKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" />
+    <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
 
   <mapping name="DeleteKeyPair" class="edu.ucsb.eucalyptus.msgs.DeleteKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
