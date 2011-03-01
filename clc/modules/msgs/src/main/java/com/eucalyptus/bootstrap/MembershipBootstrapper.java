@@ -101,11 +101,10 @@ public class MembershipBootstrapper extends Bootstrapper {
       final Condition isReady = lock.newCondition( );
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
         public void viewAccepted( View newView ) {
-          lock.lock( );
-          try {
-            LOG.info( "view: " + newView.printDetails( ) );
-            if( Components.lookup( Database.class ).isRunningLocally( ) ) {
-              for( Address addr : newView.getMembers( ) ) {
+          LOG.info( "view: " + newView.printDetails( ) );
+          if( Components.lookup( Database.class ).isRunningLocally( ) ) {
+            for( Address addr : newView.getMembers( ) ) {
+              if( !MembershipBootstrapper.this.membershipChannel.getLocalAddress( ).equals( addr ) ) {
                 try {
                   LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
                   MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, "DBDBDBDBDBDBDBDBDBDBDB" ) );
@@ -116,16 +115,19 @@ public class MembershipBootstrapper extends Bootstrapper {
                 }
               }
             }
-          } finally {
-            lock.unlock( );
           }
         }
         
         public void receive( Message msg ) {
           if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
             LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-            done[0] = true;
-            isReady.signalAll( );
+            lock.lock( );
+            try {
+              done[0] = true;
+              isReady.signalAll( );
+            } finally {
+              lock.unlock( );
+            }
           } 
         }
       } );
