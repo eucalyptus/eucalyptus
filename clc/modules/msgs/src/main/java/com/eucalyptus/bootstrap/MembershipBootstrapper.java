@@ -77,6 +77,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteConfiguration )
@@ -108,11 +109,11 @@ public class MembershipBootstrapper extends Bootstrapper {
         public void viewAccepted( View new_view ) {
           lock.lock( );
           try {
+            LOG.info( "view: " + new_view );
             if ( System.getProperty( "euca.cloud.disable" ) != null ) {
               done[0] = true;
               isReady.signalAll( );
             }
-            LOG.info( "view: " + new_view );
           } finally {
             lock.unlock( );
           }
@@ -128,6 +129,7 @@ public class MembershipBootstrapper extends Bootstrapper {
         LOG.info( "Started membership channel " + this.membershipGroupName );
         if ( System.getProperty( "euca.cloud.disable" ) != null ) {
           LOG.warn( "Blocking the bootstrap thread for testing." );
+          TimeUnit.SECONDS.sleep( 60 );
           if( !done[0] ) {
             isReady.await( );
           }
