@@ -99,7 +99,7 @@ public class MembershipBootstrapper extends Bootstrapper {
           lock.lock( );
           try {
             LOG.info( "view: " + new_view );
-            if ( System.getProperty( "euca.cloud.disable" ) != null ) {
+            if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
               done[0] = true;
               isReady.signalAll( );
             }
@@ -116,7 +116,7 @@ public class MembershipBootstrapper extends Bootstrapper {
       try {
         this.membershipChannel.connect( this.membershipGroupName );
         LOG.info( "Started membership channel " + this.membershipGroupName );
-        if ( System.getProperty( "euca.cloud.disable" ) != null ) {
+        if ( System.getProperty( "euca.disable.eucalyptus" ) != null ) {
           LOG.warn( "Blocking the bootstrap thread for testing." );
           TimeUnit.SECONDS.sleep( 60 );
           if( !done[0] ) {
