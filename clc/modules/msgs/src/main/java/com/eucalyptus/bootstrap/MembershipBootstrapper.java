@@ -111,16 +111,17 @@ public class MembershipBootstrapper extends Bootstrapper {
           LOG.info( "view: " + newView.printDetails( ) );
           if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
             for ( Address addr : newView.getMembers( ) ) {
-//              if( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
-              try {
-                LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
-                MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
-              } catch ( ChannelNotConnectedException ex ) {
-                LOG.error( ex, ex );
-              } catch ( ChannelClosedException ex ) {
-                LOG.error( ex, ex );
-              } catch ( SocketException ex ) {
-                LOG.error( ex, ex );
+              if( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
+                try {
+                  LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
+                  MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
+                } catch ( ChannelNotConnectedException ex ) {
+                  LOG.error( ex, ex );
+                } catch ( ChannelClosedException ex ) {
+                  LOG.error( ex, ex );
+                } catch ( SocketException ex ) {
+                  LOG.error( ex, ex );
+                }
               }
             }
           }
