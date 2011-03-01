@@ -91,17 +91,6 @@ public class MembershipBootstrapper extends Bootstrapper {
     try {
       this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( ).hashCode( );
       this.membershipChannel = MembershipManager.buildChannel( );
-      return true;
-    } catch ( Exception ex ) {
-      LOG.fatal( ex, ex );
-      BootstrapException.throwFatal( "Failed to construct membership channel because of " + ex.getMessage( ), ex );
-      return false;
-    }
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    try {
       final boolean[] done = { false };
       final ReentrantLock lock = new ReentrantLock( );
       final Condition isReady = lock.newCondition( );
@@ -143,6 +132,11 @@ public class MembershipBootstrapper extends Bootstrapper {
       BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
       return false;
     }
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    return true;
   }
   
   @Override
