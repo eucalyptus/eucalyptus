@@ -248,7 +248,15 @@ int validCmp(ccInstance *inst, void *in) {
 int instIpSync(ccInstance *inst, void *in) {
   int ret=0;
 
+  /*
   if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    return(0);
+  }
+  */
+
+  if (!inst) {
+    return(1);
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     return(0);
   }
 
@@ -311,9 +319,17 @@ int instIpSync(ccInstance *inst, void *in) {
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
+  /*
   if (!inst) {
     return(1);
   } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    return(0);
+  }
+  */
+
+  if (!inst) {
+    return(1);
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     return(0);
   }
 
@@ -357,9 +373,17 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 int instNetReassignAddrs(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
+  /*
   if (!inst) {
     return(1);
   } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    return(0);
+  }
+  */
+
+  if (!inst) {
+    return(1);
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     return(0);
   }
 

@@ -222,8 +222,15 @@ public class WalrusProperties {
 		GET, PUT, DELETE, POST, HEAD;
 	}
 
-	public enum OperationParameter {
-		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionId;
+	public enum ServiceParameter {
+	}
+	
+	public enum BucketParameter {
+		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions;
+	}
+
+	public enum ObjectParameter {
+		acl, torrent, versionId;
 	}
 
 	public enum RequiredQueryParams {
