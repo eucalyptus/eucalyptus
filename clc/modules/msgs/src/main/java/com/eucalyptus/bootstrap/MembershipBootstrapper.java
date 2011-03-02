@@ -104,12 +104,9 @@ public class MembershipBootstrapper extends Bootstrapper {
     try {
       this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( );
       this.membershipChannel = MembershipManager.buildChannel( );
-      final boolean[] done = { false };
-      final ReentrantLock lock = new ReentrantLock( );
-      final Condition isReady = lock.newCondition( );
-      this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
-        public void viewAccepted( final View newView ) {
-          if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+        this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
+          public void viewAccepted( final View newView ) {
             LOG.info( "view: " + newView );
             Threads.lookup( Empyrean.class, MembershipBootstrapper.class ).submit( new Runnable( ) {
               
@@ -131,60 +128,67 @@ public class MembershipBootstrapper extends Bootstrapper {
                 }
               }
             } );
-          } else {
-            LOG.info( "view: " + newView );
           }
-        }
-        
-        public void receive( Message msg ) {
-          LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-          lock.lock( );
-          try {
-            if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
-              String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
-              for ( String maybeDbAddr : dbAddrs ) {
-                try {
-                  if ( NetworkUtil.testReachability( maybeDbAddr ) ) {
-                    String host = maybeDbAddr;
-                    for ( Component c : Components.list( ) ) {
-                      if ( c.getComponentId( ).isCloudLocal( ) ) {
-                        URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
-                        ServiceBuilder builder = c.getBuilder( );
-                        ServiceConfiguration config = builder.toConfiguration( uri );
-                        c.loadService( config );
-                      }
-                    }
-                    for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-                      stage.updateBootstrapDependencies( );
-                    }
-                    break;
-                  }
-                } catch ( ServiceRegistrationException ex ) {
-                  LOG.error( ex, ex );
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
-                }
-              }
-            }
-            done[0] = true;
-            isReady.signalAll( );
-          } finally {
-            lock.unlock( );
-          }
-        }
-      } );
-      lock.lock( );
-      try {
+        } );
         this.membershipChannel.connect( this.membershipGroupName );
         LOG.info( "Started membership channel " + this.membershipGroupName );
-        if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      } else {
+        final boolean[] done = { false };
+        final ReentrantLock lock = new ReentrantLock( );
+        final Condition isReady = lock.newCondition( );
+        this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
+          public void viewAccepted( final View newView ) {
+            LOG.info( "view: " + newView );
+          }
+          
+          public void receive( Message msg ) {
+            LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            lock.lock( );
+            try {
+              if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+                String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
+                for ( String maybeDbAddr : dbAddrs ) {
+                  try {
+                    if ( NetworkUtil.testReachability( maybeDbAddr ) ) {
+                      String host = maybeDbAddr;
+                      for ( Component c : Components.list( ) ) {
+                        if ( c.getComponentId( ).isCloudLocal( ) ) {
+                          URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
+                          ServiceBuilder builder = c.getBuilder( );
+                          ServiceConfiguration config = builder.toConfiguration( uri );
+                          c.loadService( config );
+                        }
+                      }
+                      for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+                        stage.updateBootstrapDependencies( );
+                      }
+                      break;
+                    }
+                  } catch ( ServiceRegistrationException ex ) {
+                    LOG.error( ex, ex );
+                  } catch ( Exception ex ) {
+                    LOG.error( ex, ex );
+                  }
+                }
+              }
+              done[0] = true;
+              isReady.signalAll( );
+            } finally {
+              lock.unlock( );
+            }
+          }
+        } );
+        this.membershipChannel.connect( this.membershipGroupName );
+        LOG.info( "Started membership channel " + this.membershipGroupName );
+        lock.lock( );
+        try {
           while ( !done[0] ) {
             LOG.warn( "Blocking the bootstrap thread for testing." );
             isReady.await( 100, TimeUnit.MILLISECONDS );
           }
-        }
-      } finally {
-        lock.unlock( );
+        } finally {
+          lock.unlock( );
+        }        
       }
       return true;
     } catch ( Exception ex ) {
