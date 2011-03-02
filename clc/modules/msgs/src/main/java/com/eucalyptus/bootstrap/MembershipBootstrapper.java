@@ -107,16 +107,16 @@ public class MembershipBootstrapper extends Bootstrapper {
       final ReentrantLock lock = new ReentrantLock( );
       final Condition isReady = lock.newCondition( );
       this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
-        public void viewAccepted( View newView ) {
+        public void viewAccepted( final View newView ) {
           if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
-            LOG.info( "view: " + newView.printDetails( ) );
-            for ( final Address addr : newView.getMembers( ) ) {
-              if ( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
-                LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
-                Threads.lookup( Empyrean.class, MembershipBootstrapper.class ).submit( new Runnable( ) {
-                  
-                  @Override
-                  public void run( ) {
+            LOG.info( "view: " + newView );
+            Threads.lookup( Empyrean.class, MembershipBootstrapper.class ).submit( new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                for ( final Address addr : newView.getMembers( ) ) {
+                  if ( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
+                    LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
                     try {
                       MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
                     } catch ( ChannelNotConnectedException ex ) {
@@ -127,9 +127,9 @@ public class MembershipBootstrapper extends Bootstrapper {
                       LOG.error( ex, ex );
                     }
                   }
-                } );
+                }
               }
-            }
+            } );
           } else {
             LOG.info( "view: " + newView );
           }
