@@ -69,6 +69,7 @@ permission notice:
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <math.h>
 
 #include "axis2_skel_EucalyptusCC.h"
 
@@ -2368,10 +2369,11 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	(*outStatus)[i] = 0;
       }
       
-      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
-      //      free(myInstance);
+      //      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
+      if (myInstance) free(myInstance);
     } else {
       // instance is not in cache, try all resources
+      /*
       myInstance = malloc(sizeof(ccInstance));
       if (!myInstance) {
 	logprintfl(EUCAFATAL, "TerminateInstances(): out of memory!\n");
@@ -2379,6 +2381,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
       }
       bzero(myInstance, sizeof(ccInstance));
       snprintf(myInstance->instanceId, 16, "%s", instId);
+      */
 
       start = 0;
       stop = 0;
@@ -2386,13 +2389,15 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     }
     
     // TODO: temporary until networkIdx reuse is resolved
+    /*
     snprintf(myInstance->ccState, 16, "ccTeardown");
     snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
     rc = refresh_instanceCache(myInstance->instanceId, myInstance);
     if (rc) {
       logprintfl(EUCAERROR, "TerminateInstances(): could not set instance ccState to ccTeardown.\n");
     }
-    if (myInstance) free(myInstance);
+    */
+    //    if (myInstance) free(myInstance);
     
     done=0;
     for (j=start; j<stop && !done; j++) {
@@ -3702,6 +3707,113 @@ int restoreNetworkState() {
 }
 
 int reconfigureNetworkFromCLC() {
+  char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH];
+  char *cloudIp=NULL, **users=NULL, **nets=NULL;
+  int fd=0, i=0, rc=0, ret=0, usernetlen=0;
+  FILE *FH=NULL;
+
+  // get the latest cloud controller IP address
+  if (vnetconfig->cloudIp) {
+    cloudIp = hex2dot(vnetconfig->cloudIp);
+  } else {
+    cloudIp = strdup("localhost");
+    if (!cloudIp) {
+      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      unlock_exit(1);
+    }
+  }
+
+
+  // create and populate network state files
+  snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+  snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
+  
+  fd = mkstemp(clcnetfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open clcnetfile '%s'\n", clcnetfile);
+    return(1);
+  }
+  chmod(clcnetfile, 0644);
+  close(fd);
+
+  fd = mkstemp(chainmapfile);
+  if (fd < 0) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    return(1);
+  }
+  chmod(chainmapfile, 0644);
+  close(fd);
+
+  // clcnet populate
+  snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
+  rc = http_get_timeout(url, clcnetfile, 0, 0);
+  if (cloudIp) free(cloudIp);
+  if (rc) {
+    logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    unlink(clcnetfile);
+    return(1);
+  }
+
+  // chainmap populate
+  FH = fopen(chainmapfile, "w");
+  if (!FH) {
+    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
+    unlink(clcnetfile);
+    unlink(chainmapfile);
+    return(1);
+  }
+
+  rc = vnetGetAllVlans(vnetconfig, &users, &nets, &usernetlen);
+  if (rc) {
+  } else {
+    for (i=0; i<usernetlen; i++) {
+      fprintf(FH, "%s %s\n", users[i], nets[i]);
+    }
+  }
+  fclose(FH);
+
+  /*
+  for (i=0; i<vnetconfig->max_vlan; i++) {
+    char userNetString[MAX_PATH];
+    char *net=NULL, *chain=NULL;
+    int slashnet=0;
+    //    logprintfl(EUCADEBUG, "MEH: %s/%s/%d\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, vnetconfig->networks[i].active);
+    snprintf(userNetString, MAX_PATH, "%s%s", vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+    rc = hash_b64enc_string(userNetString, &chain);
+    if (rc) {
+      logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+    } else {
+      net = hex2dot(vnetconfig->networks[i].nw);
+      slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+      if (net && slashnet >= 0 && slashnet <= 32 && vnetconfig->networks[i].active) {
+	fprintf(FH, "%s %s/%d\n", chain, net, slashnet);
+      }
+      if (net) free(net);
+    }
+  }
+  fclose(FH);
+  */
+
+
+  {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "cat %s 1>&2", chainmapfile);
+    system(cmd);
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
+    rc = system(cmd);
+    if (rc) {
+      logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
+      ret = 1;
+    }
+  }
+
+  unlink(clcnetfile);
+  unlink(chainmapfile);
+
+  return(ret);
+}
+
+int reconfigureNetworkFromCLC_byline() {
   FILE *FH;
   char buf[1024], *tok=NULL, *start=NULL, *save=NULL, *type=NULL, *dgroup=NULL, *linetok=NULL, *linesave=NULL, *dname=NULL, *duser=NULL, tmpfile[MAX_PATH], url[MAX_PATH];
   char **suser, **sgroup, **snet, *protocol=NULL, *cloudIp=NULL;
@@ -4142,7 +4254,14 @@ int privIpSet(ccInstance *inst, void *ip) {
     return(1);
   }
   
+  /*
   if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+    return(0);
+  }
+  */
+
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
     return(0);
   }
@@ -4157,7 +4276,14 @@ int pubIpSet(ccInstance *inst, void *ip) {
     return(1);
   }
 
+  /*
   if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+    return(0);
+  }
+  */
+
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
     return(0);
   }
