@@ -87,6 +87,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Join;
 
@@ -109,18 +110,24 @@ public class MembershipBootstrapper extends Bootstrapper {
         public void viewAccepted( View newView ) {
           if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
             LOG.info( "view: " + newView.printDetails( ) );
-            for ( Address addr : newView.getMembers( ) ) {
+            for ( final Address addr : newView.getMembers( ) ) {
               if ( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
-                try {
-                  LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
-                  MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
-                } catch ( ChannelNotConnectedException ex ) {
-                  LOG.error( ex, ex );
-                } catch ( ChannelClosedException ex ) {
-                  LOG.error( ex, ex );
-                } catch ( SocketException ex ) {
-                  LOG.error( ex, ex );
-                }
+                LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
+                Threads.lookup( Empyrean.class, MembershipBootstrapper.class ).submit( new Runnable( ) {
+                  
+                  @Override
+                  public void run( ) {
+                    try {
+                      MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
+                    } catch ( ChannelNotConnectedException ex ) {
+                      LOG.error( ex, ex );
+                    } catch ( ChannelClosedException ex ) {
+                      LOG.error( ex, ex );
+                    } catch ( SocketException ex ) {
+                      LOG.error( ex, ex );
+                    }
+                  }
+                } );
               }
             }
           } else {
