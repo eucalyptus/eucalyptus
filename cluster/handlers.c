@@ -2590,6 +2590,10 @@ int initialize(ncMetadata *ccMeta) {
     ret = 1;
   }
 
+  if (ccMeta != NULL) {
+    logprintfl(EUCADEBUG, "initialize(): ccMeta: userId=%s correlationId=%s\n", ccMeta->userId, ccMeta->correlationId);
+  }
+
   if (!ret) {
     // store information from CLC that needs to be kept up-to-date in the CC
     if (ccMeta != NULL) {
