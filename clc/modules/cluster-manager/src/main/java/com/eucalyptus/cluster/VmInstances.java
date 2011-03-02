@@ -71,7 +71,12 @@ import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.crypto.Digest;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.blockstorage.StorageUtil;
 import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -80,6 +85,8 @@ import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -97,6 +104,7 @@ import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
@@ -271,10 +279,17 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     }
   }
 
-  public static VmInstance restrictedLookup( FullName userId, boolean administrator, String instanceId ) throws EucalyptusCloudException {
+  public static VmInstance restrictedLookup( BaseMessage request, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    if ( !administrator && !vm.getOwner( ).equals( userId ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to lookup vm instance: " + instanceId );
+    Context ctx = Contexts.lookup( );
+    Account addrAccount = null;
+    try {
+      addrAccount = Accounts.lookupUserById( vm.getOwner( ).getUniqueId( ) ).getAccount( );
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId + " by " + ctx.getUser( ) );
     }
     return vm;
   }

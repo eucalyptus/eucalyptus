@@ -63,17 +63,21 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class VmAddressMessage extends EucalyptusMessage{}
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_ALLOCATEADDRESS )
 public class AllocateAddressType extends VmAddressMessage {} //** added 2008-02-01  **/
 public class AllocateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RELEASEADDRESS )
 public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
 
@@ -86,6 +90,7 @@ public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01
 public class ReleaseAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEADDRESSES )
 public class DescribeAddressesType extends VmAddressMessage { //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "PublicIp")
   ArrayList<String> publicIpsSet = new ArrayList<String>();
@@ -94,6 +99,7 @@ public class DescribeAddressesResponseType extends VmAddressMessage { //** added
   ArrayList<AddressInfoType> addressesSet = new ArrayList<AddressInfoType>();
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_ASSOCIATEADDRESS )
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
@@ -109,6 +115,7 @@ public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-
 public class AssociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DISASSOCIATEADDRESS )
 public class DisassociateAddressType extends VmAddressMessage {  //** added 2008-02-01  **/
   String publicIp;
 }

@@ -62,6 +62,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmKeyPairMessage extends EucalyptusMessage {
@@ -72,10 +74,12 @@ public class CreateKeyPairResponseType extends VmKeyPairMessage {
   String keyFingerprint;
   String keyMaterial;
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEKEYPAIR )
 public class CreateKeyPairType extends VmKeyPairMessage {
   String keyName;
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETEKEYPAIR )
 public class DeleteKeyPairResponseType extends VmKeyPairMessage {
 }
 public class DeleteKeyPairType extends VmKeyPairMessage {
@@ -85,6 +89,7 @@ public class DeleteKeyPairType extends VmKeyPairMessage {
 public class DescribeKeyPairsResponseType extends VmKeyPairMessage {
   ArrayList<DescribeKeyPairsResponseItemType> keySet = new ArrayList<DescribeKeyPairsResponseItemType>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEKEYPAIRS )
 public class DescribeKeyPairsType extends VmKeyPairMessage {
   @HttpParameterMapping (parameter = "KeyName")
   ArrayList<String> keySet = new ArrayList<String>();
@@ -108,6 +113,7 @@ public class ImportKeyPairResponseType extends VmKeyPairMessage {
   public ImportKeyPairResponseType() {
   }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_IMPORTKEYPAIR )
 public class ImportKeyPairType extends VmKeyPairMessage {
   String keyName;
   String publicKeyMaterial;

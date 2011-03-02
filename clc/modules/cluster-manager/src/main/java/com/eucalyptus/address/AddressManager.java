@@ -65,7 +65,13 @@
 package com.eucalyptus.address;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
@@ -94,10 +100,9 @@ public class AddressManager {
   
   public AllocateAddressResponseType allocate( AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
     Address address;
     try {
-      address = Addresses.allocate( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ) );
+      address = Addresses.allocate( request );
     } catch ( NotEnoughResourcesAvailable e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
@@ -110,8 +115,7 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Context ctx = Contexts.lookup( );
-    Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
+    Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -122,8 +126,16 @@ public class AddressManager {
     Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
     boolean isAdmin = ctx.hasAdministrativePrivileges( );
+    User requestUser = ctx.getUser( );
+    String action = PolicySpec.requestToAction( request );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
-      if ( isAdmin || address.getOwner( ).equals( ctx.getUserFullName( ) ) ) {
+      Account addrAccount = null;
+      try {
+        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException( e );
+      }
+      if ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) {
         reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
       }
     }
@@ -140,9 +152,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Context ctx = Contexts.lookup( );
-    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getInstanceId( ) );
+    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );//TODO: test should throw error.
+    final VmInstance vm = VmInstances.restrictedLookup( request, request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
@@ -207,7 +218,7 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
-    final Address address = Addresses.restrictedLookup( ctx.getUserFullName( ), ctx.hasAdministrativePrivileges( ), request.getPublicIp( ) );
+    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {
