@@ -137,38 +137,38 @@ public class MembershipBootstrapper extends Bootstrapper {
         
         public void receive( Message msg ) {
           LOG.info( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-          if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
-            String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
-            for ( String maybeDbAddr : dbAddrs ) {
-              try {
-                if ( NetworkUtil.testReachability( maybeDbAddr ) ) {
-                  String host = maybeDbAddr;
-                  for ( Component c : Components.list( ) ) {
-                    if ( c.getComponentId( ).isCloudLocal( ) ) {
-                      URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
-                      ServiceBuilder builder = c.getBuilder( );
-                      ServiceConfiguration config = builder.toConfiguration( uri );
-                      c.loadService( config );
+          lock.lock( );
+          try {
+            if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+              String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
+              for ( String maybeDbAddr : dbAddrs ) {
+                try {
+                  if ( NetworkUtil.testReachability( maybeDbAddr ) ) {
+                    String host = maybeDbAddr;
+                    for ( Component c : Components.list( ) ) {
+                      if ( c.getComponentId( ).isCloudLocal( ) ) {
+                        URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
+                        ServiceBuilder builder = c.getBuilder( );
+                        ServiceConfiguration config = builder.toConfiguration( uri );
+                        c.loadService( config );
+                      }
                     }
+                    for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+                      stage.updateBootstrapDependencies( );
+                    }
+                    break;
                   }
-                  for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-                    stage.updateBootstrapDependencies( );
-                  }
-                  break;
+                } catch ( ServiceRegistrationException ex ) {
+                  LOG.error( ex, ex );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
                 }
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex, ex );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
               }
             }
-            lock.lock( );
-            try {
-              done[0] = true;
-              isReady.signalAll( );
-            } finally {
-              lock.unlock( );
-            }
+            done[0] = true;
+            isReady.signalAll( );
+          } finally {
+            lock.unlock( );
           }
         }
       } );
