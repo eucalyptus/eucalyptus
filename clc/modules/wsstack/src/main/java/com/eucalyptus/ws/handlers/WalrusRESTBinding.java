@@ -639,24 +639,36 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				}
 			}
 			if(!dontIncludeParam) {
+				String value = params.get(key);
+				if(value != null) {
+					String[] keyStringParts = keyString.split("-");
+					if(keyStringParts.length > 1) {
+						keyString = "";
+						for(int i=0; i < keyStringParts.length; ++i) {
+							keyString += toUpperFirst(keyStringParts[i]);
+						}
+					} else {
+						keyString = toUpperFirst(keyString);
+					}
+				}
 				dontIncludeParam = true;
 				if(operationKey.startsWith(SERVICE)) {
 					for(WalrusProperties.ServiceParameter param : WalrusProperties.ServiceParameter.values()) {
-						if(keyString.equals(param.toString())) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
 							dontIncludeParam = false;							
 							break;
 						}
 					}
 				} else if(operationKey.startsWith(BUCKET)) {
 					for(WalrusProperties.BucketParameter param : WalrusProperties.BucketParameter.values()) {
-						if(keyString.equals(param.toString())) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
 							dontIncludeParam = false;							
 							break;
 						}
 					}
 				} else if(operationKey.startsWith(OBJECT)) {
 					for(WalrusProperties.ObjectParameter param : WalrusProperties.ObjectParameter.values()) {
-						if(keyString.equals(param.toString())) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
 							dontIncludeParam = false;
 							break;
 						}
@@ -670,15 +682,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				continue;
 			String value = params.get(key);
 			if(value != null) {
-				String[] keyStringParts = keyString.split("-");
-				if(keyStringParts.length > 1) {
-					keyString = "";
-					for(int i=0; i < keyStringParts.length; ++i) {
-						keyString += toUpperFirst(keyStringParts[i]);
-					}
-				} else {
-					keyString = toUpperFirst(keyString);
-				}
 				operationParams.put(keyString, value);
 			}
 			if(addMore) {
