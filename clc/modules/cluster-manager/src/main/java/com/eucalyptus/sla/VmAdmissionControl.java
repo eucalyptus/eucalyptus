@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.Counters;
@@ -89,6 +90,7 @@ public class VmAdmissionControl {
     if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
       vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
     }
+    vmAllocInfo.setOwnerId( Contexts.lookup( ).getUserFullName( ).getAccountId( ) );
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
     
     byte[] userData = new byte[0];

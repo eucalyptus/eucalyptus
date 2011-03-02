@@ -1030,6 +1030,55 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   return(-1);
 }
 
+int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, int *len) {
+  int i, rc;
+
+  if (!vnetconfig || !outusers || !outnets || !len) {
+    logprintfl(EUCAERROR, "vnetGetAllVlans(): bad input parameters\n");
+  }
+  
+  *outusers = malloc(sizeof (char *) * vnetconfig->max_vlan);
+  if (!*outusers) {
+    logprintfl(EUCAFATAL, "vnetGetAllVlans(): out of memory!\n");
+    return(1);
+  }
+
+  *outnets = malloc(sizeof (char *) * vnetconfig->max_vlan);
+  if (!*outnets) {
+    logprintfl(EUCAFATAL, "vnetGetAllVlans(): out of memory!\n");
+    if (*outusers) free(*outusers);
+    return(1);
+  }
+
+  *len = 0;
+  for (i=0; i<vnetconfig->max_vlan; i++) {
+    char userNetString[MAX_PATH], netslash[24];
+    char *net=NULL, *chain=NULL;
+    int slashnet=0;
+    if (vnetconfig->networks[i].active) {
+      snprintf(userNetString, MAX_PATH, "%s%s", vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+      rc = hash_b64enc_string(userNetString, &chain);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGetAllVlans(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+      } else {
+	net = hex2dot(vnetconfig->networks[i].nw);
+	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+	if (net && slashnet >= 0 && slashnet <= 32) {
+	  //	  fprintf(FH, "%s %s/%d\n", chain, net, slashnet);
+	  netslash[0] = '\0';
+	  snprintf(netslash, 24, "%s/%d", net, slashnet);
+	  (*outusers)[(*len)] = strdup(chain);
+	  (*outnets)[(*len)] = strdup(netslash);
+	  (*len)++;
+	}
+	if (net) free(net);
+      }
+    }
+  }
+
+  return(0);
+}
+
 int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip) {
   int rc, ret=0, networkIdx;
   
