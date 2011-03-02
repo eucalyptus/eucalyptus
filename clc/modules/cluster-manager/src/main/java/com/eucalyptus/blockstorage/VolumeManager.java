@@ -71,7 +71,9 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.crypto.Crypto;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
@@ -91,6 +93,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -118,6 +121,15 @@ public class VolumeManager {
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), 1 ) ) {
+        throw new EucalyptusCloudException( "Exceeded quota of volume creation by " + ctx.getUser( ).getName( ) );
+      }
+    }
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
@@ -191,6 +203,9 @@ public class VolumeManager {
     boolean reallyFailed = false;
     try {
       Volume vol = db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_VOLUME, request.getVolumeId( ), vol.getOwner( ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
+      }
       for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
         try {
           vm.lookupVolumeAttachment( request.getVolumeId( ) );
@@ -246,6 +261,9 @@ public class VolumeManager {
       List<Volume> volumes = db.query( Volume.ownedBy( ctx.getUserFullName( ) ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : volumes ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_VOLUME, v.getDisplayName( ), v.getOwner( ) ) ) {
+          continue;
+        }
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
@@ -282,6 +300,9 @@ public class VolumeManager {
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
+    }
+    if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to attach volume to instance " + request.getInstanceId( ) + " by " + ctx.getUser( ).getName( ) );
     }
     Cluster cluster = null;
     try {
@@ -324,8 +345,8 @@ public class VolumeManager {
       db.rollback( );
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
     }
-    if ( !ctx.getUserFullName( ).equals( vm.getOwner( ) ) ) {
-      throw new EucalyptusCloudException( "Can only attach volume " + request.getVolumeId() + " to your own instance" );
+    if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_VOLUME, request.getVolumeId( ), volume.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
     ServiceConfiguration sc;
     try {
@@ -372,15 +393,19 @@ public class VolumeManager {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
 
+    Volume vol = null;
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
-      db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      vol = db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );
       throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
     }
     db.commit( );
+    if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_VOLUME, request.getVolumeId( ), vol.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to detach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
+    }
     
     VmInstance vm = null;
     AttachedVolume volume = null;
@@ -394,6 +419,9 @@ public class VolumeManager {
     }
     if ( volume == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId( ) );
+    }
+    if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to detach volume from instance " + request.getInstanceId( ) + " by " + ctx.getUser( ).getName( ) );
     }
     if ( !vm.getInstanceId( ).equals( request.getInstanceId( ) ) && request.getInstanceId( ) != null && !request.getInstanceId( ).equals( "" ) ) {
       throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId( ) );

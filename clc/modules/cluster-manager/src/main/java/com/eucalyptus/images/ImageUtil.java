@@ -82,6 +82,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
@@ -97,6 +98,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Lookups;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -106,6 +108,7 @@ import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
+import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 
 public class ImageUtil {
@@ -368,7 +371,10 @@ public class ImageUtil {
     }
   }
   
-  public static boolean modifyImageInfo( final User requestUser, final String imageId, final List<LaunchPermissionItemType> addList, final List<LaunchPermissionItemType> remList ) {
+  public static boolean modifyImageInfo( ModifyImageAttributeType request ) {
+    final String imageId = request.getImageId( );
+    final List<LaunchPermissionItemType> addList = request.getAdd( );
+    final List<LaunchPermissionItemType> remList = request.getRemove( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
@@ -377,9 +383,9 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    Account account = Accounts.lookupAccount( requestUser );
-    String accountId = account.getId( );
-    if ( !accountId.equals( imgInfo.getOwnerAccountId( ) ) && !requestUser.isSystemAdmin( ) ) return false;
+    if ( Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
+      return false;
+    }
     try {
       applyImageAttributes( db, imgInfo, addList, true );
       applyImageAttributes( db, imgInfo, remList, false );

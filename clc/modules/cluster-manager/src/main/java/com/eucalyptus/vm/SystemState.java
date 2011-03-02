@@ -84,6 +84,11 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.Image;
@@ -96,6 +101,8 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
@@ -118,6 +125,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
@@ -352,13 +360,26 @@ public class SystemState {
       LOG.error( t, t );
     }
   }
-  
-  private static String ALT_PREFIX      = "i-";
-  
-  public static ArrayList<ReservationInfoType> handle( FullName userId, List<String> instancesSet, boolean isAdmin ) throws Exception {
+    
+  public static ArrayList<ReservationInfoType> handle( DescribeInstancesType request ) throws Exception {
+    Context ctx = Contexts.lookup();
+    boolean isAdmin = ctx.hasAdministrativePrivileges( );
+    ArrayList<String> instancesSet = request.getInstancesSet( );
+    String action = PolicySpec.requestToAction( request );
+    User requestUser = ctx.getUser( );
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( ( !isAdmin && !userId.equals( v.getOwner( ) ) || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) ) continue;
+      Account instanceAccount = null;
+      try {
+        instanceAccount = Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( );
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException( e );
+      }
+      if ( ( !isAdmin && 
+             !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
+          || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
+        continue;
+      }
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
         ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );

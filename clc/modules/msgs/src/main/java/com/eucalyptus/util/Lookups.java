@@ -125,4 +125,20 @@ public class Lookups {
       }
     }
   }
+  
+  public static boolean checkPrivilege( BaseMessage request, String resourceType, String resourceId, FullName resourceOwner ) {
+    Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    User requestUser = ctx.getUser( );
+    Account account = null;
+    try {
+      account = Accounts.lookupUserById( resourceOwner.getUniqueId( ) ).getAccount( );
+    } catch ( AuthException e ) {
+      return false;
+    }
+    return ( ctx.hasAdministrativePrivileges( ) ||
+             Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser ));
+  }
+  
+  
 }
