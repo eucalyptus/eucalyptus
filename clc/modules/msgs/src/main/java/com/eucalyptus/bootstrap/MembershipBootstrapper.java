@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 
 import java.net.SocketException;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -177,9 +178,9 @@ public class MembershipBootstrapper extends Bootstrapper {
         this.membershipChannel.connect( this.membershipGroupName );
         LOG.info( "Started membership channel " + this.membershipGroupName );
         if ( !Components.lookup( Eucalyptus.class ).isLocal( ) ) {
-          LOG.warn( "Blocking the bootstrap thread for testing." );
-          if ( !done[0] ) {
-            isReady.await( );
+          while ( !done[0] ) {
+            LOG.warn( "Blocking the bootstrap thread for testing." );
+            isReady.await( 100, TimeUnit.MILLISECONDS );
           }
         }
       } finally {
