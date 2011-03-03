@@ -331,6 +331,7 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -374,6 +375,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -395,6 +397,7 @@
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -520,6 +523,7 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="rules" type="tns:networkRule"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -574,6 +578,7 @@
 	      <xs:element name="launchIndex" type="xs:string"/>
 	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

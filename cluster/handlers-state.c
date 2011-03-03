@@ -347,7 +347,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 	ret = 1;
       } else {
 	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
-	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 32, "%s", inst->ownerId);
+	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 48, "%s", inst->ownerId);
       }
     }
   }
