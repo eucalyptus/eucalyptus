@@ -266,6 +266,16 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" />
   </mapping>
+  <mapping name="GetPasswordDataResponse" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="timestamp" field="timestamp" usage="optional" />
+    <value name="passwordData" field="output" usage="optional" />
+  </mapping>
+  <mapping name="GetPasswordData" class="edu.ucsb.eucalyptus.msgs.GetPasswordDataType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
   <!--2009-04-04 -->
   <mapping name="MonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
