@@ -95,7 +95,7 @@ typedef struct instance_t {
   char ccState[16];
   time_t ts;
   
-  char ownerId[48];
+  char accountId[48];
   char keyName[1024];
   
   netConfig ccnet, ncnet;
@@ -122,7 +122,7 @@ typedef struct instance_t {
   long long blkbytes, netbytes;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
@@ -185,9 +185,9 @@ typedef struct ccConfig_t {
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
 static char *SCHEDPOLICIES[SCHEDLAST] = {"GREEDY", "ROUNDROBIN", "POWERSAVE"};
 
-int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
-int doConfigureNetwork(ncMetadata *meta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
-int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan);
+int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen);
+int doConfigureNetwork(ncMetadata *meta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
+int doStopNetwork(ncMetadata *ccMeta, char *accountId, char *netName, int vlan);
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
@@ -202,14 +202,14 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig *outvnetConfig);
 
 int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInstance **outInsts, int *outInstsLen);
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen);
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
 
 int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource **outNodes, int *outNodesLen);
-int doFlushNetwork(ncMetadata *ccMeta, char *destName);
+int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName);
 
 int doCreateImage(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 

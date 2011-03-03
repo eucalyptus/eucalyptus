@@ -331,7 +331,6 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
-	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

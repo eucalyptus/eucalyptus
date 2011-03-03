@@ -787,7 +787,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   return(ret);
 }
 
-int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort) {
+int doConfigureNetwork(ncMetadata *ccMeta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen, char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort) {
   int rc, i, fail;
 
   rc = initialize(ccMeta);
@@ -796,15 +796,15 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
   }
   
   logprintfl(EUCAINFO, "ConfigureNetwork(): called \n");
-  logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
+  logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
   
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
     fail = 0;
   } else {
     
     if ( destUserName == NULL ) {
-      if ( (ccMeta && ccMeta->userId) ) {
-	destUserName = ccMeta->userId;
+      if ( accountId ) {
+	destUserName = accountId;
       } else {
 	// destUserName is not set, return fail
 	logprintfl(EUCAERROR, "ConfigureNetwork(): cannot set destUserName from ccMeta or input\n");
@@ -846,7 +846,7 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *type, int namedLen, char **sour
   return(0);
 }
 
-int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
+int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName) {
   int rc;
 
   rc = initialize(ccMeta);
@@ -859,7 +859,7 @@ int doFlushNetwork(ncMetadata *ccMeta, char *destName) {
   }
 
   sem_mywait(VNET);
-  rc = vnetFlushTable(vnetconfig, ccMeta->userId, destName);
+  rc = vnetFlushTable(vnetconfig, accountId, destName);
   sem_mypost(VNET);
   return(rc);
 }
@@ -990,7 +990,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   return(ret);
 }
 
-int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
+int doStopNetwork(ncMetadata *ccMeta, char *accountId, char *netName, int vlan) {
   int rc, ret;
   
   rc = initialize(ccMeta);
@@ -999,7 +999,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
   }
   
   logprintfl(EUCAINFO, "StopNetwork(): called \n");
-  logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan);
+  logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan);
   if (!ccMeta || !netName || vlan < 0) {
     logprintfl(EUCAERROR, "StopNetwork(): bad input params\n");
   }
@@ -1010,7 +1010,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *netName, int vlan) {
     
     sem_mywait(VNET);
     if(ccMeta != NULL) {
-      rc = vnetStopNetwork(vnetconfig, vlan, ccMeta->userId, netName);
+      rc = vnetStopNetwork(vnetconfig, vlan, accountId, netName);
     }
     ret = rc;
     sem_mypost(VNET);
@@ -1052,7 +1052,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   return(0);
 }
 
-int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
+int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
   time_t op_start;
   char *brname;
@@ -1065,7 +1065,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char
   }
   
   logprintfl(EUCAINFO, "StartNetwork(): called \n");
-  logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(netName), vlan, SP(nameserver), ccsLen);
+  logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, accountId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan, SP(nameserver), ccsLen);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     ret = 0;
@@ -1079,7 +1079,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *uuid, char *netName, int vlan, char
     rc = vnetSetupTunnels(vnetconfig);
 
     brname = NULL;
-    rc = vnetStartNetwork(vnetconfig, vlan, uuid, ccMeta->userId, netName, &brname);
+    rc = vnetStartNetwork(vnetconfig, vlan, uuid, accountId, netName, &brname);
     if (brname) free(brname);
 
     sem_mypost(VNET);
@@ -1684,7 +1684,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   strncpy(dst->uuid, src->uuid, 48);
   strncpy(dst->instanceId, src->instanceId, 16);
   strncpy(dst->reservationId, src->reservationId, 16);
-  strncpy(dst->ownerId, src->userId, 48);
+  strncpy(dst->accountId, src->userId, 48);
   strncpy(dst->amiId, src->imageId, 16);
   strncpy(dst->kernelId, src->kernelId, 16);
   strncpy(dst->ramdiskId, src->ramdiskId, 16);
@@ -1898,7 +1898,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
 }
 
 
-int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *ownerId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
+int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen) {
   int rc=0, i=0, done=0, runCount=0, resid=0, foundnet=0, error=0, networkIdx=0, nidx=0, thenidx=0;
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
@@ -1921,7 +1921,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     return(1);
   }
   logprintfl(EUCAINFO,"RunInstances(): called \n");
-  logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
+  logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
   
   if (config->use_proxy) {
     char walrusURL[MAX_PATH], *strptr=NULL, newURL[MAX_PATH];
@@ -2159,7 +2159,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  myInstance = &(retInsts[runCount]);
 	  bzero(myInstance, sizeof(ccInstance));
 	  
-	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, "Pending", "", time(NULL), reservationId, &ncnet, &ncnet, ccvm, resid, keyName, resourceCache->resources[resid].ncURL, userData, launchIndex, platform, myInstance->bundleTaskStateName, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
+	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, accountId, "Pending", "", time(NULL), reservationId, &ncnet, &ncnet, ccvm, resid, keyName, resourceCache->resources[resid].ncURL, userData, launchIndex, platform, myInstance->bundleTaskStateName, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
 
 	  // start up DHCP
 	  sem_mywait(CONFIG);
@@ -3956,7 +3956,7 @@ int reconfigureNetworkFromCLC_byline() {
 	duser = strchr(dgroup, '-');
 	*duser = '\0';
 	duser++;
-	rc = doConfigureNetwork(NULL, "firewall-open", susergroupLen, sgroup, suser, snetLen, snet, duser, dname, protocol, minport, maxport);
+	rc = doConfigureNetwork(NULL, NULL, "firewall-open", susergroupLen, sgroup, suser, snetLen, snet, duser, dname, protocol, minport, maxport);
 	
 	if (protocol) free(protocol);
 	if (suser) {
@@ -4170,7 +4170,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock) {
   return(0);
 }
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize) {
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
     if (id) strncpy(out->instanceId, id, 16);
@@ -4184,7 +4184,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     
     if (state) strncpy(out->state, state, 16);
     if (state) strncpy(out->ccState, ccState, 16);
-    if (ownerId) strncpy(out->ownerId, ownerId, 48);
+    if (accountId) strncpy(out->accountId, accountId, 48);
     if (reservationId) strncpy(out->reservationId, reservationId, 16);
     if (keyName) strncpy(out->keyName, keyName, 1024);
     out->ts = ts;
@@ -4349,7 +4349,7 @@ void print_ccInstance(char *tag, ccInstance *in) {
     }
   }
   
-  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s emiId=%s kernelId=%s ramdiskId=%s emiURL=%s kernelURL=%s ramdiskURL=%s state=%s ts=%d ownerId=%s keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->state, in->ts, in->ownerId, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s emiId=%s kernelId=%s ramdiskId=%s emiURL=%s kernelURL=%s ramdiskURL=%s state=%s ts=%d accountId=%s keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->state, in->ts, in->accountId, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
 
   free(volbuf);
   free(groupbuf);
@@ -4422,7 +4422,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
     }
   }
   logprintfl(EUCADEBUG, "add_instanceCache(): adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
-  allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->ownerId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->groupNames, in->volumes, in->volumesSize);
+  allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->groupNames, in->volumes, in->volumesSize);
   instanceCache->numInsts++;
   instanceCache->lastseen[firstNull] = time(NULL);
   instanceCache->cacheState[firstNull] = INSTVALID;
@@ -4469,7 +4469,7 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
 	unlock_exit(1);
       }
 
-      allocate_ccInstance(*out, instanceCache->instances[i].instanceId,instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].ownerId, instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName, instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
+      allocate_ccInstance(*out, instanceCache->instances[i].instanceId,instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].accountId, instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName, instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
       logprintfl(EUCADEBUG, "find_instanceCache(): found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
       done++;
     }
@@ -4501,7 +4501,7 @@ int find_instanceCacheIP(char *ip, ccInstance **out) {
 	  unlock_exit(1);
 	}
 	
-	allocate_ccInstance(*out, instanceCache->instances[i].instanceId,instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].ownerId, instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName, instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
+	allocate_ccInstance(*out, instanceCache->instances[i].instanceId,instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].accountId, instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName, instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
 	done++;
       }
     }

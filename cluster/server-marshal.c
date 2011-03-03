@@ -80,15 +80,12 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *volumeId, *instanceId, *remoteDev, *localDev, *cid;
+  char *volumeId=NULL, *instanceId=NULL, *remoteDev=NULL, *localDev=NULL;
   ncMetadata ccMeta;
   
   avt = adb_AttachVolume_get_AttachVolume(attachVolume, env);
   
-  //  ccMeta.correlationId = adb_attachVolumeType_get_correlationId(avt, env);
-  //  ccMeta.userId = adb_attachVolumeType_get_userId(avt, env);
   EUCA_MESSAGE_UNMARSHAL(attachVolumeType, avt, (&ccMeta));
-  //cid = adb_attachVolumeType_get_correlationId(avt, env);
   
   volumeId = adb_attachVolumeType_get_volumeId(avt, env);
   instanceId = adb_attachVolumeType_get_instanceId(avt, env);
@@ -129,16 +126,13 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *volumeId, *instanceId, *remoteDev, *localDev, *cid;
+  char *volumeId=NULL, *instanceId=NULL, *remoteDev=NULL, *localDev=NULL;
   int force;
   ncMetadata ccMeta;
   
   dvt = adb_DetachVolume_get_DetachVolume(detachVolume, env);
   
-  //  ccMeta.correlationId = adb_detachVolumeType_get_correlationId(dvt, env);
-  //  ccMeta.userId = adb_detachVolumeType_get_userId(dvt, env);
   EUCA_MESSAGE_UNMARSHAL(detachVolumeType, dvt, (&ccMeta));
-  //cid = adb_detachVolumeType_get_correlationId(dvt, env);
   
   volumeId = adb_detachVolumeType_get_volumeId(dvt, env);
   instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
@@ -180,7 +174,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid, *S3Policy, *S3PolicySig;
+  char *instanceId=NULL, *bucketName=NULL, *filePrefix=NULL, *walrusURL=NULL, *userPublicKey=NULL, *S3Policy=NULL, *S3PolicySig=NULL;
   ncMetadata ccMeta;
   
   bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
@@ -230,7 +224,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *instanceId, *bucketName, *filePrefix, *walrusURL, *userPublicKey, *cid;
+  char *instanceId=NULL, *bucketName=NULL, *filePrefix=NULL, *walrusURL=NULL, *userPublicKey=NULL;
   ncMetadata ccMeta;
   
   bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
@@ -265,71 +259,6 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   return(ret);
 }
 
-/*
-adb_DescribeBundleTasksResponse_t *DescribeBundleTasksMarshal(adb_DescribeBundleTasks_t *describeBundleTasks, const axutil_env_t *env) {
-  adb_DescribeBundleTasksResponse_t *ret=NULL;
-  adb_describeBundleTasksResponseType_t *birt=NULL;
-  
-  adb_describeBundleTasksType_t *bit=NULL;
-  
-  int rc, instIdsLen, i;
-  axis2_bool_t status=AXIS2_TRUE;
-  char statusMessage[256];
-  char **instIds=NULL, *cid;
-  ncMetadata ccMeta;
-  bundleTask *outBundleTasks=NULL;
-  int outBundleTasksLen=0;
-
-  bit = adb_DescribeBundleTasks_get_DescribeBundleTasks(describeBundleTasks, env);
-  
-  ccMeta.correlationId = adb_describeBundleTasksType_get_correlationId(bit, env);
-  ccMeta.userId = adb_describeBundleTasksType_get_userId(bit, env);
-  
-  instIdsLen = adb_describeBundleTasksType_sizeof_instanceIds(bit, env);
-  instIds = malloc(sizeof(char *) * instIdsLen);
-  
-  for (i=0; i<instIdsLen; i++) {
-    instIds[i] = adb_describeBundleTasksType_get_instanceIds_at(bit, env, i);
-  }
-
-  birt = adb_describeBundleTasksResponseType_create(env);
-  
-  status = AXIS2_TRUE;
-  if (!DONOTHING) {
-    rc = doDescribeBundleTasks(&ccMeta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
-    if (instIds) free(instIds);
-    if (rc) {
-      logprintf("ERROR: doDescribeBundleTasks() returned FAIL\n");
-      status = AXIS2_FALSE;
-      snprintf(statusMessage, 255, "ERROR");
-    } else {
-      for (i=0; i<outBundleTasksLen; i++) {
-	adb_bundleTaskType_t *bundle;
-	bundle = adb_bundleTaskType_create(env);
-	adb_bundleTaskType_set_instanceId(bundle, env, outBundleTasks[i].instanceId);
-	adb_bundleTaskType_set_state(bundle, env, outBundleTasks[i].state);
-	
-	adb_describeBundleTasksResponseType_add_bundleTasks(birt, env, bundle);
-      }
-      if (outBundleTasks) free(outBundleTasks);
-    }
-  }
-  
-  adb_describeBundleTasksResponseType_set_return(birt, env, status);
-  if (status == AXIS2_FALSE) {
-    adb_describeBundleTasksResponseType_set_statusMessage(birt, env, statusMessage);
-  }
-
-  adb_describeBundleTasksResponseType_set_correlationId(birt, env, ccMeta.correlationId);
-  adb_describeBundleTasksResponseType_set_userId(birt, env, ccMeta.userId);
-  
-  ret = adb_DescribeBundleTasksResponse_create(env);
-  adb_DescribeBundleTasksResponse_set_DescribeBundleTasksResponse(ret, env, birt);
-
-  return(ret);
-}
-*/
-
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
   adb_stopNetworkResponseType_t *snrt=NULL;
@@ -339,23 +268,23 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, co
   int rc, vlan;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *userName, *netName, *cid;
+  char *userName=NULL, *netName=NULL, *accountId=NULL;
   ncMetadata ccMeta;
   
   snt = adb_StopNetwork_get_StopNetwork(stopNetwork, env);
   
-  //  ccMeta.correlationId = adb_stopNetworkType_get_correlationId(snt, env);
-  //  ccMeta.userId = adb_stopNetworkType_get_userId(snt, env);
   EUCA_MESSAGE_UNMARSHAL(stopNetworkType, snt, (&ccMeta));
-  //userName = adb_stopNetworkType_get_userId(snt, env);
-  //cid = adb_stopNetworkType_get_correlationId(snt, env);
   
   vlan = adb_stopNetworkType_get_vlan(snt, env);
   netName = adb_stopNetworkType_get_netName(snt, env);
+  accountId = adb_stopNetworkType_get_accountId(snt, env);
+  if (!accountId) {
+    accountId = ccMeta.userId;
+  }
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStopNetwork(&ccMeta, netName, vlan);
+    rc = doStopNetwork(&ccMeta, accountId, netName, vlan);
     if (rc) {
       logprintf("ERROR: doStopNetwork() returned FAIL\n");
       status = AXIS2_FALSE;
@@ -565,16 +494,12 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t *assignAdd
   int rc;
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
-  char *src, *dst, *cid, *uuid=NULL;
+  char *src=NULL, *dst=NULL, *uuid=NULL;
   ncMetadata ccMeta;
   
   aat = adb_AssignAddress_get_AssignAddress(assignAddress, env);
   
-  //  ccMeta.correlationId = adb_assignAddressType_get_correlationId(aat, env);
-  //  ccMeta.userId = adb_assignAddressType_get_userId(aat, env);
   EUCA_MESSAGE_UNMARSHAL(assignAddressType, aat, (&ccMeta));
-  
-  //cid = adb_assignAddressType_get_correlationId(aat, env);
   
   src = adb_assignAddressType_get_source(aat, env);
   dst = adb_assignAddressType_get_dest(aat, env);
@@ -663,17 +588,18 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char **sourceNets, **userNames, **sourceNames, *protocol,  *destName, *type, *destNameLast, *destUserName;
+  char **sourceNets=NULL, **userNames=NULL, **sourceNames=NULL, *protocol=NULL,  *destName=NULL, *type=NULL, *destNameLast=NULL, *destUserName=NULL, *accountId=NULL;
   int minPort, maxPort, namedLen, netLen;
   ncMetadata ccMeta;
   
   cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
-  //  ccMeta.correlationId = adb_configureNetworkType_get_correlationId(cnt, env);
-  //  ccMeta.userId = adb_configureNetworkType_get_userId(cnt, env);
   EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
 
-  //  user = adb_configureNetworkType_get_userId(cnt, env);
-  //  cid = adb_configureNetworkType_get_correlationId(cnt, env);
+  accountId = adb_configureNetworkType_get_accountId(cnt, env);
+  if (!accountId) {
+    accountId = ccMeta.userId;
+  }
+
   ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
   done=0;
   destNameLast = strdup("EUCAFIRST");
@@ -694,7 +620,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     maxPort = adb_networkRule_get_portRangeMax(nr, env);
   
     if (strcmp(destName, destNameLast)) {
-      doFlushNetwork(&ccMeta, destName);
+      doFlushNetwork(&ccMeta, accountId, destName);
     }
     if (destNameLast) free(destNameLast);
     destNameLast = strdup(destName);
@@ -742,7 +668,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     
     rc=1;
     if (!DONOTHING) {
-      rc = doConfigureNetwork(&ccMeta, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
+      rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
     }
     
     if (userNames) free(userNames);
@@ -842,7 +768,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL, *uuid=NULL;
+  char *netName=NULL, **clusterControllers=NULL, *nameserver=NULL, *uuid=NULL, *accountId=NULL;
   
   int vlan, clusterControllersLen=0;
   ncMetadata ccMeta;
@@ -856,6 +782,10 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   netName = adb_startNetworkType_get_netName(snt, env);
   nameserver = adb_startNetworkType_get_nameserver(snt, env);
   uuid = adb_startNetworkType_get_uuid(snt, env);
+  accountId = adb_startNetworkType_get_accountId(snt, env);
+  if (!accountId) {
+    accountId = ccMeta.userId;
+  }
 
   clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
   clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
@@ -866,7 +796,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   snrt = adb_startNetworkResponseType_create(env);
   status = AXIS2_TRUE;
   if (!DONOTHING) {
-    rc = doStartNetwork(&ccMeta, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
+    rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
     if (rc) {
       logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
       status = AXIS2_FALSE;
@@ -1063,7 +993,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t *dst, ccInstance *src, const axutil
   adb_ccInstanceType_set_instanceId(dst, env, src->instanceId);
   adb_ccInstanceType_set_uuid(dst, env, src->uuid);
   adb_ccInstanceType_set_reservationId(dst, env, src->reservationId);
-  adb_ccInstanceType_set_ownerId(dst, env, src->ownerId);
+  adb_ccInstanceType_set_ownerId(dst, env, src->accountId);
   adb_ccInstanceType_set_imageId(dst, env, src->amiId);
   adb_ccInstanceType_set_kernelId(dst, env, src->kernelId);
   adb_ccInstanceType_set_ramdiskId(dst, env, src->ramdiskId);
@@ -1134,7 +1064,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axis2_bool_t status=AXIS2_TRUE;
   char statusMessage[256];
 
-  char *emiId, *keyName, **instIds=NULL, *reservationId, **netNames=NULL, **macAddrs=NULL, *kernelId, *ramdiskId, *emiURL, *kernelURL, *ramdiskURL, *vmName, *userData, *launchIndex, *platform, *tmp, **uuids=NULL;
+  char *emiId=NULL, *keyName=NULL, **instIds=NULL, *reservationId=NULL, **netNames=NULL, **macAddrs=NULL, *kernelId=NULL, *ramdiskId=NULL, *emiURL=NULL, *kernelURL=NULL, *ramdiskURL=NULL, *vmName=NULL, *userData=NULL, *launchIndex=NULL, *platform=NULL, *tmp=NULL, **uuids=NULL, *accountId=NULL;
   ncMetadata ccMeta;
   
   virtualMachine ccvm;
@@ -1215,11 +1145,16 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
       networkIndexList[i] = adb_runInstancesType_get_networkIndexList_at(rit, env, i);
     }
   }
+
+  accountId = adb_runInstancesType_get_accountId(rit, env);
+  if (!accountId) {
+    accountId = ccMeta.userId;
+  }
   
   rirt = adb_runInstancesResponseType_create(env);
   rc=1;
   if (!DONOTHING) {
-    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, ccMeta.userId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
+    rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL,ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs, macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, accountId, reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
   }
   
   if (rc) {
