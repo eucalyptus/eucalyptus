@@ -2368,36 +2368,14 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	stop = 0;
 	(*outStatus)[i] = 0;
       }
-      
-      //      rc = free_instanceNetwork(myInstance->ccnet.privateMac, myInstance->ccnet.vlan, 1, 1);
       if (myInstance) free(myInstance);
     } else {
       // instance is not in cache, try all resources
-      /*
-      myInstance = malloc(sizeof(ccInstance));
-      if (!myInstance) {
-	logprintfl(EUCAFATAL, "TerminateInstances(): out of memory!\n");
-	unlock_exit(1);
-      }
-      bzero(myInstance, sizeof(ccInstance));
-      snprintf(myInstance->instanceId, 16, "%s", instId);
-      */
 
       start = 0;
       stop = 0;
       (*outStatus)[i] = 0;      
     }
-    
-    // TODO: temporary until networkIdx reuse is resolved
-    /*
-    snprintf(myInstance->ccState, 16, "ccTeardown");
-    snprintf(myInstance->ccnet.publicIp, 24, "0.0.0.0");
-    rc = refresh_instanceCache(myInstance->instanceId, myInstance);
-    if (rc) {
-      logprintfl(EUCAERROR, "TerminateInstances(): could not set instance ccState to ccTeardown.\n");
-    }
-    */
-    //    if (myInstance) free(myInstance);
     
     done=0;
     for (j=start; j<stop && !done; j++) {
@@ -2599,14 +2577,10 @@ int initialize(ncMetadata *ccMeta) {
     if (ccMeta != NULL) {
       int i;
       sem_mywait(CONFIG);
-      // TODO: should copy on every message, as soon as info is sent on every message
-      //      memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
+      memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
       
       for (i=0; i<16; i++) {
 	int j;
-	if (strlen(ccMeta->services[i].type)) {
-	  memcpy(&(config->services[i]), &(ccMeta->services[i]), sizeof(serviceInfoType));
-	}
 	if (strlen(config->services[i].type)) {
 	  logprintfl(EUCADEBUG, "initialize(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
 	  for (j=0; j<8; j++) {
@@ -2632,6 +2606,15 @@ int initialize(ncMetadata *ccMeta) {
 		  done++;
 		}
 	      }
+	    }
+	  } else if (!strcmp(config->services[i].type, "eucalyptus")) {
+	    char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+	    int port, done;
+	    // this is the cloud controller serviceInfo
+	    snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+	    rc = tokenize_uri(uri, uriType, host, &port, path);
+	    if (strlen(host)) {
+	      config->cloudIp = dot2hex(host);
 	    }
 	  }
 	}
@@ -3147,8 +3130,8 @@ int init_config(void) {
       *pubRouter=NULL,
       *pubDomainname=NULL,
       *pubDNS=NULL,
-      *localIp=NULL,
-      *cloudIp=NULL;
+      *localIp=NULL;
+      //      *cloudIp=NULL;
     uint32_t *ips, *nms;
     int initFail=0, len;
     
@@ -3252,7 +3235,7 @@ int init_config(void) {
       if (!localIp) {
 	logprintfl(EUCAWARN, "init_config(): VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
-      cloudIp = getConfString(configFiles, 2, "VNET_CLOUDIP");
+      //      cloudIp = getConfString(configFiles, 2, "VNET_CLOUDIP");
 
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"init_config(): in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
@@ -3262,7 +3245,7 @@ int init_config(void) {
     
     if (initFail) {
       logprintfl(EUCAFATAL, "init_config(): bad network parameters, must fix before system will work\n");
-      if (cloudIp) free(cloudIp);
+      //      if (cloudIp) free(cloudIp);
       if (pubSubnet) free(pubSubnet);
       if (pubSubnetMask) free(pubSubnetMask);
       if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3283,8 +3266,8 @@ int init_config(void) {
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, cloudIp);
-    if (cloudIp) free(cloudIp);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp);
+    //    if (cloudIp) free(cloudIp);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3572,8 +3555,6 @@ int syncNetworkState() {
 int maintainNetworkState() {
   int rc, i, ret=0;
   time_t startTime, startTimeA;
-  uint32_t cloudIp;
-
   
   logprintfl(EUCADEBUG, "maintainNetworkState(): syncing CLC network rules ground truth with local state\n");
   rc = reconfigureNetworkFromCLC();
@@ -3581,6 +3562,7 @@ int maintainNetworkState() {
     logprintfl(EUCAWARN, "maintainNetworkState(): cannot get network ground truth from CLC\n");
   }
 
+  /*
   // find current CLC IP
   cloudIp = vnetconfig->cloudIp;
   for (i=0; i<16; i++) {
@@ -3594,14 +3576,16 @@ int maintainNetworkState() {
       }
     }
   }
+  */
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining metadata redirect and tunnel health\n");
     sem_mywait(VNET);
     
     // check to see if cloudIp has changed
-    if (cloudIp && (cloudIp != vnetconfig->cloudIp)) {
-      vnetconfig->cloudIp = cloudIp;
+    logprintfl(EUCADEBUG, "maintainNetworkState(): CCcloudIp=%s VNETcloudIp=%s\n", hex2dot(config->cloudIp), hex2dot(vnetconfig->cloudIp));
+    if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
+      vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
       if (rc) {
 	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
