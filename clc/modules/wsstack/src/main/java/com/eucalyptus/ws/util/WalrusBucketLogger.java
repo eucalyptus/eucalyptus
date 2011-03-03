@@ -159,9 +159,8 @@ public class WalrusBucketLogger {
 							request.setEtag(etag);
 							String ownerId = entry.getOwnerId();
 							try {
-								User userInfo = Accounts.lookupUserById(ownerId);
 								ArrayList<Grant> grants = new ArrayList<Grant>();
-								grants.add(new Grant(new Grantee(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId(userInfo), ownerId)), 
+								grants.add(new Grant(new Grantee(new CanonicalUserType(Accounts.lookupAccountById(ownerId).getName(), ownerId)), 
 								"FULL_CONTROL"));
 								request.getAccessControlList().setGrants(grants);
 							} catch (AuthException e1) {

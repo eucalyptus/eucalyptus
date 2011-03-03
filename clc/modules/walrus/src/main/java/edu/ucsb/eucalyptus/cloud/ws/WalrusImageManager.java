@@ -84,6 +84,8 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Authentication;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
@@ -94,6 +96,7 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
 
 import javax.crypto.Cipher;
@@ -148,6 +151,7 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -191,8 +195,7 @@ public class WalrusImageManager {
 		this.imageMessenger = imageMessenger;
 	}
 
-	private String decryptImage(String bucketName, String objectKey, User user, boolean isAdministrator) throws EucalyptusCloudException {
-	  String userId = user.getName( );
+	private String decryptImage(String bucketName, String objectKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -204,7 +207,12 @@ public class WalrusImageManager {
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
-				if(objectInfo.canRead(userId)) {
+				if(isAdministrator || (
+				      objectInfo.canRead(account.getId()) &&
+				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.S3_RESOURCE_OBJECT,
+				                             PolicySpec.objectFullName(bucketName, objectKey),
+				                             objectInfo.getOwnerId()))) {
 					String objectName = objectInfo.getObjectName();
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
 					XMLParser parser = new XMLParser(file);
@@ -239,6 +247,7 @@ public class WalrusImageManager {
 									if(verified)
 										break;
 								}
+								if(verified) break;
 							}
 							if(!verified) {
 								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
@@ -256,14 +265,17 @@ public class WalrusImageManager {
 					} else {
 						boolean signatureVerified = false;
 						try {
-							for(Certificate c : user.getCertificates()) {
-							  X509Certificate cert = c.getX509Certificate( );
-								if(cert != null) {
-									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-								}
-								if(signatureVerified)
-									break;
-							}
+						  for(User user: account.getUsers()) {
+  							for(Certificate c : user.getCertificates()) {
+  							  X509Certificate cert = c.getX509Certificate( );
+  								if(cert != null) {
+  									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+  								}
+  								if(signatureVerified)
+  									break;
+  							}
+  							if(signatureVerified) break;
+						  }
 						} catch(Exception ex) {
 							db.rollback();
 							LOG.error(ex, ex);
@@ -359,8 +371,7 @@ public class WalrusImageManager {
 	}
 
 
-	private void checkManifest(String bucketName, String objectKey, User user) throws EucalyptusCloudException {
-	  String userId = user.getName( );
+	private void checkManifest(String bucketName, String objectKey, Account account) throws EucalyptusCloudException {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
@@ -377,7 +388,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(user)) {
+				if(objectInfo.canRead(account.getId())) {
 					String objectName = objectInfo.getObjectName();
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
 					XMLParser parser = new XMLParser(file);
@@ -506,8 +517,7 @@ public class WalrusImageManager {
 		}
 	}
 
-	private void cacheImage(String bucketName, String manifestKey, User user, boolean isAdministrator) throws EucalyptusCloudException {
-	  String userId = user.getName( );
+	private void cacheImage(String bucketName, String manifestKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
 		EntityWrapper<ImageCacheInfo> db = WalrusControl.getEntityWrapper();
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
@@ -527,7 +537,7 @@ public class WalrusImageManager {
 		if(imageCacher == null) {
 			if(decryptedImageKey == null) {
 				try {
-					decryptedImageKey = decryptImage(bucketName, manifestKey, user, isAdministrator);
+					decryptedImageKey = decryptImage(bucketName, manifestKey, account, isAdministrator);
 				} catch(EucalyptusCloudException ex) {
 					imageCachers.remove(bucketName + manifestKey);
 					throw ex;
@@ -578,7 +588,7 @@ public class WalrusImageManager {
 		}
 	}
 
-	private void validateManifest(String bucketName, String objectKey, String userId) throws EucalyptusCloudException {
+	private void validateManifest(String bucketName, String objectKey, String accountId) throws EucalyptusCloudException {
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
@@ -595,7 +605,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(userId)) {
+				if(objectInfo.canRead(accountId)) {
 					String objectName = objectInfo.getObjectName();
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
 					XMLParser parser = new XMLParser(file);
@@ -1055,8 +1065,8 @@ public class WalrusImageManager {
 		GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		User user = Contexts.lookup().getUser( );
-		String userId = Contexts.lookup().getUserFullName().getUserId();
+		Context ctx = Contexts.lookup();
+		Account account = ctx.getAccount();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1068,7 +1078,12 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(userId) || Contexts.lookup().hasAdministrativePrivileges() ) {
+				if(ctx.hasAdministrativePrivileges() || (
+				      objectInfo.canRead(account.getId()) &&
+				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.S3_RESOURCE_OBJECT,
+				                             PolicySpec.objectFullName(bucketName, objectKey),
+				                             objectInfo.getOwnerId()))) {
 					db.commit();
 					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
@@ -1094,7 +1109,7 @@ public class WalrusImageManager {
 						db2.commit();
 						//issue a cache request
 						LOG.info("Image " + bucketName + "/" + objectKey + " not found in cache. Issuing cache request (might take a while...)");
-						cacheImage(bucketName, objectKey, user, Contexts.lookup().hasAdministrativePrivileges());
+						cacheImage(bucketName, objectKey, account, ctx.hasAdministrativePrivileges());
 						//query db again
 						db2 = WalrusControl.getEntityWrapper();
 						foundImageCacheInfos = db2.query(searchImageCacheInfo);
@@ -1189,9 +1204,9 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
-		String userId = Contexts.lookup().getUserFullName().getUserId();
-    User user = Contexts.lookup().getUser( );
-
+		Context ctx = Contexts.lookup();
+		Account account = ctx.getAccount();
+		
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
@@ -1207,9 +1222,14 @@ public class WalrusImageManager {
 			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
-				if(objectInfo.canRead(user)) {
+				if(ctx.hasAdministrativePrivileges() || (
+				      objectInfo.canRead(account.getId()) &&
+				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.S3_RESOURCE_OBJECT,
+				                             PolicySpec.objectFullName(bucketName, objectKey),
+				                             objectInfo.getOwnerId()))) {
 					db.commit();
-					checkManifest(bucketName, objectKey, user);
+					checkManifest(bucketName, objectKey, account);
 					reply.setSuccess(true);
 					return reply;
 				} else {
@@ -1231,9 +1251,8 @@ public class WalrusImageManager {
 		reply.setSuccess(false);
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = Contexts.lookup().getUserFullName().getUserId();
-    User user = Contexts.lookup().getUser( );
-
+		Context ctx = Contexts.lookup();
+		Account account = ctx.getAccount();
 
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1246,13 +1265,18 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(user)) {
+				if(ctx.hasAdministrativePrivileges() || (
+				      objectInfo.canRead(account.getId()) &&
+				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.S3_RESOURCE_OBJECT,
+				                             PolicySpec.objectFullName( bucketName, manifestKey ),
+				                             objectInfo.getOwnerId()))) {
 					EntityWrapper<ImageCacheInfo> db2 = WalrusControl.getEntityWrapper();
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
 					db2.commit();
 					if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + manifestKey))) {
-						cacheImage(bucketName, manifestKey, user, Contexts.lookup( ).hasAdministrativePrivileges( ));
+						cacheImage(bucketName, manifestKey, account, Contexts.lookup( ).hasAdministrativePrivileges( ));
 						reply.setSuccess(true);
 					}
 					db.commit( );
@@ -1305,7 +1329,8 @@ public class WalrusImageManager {
 		ValidateImageResponseType reply = (ValidateImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
-		String userId = Contexts.lookup().getUserFullName().getUserId();
+		Context ctx = Contexts.lookup();
+		Account account = ctx.getAccount();
 		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1319,9 +1344,14 @@ public class WalrusImageManager {
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
-						if (objectInfo.canRead(userId)) {
+						if (ctx.hasAdministrativePrivileges() || (
+						      objectInfo.canRead(account.getId()) &&
+						      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+						                             PolicySpec.S3_RESOURCE_OBJECT,
+						                             PolicySpec.objectFullName(bucketName, manifestKey),
+						                             objectInfo.getOwnerId()))) {
 							//validate manifest
-							validateManifest(bucketName, manifestKey, userId);
+							validateManifest(bucketName, manifestKey, account.getId());
 							db.commit();
 						} else {
 							db.rollback();

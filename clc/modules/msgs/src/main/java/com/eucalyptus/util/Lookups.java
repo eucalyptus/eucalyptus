@@ -134,11 +134,24 @@ public class Lookups {
     try {
       account = Accounts.lookupUserById( resourceOwner.getUniqueId( ) ).getAccount( );
     } catch ( AuthException e ) {
+      LOG.error( e, e );
       return false;
     }
     return ( ctx.hasAdministrativePrivileges( ) ||
              Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser ));
   }
   
+  public static boolean checkPrivilege( String action, String resourceType, String resourceId, String resourceOwnerAccountId ) {
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = null;
+    try {
+      account = Accounts.lookupAccountById( resourceOwnerAccountId );
+    } catch ( AuthException e ) {
+      LOG.error( e, e );
+      return false;
+    }
+    return Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser );
+  }
   
 }
