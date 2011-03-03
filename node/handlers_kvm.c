@@ -232,14 +232,27 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char **consoleOutput) {
 
   char *console_output=NULL, *console_append=NULL, *console_main=NULL;
-  char console_file[MAX_PATH];
+  char console_file[MAX_PATH], userId[48];
   int rc, fd, ret, readsize;
   struct stat statbuf;
+  ncInstance *instance=NULL;
 
   *consoleOutput = NULL;
   readsize = 64 * 1024;
 
-  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
+  // find the instance record
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  if (instance) {
+    snprintf(userId, 48, "%s", instance->userId);
+  }
+  sem_v (inst_sem);
+  if (!instance) {
+    logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
+    return(1);
+  }
+
+  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), userId, instanceId);
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
     fd = open(console_file, O_RDONLY);
@@ -253,7 +266,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     }
   }
   
-  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), userId, instanceId);
 
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {

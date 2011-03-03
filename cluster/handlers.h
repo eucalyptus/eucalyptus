@@ -177,6 +177,7 @@ typedef struct ccConfig_t {
   int threads[3];
   int ncFanout;
   int ccState, ccLastState, kick_network, kick_enabled;
+  uint32_t cloudIp;
   serviceStatusType ccStatus;
   serviceInfoType services[16];
 } ccConfig;

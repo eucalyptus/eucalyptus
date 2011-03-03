@@ -780,7 +780,7 @@ int logprintfl(int level, const char *format, ...) {
       }
     }
   } else {
-    file = stdout;
+    file = stderr;
   }
 
   

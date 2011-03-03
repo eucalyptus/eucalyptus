@@ -86,7 +86,7 @@ permission notice:
 
 char *iptablesCache=NULL;
 
-int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp) {
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
@@ -203,6 +203,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	free(ipbuf);
       }
     }
+    /*
     if (cloudIp) {
       char *ipbuf=NULL;
       ipbuf = host2ip(cloudIp);
@@ -211,6 +212,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	free(ipbuf);
       }
     }
+    */
     vnetconfig->tunnels.localIpId = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
@@ -288,7 +290,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	rc = vnetSetMetadataRedirect(vnetconfig);
+	//	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -360,16 +362,16 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 }
 
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
-  char cmd[256], *network=NULL;
-  int rc, slashnet;
+  char cmd[256];
+  int rc;
 
   if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetSetMetadataRedirect(): bad input params\n");
     return(1);
   }
 
-  network = hex2dot(vnetconfig->nw);
-  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
+  //network = hex2dot(vnetconfig->nw);
+  //slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
 
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
@@ -377,14 +379,16 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
   if (vnetconfig->cloudIp != 0) {
     char *ipbuf;
     ipbuf = hex2dot(vnetconfig->cloudIp);
-    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
+    //    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
+    snprintf(cmd, 256, "-A PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
     if (ipbuf) free(ipbuf);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   } else {
-    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
+    //    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
+    logprintfl(EUCAWARN, "vnetSetMetadataRedirect(): cloudIp is not yet set, not installing redirect rule\n");
   }
-  rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   
-  if (network) free(network);
+  //  if (network) free(network);
 
   return(0);
 }
