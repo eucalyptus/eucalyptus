@@ -72,8 +72,8 @@ import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.crypto.Hmac;
 
 public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials> {
 	private static Logger LOG = Logger.getLogger( WalrusLoginModule.class );

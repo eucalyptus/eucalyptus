@@ -71,12 +71,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.crypto.Hmac;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 

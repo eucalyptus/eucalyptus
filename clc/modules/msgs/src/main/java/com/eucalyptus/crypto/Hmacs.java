@@ -1,6 +1,6 @@
-package com.eucalyptus.auth.crypto;
+package com.eucalyptus.crypto;
 
-import com.eucalyptus.auth.Authentication;
+
 
 /**
  * Facade for generator methods related to hashed message authentication codes.
@@ -12,19 +12,19 @@ public class Hmacs {
   /**
    * @param userName
    * @return
-   * @see com.eucalyptus.auth.api.CryptoProvider#generateQueryId(java.lang.String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId(java.lang.String)
    */
   public static String generateQueryId( final String userName ) {
-    return Authentication.getHmacProvider( ).generateQueryId( userName );
+    return Crypto.getHmacProvider( ).generateQueryId( userName );
   }
   
   /**
    * @param userName
    * @return
-   * @see com.eucalyptus.auth.api.CryptoProvider#generateSecretKey(java.lang.String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey(java.lang.String)
    */
   public static String generateSecretKey( final String userName ) {
-    return Authentication.getHmacProvider( ).generateSecretKey( userName );
+    return Crypto.getHmacProvider( ).generateSecretKey( userName );
   }
   
   /**
@@ -33,10 +33,10 @@ public class Hmacs {
    * @return
    */
   public static String generateSystemSignature( ) {
-    return Authentication.getHmacProvider( ).generateSystemSignature( );
+    return Crypto.getHmacProvider( ).generateSystemSignature( );
   }
   public static String generateSystemToken( byte[] data ) {
-    return Authentication.getHmacProvider( ).generateSystemToken( data );
+    return Crypto.getHmacProvider( ).generateSystemToken( data );
   }
 
 }

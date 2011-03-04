@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.crypto;
+package com.eucalyptus.crypto;
 
 import java.security.MessageDigest;
 

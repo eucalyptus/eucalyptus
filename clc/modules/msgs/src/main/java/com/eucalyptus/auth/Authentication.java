@@ -67,11 +67,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.api.BaseSecurityProvider;
-import com.eucalyptus.auth.api.CertificateProvider;
-import com.eucalyptus.auth.api.CryptoProvider;
-import com.eucalyptus.auth.api.HmacProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.crypto.BaseSecurityProvider;
+import com.eucalyptus.crypto.CertificateProvider;
+import com.eucalyptus.crypto.CryptoProvider;
+import com.eucalyptus.crypto.HmacProvider;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
@@ -79,75 +79,9 @@ import com.eucalyptus.records.EventRecord;
 public class Authentication {
   static String         DB_NAME = "eucalyptus_auth";
   public static Logger         LOG     = Logger.getLogger( Authentication.class );
-  private static CryptoProvider cryptoProvider;
-  private static CertificateProvider certProvider;
-  private static HmacProvider hmacProvider;
-  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
-  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
-  static {
-    BaseSecurityProvider provider;
-    try {
-      Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
-      provider = ( BaseSecurityProvider ) provClass.newInstance( );
-    } catch ( Throwable t ) {
-      LOG.debug( t, t );
-      provider = DUMMY;
-    }
-    providers.put( CertificateProvider.class, provider );
-    providers.put( HmacProvider.class, provider );
-    providers.put( CryptoProvider.class, provider );
-  }
   
   public static <T> EntityWrapper<T> getEntityWrapper( ) {
     return new EntityWrapper<T>( Authentication.DB_NAME );
   }
-  
-  public static CertificateProvider getCertificateProvider( ) {
-    return (CertificateProvider) providers.get( CertificateProvider.class );
-  }
-  public static HmacProvider getHmacProvider( ) {
-    return (HmacProvider) providers.get( HmacProvider.class );
-  }
-  public static CryptoProvider getCryptoProvider( ) {
-    return (CryptoProvider) providers.get( CryptoProvider.class );
-  }
-  
-  public static class CryptoProviderDiscovery extends ServiceJarDiscovery {
-    public CryptoProviderDiscovery( ) {}
-    @Override
-    public Double getPriority( ) {
-      return 0.01d;
-    }
-    @Override
-    public boolean processClass( Class candidate ) throws Throwable {
-      if( !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && BaseSecurityProvider.class.isAssignableFrom( candidate ) ) {
-        try {
-          BaseSecurityProvider o = ( BaseSecurityProvider ) candidate.newInstance( );
-          for( Class c : Authentication.providers.keySet( ) ) {
-            if( c.isAssignableFrom( candidate ) ) {
-              Object curr = Authentication.providers.get( c );
-              if( DUMMY.equals( curr ) ) {
-                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFIGURED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
-                Authentication.providers.put( c, o );
-              } else if( !candidate.getSimpleName( ).startsWith( "Default" ) ) {
-                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "current", curr.getClass( ).getCanonicalName( ) ).info( );
-                EventRecord.here( this.getClass( ), EventType.PROVIDER_CONFLICT, c.getSimpleName( ), "candidate", candidate.getCanonicalName( ) ).info( );
-                Authentication.providers.put( c, o );
-              } else {
-                EventRecord.here( this.getClass( ), EventType.PROVIDER_IGNORED, c.getSimpleName( ), candidate.getCanonicalName( ) ).info( );
-                return false;
-              }
-            }
-          }
-          return true;
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-          LOG.fatal( "Provider class " + candidate + " failed during <init>().  This must be fixed for the system to run." );
-          System.exit( -1 );
-        }
-      }
-      return false;
-    }
-  }
-  
+    
 }

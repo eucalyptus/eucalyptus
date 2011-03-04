@@ -141,6 +141,7 @@
         <multicasting-router>
           <outbound-endpoint ref="ClusterSinkWS"/>
           <outbound-endpoint ref="TransformReplyWS"/>
+          <no-action-transformer/>
         </multicasting-router>
       </outbound>
     </service>
