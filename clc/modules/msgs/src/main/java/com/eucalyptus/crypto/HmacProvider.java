@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.api;
+package com.eucalyptus.crypto;
 
 
 public interface HmacProvider extends BaseSecurityProvider  {

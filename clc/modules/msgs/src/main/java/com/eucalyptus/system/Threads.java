@@ -90,7 +90,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -99,21 +98,30 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import org.jgroups.util.ThreadFactory;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.google.common.collect.Lists;
 
 public class Threads {
   private static Logger                                  LOG          = Logger.getLogger( Threads.class );
-  private final static String PREFIX = "Eucalyptus.";
+  private final static String                            PREFIX       = "Eucalyptus.";
   private final static AtomicInteger                     threadIndex  = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices = new ConcurrentHashMap<String, ThreadPool>( );
   
+  public static ThreadPool lookup( Class<? extends ComponentId> group, Class owningClass ) {
+    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) );
+  }
+
+  public static ThreadPool lookup( Class<? extends ComponentId> group, Class owningClass, String name ) {
+    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) + "." + name );
+  }
+
   public static ThreadPool lookup( Class<? extends ComponentId> group ) {
     return lookup( ComponentIds.lookup( group ).name( ) );
   }
   
-  public static ThreadPool lookup( String threadGroupName ) {
+  private static ThreadPool lookup( String threadGroupName ) {
     String groupName = PREFIX + threadGroupName;
     if ( execServices.containsKey( groupName ) ) {
       LOG.debug( "LOOKUP thread threadpool named: " + groupName );
@@ -130,10 +138,6 @@ public class Threads {
   
   private static final ThreadPool SYSTEM = lookup( "SYSTEM" );
   
-  public static ExecutorService getThreadPool( String groupName ) {
-    return lookup( groupName ).getExecutorService( );
-  }
-  
   public static Thread newThread( Runnable r, String name ) {
     LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
@@ -146,10 +150,11 @@ public class Threads {
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
     private final ThreadGroup group;
-    private final String      prefix     = "Eucalyptus.";
+    private final String      clusterName = "";
+    private final String      prefix      = "Eucalyptus.";
     private final String      name;
     private ExecutorService   pool;
-    private Integer           numThreads = -1;
+    private Integer           numThreads  = -1;
     
     private ThreadPool( String groupPrefix, Integer threadCount ) {
       this( groupPrefix );
@@ -250,143 +255,98 @@ public class Threads {
       return new Thread( this.group, r, this.group.getName( ) + "." + r.getClass( ) + "#" + Threads.threadIndex.incrementAndGet( ) );
     }
     
-    /**
-     * @param command
-     * @see java.util.concurrent.Executor#execute(java.lang.Runnable)
-     */
     public void execute( Runnable command ) {
       this.pool.execute( command );
     }
     
-    /**
-     * 
-     * @see java.util.concurrent.ExecutorService#shutdown()
-     */
     public void shutdown( ) {
       this.pool.shutdown( );
     }
     
-    /**
-     * @return
-     * @see java.util.concurrent.ExecutorService#shutdownNow()
-     */
     public List<Runnable> shutdownNow( ) {
       return this.free( );
     }
     
-    /**
-     * @return
-     * @see java.util.concurrent.ExecutorService#isShutdown()
-     */
     public boolean isShutdown( ) {
       return this.pool.isShutdown( );
     }
     
-    /**
-     * @return
-     * @see java.util.concurrent.ExecutorService#isTerminated()
-     */
     public boolean isTerminated( ) {
       return this.pool.isTerminated( );
     }
     
-    /**
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws InterruptedException
-     * @see java.util.concurrent.ExecutorService#awaitTermination(long,
-     *      java.util.concurrent.TimeUnit)
-     */
     public boolean awaitTermination( long timeout, TimeUnit unit ) throws InterruptedException {
       return this.pool.awaitTermination( timeout, unit );
     }
     
-    /**
-     * @param <T>
-     * @param task
-     * @return
-     * @see java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable)
-     */
     public <T> Future<T> submit( Callable<T> task ) {
       LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task );
     }
     
-    /**
-     * @param <T>
-     * @param task
-     * @param result
-     * @return
-     * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable, java.lang.Object)
-     */
     public <T> Future<T> submit( Runnable task, T result ) {
       LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task, result );
     }
     
-    /**
-     * @param task
-     * @return
-     * @see java.util.concurrent.ExecutorService#submit(java.lang.Runnable)
-     */
     public Future<?> submit( Runnable task ) {
       LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
       return this.pool.submit( task );
     }
     
-    /**
-     * @param <T>
-     * @param tasks
-     * @return
-     * @throws InterruptedException
-     * @see java.util.concurrent.ExecutorService#invokeAll(java.util.Collection)
-     */
     public <T> List<Future<T>> invokeAll( Collection<? extends Callable<T>> tasks ) throws InterruptedException {
       return this.pool.invokeAll( tasks );
     }
     
-    /**
-     * @param <T>
-     * @param tasks
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws InterruptedException
-     * @see java.util.concurrent.ExecutorService#invokeAll(java.util.Collection, long,
-     *      java.util.concurrent.TimeUnit)
-     */
     public <T> List<Future<T>> invokeAll( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException {
       return this.pool.invokeAll( tasks, timeout, unit );
     }
     
-    /**
-     * @param <T>
-     * @param tasks
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
-     * @see java.util.concurrent.ExecutorService#invokeAny(java.util.Collection)
-     */
     public <T> T invokeAny( Collection<? extends Callable<T>> tasks ) throws InterruptedException, ExecutionException {
       return this.pool.invokeAny( tasks );
     }
     
-    /**
-     * @param <T>
-     * @param tasks
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
-     * @throws TimeoutException
-     * @see java.util.concurrent.ExecutorService#invokeAny(java.util.Collection, long,
-     *      java.util.concurrent.TimeUnit)
-     */
     public <T> T invokeAny( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
       return this.pool.invokeAny( tasks, timeout, unit );
     }
+    
+    @Override
+    public Thread newThread( Runnable r, String name ) {
+      return this.newThread( this.group, r, name );
+    }
+    
+    @Override
+    public Thread newThread( ThreadGroup group, Runnable r, String name ) {
+      return new Thread( group, r, this.group.getName( ) + "." + r.getClass( ).getName( ) + "#" + Threads.threadIndex.incrementAndGet( ) + "#" + name );
+    }
+    
+    @Override
+    public void setPattern( String pattern ) {}
+    
+    @Override
+    public void setIncludeClusterName( boolean includeClusterName ) {}
+    
+    @Override
+    public void setClusterName( String channelName ) {}
+    
+    /**
+     * TODO: DOCUMENT
+     * 
+     * @see org.jgroups.util.ThreadFactory#setAddress(java.lang.String)
+     * @param address
+     */
+    @Override
+    public void setAddress( String address ) {}
+    
+    /**
+     * TODO: DOCUMENT
+     * 
+     * @see org.jgroups.util.ThreadFactory#renameThread(java.lang.String, java.lang.Thread)
+     * @param base_name
+     * @param thread
+     */
+    @Override
+    public void renameThread( String base_name, Thread thread ) {}
   }
   
   public static ExecutorService currentThreadExecutor( ) {

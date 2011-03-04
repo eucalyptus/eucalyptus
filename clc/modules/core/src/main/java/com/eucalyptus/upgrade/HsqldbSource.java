@@ -9,7 +9,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.crypto.Hmacs;
+import com.eucalyptus.crypto.Hmacs;
 
 public class HsqldbSource implements DatabaseSource {
   private static Logger     LOG      = Logger.getLogger( HsqldbSource.class );

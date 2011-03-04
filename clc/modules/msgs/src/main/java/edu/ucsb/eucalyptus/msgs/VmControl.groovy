@@ -232,6 +232,37 @@ public class RunningInstancesItemType extends EucalyptusData {
   Boolean monitoring = false;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
+  String ipAddress;
+  String privateIpAddress;
+  String rootDeviceType = "instance-store";
+  String rootDeviceName = "/dev/sda1";
+  ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+}
+
+public class InstanceBlockDeviceMapping extends EucalyptusData {
+  String deviceName;
+  EbsInstanceBlockDeviceMapping ebs;
+  public InstanceBlockDeviceMapping() {}
+  public InstanceBlockDeviceMapping( String deviceName ) {
+    this.deviceName = deviceName;
+  }
+  public InstanceBlockDeviceMapping( String deviceName, String volumeId, String status, Date attachTime ) {
+    this.deviceName = deviceName;
+    this.ebs = new EbsInstanceBlockDeviceMapping( volumeId, status, attachTime );
+  }
+}
+
+public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
+  String volumeId;
+  String status;
+  Date attachTime;
+  Boolean deleteOnTermination = Boolean.FALSE;
+  public EbsInstanceBlockDeviceMapping() {}
+  public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime ) {
+    this.volumeId = volumeId;
+    this.status = status;
+    this.attachTime = attachTime;
+  }
 }
 public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/
   String snapshotId;

@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.util;
+package com.eucalyptus.crypto.util;
 
 public enum SecurityParameter {
   AWSAccessKeyId,
