@@ -865,9 +865,10 @@ int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName) {
 }
 
 int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
-  int rc, allocated, addrdevno, ret;
+  int rc, allocated, addrdevno, ret, i;
   char cmd[MAX_PATH];
   ccInstance *myInstance=NULL;
+  ccResourceCache resourceCacheLocal;
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -881,6 +882,10 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     return(1);
   }
   
+  sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+
   ret = 0;
   
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
@@ -898,13 +903,28 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     sem_mypost(VNET);
   }
   
-  
   if (!ret && strcmp(dst, "0.0.0.0")) {
     // everything worked, update instance cache
 
     rc = map_instanceCache(privIpCmp, dst, pubIpSet, src);
     if (rc) {
       logprintfl(EUCAERROR, "AssignAddress(): map_instanceCache() failed to assign %s->%s\n", dst, src);
+    } else {
+      rc = find_instanceCacheIP(src, &myInstance);
+      if (!rc) {
+	logprintfl(EUCADEBUG, "AssignAddress(): found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+	// found the instance in the cache
+	if (myInstance) {
+	  //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
+	  rc = ncClientCall(ccMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx, resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+	  if (rc) {
+	    logprintfl(EUCAERROR, "AssignAddress(): could not sync IP with NC\n");
+	    ret = 1;
+	  } else {
+	    ret = 0;
+	  }
+	}
+      }
     }
   }
   
@@ -947,6 +967,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   int rc, allocated, addrdevno, ret;
   char cmd[MAX_PATH];
   ccInstance *myInstance=NULL;
+  ccResourceCache resourceCacheLocal;
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -959,6 +980,12 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
     return(1);
   }
+
+  sem_mywait(RESCACHE);
+  memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+  
+  ret=0;
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     ret = 0;
@@ -976,6 +1003,23 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   }
 
   if (!ret) {
+
+    rc = find_instanceCacheIP(src, &myInstance);
+    if (!rc) {
+      logprintfl(EUCADEBUG, "UnassignAddress(): found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+      // found the instance in the cache
+      if (myInstance) {
+	//timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
+	rc = ncClientCall(ccMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx, resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
+	if (rc) {
+	  logprintfl(EUCAERROR, "UnassignAddress(): could not sync IP with NC\n");
+	  ret = 1;
+	} else {
+	  ret = 0;
+	}
+      }
+    }
+
     // refresh instance cache
     rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
     if (rc) {
@@ -1455,15 +1499,15 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		if (ip) free(ip);
 	      }
 
-	      if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
+	      //	      if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
 		// CC has network info, NC does not
-		logprintfl(EUCADEBUG, "refresh_instances(): sending ncAssignAddress to sync NC\n");
-		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
-		if (rc) {
+		//		logprintfl(EUCADEBUG, "refresh_instances(): sending ncAssignAddress to sync NC\n");
+		//		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+		//		if (rc) {
 		  // problem, but will retry next time
-		  logprintfl(EUCAWARN, "refresh_instances(): could not send AssignAddress to NC\n");
-		}
-	      }
+		//		  logprintfl(EUCAWARN, "refresh_instances(): could not send AssignAddress to NC\n");
+		//		}
+	      //	      }
 	      
 	      refresh_instanceCache(myInstance->instanceId, myInstance);
 	      if (!strcmp(myInstance->state, "Extant")) {
@@ -2737,7 +2781,7 @@ int ccCheckState() {
    controllers.
 */
 void *monitor_thread(void *in) {
-  int rc;
+  int rc, ncTimer, clcTimer, ncRefresh, clcRefresh;
   ncMetadata ccMeta;
   char pidfile[MAX_PATH], *pidstr=NULL;
 
@@ -2749,15 +2793,18 @@ void *monitor_thread(void *in) {
     unlock_exit(1);
   }
 
-  while(1) {
-    // set up default signal handler for this child process (for SIGTERM)
-    struct sigaction newsigact;
-    newsigact.sa_handler = SIG_DFL;
-    newsigact.sa_flags = 0;
-    sigemptyset(&newsigact.sa_mask);
-    sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
-    sigaction(SIGTERM, &newsigact, NULL);
+  // set up default signal handler for this child process (for SIGTERM)
+  struct sigaction newsigact;
+  newsigact.sa_handler = SIG_DFL;
+  newsigact.sa_flags = 0;
+  sigemptyset(&newsigact.sa_mask);
+  sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+  sigaction(SIGTERM, &newsigact, NULL);
 
+  ncTimer = config->ncPollingFrequency+1;
+  clcTimer = config->clcPollingFrequency+1;
+  
+  while(1) {
     logprintfl(EUCADEBUG, "monitor_thread(): running\n");
     
     if (config->kick_enabled) {
@@ -2766,57 +2813,71 @@ void *monitor_thread(void *in) {
     }
 
     if (config->ccState == ENABLED) {
-      rc = refresh_resources(&ccMeta, 60, 1);
-      if (rc) {
-	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
+
+      // NC Polling operations
+      if (ncTimer >= config->ncPollingFrequency) {
+	ncTimer=0;
+	ncRefresh=1;
+      }
+      ncTimer++;
+
+      // CLC Polling operations
+      if (clcTimer >= config->clcPollingFrequency) {
+	clcTimer=0;
+	clcRefresh=1;
+      }
+      clcTimer++;
+
+      if (ncRefresh) {
+	rc = refresh_resources(&ccMeta, 60, 1);
+	if (rc) {
+	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
+	}
+	
+	rc = refresh_instances(&ccMeta, 60, 1);
+	if (rc) {
+	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
+	}
       }
       
-      rc = refresh_instances(&ccMeta, 60, 1);
-      if (rc) {
-	logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
-      }
-
-      logprintfl(EUCADEBUG, "monitor_thread(): syncing network state\n");
-      rc = syncNetworkState();
-      if (rc) {
-	logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
-	config->kick_network = 1;
-      }
-      if (config->kick_network) {
-	logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
-	rc = restoreNetworkState();
+      if (ncRefresh) {
+	// Network state operations
+	logprintfl(EUCADEBUG, "monitor_thread(): syncing network state\n");
+	rc = syncNetworkState();
 	if (rc) {
-	  // failed to restore network state, continue 
-	  logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
-	} else {
-	  sem_mywait(CONFIG);
-	  config->kick_network = 0;
-	  sem_mypost(CONFIG);
+	  logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
+	  config->kick_network = 1;
 	}
-      }
-      logprintfl(EUCADEBUG, "monitor_thread(): maintaining network state\n");
-      rc = maintainNetworkState();
-      if (rc) {
-	logprintfl(EUCAERROR, "monitor_thread(): network state maintainance failed\n");
-      }
-    
-      sem_mywait(CONFIG);
-      snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
-      if (!check_file(pidfile)) {
-	pidstr = file2str(pidfile);
-      } else {
-	pidstr = NULL;
-      }
-      if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
-	rc = vnetKickDHCP(vnetconfig);
-	if (rc) {
-	  logprintfl(EUCAERROR, "monitor_thread(): cannot start DHCP daemon\n");
-	} else {
-	  config->kick_dhcp = 0;
+	
+	if (config->kick_network) {
+	  logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
+	  rc = restoreNetworkState();
+	  if (rc) {
+	    // failed to restore network state, continue 
+	    logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	  } else {
+	    sem_mywait(CONFIG);
+	    config->kick_network = 0;
+	    sem_mypost(CONFIG);
+	  }
 	}
       }
 
-      sem_mypost(CONFIG);
+      if (clcRefresh) {
+	logprintfl(EUCADEBUG, "monitor_thread(): syncing CLC network rules ground truth with local state\n");
+	rc = reconfigureNetworkFromCLC();
+	if (rc) {
+	  logprintfl(EUCAWARN, "monitor_thread(): cannot get network ground truth from CLC\n");
+	}
+      }
+
+      if (ncRefresh) {
+	logprintfl(EUCADEBUG, "monitor_thread(): maintaining network state\n");
+	rc = maintainNetworkState();
+	if (rc) {
+	  logprintfl(EUCAERROR, "monitor_thread(): network state maintainance failed\n");
+	}
+      }
       
       if (config->use_proxy) {
 	rc = image_cache_invalidate();
@@ -2856,7 +2917,9 @@ void *monitor_thread(void *in) {
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(): done\n");
-    sleep(config->ncPollingFrequency);
+    //sleep(config->ncPollingFrequency);
+    ncRefresh = clcRefresh = 0;
+    sleep(1);
   }
   return(NULL);
 }
@@ -3079,7 +3142,7 @@ int init_config(void) {
   
   char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH];
   
-  time_t configMtime, instanceTimeout, ncPollingFrequency, ncFanout;
+  time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
   struct stat statbuf;
   
   // read in base config information
@@ -3391,6 +3454,19 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
+  tmpstr = getConfString(configFiles, 2, "CLC_POLLING_FREQUENCY");
+  if (!tmpstr) {
+    clcPollingFrequency = 6;
+    tmpstr = NULL;
+  } else {
+    clcPollingFrequency = atoi(tmpstr);
+    if (clcPollingFrequency < 1) {
+      logprintfl(EUCAWARN, "init_config(): CLC_POLLING_FREQUENCY set too low (%d seconds), resetting to default (6 seconds)\n", clcPollingFrequency);
+      clcPollingFrequency = 6;
+    }
+  }
+  if (tmpstr) free(tmpstr);
+
   tmpstr = getConfString(configFiles, 2, "NC_FANOUT");
   if (!tmpstr) {
     ncFanout = 1;
@@ -3488,6 +3564,7 @@ int init_config(void) {
   //  config->configMtime = configMtime;
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
+  config->clcPollingFrequency = clcPollingFrequency;
   config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
@@ -3555,28 +3632,7 @@ int syncNetworkState() {
 int maintainNetworkState() {
   int rc, i, ret=0;
   time_t startTime, startTimeA;
-  
-  logprintfl(EUCADEBUG, "maintainNetworkState(): syncing CLC network rules ground truth with local state\n");
-  rc = reconfigureNetworkFromCLC();
-  if (rc) {
-    logprintfl(EUCAWARN, "maintainNetworkState(): cannot get network ground truth from CLC\n");
-  }
-
-  /*
-  // find current CLC IP
-  cloudIp = vnetconfig->cloudIp;
-  for (i=0; i<16; i++) {
-    int j;
-    if (strlen(config->services[i].type)) {
-      logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
-      for (j=0; j<8; j++) {
-	if (strlen(config->services[i].uris[j])) {
-	  logprintfl(EUCADEBUG, "maintainNetworkState(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
-	}
-      }
-    }
-  }
-  */
+  char pidfile[MAX_PATH], *pidstr=NULL;
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
     logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining metadata redirect and tunnel health\n");
@@ -3616,6 +3672,24 @@ int maintainNetworkState() {
     }
     sem_mypost(VNET);
   }
+
+  sem_mywait(CONFIG);
+  snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
+  if (!check_file(pidfile)) {
+    pidstr = file2str(pidfile);
+  } else {
+    pidstr = NULL;
+  }
+  if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
+    rc = vnetKickDHCP(vnetconfig);
+    if (rc) {
+      logprintfl(EUCAERROR, "maintainNetworkState(): cannot start DHCP daemon\n");
+      ret=1;
+    } else {
+      config->kick_dhcp = 0;
+    }
+  }
+  sem_mypost(CONFIG);
   
   return(ret);
 }
@@ -3683,11 +3757,13 @@ int restoreNetworkState() {
 
   sem_mypost(VNET);
 
+  /*
   // get current rules from CLC
   rc = reconfigureNetworkFromCLC();
   if (rc) {
     logprintfl(EUCAWARN, "restoreNetworkState(): cannot get network ground truth from CLC\n");
   }
+  */
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
 

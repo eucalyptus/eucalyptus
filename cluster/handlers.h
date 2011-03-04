@@ -173,7 +173,7 @@ typedef struct ccConfig_t {
   int initialized, kick_dhcp;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime, instanceTimeout, ncPollingFrequency;
+  time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency;
   int threads[3];
   int ncFanout;
   int ccState, ccLastState, kick_network, kick_enabled;
