@@ -524,11 +524,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
 							}
-							/*try {
-								sourceObjectKey = new URLCodec().decode(sourceObjectKey);
-							} catch (DecoderException e) {
-								throw new BindingException("Unable to get source key: " + e.getMessage());
-							}*/
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);
 							operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
