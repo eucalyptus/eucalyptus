@@ -506,6 +506,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {
 					if(httpRequest.containsHeader(WalrusProperties.COPY_SOURCE.toString())) {
 						String copySource = httpRequest.getHeader(WalrusProperties.COPY_SOURCE.toString());
+						try {
+							copySource = new URLCodec().decode(copySource);
+						} catch(DecoderException ex) {
+							throw new BindingException("Unable to decode copy source: " + copySource);
+						}
 						String[] sourceParts = copySource.split("\\?");
 						if(sourceParts.length > 1) {
 							operationParams.put("SourceVersionId", sourceParts[1].replaceFirst("versionId=", "").trim());
@@ -519,11 +524,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
 							}
-							try {
+							/*try {
 								sourceObjectKey = new URLCodec().decode(sourceObjectKey);
 							} catch (DecoderException e) {
 								throw new BindingException("Unable to get source key: " + e.getMessage());
-							}
+							}*/
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);
 							operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
