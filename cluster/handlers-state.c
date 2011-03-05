@@ -350,7 +350,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 48, "%s", inst->accountId);
       }
     }
-  }
+  } 
 
   if (!ret) {
     // so far so good
