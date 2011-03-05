@@ -954,7 +954,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
   } else {
     *outAddresses = NULL;
     *outAddressesLen = 0;
-    ret=2;
+    ret=0;
   }
   
   logprintfl(EUCADEBUG, "DescribePublicAddresses(): done. \n");
@@ -3721,33 +3721,34 @@ int restoreNetworkState() {
     ret = 1;
   }
 
-  // restore iptables state, if internal iptables state exists
-  logprintfl(EUCADEBUG, "restoreNetworkState(): restarting iptables\n");
-  rc = vnetRestoreTablesFromMemory(vnetconfig);
-  if (rc) {
-    logprintfl(EUCAERROR, "restoreNetworkState(): cannot restore iptables state\n");
-    ret = 1;
-  }
-  
-  // re-create all active networks (bridges, vlan<->bridge mappings)
-  logprintfl(EUCADEBUG, "restoreNetworkState(): restarting networks\n");
-  for (i=2; i<NUMBER_OF_VLANS; i++) {
-    if (vnetconfig->networks[i].active) {
-      char *brname=NULL;
-      logprintfl(EUCADEBUG, "restoreNetworkState(): found active network: %d\n", i);
-      rc = vnetStartNetwork(vnetconfig, i, NULL, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
-      if (rc) {
-        logprintfl(EUCADEBUG, "restoreNetworkState(): failed to reactivate network: %d", i);
-      }
-      if (brname) free(brname);
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    // restore iptables state, if internal iptables state exists
+    logprintfl(EUCADEBUG, "restoreNetworkState(): restarting iptables\n");
+    rc = vnetRestoreTablesFromMemory(vnetconfig);
+    if (rc) {
+      logprintfl(EUCAERROR, "restoreNetworkState(): cannot restore iptables state\n");
+      ret = 1;
     }
-  }
-  
-  //  ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
-  rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
-  if (rc) {
-    logprintfl(EUCAERROR, "restoreNetworkState(): could not (re)assign public/private IP mappings\n");
-    ret = 1;
+    
+    // re-create all active networks (bridges, vlan<->bridge mappings)
+    logprintfl(EUCADEBUG, "restoreNetworkState(): restarting networks\n");
+    for (i=2; i<NUMBER_OF_VLANS; i++) {
+      if (vnetconfig->networks[i].active) {
+	char *brname=NULL;
+	logprintfl(EUCADEBUG, "restoreNetworkState(): found active network: %d\n", i);
+	rc = vnetStartNetwork(vnetconfig, i, NULL, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
+	if (rc) {
+	  logprintfl(EUCADEBUG, "restoreNetworkState(): failed to reactivate network: %d", i);
+	}
+	if (brname) free(brname);
+      }
+    }
+    
+    rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
+    if (rc) {
+      logprintfl(EUCAERROR, "restoreNetworkState(): could not (re)assign public/private IP mappings\n");
+      ret = 1;
+    }
   }
 
   // get DHCPD back up and running
@@ -3760,14 +3761,6 @@ int restoreNetworkState() {
 
   sem_mypost(VNET);
 
-  /*
-  // get current rules from CLC
-  rc = reconfigureNetworkFromCLC();
-  if (rc) {
-    logprintfl(EUCAWARN, "restoreNetworkState(): cannot get network ground truth from CLC\n");
-  }
-  */
-
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
 
   return(ret);
@@ -3779,6 +3772,10 @@ int reconfigureNetworkFromCLC() {
   int fd=0, i=0, rc=0, ret=0, usernetlen=0;
   FILE *FH=NULL;
 
+  if (strcmp(vnetconfig->mode, "MANAGED") && strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    return(0);
+  }
+  
   // get the latest cloud controller IP address
   if (vnetconfig->cloudIp) {
     cloudIp = hex2dot(vnetconfig->cloudIp);
@@ -3789,7 +3786,6 @@ int reconfigureNetworkFromCLC() {
       unlock_exit(1);
     }
   }
-
 
   // create and populate network state files
   snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
