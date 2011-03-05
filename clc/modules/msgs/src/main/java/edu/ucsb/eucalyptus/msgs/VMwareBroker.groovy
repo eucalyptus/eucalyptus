@@ -72,7 +72,8 @@ public class VMwareBrokerResponseType extends BaseMessage {
 
   	@Override
   	public void setStatusMessage (String msg) {
-  		// TODO: don't suppress the message once CC can accept statusMessage 
+  		// TODO: don't suppress the message once CC can accept statusMessage
+  		this.statusMessage = msg;
   	}
 
   	// unused (handler must cast the response)

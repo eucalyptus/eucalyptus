@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/test/java"/>
 	<classpathentry kind="src" ouptut="modules/euare/build" path="modules/euare/src/main/java"/>
 	<classpathentry kind="src" ouptut="modules/euare-common/build" path="modules/euare-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/main/java"/>
@@ -163,5 +164,6 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
+	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

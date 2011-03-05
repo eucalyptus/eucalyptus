@@ -137,6 +137,7 @@
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${test.dir}" includes="**/*" />
 		</uptodate>
 	</target>
 	<target name="build-java" depends="should-build-java" unless="build.notRequired">
@@ -148,11 +149,13 @@
 		<mkdir dir="${test.dir}" />
 		<mkdir dir="${src.dir}" />
 		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
+		<javac srcdir="${test.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" target="1.5" listfiles="true" />
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${test.dir}" includes="**/*" />
 		</uptodate>
 	</target>
 	<target name="build-groovy" depends="should-build-groovy" unless="build.notRequired">
@@ -165,6 +168,9 @@
 		<mkdir dir="${src.dir}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
+			<javac target="1.5" debug="true" />
+		</groovyc>
+		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
 			<javac target="1.5" debug="true" />
 		</groovyc>
 	</target>
