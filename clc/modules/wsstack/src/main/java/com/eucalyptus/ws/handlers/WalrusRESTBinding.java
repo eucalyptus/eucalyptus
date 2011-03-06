@@ -783,14 +783,17 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			assert(value.startsWith(prefix));
 			value = value.substring(prefix.length());
 			String[]values = value.split("-");
-			assert(values.length == 2);
 			if(values[0].equals("")) {
 				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), new Long(0));
 			} else {
 				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), Long.parseLong(values[0]));
 			}
-			assert(!values[1].equals(""));
-			operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
+			if((values.length < 2) || (values[1].equals(""))) {
+				//-1 is treated by the back end as end of object
+				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), new Long(-1));
+			} else {
+				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
+			}
 		} else if(WalrusProperties.ExtendedHeaderDateTypes.contains(headerString)) {
 			try {
 				List<String> dateFormats = new ArrayList<String>();
