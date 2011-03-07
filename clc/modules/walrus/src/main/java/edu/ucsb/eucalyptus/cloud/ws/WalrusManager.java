@@ -88,7 +88,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.crypto.Digest;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
