@@ -1084,32 +1084,52 @@ int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, i
 }
 
 int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip) {
-  int rc, ret=0, networkIdx;
+  int rc, ret=0, networkIdx, found, i;
+  uint32_t inip;
   
   if (!instId || !outmac || !outpubip || !outprivip) {
     logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): bad input params\n");
     return(1);
   }
   
-  rc = instId2mac(instId, outmac);
-  if (rc) {
-    logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-    return(1);
-  }
-  
   ret = 1;
   // define/get next mac and allocate IP
   if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    // search for existing entry
+    inip = dot2hex(outprivip);
+    found=0;
+    for (i=2; i<vnetconfig->numaddrs-2 && !found; i++) {
+      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+      if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
+	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+	vnetconfig->networks[0].addrs[i].active = 1;
+	found++;
+	ret=0;
+      }
+    }
     // get the next valid mac/ip pairing for this vlan
-    outmac[0] = '\0';
-    rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
-    if (!rc) {
-      snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
-      ret = 0;
+    if (!found) {
+      outmac[0] = '\0';
+      rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
+      if (!rc) {
+	snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
+	ret = 0;
+      }
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    rc = instId2mac(instId, outmac);
+    if (rc) {
+      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+      return(1);
+    }
     ret = 0;
   } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    rc = instId2mac(instId, outmac);
+    if (rc) {
+      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+      return(1);
+    }
+ 
     if (nidx == -1) {
       networkIdx = -1;
     } else {
