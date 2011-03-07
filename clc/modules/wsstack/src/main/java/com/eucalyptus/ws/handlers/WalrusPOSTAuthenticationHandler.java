@@ -95,12 +95,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;

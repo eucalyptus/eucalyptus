@@ -73,11 +73,11 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.auth.util.B64;
-import com.eucalyptus.auth.util.B64.url;
-import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.crypto.util.B64.url;
 import com.eucalyptus.util.FullName;
 import com.google.common.collect.Lists;
 

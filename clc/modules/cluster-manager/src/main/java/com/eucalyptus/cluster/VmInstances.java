@@ -87,6 +87,7 @@ import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;

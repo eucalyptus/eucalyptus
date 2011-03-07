@@ -149,13 +149,20 @@ sub old_euca_ipt() {
     }
     
     
-    open my $fh, '|-' or exec 'iptables-restore' or dodie( "iptables-restore failed: $!\n");
-    open(IFH, "$rulefile.new") or dodie( "cannot open $rulefile.new");
-    while(<IFH>) {
-	print $fh "$_";
+    $rc = system("cat $rulefile.new | iptables-restore");
+    if ($rc) {
+	print STDERR "iptables-restore failed: rulefile contents:\n";
+	system("cat $rulefile.new 1>&2");
+	dodie("iptables-restore failed\n");
     }
-    close($fh) || dodie( "iptables-restore failed\n");
-    close(IFH);
+
+#    open my $fh, '|-' or exec 'iptables-restore' or dodie( "iptables-restore failed: $!\n");
+#    open(IFH, "$rulefile.new") or dodie( "cannot open $rulefile.new");
+#    while(<IFH>) {
+#	print $fh "$_";
+#    }
+#    close($fh) || dodie( "iptables-restore failed\n");
+#    close(IFH);
     
     return(0);
 }
@@ -307,8 +314,10 @@ sub new_euca_ipt() {
     close(OFH);
     
     if ( -f "$ofile" ) {
-	system("cat $ofile");
 	$rc = system("cat $ofile | iptables-restore");
+	if ($rc) {
+	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
+	}
     } else {
 	$rc = 1;
     }
@@ -392,6 +401,6 @@ sub doexit {
 
 sub dodie {
     $msg = shift @_;
-    doexit(1, "$msg");
+    doexit(1, "[EUCAERROR] $msg");
 }
 

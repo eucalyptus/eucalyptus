@@ -74,8 +74,8 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.crypto.Hmac;
 
 public class HmacUtils {
   public static Logger            LOG     = Logger.getLogger( HmacUtils.class );

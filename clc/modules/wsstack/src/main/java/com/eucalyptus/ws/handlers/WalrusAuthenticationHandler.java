@@ -94,7 +94,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;
@@ -109,6 +108,7 @@ import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.http.MappingHttpRequest;
 
 @ChannelPipelineCoverage("one")

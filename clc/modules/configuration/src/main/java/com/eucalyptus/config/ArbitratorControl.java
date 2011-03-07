@@ -77,6 +77,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ArbitratorConfiguration;
@@ -104,7 +105,7 @@ public class ArbitratorControl {
       List<ArbitratorConfiguration> configs = ServiceConfigurations.getConfigurations( ArbitratorConfiguration.class );
       for ( ArbitratorConfiguration config : configs ) {
         final String hostName = config.getHostName( );
-        Threads.getThreadPool( ArbitratorControl.class.getSimpleName( ) ).submit( new Runnable( ) {
+        Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
             try {

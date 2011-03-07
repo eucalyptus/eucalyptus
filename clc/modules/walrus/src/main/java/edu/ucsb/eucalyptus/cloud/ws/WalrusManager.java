@@ -96,6 +96,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
@@ -1357,7 +1358,7 @@ public class WalrusManager {
 								String objectName = nullObject.getObjectName();
 								for (GrantInfo grantInfo : nullObject
 										.getGrants()) {
-								  db.delete(grantInfo);
+									db.delete(grantInfo);
 								}
 								Long size = nullObject.getSize();
 								bucketInfo.setBucketSize(bucketInfo
@@ -2214,14 +2215,6 @@ public class WalrusManager {
 			GetObjectExtendedType request) throws EucalyptusCloudException {
 		GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType) request
 		.getReply();
-		Long byteRangeStart = request.getByteRangeStart();
-		if (byteRangeStart == null) {
-			byteRangeStart = 0L;
-		}
-		Long byteRangeEnd = request.getByteRangeEnd();
-		if (byteRangeEnd == null) {
-			byteRangeEnd = -1L;
-		}
 		Date ifModifiedSince = request.getIfModifiedSince();
 		Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
 		String ifMatch = request.getIfMatch();
@@ -2260,18 +2253,33 @@ public class WalrusManager {
 						                              objectInfo.getOwnerId()))) {
 							String etag = objectInfo.getEtag();
 							String objectName = objectInfo.getObjectName();
+							Long byteRangeStart = request.getByteRangeStart();							
+							Long byteRangeEnd = request.getByteRangeEnd();
+							DefaultHttpResponse httpResponse = null;
+							if(byteRangeStart != null || byteRangeEnd != null) {
+								httpResponse = new DefaultHttpResponse(
+										HttpVersion.HTTP_1_1, HttpResponseStatus.PARTIAL_CONTENT);
+							} else {
+								httpResponse = new DefaultHttpResponse(
+										HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+							}
+							if (byteRangeStart == null) {
+								byteRangeStart = 0L;
+							}
+							if (byteRangeEnd == null) {
+								byteRangeEnd = -1L;
+							}
+
 							if (byteRangeEnd == -1)
-								byteRangeEnd = objectInfo.getSize();
+								byteRangeEnd = objectInfo.getSize() - 1;
 							if ((byteRangeStart > objectInfo.getSize())
 									|| (byteRangeStart > byteRangeEnd)
-									|| (byteRangeEnd > objectInfo.getSize())
+									|| ((byteRangeEnd + 1) > objectInfo.getSize())
 									|| (byteRangeStart < 0 || byteRangeEnd < 0)) {
 								throw new InvalidRangeException("Range: "
 										+ byteRangeStart + "-" + byteRangeEnd
 										+ "object: " + bucketName + "/" + objectKey);
 							}
-							DefaultHttpResponse httpResponse = new DefaultHttpResponse(
-									HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 							if (ifMatch != null) {
 								if (!ifMatch.equals(etag)
 										&& !returnCompleteObjectOnFailure) {
@@ -2341,7 +2349,7 @@ public class WalrusManager {
 								}
 								storageManager.sendObject(request,
 										httpResponse, bucketName, objectName,
-										byteRangeStart, byteRangeEnd, size, etag,
+										byteRangeStart, byteRangeEnd + 1, size, etag,
 										DateUtils.format(lastModified.getTime(),
 												DateUtils.ISO8601_DATETIME_PATTERN
 												+ ".000Z"), contentType,

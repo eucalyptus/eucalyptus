@@ -79,13 +79,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.auth.crypto.Certs;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.crypto.Hmacs;
+import com.eucalyptus.crypto.util.PEMFiles;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class X509Download extends HttpServlet {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,105 +53,45 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+
 package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Database;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.NetworkUtil;
+import java.net.InetAddress;
+import org.jgroups.JChannel;
+import org.jgroups.conf.ClassConfigurator;
+import org.jgroups.protocols.FC;
+import org.jgroups.protocols.FD;
+import org.jgroups.protocols.FD_SOCK;
+import org.jgroups.protocols.FRAG2;
+import org.jgroups.protocols.MERGE2;
+import org.jgroups.protocols.MFC;
+import org.jgroups.protocols.PING;
+import org.jgroups.protocols.UDP;
+import org.jgroups.protocols.UFC;
+import org.jgroups.protocols.UNICAST;
+import org.jgroups.protocols.VERIFY_SUSPECT;
+import org.jgroups.protocols.pbcast.GMS;
+import org.jgroups.protocols.pbcast.NAKACK;
+import org.jgroups.protocols.pbcast.STABLE;
+import org.jgroups.protocols.pbcast.STATE_TRANSFER;
+import org.jgroups.stack.Protocol;
+import org.jgroups.stack.ProtocolStack;
 
-@Provides(Empyrean.class)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsRemote(Eucalyptus.class)
-public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
-  private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
-  @Override
-
-  public boolean load( ) throws Exception {
-    try {
-      if ( NetworkUtil.testReachability( Components.lookup(Database.class).getUri( ).getHost( ) ) ) {
-        LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-      } else {
-        LOG.error( "Failed with invalid DB address" );
-        System.exit( -1 );
-      }
-    } catch ( Throwable e ) {
-      LOG.error( "Failed with invalid DB address" );
-    }
-    try {
-      GroovyUtil.evaluateScript( "after_database.groovy" );
-    } catch ( ScriptExecutionFailedException e1 ) {
-      LOG.error( "Failed to initialize persistence layer" );
-      LOG.debug( e1, e1 );
-      System.exit( 123 );
-    }
-
-    return true;
-  }
-
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-
-  @Override
-  public boolean isRunning( ) {
-    return true;//TODO: track remote connectionf failures.
-  }
-
-  @Override
-  public void hup( ) {
-  }
-
+public class MembershipManager {
   
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
+  public static JChannel buildChannel( ) throws Exception {
+    final JChannel channel = new JChannel( false );
+    ProtocolStack stack = new ProtocolStack( );
+    channel.setProtocolStack( stack );
+    stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
+    stack.init( );
+    return channel;
   }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-
 }
