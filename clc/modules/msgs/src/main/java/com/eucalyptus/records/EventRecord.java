@@ -5,6 +5,8 @@ import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -17,7 +19,7 @@ public class EventRecord extends EucalyptusMessage {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    UserFullName userFn = FakePrincipals.NOBODY_USER_ERN;
+    UserFullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
       userFn = ctx.getUserFullName( );

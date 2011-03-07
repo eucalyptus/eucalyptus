@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.api;
+package com.eucalyptus.crypto;
 
 import java.security.Key;
 import java.security.KeyPair;

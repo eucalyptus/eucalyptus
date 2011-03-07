@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.util;
+package com.eucalyptus.crypto.util;
 
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.UrlBase64;

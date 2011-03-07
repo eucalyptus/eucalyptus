@@ -82,12 +82,12 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.WalrusProperties;
 

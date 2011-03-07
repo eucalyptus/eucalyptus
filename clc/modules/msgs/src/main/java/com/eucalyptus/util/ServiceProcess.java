@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.google.common.collect.Lists;
 
@@ -33,7 +34,7 @@ public class ServiceProcess implements Runnable {
   }
   private ServiceProcess( String name, File pwd, String[] args, String[] envp ) {
     super( );
-    this.threads = Threads.lookup( name );
+    this.threads = Threads.lookup( Empyrean.class, ServiceProcess.class, name );
     this.pwd = pwd;
     this.returnCode = null;
     this.args = args;

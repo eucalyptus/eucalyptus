@@ -75,7 +75,6 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-import com.eucalyptus.auth.util.SslSetup;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -89,6 +88,7 @@ import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
@@ -102,199 +102,199 @@ import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.ChannelUtil;
 
-@Provides(Empyrean.class)
-@RunDuring(Bootstrap.Stage.RemoteConfiguration)
-@DependsRemote(Eucalyptus.class)
-@ChannelPipelineCoverage( "all" )
-public class  RemoteBootstrapperServer extends Bootstrapper implements ChannelPipelineFactory {
-  private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
-  private int                             port;
-  private ServerBootstrap                 bootstrap;
-  private Channel                         channel;
-  private static RemoteBootstrapperServer server;
-  
-  public static RemoteBootstrapperServer getServer( ) {
-    return server;
-  }
-  
-  public RemoteBootstrapperServer( ) {
-    this.port = ChannelUtil.PORT;
-    ChannelUtil.setupServer( );
-    this.bootstrap = ChannelUtil.getServerBootstrap( );
-    this.bootstrap.setPipelineFactory( this );
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    if( System.getProperty("euca.debug.addr") != null ) {
-      String host = System.getProperty("euca.debug.addr");
-      for( Component c : Components.list( ) ) {
-        if( c.getComponentId( ).isCloudLocal( ) ) {
-          URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
-          ServiceBuilder builder = c.getBuilder( );
-          ServiceConfiguration config = builder.toConfiguration( uri );
-          c.loadService( config );
-        }
-      }
-      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-        stage.updateBootstrapDependencies( );
-      }
-      try {
-        GroovyUtil.evaluateScript( "after_database.groovy" );
-      } catch ( ScriptExecutionFailedException e1 ) {
-        LOG.error( "Failed with invalid DB address" );
-        LOG.debug( e1, e1 );
-        System.exit( 123 );
-      }
-      try {
-        if( NetworkUtil.testReachability( host ) ) {
-          LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-        } else {
-          LOG.error( "Failed with invalid DB address" );
-          System.exit( -1 );
-        }
-      } catch ( Throwable e ) {
-        LOG.error( "Failed with invalid DB address" );
-      }
-
-    } else {
-      this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
-      LOG.info( "Waiting for system properties before continuing bootstrap." );
-      this.channel.getCloseFuture( ).awaitUninterruptibly( );
-      LOG.info( "Channel closed, proceeding with bootstrap." );
-    }
-    return true;
-  }
-
-  public boolean start( ) {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-
-  
-  @Provides(Empyrean.class)
-  @RunDuring(Bootstrap.Stage.RemoteServicesInit)
-  @DependsRemote(Eucalyptus.class)
-  public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
-    @Override
-    public boolean start( ) throws Exception {
-      for( com.eucalyptus.component.Component c : Components.list( ) ) {
-        for( Service s : c.lookupServices( ) ) {
-          if( s.isLocal( ) ) {
-            try {
-              c.startService( s.getServiceConfiguration( ) );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex , ex );
-              System.exit( 123 );
-            }
-          }
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public boolean load( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-     */
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-     */
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-     */
-    @Override
-    public void destroy( ) throws Exception {}
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-     */
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-     */
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
-    }
-
-  }
-  
-  public ChannelPipeline getPipeline( ) throws Exception {
-    ChannelPipeline pipeline = pipeline( );
-    pipeline.addLast( "decoder", new NioHttpDecoder( ) );
-    pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
-    pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
-    pipeline.addLast( "handler", new HeartbeatHandler( this.channel ) );
-    return pipeline;
-  }
-  
-  public Channel getChannel( ) {
-    return channel;
-  }
-  
+//@Provides(Empyrean.class)
+//@RunDuring(Bootstrap.Stage.RemoteConfiguration)
+//@DependsRemote(Eucalyptus.class)
+//@ChannelPipelineCoverage( "all" )
+public class  RemoteBootstrapperServer /*extends Bootstrapper implements ChannelPipelineFactory*/ {
+//  private static Logger                   LOG = Logger.getLogger( RemoteBootstrapperServer.class );
+//  private int                             port;
+//  private ServerBootstrap                 bootstrap;
+//  private Channel                         channel;
+//  private static RemoteBootstrapperServer server;
+//  
+//  public static RemoteBootstrapperServer getServer( ) {
+//    return server;
+//  }
+//  
+//  public RemoteBootstrapperServer( ) {
+//    this.port = ChannelUtil.PORT;
+//    ChannelUtil.setupServer( );
+//    this.bootstrap = ChannelUtil.getServerBootstrap( );
+//    this.bootstrap.setPipelineFactory( this );
+//  }
+//  
+//  @Override
+//  public boolean load( ) throws Exception {
+//    if( System.getProperty("euca.debug.addr") != null ) {
+//      String host = System.getProperty("euca.debug.addr");
+//      for( Component c : Components.list( ) ) {
+//        if( c.getComponentId( ).isCloudLocal( ) ) {
+//          URI uri = c.getUri( host, c.getComponentId( ).getPort( ) );
+//          ServiceBuilder builder = c.getBuilder( );
+//          ServiceConfiguration config = builder.toConfiguration( uri );
+//          c.loadService( config );
+//        }
+//      }
+//      for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+//        stage.updateBootstrapDependencies( );
+//      }
+//      try {
+//        GroovyUtil.evaluateScript( "after_database.groovy" );
+//      } catch ( ScriptExecutionFailedException e1 ) {
+//        LOG.error( "Failed with invalid DB address" );
+//        LOG.debug( e1, e1 );
+//        System.exit( 123 );
+//      }
+//      try {
+//        if( NetworkUtil.testReachability( host ) ) {
+//          LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
+//        } else {
+//          LOG.error( "Failed with invalid DB address" );
+//          System.exit( -1 );
+//        }
+//      } catch ( Throwable e ) {
+//        LOG.error( "Failed with invalid DB address" );
+//      }
+//
+//    } else {
+//      this.channel = this.bootstrap.bind( new InetSocketAddress( this.port ) );
+//      LOG.info( "Waiting for system properties before continuing bootstrap." );
+//      this.channel.getCloseFuture( ).awaitUninterruptibly( );
+//      LOG.info( "Channel closed, proceeding with bootstrap." );
+//    }
+//    return true;
+//  }
+//
+//  public boolean start( ) {
+//    return true;
+//  }
+//  
+//  /**
+//   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+//   */
+//  @Override
+//  public boolean enable( ) throws Exception {
+//    return true;
+//  }
+//
+//  /**
+//   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+//   */
+//  @Override
+//  public boolean stop( ) throws Exception {
+//    return true;
+//  }
+//
+//  /**
+//   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+//   */
+//  @Override
+//  public void destroy( ) throws Exception {}
+//
+//  /**
+//   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+//   */
+//  @Override
+//  public boolean disable( ) throws Exception {
+//    return true;
+//  }
+//
+//  /**
+//   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+//   */
+//  @Override
+//  public boolean check( ) throws Exception {
+//    return true;
+//  }
+//
+//  
+//  @Provides(Empyrean.class)
+//  @RunDuring(Bootstrap.Stage.RemoteServicesInit)
+//  @DependsRemote(Eucalyptus.class)
+//  public static class DeferedRemoteServiceBootstrapper extends Bootstrapper {
+//    @Override
+//    public boolean start( ) throws Exception {
+//      for( com.eucalyptus.component.Component c : Components.list( ) ) {
+//        for( Service s : c.lookupServices( ) ) {
+//          if( s.isLocal( ) ) {
+//            try {
+//              c.startService( s.getServiceConfiguration( ) );
+//            } catch ( ServiceRegistrationException ex ) {
+//              LOG.error( ex , ex );
+//              System.exit( 123 );
+//            }
+//          }
+//        }
+//      }
+//      return true;
+//    }
+//
+//    @Override
+//    public boolean load( ) throws Exception {
+//      return true;
+//    }
+//
+//    /**
+//     * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+//     */
+//    @Override
+//    public boolean enable( ) throws Exception {
+//      return true;
+//    }
+//
+//    /**
+//     * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+//     */
+//    @Override
+//    public boolean stop( ) throws Exception {
+//      return true;
+//    }
+//
+//    /**
+//     * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+//     */
+//    @Override
+//    public void destroy( ) throws Exception {}
+//
+//    /**
+//     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+//     */
+//    @Override
+//    public boolean disable( ) throws Exception {
+//      return true;
+//    }
+//
+//    /**
+//     * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+//     */
+//    @Override
+//    public boolean check( ) throws Exception {
+//      return true;
+//    }
+//
+//  }
+//  
+//  public ChannelPipeline getPipeline( ) throws Exception {
+//    ChannelPipeline pipeline = pipeline( );
+//    pipeline.addLast( "decoder", new NioHttpDecoder( ) );
+//    pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
+//    pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+//    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
+//    try {
+//      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
+//    } catch ( GeneralSecurityException e ) {
+//      LOG.error( e, e );
+//    }
+//    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
+//    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+//    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
+//    pipeline.addLast( "handler", new HeartbeatHandler( this.channel ) );
+//    return pipeline;
+//  }
+//  
+//  public Channel getChannel( ) {
+//    return channel;
+//  }
+//  
 }

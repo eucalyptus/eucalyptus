@@ -75,8 +75,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.B64;
-import com.eucalyptus.auth.util.PEMFiles;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -90,6 +88,8 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -169,7 +169,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
-    this.threadFactory = Threads.lookup( "cluster-" + this.getFullName( ) );
+    this.threadFactory = Threads.lookup( com.eucalyptus.component.id.Cluster.class, Cluster.class, this.getFullName( ).toString( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
       {
         //when entering state DOWN

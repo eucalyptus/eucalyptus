@@ -91,6 +91,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
@@ -117,7 +118,7 @@ public class ServiceContextManager {
   private static SpringXmlConfigurationBuilder                builder;
   
   private static final AtomicReference<MuleClient>            client                         = new AtomicReference<MuleClient>( null );
-  private static final ThreadPool                             ctxMgmtThreadPool              = Threads.lookup( ServiceContext.class.getSimpleName( ) ).limitTo( 1 );
+  private static final ThreadPool                             ctxMgmtThreadPool              = Threads.lookup( Empyrean.class, ServiceContext.class ).limitTo( 1 );
   
   static MuleClient getClient( ) throws MuleException {
     boolean[] bit = new boolean[1];
