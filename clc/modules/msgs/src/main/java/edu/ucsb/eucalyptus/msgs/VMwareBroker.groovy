@@ -70,12 +70,14 @@ public class VMwareBrokerResponseType extends BaseMessage {
 
   	def VMwareBrokerResponseType() {}
 
+  	/*
   	@Override
   	public void setStatusMessage (String msg) {
   		// TODO: don't suppress the message once CC can accept statusMessage
-  		this.statusMessage = msg;
+  		// this.statusMessage = msg;
   	}
-
+  	 */
+  	
   	// unused (handler must cast the response)
   	public VMwareBrokerResponseType withSuccess () {
   		withSuccess (STATUS_MSG_SUCCESS); // default OK message
