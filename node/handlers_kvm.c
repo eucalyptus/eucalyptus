@@ -83,13 +83,9 @@ permission notice:
 extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
+extern struct nc_state_t nc_state;
 
 #define HYPERVISOR_URI "qemu:///system"
-
-struct rebooting_thread_data {
-        struct nc_state_t *nc;
-	ncInstance *instance;        
-};
 
 static int doInitialize (struct nc_state_t *nc) 
 {
@@ -158,10 +154,7 @@ static int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_st
 static void * rebooting_thread (void *arg) 
 {
     virConnectPtr *conn;
-//    ncInstance * instance = (ncInstance *)arg;
-    struct rebooting_thread_data *data = (struct rebooting_thread_data *)arg;
-    ncInstance *instance = data->instance;
-    struct nc_state_t *nc = data->nc;
+    ncInstance * instance = (ncInstance *)arg;
  
     struct stat statbuf;
     int rc = 0;
@@ -210,7 +203,7 @@ static void * rebooting_thread (void *arg)
         int err = 0;
         int rc = 0;
         ncVolume *volume = &instance->volumes[i];
-        rc = generate_attach_xml(volume->localDevReal, volume->remoteDev, nc, attach_xml);
+        rc = generate_attach_xml(volume->localDevReal, volume->remoteDev, &nc_state, attach_xml);
         if(!rc) {
             sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, attach_xml);
@@ -246,11 +239,8 @@ doRebootInstance(	struct nc_state_t *nc,
     }
     
     pthread_t tcb;
-    struct rebooting_thread_data thread_data;
-    thread_data.nc = nc;
-    thread_data.instance = instance;
     // since shutdown/restart may take a while, we do them in a thread
-    if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)&thread_data) ) {
+    if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)instance) ) {
         logprintfl (EUCAFATAL, "failed to spawn a reboot thread\n");
         return ERROR_FATAL;
     }
@@ -391,9 +381,6 @@ doAttachVolume (	struct nc_state_t *nc,
             int virtio_dev = 0;
             rc = 0;
             /* only attach using virtio when the device is /dev/vdXX */
-    /*        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
-                virtio_dev = 1;
-            }*/
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
