@@ -116,6 +116,11 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		return returnValue;
 	}
 
+	/**
+	 * @return
+	 * @throws ExecutionException
+	 * @throws EucalyptusCloudException
+	 */
 	private String getRole() throws ExecutionException, EucalyptusCloudException {
 		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "role", DRBDInfo.getDRBDInfo().getResource()});
 		if(returnValue.length() == 0) {
@@ -124,15 +129,23 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		return returnValue;
 	}
 
+	/*This method does not check if resource is already primary*/
+	/**
+	 * @throws ExecutionException
+	 * @throws EucalyptusCloudException
+	 */
 	private void makePrimary() throws ExecutionException, EucalyptusCloudException {
-		//TODO: check if is already primary
 		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "primary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to make resource " + DRBDInfo.getDRBDInfo().getResource() + " primary");
 		}
 	}
 
-	private void makeSecondary() throws ExecutionException, EucalyptusCloudException {
-		//TODO: check if is already secondary
+	/*This method does not check if resource is already secondary*/
+	/**
+	 * @throws ExecutionException
+	 * @throws EucalyptusCloudException
+	 */
+	private void makeSecondary() throws ExecutionException, EucalyptusCloudException {		
 		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "secondary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to make resource " + DRBDInfo.getDRBDInfo().getResource() + " secondary");
 		}
@@ -167,6 +180,11 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		}
 	}
 
+	/**
+	 * We use /proc/mounts because EUCA_ROOT_WRAPPER uses a syscall and does not update /etc/mtab
+	 * @return
+	 * @throws ExecutionException
+	 */
 	private boolean isMounted() throws ExecutionException {
 		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "cat", "/proc/mounts"});
 		if(returnValue.length() > 0) {
