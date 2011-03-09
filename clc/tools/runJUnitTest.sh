@@ -1,16 +1,15 @@
 
 # 
-# Runs any static method within eucalyptus. Does not require Eucalyptus to be
+# Runs any class in the standard JUnit harness. Does not require Eucalyptus to be
 #  running. Initializes everything, sets up database and persistence contexts, etc.
 #
-# Syntax: runTest.sh -t fullyQualifiedClassName:staticMethodName[:arg0,arg1...]
-#
-# Arguments are always of type java.lang.String. If you desire some other
-#  type then your method must convert.
+# Syntax: runJUnitTest.sh fullyQualifiedClassName
 #
 # Example usage:
-#  runTest.sh -t com.eucalyptus.reporting.instance.FalseDataGenerator:summarizeFalseDataTwoCriteria:cluster,user
+#  runJUnitTest.sh com.eucalyptus.cloud.ws.EucaImagerTest
 #
+# TODO: unify this with runTest.sh, which does the same thing except it
+# runs our own test harness and does not set some env variables
 
 set -e
 log() {
