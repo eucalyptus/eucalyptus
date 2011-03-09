@@ -327,8 +327,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
   outvnetConfig = malloc(sizeof(vnetConfig));
 
   snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
-  //  ccMeta.correlationId = adb_describeNetworksType_get_correlationId(snt, env);
-  //  ccMeta.userId = adb_describeNetworksType_get_userId(snt, env);
   EUCA_MESSAGE_UNMARSHAL(describeNetworksType, snt, (&ccMeta));
   
   nameserver = adb_describeNetworksType_get_nameserver(snt, env);
@@ -428,9 +426,6 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
   publicip *outAddresses;
 
   dpa = adb_DescribePublicAddresses_get_DescribePublicAddresses(describePublicAddresses, env);
-
-  //  ccMeta.correlationId = adb_describePublicAddressesType_get_correlationId(dpa, env);
-  //  ccMeta.userId = adb_describePublicAddressesType_get_userId(dpa, env);
   EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
 
   if (!DONOTHING) {
@@ -543,9 +538,6 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t *una
   ncMetadata ccMeta;
   
   uat = adb_UnassignAddress_get_UnassignAddress(unassignAddress, env);
-  
-  //  ccMeta.correlationId = adb_unassignAddressType_get_correlationId(uat, env);
-  //  ccMeta.userId = adb_unassignAddressType_get_userId(uat, env);
   EUCA_MESSAGE_UNMARSHAL(unassignAddressType, uat, (&ccMeta));
   
   src = adb_unassignAddressType_get_source(uat, env);
@@ -718,8 +710,6 @@ adb_GetConsoleOutputResponse_t* GetConsoleOutputMarshal (adb_GetConsoleOutput_t*
   ncMetadata ccMeta;
   
   gcot = adb_GetConsoleOutput_get_GetConsoleOutput(getConsoleOutput, env);
-  //  ccMeta.correlationId = adb_getConsoleOutputType_get_correlationId(gcot, env);
-  //  ccMeta.userId = adb_getConsoleOutputType_get_userId(gcot, env);
   EUCA_MESSAGE_UNMARSHAL(getConsoleOutputType, gcot, (&ccMeta));
   
   instId = adb_getConsoleOutputType_get_instanceId(gcot, env);
@@ -774,8 +764,6 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t *startNetwork
   ncMetadata ccMeta;
   
   snt = adb_StartNetwork_get_StartNetwork(startNetwork, env);
-  //  ccMeta.correlationId = adb_startNetworkType_get_correlationId(snt, env);
-  //  ccMeta.userId = adb_startNetworkType_get_userId(snt, env);
   EUCA_MESSAGE_UNMARSHAL(startNetworkType, snt, (&ccMeta));
   
   vlan = adb_startNetworkType_get_vlan(snt, env);
@@ -931,8 +919,6 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
   ncMetadata ccMeta;
   
   dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
-  //  ccMeta.correlationId = adb_describeInstancesType_get_correlationId(dit, env);
-  //  ccMeta.userId = adb_describeInstancesType_get_userId(dit, env);
   EUCA_MESSAGE_UNMARSHAL(describeInstancesType, dit, (&ccMeta));
 
   instIdsLen = adb_describeInstancesType_sizeof_instanceIds(dit, env);
@@ -1072,8 +1058,6 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   axutil_date_time_t *dt=NULL;
   
   rit = adb_RunInstances_get_RunInstances(runInstances, env);
-  //  ccMeta.correlationId = adb_runInstancesType_get_correlationId(rit, env);
-  //  ccMeta.userId = adb_runInstancesType_get_userId(rit, env);
   EUCA_MESSAGE_UNMARSHAL(runInstancesType, rit, (&ccMeta));
 
   reservationId = adb_runInstancesType_get_reservationId(rit, env);
@@ -1207,8 +1191,6 @@ adb_RebootInstancesResponse_t* RebootInstancesMarshal (adb_RebootInstances_t* re
   ncMetadata ccMeta;
 
   rit = adb_RebootInstances_get_RebootInstances(rebootInstances, env);
-  //  ccMeta.correlationId = adb_rebootInstancesType_get_correlationId(rit, env);
-  //  ccMeta.userId = adb_rebootInstancesType_get_userId(rit, env);
   EUCA_MESSAGE_UNMARSHAL(rebootInstancesType, rit, (&ccMeta));
   
   instIdsLen = adb_rebootInstancesType_sizeof_instanceIds(rit, env);
@@ -1264,8 +1246,6 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   ncMetadata ccMeta;
   
   tit = adb_TerminateInstances_get_TerminateInstances(terminateInstances, env);
-  //  ccMeta.correlationId = adb_terminateInstancesType_get_correlationId(tit, env);
-  //  ccMeta.userId = adb_terminateInstancesType_get_userId(tit, env);
   EUCA_MESSAGE_UNMARSHAL(terminateInstancesType, tit, (&ccMeta));
   
   instIdsLen = adb_terminateInstancesType_sizeof_instanceIds(tit, env);
