@@ -392,4 +392,12 @@ public class PolicySpec {
     return null;
   }
   
+  public static String objectFullName( String bucketName, String objectKey ) {
+    if ( objectKey.startsWith( "/" ) ) {
+      return bucketName + objectKey;
+    } else {
+      return bucketName + "/" + objectKey;
+    }
+  }
+  
 }

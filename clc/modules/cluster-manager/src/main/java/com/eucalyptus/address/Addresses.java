@@ -70,11 +70,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -90,6 +98,7 @@ import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
@@ -179,26 +188,46 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     
   }
-  public static Address restrictedLookup( FullName userId, boolean isAdmin, String addr ) throws EucalyptusCloudException {
+  public static Address restrictedLookup( BaseMessage request, String addr ) throws EucalyptusCloudException {
     Address address = null;
     try {
       address = Addresses.getInstance( ).lookup( addr );
     } catch ( NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
     }
-    if ( !isAdmin && !address.getOwner( ).getUniqueId( ).equals( userId.getUniqueId( ) ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
-      //    } else if ( address.isPending( ) ) {
-      //      throw new EucalyptusCloudException( "A previous assign/unassign is still pending for this address: " + address.getName( ) );
-    } else if ( address.isSystemOwned( ) && !isAdmin ) {
-      throw new EucalyptusCloudException( "Cannot manipulate system owned address: " + address.getName( ) );
+    Context ctx = Contexts.lookup( );
+    boolean isAdmin = ctx.hasAdministrativePrivileges( );
+    if ( !isAdmin ) {
+      if ( address.isSystemOwned( ) ) {
+        throw new EucalyptusCloudException( "Non admin user cannot manipulate system owned address " + addr );
+      }
+      Account addrAccount = null;
+      try {
+        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException( e );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr + " by " + ctx.getUser( ) );
+      }
     }
     return address;
   }
   
-  public static Address allocate( UserFullName userFullName, boolean isAdministrator ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+    Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1 ) ) {
+        throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
+      }
+    }
+    //TODO(wenye): add quota restriction.
 //TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
-    return Addresses.getAddressManager( ).allocateNext( userFullName );
+    return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   
   //TODO: add return of callback, use reassign, special case for now
