@@ -4,13 +4,15 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = ${LIBS} -lcurl -lssl -lcrypto
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o helpers.o
-VDDK_FLAGS = $(LIBS) -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
+STORAGE_LIBS = -lcurl -lssl -lcrypto
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o diskutil.o
+VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
 IMAGER=_euca_imager
+#EFENCE=-lefence
 
-all: storage.o storage-windows.o walrus.o Wclient $(IMAGER)
+all: storage.o storage-windows.o walrus.o Wclient $(IMAGER) test_blobstore
+#all: storage.o storage-windows.o walrus.o test_blobstore
 
 build: all
 
@@ -25,6 +27,9 @@ walrus.o: walrus.c walrus.h
 
 test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+
+test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
+	$(CC) -g -rdynamic -std=gnu99 $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o -lpthread $(EFENCE)
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
