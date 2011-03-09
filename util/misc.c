@@ -1736,3 +1736,33 @@ int hash_b64enc_string(const char *in, char **out) {
   return(0);
 }
 
+// returns a new string in which 'new' is appended to 'original'
+// and frees 'original'
+char * strdupcat (char * original, char * new)
+{
+        int len = 0;
+        int olen = 0;
+
+        if (original) {
+                olen = strlen (original);
+                len += olen;
+        }
+        
+        if (new) {
+                len += strlen (new);
+        }
+        
+        char * ret = calloc (len + 1, sizeof (char));
+        if ( ret ) {
+                if (original) {
+                        strncat (ret, original, len);
+                        free (original);
+                }
+                if (new) {
+                        strncat (ret, new, len-olen);
+                }
+        }
+        
+        return ret;
+}
+
