@@ -56,7 +56,7 @@ public class VMwareBrokerRequestType extends BaseMessage {
   	@Override
     public String toString(String msg) {
   		String paddedMsg = (msg.size()>0 && !msg.endsWith(" "))?(msg+" "):(msg);
-    	return "VMwareBrokerRequest {" + paddedMsg + "userId=" + getUserId() + " nodeName=" + this.nodeName + "}";
+    	return "BrokerRequest {" + paddedMsg + "userId=" + getUserId() + " nodeName=" + this.nodeName + "}";
     }
 }
 
@@ -95,7 +95,7 @@ public class VMwareBrokerResponseType extends BaseMessage {
   	}
   	
   	public VMwareBrokerResponseType withFailure (String msg) throws EucalyptusCloudException {
-  		LOG.error("FAULT returned by VMwareBroker: " + msg);
+  		LOG.error("FAULT returned by a Broker: " + msg);
   		this.setStatusMessage (msg);
   		this.set_return (false);
   		//throw EucalyptusCloudException(msg);
