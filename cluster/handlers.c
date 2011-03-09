@@ -2914,7 +2914,11 @@ void *monitor_thread(void *in) {
     }
 
     if (ccCheckState()) {
-      logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() failed\n");
+      logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
+      sem_mywait(CONFIG);
+      config->kick_enabled = 0;
+      ccChangeState(NOTREADY);
+      sem_mypost(CONFIG);
     }
 
     shawn();

@@ -99,7 +99,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   serviceStatusType *myStatus=NULL;
 
   rc = initialize(ccMeta);
-  if (rc || ccIsEnabled()) {
+  if (rc) {
     return(1);
   }
 
@@ -145,7 +145,7 @@ int doStartService(ncMetadata *ccMeta) {
   // this is actually a NOP
   sem_mywait(CONFIG);
   config->kick_enabled = 0;
-  ccChangeState(DISABLED);
+  ccChangeState(LOADED);
   sem_mypost(CONFIG);
   
   logprintfl(EUCAINFO, "StartService(): done\n");
