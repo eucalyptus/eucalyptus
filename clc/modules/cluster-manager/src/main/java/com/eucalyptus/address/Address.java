@@ -547,7 +547,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public AddressInfoType getAdminDescription( ) {
     String name = this.getName( );
-    String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ).getNamespace( ) );
+    String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
     return new AddressInfoType( name, desc );
   }
   
