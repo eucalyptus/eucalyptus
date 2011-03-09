@@ -116,13 +116,28 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     super( userFullName, displayName );
   }
   
+  private Volume( final String accountId, String displayName ) {
+    this.setOwnerAccountId( accountId );
+    this.setDisplayName( displayName );
+  }
+  
   public static Volume named( final UserFullName userFullName, String volumeId ) {
-    Volume v = new Volume( userFullName, volumeId );
+    //Volume v = new Volume( userFullName, volumeId );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountId( );
+    }
+    Volume v = new Volume( accountId, volumeId );
     return v;
   }
   
   public static Volume ownedBy( final UserFullName userFullName ) {
-    Volume v = new Volume( userFullName, null );
+    //Volume v = new Volume( userFullName, null );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountId( );
+    }
+    Volume v = new Volume( accountId, null );
     return v;
   }
   

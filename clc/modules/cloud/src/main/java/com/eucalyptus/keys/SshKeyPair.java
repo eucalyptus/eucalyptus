@@ -104,6 +104,16 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   
   public SshKeyPair( ) {}
   
+  public SshKeyPair( String accountId, String keyName ) {
+    this.setOwnerAccountId( accountId );
+    this.setDisplayName( keyName );
+    this.uniqueName = this.getFullName( ).toString( );
+  }
+  
+  public SshKeyPair( String accountId ) {
+    this.setOwnerAccountId( accountId );
+  }
+  
   public SshKeyPair( UserFullName user ) {
     super( user );
   }
