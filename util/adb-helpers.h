@@ -34,6 +34,7 @@
       adb_serviceInfoType_set_type(sit, env, themeta->services[i].type); \
       adb_serviceInfoType_set_name(sit, env, themeta->services[i].name); \
       for (j=0; j<themeta->services[i].urisLen && j < 8; j++) {	\
+	printf("WTF: %d, %s\n", themeta->services[i].urisLen, themeta->services[i].uris[j]);		\
 	adb_serviceInfoType_add_uris(sit, env, themeta->services[i].uris[j]); \
       }									\
       adb_##thefunc##_add_services(theadb, env, sit);			\
