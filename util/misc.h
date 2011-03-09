@@ -205,5 +205,6 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int hash_b64enc_string(const char *in, char **out);
 char * strdupcat (char * original, char * new);
+char * file2md5str (const char *path);
 
 #endif

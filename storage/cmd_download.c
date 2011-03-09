@@ -65,6 +65,7 @@ typedef struct _download_params {
         WEB=0,
         VSPHERE,
         WALRUS,
+        PATH, // not a "download", but useful for testing
     } type;
     char * vpath;
     boolean work;
@@ -168,46 +169,53 @@ int download_validate (imager_request * req)
     }
 
     // figure out what kind of download this is
-    if (strncmp ("http", state->in, 4)!=0)
-        err ("only URLs beginning with 'http...' are supported");
+    if (strncmp ("file:///", state->in, 8)==0) {
+        state->type = PATH;
+        state->in = state->in + 7; // move pointer to get a proper Unix path
 
-    if (strstr (state->in, "services/Walrus")!=NULL) { // looks like a Walrus URL
-        state->type = WALRUS;
-        if (state->cert==NULL) { // try to find default credentials
+    } else if (strncmp ("http://", state->in, 7)==0) {
 
-            // try to find default Walrus creds
-            snprintf (def_cert, sizeof (def_cert), "%s/" NODE_CERT, get_euca_home());
-            snprintf (def_pk,   sizeof (def_pk),   "%s/" NODE_PK,   get_euca_home());
-            if (access (def_cert, R_OK) || access (def_pk, R_OK)) {
-                err ("could not find or open default Walrus credentials (set EUCALYPTUS or specify cert= and pk=)");
-            } else {
-                state->cert = def_cert;
-                state->pk = def_pk;
+        if (strstr (state->in, "services/Walrus")!=NULL) { // looks like a Walrus URL
+            state->type = WALRUS;
+            if (state->cert==NULL) { // try to find default credentials
+                
+                // try to find default Walrus creds
+                snprintf (def_cert, sizeof (def_cert), "%s/" NODE_CERT, get_euca_home());
+                snprintf (def_pk,   sizeof (def_pk),   "%s/" NODE_PK,   get_euca_home());
+                if (access (def_cert, R_OK) || access (def_pk, R_OK)) {
+                    err ("could not find or open default Walrus credentials (set EUCALYPTUS or specify cert= and pk=)");
+                } else {
+                    state->cert = def_cert;
+                    state->pk = def_pk;
+                }
             }
-        }
-
-    } else if (strstr (state->in, "?dcPath=")!=NULL) { // looks like a vSphere URL
-        state->type = VSPHERE;
-        if (state->vpath) {
-            err ("with " _VPATH " option the URL must not contain a path");
+            
+        } else if (strstr (state->in, "?dcPath=")!=NULL) { // looks like a vSphere URL
+            state->type = VSPHERE;
+            if (state->vpath) {
+                err ("with " _VPATH " option the URL must not contain a path");
+            }
+            
+        } else {
+            if (state->vpath) {
+                if (strstr (state->in, "?")!=NULL ) { // TODO: do better job checking
+                    err ("with " _VPATH " option the URL must not contain a path");
+                }
+                state->type = VSPHERE;
+            }
+            state->type = WEB; // any old Web URL
         }
 
     } else {
-        if (state->vpath) {
-            if (strstr (state->in, "?")!=NULL ) { // TODO: do better job checking
-                err ("with " _VPATH " option the URL must not contain a path");
-            }
-            state->type = VSPHERE;
-        }
-        state->type = WEB; // any old Web URL
+        err ("only URLs beginning with 'http://' or 'file:///' are supported");
     }
-
+    
     if (state->type == VSPHERE) {
-        // TODO: parse URL and path
+        // TODO: parse URL and path to verify?
     }
 
-    if (state->type != WALRUS) { // TODO: finish vSphere and plain HTTP downloads
-        err ("sorry, vSphere downloads aren't implemented yes");
+    if (state->type != WALRUS && state->type != PATH) { // TODO: finish vSphere and plain HTTP downloads
+        err ("sorry, this type of download is not implemented yes");
     }
 
     req->internal = (void *) state; // save pointer to find it later
@@ -236,31 +244,40 @@ int download_requirements (imager_request * req)
     char * digest;
 
     switch (state->type) {
-    case WALRUS:
-        {
-            char * walrus_digest = download_walrus_digest (state->in);
-            if (walrus_digest==NULL) {
-                logprintfl (EUCAERROR, "error: failed to download or process Walrus manifest '%s'\n", state->in);
-                return ERROR;
-            }
-            char * size_s = xpath_content (walrus_digest, "manifest/image/size");
-            size = atoll (size_s);
-            free (size_s);
-            if (size==0) {
-                logprintfl (EUCAWARN, "warning: size not found in Walrus manifest '%s'\n", state->in);
-            }
-            digest = xpath_content (walrus_digest, "manifest/image/digest");
-            if (digest==NULL) {
-                logprintfl (EUCAWARN, "warning: no digest found in Walrus manifest '%s'\n", state->in);
-                digest = strdup ("N/A"); // because digest will get freed
-            }
-            free (walrus_digest);
-            break;
+    case WALRUS: {
+        char * walrus_digest = download_walrus_digest (state->in);
+        if (walrus_digest==NULL) {
+            logprintfl (EUCAERROR, "error: failed to download or process Walrus manifest '%s'\n", state->in);
+            return ERROR;
         }
+        char * size_s = xpath_content (walrus_digest, "manifest/image/size");
+        size = atoll (size_s);
+        free (size_s);
+        if (size==0) {
+            logprintfl (EUCAWARN, "warning: size not found in Walrus manifest '%s'\n", state->in);
+        }
+        digest = xpath_content (walrus_digest, "manifest/image/digest");
+        if (digest==NULL) {
+            logprintfl (EUCAWARN, "warning: no digest found in Walrus manifest '%s'\n", state->in);
+            digest = strdup ("N/A"); // because digest will get freed
+        }
+        free (walrus_digest);
+        break;
+    }
     case VSPHERE: // TODO
         break;
     case WEB: // TODO (do HEAD request?)
         break;
+    case PATH: {
+        struct stat mystat;
+        if (stat (state->in, &mystat) < 0 ) {
+            logprintfl (EUCAERROR, "failed to stat file %s\n", state->in);
+            return ERROR;
+        }
+        size = mystat.st_size;
+        digest = file2md5str (state->in);
+        break;
+    }        
     default:
         err ("internal error (unexpected download type)");
     }
@@ -310,14 +327,18 @@ int download_execute (imager_request * req)
         // (no input files expected in this stage)
 
         // do the download to create the output file
-        logprintfl (EUCAINFO, "dowloading from '%s'...\n", state->in);
         switch (state->type) {
         case WALRUS:
+            logprintfl (EUCAINFO, "dowloading from '%s'...\n", state->in);
             ret = walrus_image_by_manifest_url (state->in, o->path, 1);
             break;
         case VSPHERE:
             break;
         case WEB:
+            break;
+        case PATH:
+            logprintfl (EUCAINFO, "copying file from '%s'...\n", state->in);
+            ret = copy_file (state->in, o->path);
             break;
         default:
             err ("internal error (unexpected download type)");

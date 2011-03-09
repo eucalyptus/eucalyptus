@@ -81,6 +81,7 @@ permission notice:
 #include <limits.h>
 #include <euca_auth.h>
 #include <openssl/md5.h>
+#include <sys/mman.h> // mmap
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -1766,3 +1767,35 @@ char * strdupcat (char * original, char * new)
         return ret;
 }
 
+// returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
+// or NULL if there was an error; the string must be freed by the caller
+char * file2md5str (const char * path)
+{
+    char * md5string = NULL;
+
+    int fd = open (path, O_RDONLY);
+    if (fd<0) return NULL;
+
+    struct stat mystat;
+    if (fstat(fd, &mystat) < 0) goto cleanup;
+
+    char * buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (buf==MAP_FAILED) goto cleanup;
+
+    unsigned char md5digest [MD5_DIGEST_LENGTH];
+    if (MD5((unsigned char*) buf, mystat.st_size, md5digest)==NULL) goto cleanup;
+
+    md5string = calloc (MD5_DIGEST_LENGTH * 2 + 1, sizeof (char));
+    if (md5string==NULL) goto cleanup;
+
+    char * p = md5string;
+    for (int i=0; i<MD5_DIGEST_LENGTH; i++) {
+        sprintf (p, "%02x", md5digest [i]);
+        p += 2;
+    }
+
+ cleanup:
+
+    close (fd);
+    return md5string;
+}
