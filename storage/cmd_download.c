@@ -173,7 +173,7 @@ int download_validate (imager_request * req)
         state->type = PATH;
         state->in = state->in + 7; // move pointer to get a proper Unix path
 
-    } else if (strncmp ("http://", state->in, 7)==0) {
+    } else if (strncmp ("http", state->in, 4)==0) {
 
         if (strstr (state->in, "services/Walrus")!=NULL) { // looks like a Walrus URL
             state->type = WALRUS;
@@ -207,7 +207,7 @@ int download_validate (imager_request * req)
         }
 
     } else {
-        err ("only URLs beginning with 'http://' or 'file:///' are supported");
+        err ("only URLs beginning with 'http(s)://' or 'file:///' are supported");
     }
     
     if (state->type == VSPHERE) {
