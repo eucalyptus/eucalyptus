@@ -127,21 +127,6 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   myStatus->localEpoch = config->ccStatus.localEpoch;
   memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
 
-  // go through input service descriptions and match with self and node states
-
-  /*
-  *outStatusesLen = serviceIdsLen;
-  *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
-  for (i=0; i<serviceIdsLen; i++) {
-    char statestr[32];
-    logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
-    
-    snprintf((*outStatuses)[i].localState, 32, "%s", config->ccStatus.localState);    
-    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
-    (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
-    memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
-  }  
-  */
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
   return(0);
 }
@@ -319,14 +304,6 @@ int instIpSync(ccInstance *inst, void *in) {
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
-  /*
-  if (!inst) {
-    return(1);
-  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
-    return(0);
-  }
-  */
-
   if (!inst) {
     return(1);
   } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
@@ -372,14 +349,6 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 
 int instNetReassignAddrs(ccInstance *inst, void *in) {
   int rc, ret=0, i;
-
-  /*
-  if (!inst) {
-    return(1);
-  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
-    return(0);
-  }
-  */
 
   if (!inst) {
     return(1);
