@@ -117,7 +117,7 @@ public class StandalonePersistence {
     return conn;
   }
   
-  static void setupProviders( ) {
+  public static void setupProviders( ) {
     DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
     Accounts.setAccountProvider( dbAuth );
   }
@@ -144,7 +144,7 @@ public class StandalonePersistence {
     }
   }
   
-  static void setupNewDatabase( ) throws Exception {
+  public static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
     dest.initialize( );    
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
@@ -155,13 +155,13 @@ public class StandalonePersistence {
     } );
   }
   
-  static void setupInitProviders( ) throws Exception {
+  public static void setupInitProviders( ) throws Exception {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
     SystemCredentialProvider.initializeCredentials( );
     DispatcherFactory.setFactory( ( DispatcherFactory ) ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.ws.client.DefaultDispatcherFactory" ).newInstance( ) );
-    LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.SslSetup" ) );
+    LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
   
@@ -216,6 +216,19 @@ public class StandalonePersistence {
   }
   
   public static void runDiscovery( ) {
+    runSetupDiscovery( );
+    for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
+      LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
+      try {
+        UpgradeScript u = GroovyUtil.newInstance( script.getAbsolutePath( ) );
+        registerUpgradeScript( u );
+      } catch ( ScriptExecutionFailedException e ) {
+        LOG.debug( e, e );
+      }
+    }
+  }
+
+  public static void runSetupDiscovery( ) {
     List<Class> classList = ServiceJarDiscovery.classesInDir( new File( BaseDirectory.LIB.toString( ) ) );
     for( ServiceJarDiscovery d : Lists.newArrayList( new PersistenceContextDiscovery( ), new UpgradeScriptDiscovery( ) ) ) {
       for ( Class c : classList ) {
@@ -228,15 +241,6 @@ public class StandalonePersistence {
             LOG.debug( t, t );
           }
         }
-      }
-    }
-    for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
-      LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
-      try {
-        UpgradeScript u = GroovyUtil.newInstance( script.getAbsolutePath( ) );
-        registerUpgradeScript( u );
-      } catch ( ScriptExecutionFailedException e ) {
-        LOG.debug( e, e );
       }
     }
   }
