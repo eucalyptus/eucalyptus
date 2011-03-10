@@ -139,7 +139,7 @@ static char *jvm_default_opts[] = {
 	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
 	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
 	    "-Deuca.version=eee-2.1.0",
-	    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.system.NoopPreferences.Factory",
+	    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.util.NoopPreferencesFactory",
 	    NULL,
 };
 static char *libjvm_paths[ ] = {
