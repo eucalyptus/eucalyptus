@@ -28,14 +28,17 @@ printf "%-40.40s %s\n" "Eclipse Workspace Directory:" ${WORKSPACE_DIR}
 NAME=${SRC_DIR//${WORKSPACE_DIR}/}
 NAME=${NAME//\//:}
 printf "\n%-40.40s %s\n" "-> New Project Name:" ${NAME} 
-if bzr nick >/dev/null 2>&1 ; then
-  printf "%-40.40s %s in %s\n" "--> Setting project name:" ${NAME} ${SRC_DIR}/clc/.project 
-  sed -i "s/<name>.*<\/name>/<name>${NAME}:clc<\/name>/g" ${SRC_DIR}/clc/.project
-  printf "%-40.40s %s in %s\n" "--> Setting project name:" ${NAME} ${SRC_DIR}/tools/.project 
-  sed -i "s/<name>.*<\/name>/<name>${NAME}:python<\/name>/g" ${SRC_DIR}/clc/tools/.project
-  printf "%-40.40s %s in %s\n" "--> Setting project name:" ${NAME} ${SRC_DIR}/project/.project 
-  sed -i "s/<name>.*<\/name>/<name>${NAME}:c<\/name>/g" ${SRC_DIR}/project/.project
-fi
+fixProjectName() {
+  TARGET=$1
+  SUFFIX=$2
+  printf "%-40.40s %s in %s\n" "--> Setting project name:" ${NAME} ${TARGET}
+  sed -i "s/<name>$(xpath -q -e projectDescription/name/text\(\) ${TARGET})<\/name>/<name>${NAME}:${SUFFIX}<\/name>/g"   ${TARGET}
+}
+
+
+fixProjectName ${SRC_DIR}/clc/.project clc
+fixProjectName ${SRC_DIR}/project/.project c
+fixProjectName ${SRC_DIR}/clc/tools/.project python
   
 for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do 
   f=$(basename $m)
