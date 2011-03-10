@@ -103,6 +103,7 @@ public class MembershipBootstrapper extends Bootstrapper {
   public boolean load( ) throws Exception {
     try {
       this.membershipGroupName = Eucalyptus.class.getSimpleName( ) + "-" + Hmacs.generateSystemToken( Eucalyptus.class.getSimpleName( ).getBytes( ) );
+      this.membershipChannel = MembershipManager.buildChannel( );
       if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
           public void viewAccepted( final View newView ) {
