@@ -85,7 +85,8 @@
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    --></layout>
+    -->
+    </layout>
   </appender>
   <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
@@ -94,7 +95,8 @@
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
       <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    --></layout>
+    -->
+    </layout>
   </appender>
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
@@ -151,7 +153,7 @@
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
   -->
-  <category name="com.eucalyptus.context.ServiceContextManager" additivity="false">
+  <category name="com.eucalyptus.context.ServiceContextManager" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
@@ -183,6 +185,10 @@
     <priority value="${euca.log.exhaustive.db}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="bitronix.tm" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="org.apache.commons.beanutils.converters" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
@@ -200,13 +206,14 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.logicalcobwebs.proxool" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.apache" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <!--
   <category name="org.mule.DefaultMuleContext" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
@@ -235,16 +242,25 @@
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  -->
+  <category name="org.mule" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jboss" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="org.hibernate" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.springframework" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.mortbay" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
@@ -256,11 +272,11 @@
     <appender-ref ref="sc-stats-log" />
   </category>
   <category name="org.apache.commons.httpclient" additivity="true">
-    <priority value="ERROR"/>
+    <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />
   </category>
   <category name="httpclient.wire" additivity="true">
-    <priority value="ERROR"/>
+    <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />
   </category>
   <root>
