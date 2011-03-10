@@ -6,7 +6,7 @@ import java.util.prefs.Preferences;
 import java.util.prefs.PreferencesFactory;
 
 public class NoopPreferences extends AbstractPreferences {
-  
+  private static final String[] EMPTY = {};
   protected NoopPreferences( ) {
     super( null, "" );
   }
@@ -39,12 +39,12 @@ public class NoopPreferences extends AbstractPreferences {
   
   @Override
   protected String[] keysSpi( ) throws BackingStoreException {
-    return null;
+    return EMPTY;
   }
   
   @Override
   protected String[] childrenNamesSpi( ) throws BackingStoreException {
-    return null;
+    return EMPTY;
   }
   
   @Override
