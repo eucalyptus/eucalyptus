@@ -25,8 +25,12 @@ if [[ -z "${WORKSPACE_DIR}" ]]; then
 fi
 printf "%-40.40s %s\n" "Eclipse Workspace Directory:" ${WORKSPACE_DIR} 
 
-NAME=${SRC_DIR//${WORKSPACE_DIR}/}
-NAME=${NAME//\//:}
+if [ -z "$1" ]; then
+  NAME=${SRC_DIR//${WORKSPACE_DIR}/}
+  NAME=${NAME//\//:}
+else
+  NAME=$1
+fi
 printf "\n%-40.40s %s\n" "-> New Project Name:" ${NAME} 
 fixProjectName() {
   TARGET=$1
