@@ -102,8 +102,7 @@ public class MembershipBootstrapper extends Bootstrapper {
   @Override
   public boolean load( ) throws Exception {
     try {
-      this.membershipGroupName = "Eucalyptus-" + Hmacs.generateSystemSignature( );
-      this.membershipChannel = MembershipManager.buildChannel( );
+      this.membershipGroupName = Eucalyptus.class.getSimpleName( ) + "-" + Hmacs.generateSystemToken( Eucalyptus.class.getSimpleName( ).getBytes( ) );
       if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
         this.membershipChannel.setReceiver( new ReceiverAdapter( ) {
           public void viewAccepted( final View newView ) {
