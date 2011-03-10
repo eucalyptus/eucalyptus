@@ -67,6 +67,7 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.util.UserManagement;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.WalrusProperties;
 import org.hibernate.annotations.Cache;
@@ -292,10 +293,6 @@ public class ObjectInfo implements Comparable {
             }
         }
 
-        if(UserManagement.isAdministrator(userId)) {
-            return true;
-        }
-
         return false;
     }
 
@@ -329,10 +326,6 @@ public class ObjectInfo implements Comparable {
             }
         }
 
-        if(UserManagement.isAdministrator(userId)) {
-            return true;
-        }
-
         return false;
     }
 
@@ -350,10 +343,6 @@ public class ObjectInfo implements Comparable {
             }
         }
 
-        if(UserManagement.isAdministrator(userId)) {
-            return true;
-        }
-
         return false;
     }
 
@@ -368,10 +357,6 @@ public class ObjectInfo implements Comparable {
                     return true;
                 }
             }
-        }
-
-        if(UserManagement.isAdministrator(userId)) {
-            return true;
         }
 
         return false;

@@ -7,6 +7,7 @@ import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
@@ -66,7 +67,9 @@ public class KeyPairManager {
     Context ctx = Contexts.lookup();
     for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( ctx.getUserFullName( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
-        reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
+        if ( Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+          reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
+        }
       }
     }
     return reply;
@@ -77,6 +80,15 @@ public class KeyPairManager {
     Context ctx = Contexts.lookup();
     try {
       SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      Account keyAccount = null;
+      try {
+        keyAccount = Accounts.lookupAccountById( key.getOwnerAccountId( ) );
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException( e );
+      }
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
+      }
       reply.set_return( true );
     } catch ( Exception e1 ) {
       reply.set_return( true );
@@ -87,6 +99,15 @@ public class KeyPairManager {
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException {
     CreateKeyPairResponseType reply = request.getReply( );
     com.eucalyptus.context.Context ctx = Contexts.lookup();
+    String action = PolicySpec.requestToAction( request );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1 ) ) {
+        throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
+      }
+    }
     try {
       KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {

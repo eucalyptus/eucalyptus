@@ -82,10 +82,10 @@ int main(int argc, char **argv) {
   mymeta.correlationId = strdup("1234abcd");
   mymeta.epoch = 3;
   mymeta.servicesLen = 16;
-  snprintf(mymeta.services[15].name, 16, "theBogusService");
-  snprintf(mymeta.services[15].type, 16, "bogusService");
-  mymeta.services[0].urisLen = 1;
-  snprintf(mymeta.services[0].uris[0], 512, "http://1.2.3.4/path");
+  snprintf(mymeta.services[15].name, 16, "eucalyptus");
+  snprintf(mymeta.services[15].type, 16, "eucalyptus");
+  mymeta.services[15].urisLen = 1;
+  snprintf(mymeta.services[15].uris[0], 512, "http://192.168.254.3:8773/services/Eucalyptus");
     
   if (MODE == 0) {
     if (argc != 2 || strcmp(argv[1], "-9")) {
