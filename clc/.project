@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>grze_eee</name>
+	<name>bzr:grze_eee:clc</name>
 	<comment></comment>
 	<projects>
 	</projects>
 	<buildSpec>
 		<buildCommand>
-			<name>org.python.pydev.PyDevBuilder</name>
+			<name>bzr:grze_eee:clc</name>
 			<arguments>
 			</arguments>
 		</buildCommand>
 		<buildCommand>
-			<name>org.eclipse.wst.common.project.facet.core.builder</name>
+			<name>bzr:grze_eee:clc</name>
 			<arguments>
 			</arguments>
 		</buildCommand>
 		<buildCommand>
-			<name>org.eclipse.jdt.core.javabuilder</name>
+			<name>bzr:grze_eee:clc</name>
 			<arguments>
 			</arguments>
 		</buildCommand>
@@ -31,7 +31,7 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Suspended Root</name>
+			<name>bzr:grze_eee:clc</name>
 			<type>2</type>
 			<locationURI>SuspendedRootVariable</locationURI>
 		</link>
