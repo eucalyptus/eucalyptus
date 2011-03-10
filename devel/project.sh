@@ -60,7 +60,7 @@ fi
 printf "%-40.40s %s\n" "--> Generating new .classpath:" ${SRC_DIR}/clc/.classpath
 echo "${CLASSPATH_HEADER}${SOURCES}${CLASSPATH_STANDARD}${LIBS}${CLASSPATH_FOOTER}" > ${SRC_DIR}/clc/.classpath
 if which xmlindent >/dev/null 2>&1; then 
-  xmlindent -f -w ${SRC_DIR}/.classpath
+  xmlindent -f -w ${SRC_DIR}/clc/.classpath
 fi
 echo "FIN"
 
