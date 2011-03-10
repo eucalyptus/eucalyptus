@@ -147,6 +147,9 @@ public class WalrusProperties {
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_MOUNT_WRAPPER = "/usr/lib/eucalyptus/euca_mountwrap";
 
+	//15 minutes
+	public final static long EXPIRATION_LIMIT = 900000;
+
 	static { GroovyUtil.loadConfig("walrusprops.groovy"); }
 
 	public enum VersioningStatus {

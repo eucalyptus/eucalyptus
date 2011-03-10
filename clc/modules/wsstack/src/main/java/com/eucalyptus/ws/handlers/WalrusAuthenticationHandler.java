@@ -114,8 +114,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusAuthenticationHandler.class );
-	private final static long EXPIRATION_LIMIT = 900000;
-
 	public enum SecurityParameter {
 		AWSAccessKeyId,
 		Timestamp,
@@ -200,7 +198,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				try {
 					Date dateToVerify = DateUtil.parseDate(verifyDate);
 					Date currentDate = new Date();
-					if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > EXPIRATION_LIMIT)
+					if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT)
 						throw new AuthenticationException("Message expired. Sorry.");
 				} catch(Exception ex) {
 					throw new AuthenticationException("Unable to parse date.");
