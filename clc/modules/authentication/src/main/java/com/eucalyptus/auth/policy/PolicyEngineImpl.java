@@ -72,7 +72,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
 
       // System admin can do everything
-      if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
         String userId = requestUser.getId( );
         Account account = requestUser.getAccount( );
         

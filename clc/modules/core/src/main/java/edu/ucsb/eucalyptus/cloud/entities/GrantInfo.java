@@ -92,7 +92,7 @@ public class GrantInfo {
 	@Column( name = "grant_id" )
 	private Long id = -1l;
 	@Column(name="user_id")
-	private String userId;
+	private String userId; // Actually refer to the owner account ID
 	@Column(name="grantGroup")
 	private String grantGroup;
 	@Column(name="allow_read")

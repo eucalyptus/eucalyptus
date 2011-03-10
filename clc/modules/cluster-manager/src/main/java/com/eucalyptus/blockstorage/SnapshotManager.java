@@ -68,6 +68,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
@@ -85,6 +87,7 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Lookups;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
@@ -116,12 +119,19 @@ public class SnapshotManager {
   private static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   private static String ID_PREFIX = "snap";
   
-  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {
-    
+  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException {    
     Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1 ) ) {
+        throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
+      }
+    }
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
-    String partition = vol.getCluster( );
     Service sc = null;
     try {
       sc = StorageUtil.getActiveSc( vol.getCluster( ) );
@@ -174,7 +184,7 @@ public class SnapshotManager {
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );
-      throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ) );
+      throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ), e );
     }
     db.commit( );
     EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getOwner( ),
@@ -202,6 +212,9 @@ public class SnapshotManager {
         reply.set_return( false );
         return reply;
       }
+      if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) );
+      }
       db.delete( snap );
 //      db.getSession( ).flush( );
       DeleteStorageSnapshotResponseType scReply = StorageUtil.send( snap.getCluster( ), new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
@@ -217,7 +230,7 @@ public class SnapshotManager {
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );
-      throw new EucalyptusCloudException( "Error deleting storage volume:" + e.getMessage( ) );
+      throw new EucalyptusCloudException( "Error deleting storage volume:" + e.getMessage( ), e );
     }
     reply.set_return( true );
     return reply;
@@ -232,6 +245,10 @@ public class SnapshotManager {
       List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
       
       for ( Snapshot v : snapshots ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
+          LOG.debug( "Skip snapshot " + v.getDisplayName( ) + " due to access right" );
+          continue;
+        }
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {

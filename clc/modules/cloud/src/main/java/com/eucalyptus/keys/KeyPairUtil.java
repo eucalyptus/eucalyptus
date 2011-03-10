@@ -7,7 +7,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.crypto.Certs;
@@ -23,11 +23,11 @@ public class KeyPairUtil {
     return db;
   }
 
-  public static List<SshKeyPair> getUserKeyPairs( UserFullName userName ) {
+  public static List<SshKeyPair> getUserKeyPairs( AccountFullName accountName ) {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     List<SshKeyPair> keys = Lists.newArrayList( );
     try {
-      keys = db.query( new SshKeyPair( userName ) );
+      keys = db.query( new SshKeyPair( accountName.getAccountId( ) ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -35,24 +35,24 @@ public class KeyPairUtil {
     return keys;
   }
 
-  public static SshKeyPair getUserKeyPair( UserFullName userName, String keyName ) throws EucalyptusCloudException {
+  public static SshKeyPair getUserKeyPair( AccountFullName accountName, String keyName ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      key = db.getUnique( new SshKeyPair( userName, keyName ) );
+      key = db.getUnique( new SshKeyPair( accountName.getAccountId( ), keyName ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName + " for user " + userName, e );
+      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName + " for account " + accountName, e );
     }
     return key;
   }
 
-  public static SshKeyPair getUserKeyPairByValue( UserFullName userName, String keyValue ) throws EucalyptusCloudException {
+  public static SshKeyPair getUserKeyPairByValue( AccountFullName accountName, String keyValue ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      SshKeyPair searchKey = new SshKeyPair( userName );
+      SshKeyPair searchKey = new SshKeyPair( accountName.getAccountId( ) );
       searchKey.setPublicKey( keyValue );
       key = db.getUnique( searchKey );
       db.commit( );
@@ -63,11 +63,11 @@ public class KeyPairUtil {
     return key;
   }
 
-  public static SshKeyPair deleteUserKeyPair( UserFullName userName, String keyName ) throws EucalyptusCloudException {
+  public static SshKeyPair deleteUserKeyPair( AccountFullName accountName, String keyName ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      key = db.getUnique( new SshKeyPair( userName, keyName ) );
+      key = db.getUnique( new SshKeyPair( accountName.getAccountId( ), keyName ) );
       db.delete( key );
       db.commit( );
     } catch ( Throwable e ) {

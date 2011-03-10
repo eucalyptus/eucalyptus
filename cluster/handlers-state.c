@@ -99,7 +99,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   serviceStatusType *myStatus=NULL;
 
   rc = initialize(ccMeta);
-  if (rc || ccIsEnabled()) {
+  if (rc) {
     return(1);
   }
 
@@ -127,21 +127,6 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   myStatus->localEpoch = config->ccStatus.localEpoch;
   memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
 
-  // go through input service descriptions and match with self and node states
-
-  /*
-  *outStatusesLen = serviceIdsLen;
-  *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
-  for (i=0; i<serviceIdsLen; i++) {
-    char statestr[32];
-    logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
-    
-    snprintf((*outStatuses)[i].localState, 32, "%s", config->ccStatus.localState);    
-    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
-    (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
-    memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
-  }  
-  */
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
   return(0);
 }
@@ -160,7 +145,7 @@ int doStartService(ncMetadata *ccMeta) {
   // this is actually a NOP
   sem_mywait(CONFIG);
   config->kick_enabled = 0;
-  ccChangeState(DISABLED);
+  ccChangeState(LOADED);
   sem_mypost(CONFIG);
   
   logprintfl(EUCAINFO, "StartService(): done\n");
@@ -319,14 +304,6 @@ int instIpSync(ccInstance *inst, void *in) {
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
-  /*
-  if (!inst) {
-    return(1);
-  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
-    return(0);
-  }
-  */
-
   if (!inst) {
     return(1);
   } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
@@ -373,14 +350,6 @@ int instNetParamsSet(ccInstance *inst, void *in) {
 int instNetReassignAddrs(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
-  /*
-  if (!inst) {
-    return(1);
-  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
-    return(0);
-  }
-  */
-
   if (!inst) {
     return(1);
   } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
@@ -399,13 +368,58 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
 
 int clean_network_state(void) {
   int rc, i;
-  char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH];
+  char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH], *pidstr=NULL, *ipstr=NULL;
   struct stat statbuf;
   vnetConfig *tmpvnetconfig;
 
   tmpvnetconfig = malloc(sizeof(vnetConfig));
   memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
   
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc && (rc != 2)) {
+    logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip 169.254.169.254\n", cmd);
+  }
+  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
+    if (tmpvnetconfig->publicips[i].ip != 0) {
+      ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
+      rc = system(cmd);
+      rc = rc>>8;
+      if (rc && rc != 2) {
+	logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
+      }
+      if (ipstr) free(ipstr);
+    }
+  }
+
+
+  // dhcp
+  snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
+  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
+  if (!check_file(file)) {
+    pidstr = file2str(file);
+    if (pidstr) {
+      rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
+      if (rc) {
+	logprintfl(EUCAERROR, "clean_network_state(): could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
+      }
+      free(pidstr);
+    }
+  }
+
+  sem_mywait(VNET);
+  for (i=2; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+      if (rc) {
+	logprintfl(EUCADEBUG, "clean_network_state(): failed to tear down network %d\n");
+      }
+    }
+  }
+  sem_mypost(VNET);
+
   // clean up assigned addrs, iptables, dhcpd (and configs)
   rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-F");
   if (rc) {
@@ -417,42 +431,6 @@ int clean_network_state(void) {
   if (rc) {
   }
   
-  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
-  logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
-  rc = system(cmd);
-  if (rc) {
-    logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip 169.254.169.254\n");
-  }
-  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
-    if (tmpvnetconfig->publicips[i].ip != 0) {
-      logprintfl(EUCADEBUG, "clean_network_state(): IP addr: %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, hex2dot(tmpvnetconfig->publicips[i].ip), tmpvnetconfig->pubInterface);
-      logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
-      rc = system(cmd);
-      if (rc) {
-	logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
-      }
-    }
-  }
-
-
-  // dhcp
-  snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
-  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
-  rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
-  if (rc) {
-    logprintfl(EUCAERROR, "clean_network_state(): could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
-  }
-
-  for (i=2; i<NUMBER_OF_VLANS; i++) {
-    if (tmpvnetconfig->networks[i].active) {
-      rc = vnetStopNetwork(tmpvnetconfig, i, tmpvnetconfig->users[i].userName, tmpvnetconfig->users[i].netName);
-      if (rc) {
-	logprintfl(EUCADEBUG, "clean_network_state(): failed to tear down network %d\n");
-      }
-    }
-  }
-
   if (tmpvnetconfig) free(tmpvnetconfig);
   return(0);
 }
