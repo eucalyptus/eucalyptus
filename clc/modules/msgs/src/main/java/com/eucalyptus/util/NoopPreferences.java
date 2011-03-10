@@ -10,11 +10,11 @@ import java.util.prefs.BackingStoreException;
 public class NoopPreferences extends AbstractPreferences {
   private static final String[] EMPTY = {};
   
-  public NoopPreferences( AbstractPreferences parent, String name ) {
+  NoopPreferences( AbstractPreferences parent, String name ) {
     super( parent, name );
   }
   
-  protected NoopPreferences( ) {
+  NoopPreferences( ) {
     this( null, "" );
   }
   
