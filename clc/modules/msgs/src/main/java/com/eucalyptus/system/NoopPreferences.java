@@ -7,8 +7,14 @@ import java.util.prefs.PreferencesFactory;
 
 public class NoopPreferences extends AbstractPreferences {
   private static final String[] EMPTY = {};
+  private static final NoopPreferences ROOT = new NoopPreferences();
+  
+  public NoopPreferences( AbstractPreferences parent, String name ) {
+    super( parent, name );
+  }
+
   protected NoopPreferences( ) {
-    super( null, "" );
+    this( null, "" );
   }
 
   public static class Factory implements PreferencesFactory {
@@ -49,7 +55,7 @@ public class NoopPreferences extends AbstractPreferences {
   
   @Override
   protected AbstractPreferences childSpi( String name ) {
-    return null;
+    return new NoopPreferences( this, name );
   }
   
   @Override
