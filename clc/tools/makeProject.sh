@@ -40,7 +40,10 @@ if [[ -e ${SRC_DIR}/.classpath ]]; then
   cp -fv ${SRC_DIR}/.classpath ${SRC_DIR}/.classpath.bak
 fi
 echo "Generating .classpath file"
-echo "${CLASSPATH_HEADER}${SOURCES}${CLASSPATH_STANDARD}${LIBS}${CLASSPATH_FOOTER}" | xmlindent -f > ${SRC_DIR}/.classpath
+echo "${CLASSPATH_HEADER}${SOURCES}${CLASSPATH_STANDARD}${LIBS}${CLASSPATH_FOOTER}" > ${SRC_DIR}/.classpath
+if which xmlindent; then 
+  xmlindent -f -w ${SRC_DIR}/.classpath
+fi
 echo "Project ready to import"
 
 
