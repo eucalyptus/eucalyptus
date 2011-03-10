@@ -186,7 +186,7 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="bitronix.tm" additivity="false">
-    <priority value="${euca.log.exhaustive.db}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.apache.commons.beanutils.converters" additivity="false">
@@ -206,7 +206,7 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.logicalcobwebs.proxool" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.apache" additivity="false">
@@ -245,18 +245,22 @@
   -->
   <category name="org.mule" additivity="false">
     <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-debug" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jboss" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.hibernate" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.springframework" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.mortbay" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
