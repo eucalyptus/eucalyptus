@@ -74,6 +74,9 @@ permission notice:
 
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
+void adb_InitService(void) {
+}
+
 adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* ncAssignAddress, const axutil_env_t *env) {
   adb_ncAssignAddressType_t * input          = adb_ncAssignAddress_get_ncAssignAddress(ncAssignAddress, env);
   adb_ncAssignAddressResponse_t * response   = adb_ncAssignAddressResponse_create(env);

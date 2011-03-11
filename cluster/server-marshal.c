@@ -71,6 +71,11 @@ permission notice:
 #define DONOTHING 0
 #define EVENTLOG 0
 
+void adb_InitService(void) {
+  int rc;
+  doInitCC();
+}
+
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env) {
   adb_AttachVolumeResponse_t *ret=NULL;
   adb_attachVolumeResponseType_t *avrt=NULL;

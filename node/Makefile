@@ -25,7 +25,7 @@ generated/stubs: $(NCWSDL)
 	mkdir -p generated
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Compiling the stubs

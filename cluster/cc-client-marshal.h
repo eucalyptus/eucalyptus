@@ -78,7 +78,6 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub);
 
 int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub);
-int cc_describeBundleTasks(char **instIds, int instIdsLen, axutil_env_t *env, axis2_stub_t *stub);
 
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub);
 

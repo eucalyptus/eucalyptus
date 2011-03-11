@@ -62,6 +62,7 @@ permission notice:
 
 #include "axis2_skel_EucalyptusNC.h"
 
+void adb_InitService(void);
 adb_ncDescribeResourceResponse_t*  ncDescribeResourceMarshal  (adb_ncDescribeResource_t* ncDescribeResource, const axutil_env_t *env);
 adb_ncRunInstanceResponse_t*       ncRunInstanceMarshal       (adb_ncRunInstance_t* ncRunInstance, const axutil_env_t *env);
 adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeInstances_t* ncDescribeInstances, const axutil_env_t *env);

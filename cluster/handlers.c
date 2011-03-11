@@ -112,6 +112,10 @@ vnetConfig *vnetconfig=NULL;
 sem_t *locks[ENDLOCK];
 int mylocks[ENDLOCK];
 
+void doInitCC(void) {
+  initialize(NULL);
+}
+
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig) {
   int i, j, rc, start = 0, stop = 0, ret=0, timeout, done;
   ccInstance *myInstance;
