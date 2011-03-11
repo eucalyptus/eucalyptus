@@ -49,7 +49,6 @@
     <classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/test/java"/>
     <classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
     <classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
-    <classpathentry kind="src" output="modules/www/build" path="modules/www/src/test/java"/>
     <classpathentry kind="con" path="GROOVY_SUPPORT"/>
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
@@ -97,6 +96,7 @@
     <classpathentry kind="lib" path="lib/commons-pool-1.4.jar"/>
     <classpathentry kind="lib" path="lib/dnsjava-2.0.6.jar"/>
     <classpathentry kind="lib" path="lib/dom4j-1.6.1.jar"/>
+    <classpathentry kind="lib" path="lib/EasyMBean.jar"/>
     <classpathentry kind="lib" path="lib/ehcache-core-1.7.2.jar"/>
     <classpathentry kind="lib" path="lib/el-api-2.1.jar"/>
     <classpathentry kind="lib" path="lib/excalibur-logkit.jar"/>
