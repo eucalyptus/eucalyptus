@@ -1,40 +1,43 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+  Copyright (c) 2009  Eucalyptus Systems, Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, only version 3 of the License.
 
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
+  This file is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  for more details.
 
-This file may incorporate work covered under the following copyright and
-permission notice:
+  You should have received a copy of the GNU General Public License along
+  with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  Please contact Eucalyptus Systems, Inc., 130 Castilian
+  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+  if you need additional information or have any questions.
+
+  This file may incorporate work covered under the following copyright and
+  permission notice:
 
   Software License Agreement (BSD License)
 
   Copyright (c) 2008, Regents of the University of California
-  
+
 
   Redistribution and use of this software in source and binary forms, with
   or without modification, are permitted provided that the following
   conditions are met:
 
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
+  Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
 
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -67,7 +70,7 @@ permission notice:
 #include <fcntl.h> // open
 #include <ctype.h> // tolower, isdigit
 #include <sys/types.h> // stat
-#include <sys/stat.h> // stat 
+#include <sys/stat.h> // stat
 #include <curl/curl.h>
 #include <curl/easy.h>
 
@@ -83,7 +86,7 @@ permission notice:
 static size_t read_data (char *bufptr, size_t size, size_t nitems, void *userp);
 
 struct request {
-	FILE * fp; /* input file pointer to be used by curl READERs */
+    FILE * fp; /* input file pointer to be used by curl READERs */
     long long total_read; /* bytes written during the operation */
     long long total_calls; /* write calls made during the operation */
     time_t timestamp; // timestamp for periodically printing progress messages
@@ -92,7 +95,7 @@ struct request {
 
 static int curl_initialized = 0;
 
-int http_put (const char * file_path, const char * url, const char * login, const char * password) 
+int http_put (const char * file_path, const char * url, const char * login, const char * password)
 {
     int code = ERROR;
 
@@ -104,34 +107,34 @@ int http_put (const char * file_path, const char * url, const char * login, cons
     struct stat64 mystat;
     if (stat64 (file_path, &mystat)) {
         logprintfl (EUCAERROR, "http_put(): failed to stat %s\n", file_path);
-		return code;
+        return code;
     }
     if (!S_ISREG(mystat.st_mode)) {
         logprintfl (EUCAERROR, "http_put(): %s is not a regular file\n", file_path);
-		return code;
+        return code;
     }
 
-	FILE * fp = fopen64 (file_path, "r");
-	if (fp==NULL) {
-		logprintfl (EUCAERROR, "http_put(): failed to open %s for reading\n", file_path);
-		return code;
-	}
+    FILE * fp = fopen64 (file_path, "r");
+    if (fp==NULL) {
+        logprintfl (EUCAERROR, "http_put(): failed to open %s for reading\n", file_path);
+        return code;
+    }
 
-	CURL * curl;
-	CURLcode result;
-	curl = curl_easy_init ();
-	if (curl==NULL) {
-		logprintfl (EUCAERROR, "http_put(): could not initialize libcurl\n");
-		fclose (fp);
-		return code;
-	}
+    CURL * curl;
+    CURLcode result;
+    curl = curl_easy_init ();
+    if (curl==NULL) {
+        logprintfl (EUCAERROR, "http_put(): could not initialize libcurl\n");
+        fclose (fp);
+        return code;
+    }
 
     logprintfl (EUCAINFO, "http_put(): uploading %s\n", file_path);
     logprintfl (EUCAINFO, "            to %s\n", url);
 
-	char error_msg [CURL_ERROR_SIZE];
-	curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
-	curl_easy_setopt (curl, CURLOPT_URL, url); 
+    char error_msg [CURL_ERROR_SIZE];
+    curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
+    curl_easy_setopt (curl, CURLOPT_URL, url);
     curl_easy_setopt (curl, CURLOPT_UPLOAD, 1L);
     curl_easy_setopt (curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)mystat.st_size);
     curl_easy_setopt (curl, CURLOPT_SSL_VERIFYPEER, 0L); // TODO: make this optional?
@@ -145,7 +148,7 @@ int http_put (const char * file_path, const char * url, const char * login, cons
         curl_easy_setopt (curl, CURLOPT_USERPWD, userpwd);
     }
 
-	struct request params;
+    struct request params;
     params.fp = fp;
     params.timestamp = time(NULL);
     params.file_size = (long long)mystat.st_size;
@@ -167,7 +170,7 @@ int http_put (const char * file_path, const char * url, const char * login, cons
             long httpcode;
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcode);
             // TODO: pull out response message, too?
-            
+
             switch (httpcode) {
             case 200L: // all good
                 logprintfl (EUCAINFO, "http_put(): file updated sucessfully\n");
@@ -180,8 +183,8 @@ int http_put (const char * file_path, const char * url, const char * login, cons
             case 408L: // timeout, retry
                 logprintfl (EUCAWARN, "http_put(): server responded with HTTP code %ld (timeout)\n", httpcode);
                 break;
-	    case 500L: // internal server error (could be a fluke, so we'll retry)
-	      logprintfl (EUCAWARN, "http_put(): server responded with HTTP code %ld (transient?)\n", httpcode);
+            case 500L: // internal server error (could be a fluke, so we'll retry)
+                logprintfl (EUCAWARN, "http_put(): server responded with HTTP code %ld (transient?)\n", httpcode);
                 break;
             default: // some kind of error, will not retry
                 logprintfl (EUCAERROR, "http_put(): server responded with HTTP code %ld\n", httpcode);
@@ -199,8 +202,8 @@ int http_put (const char * file_path, const char * url, const char * login, cons
         retries--;
     } while (code!=OK && retries>0);
     fclose (fp);
-    
-	curl_easy_cleanup (curl);
+
+    curl_easy_cleanup (curl);
     return code;
 }
 
@@ -214,7 +217,7 @@ static size_t read_data (char *buffer, size_t size, size_t nitems, void *params)
     do {
         items_read += fread (buffer, size, nitems-items_read, fp);
     } while (items_read!=nitems && !feof(fp));
-        
+
     ((struct request *)params)->total_read += items_read * size;
     ((struct request *)params)->total_calls++;
 
@@ -237,74 +240,74 @@ static size_t read_data (char *buffer, size_t size, size_t nitems, void *params)
 
 // converts hex character to integer
 static char hch_to_int (char ch) {
-  return isdigit (ch) ? (ch - '0') : (10 + tolower (ch) - 'a');
+    return isdigit (ch) ? (ch - '0') : (10 + tolower (ch) - 'a');
 }
 
 // converts integer to hex character
 static char int_to_hch (char i) {
-  static char hex[] = "0123456789ABCDEF";
-  return hex [i & 15];
+    static char hex[] = "0123456789ABCDEF";
+    return hex [i & 15];
 }
 
 // converts a string to url-encoded string (which must be freed)
 char * url_encode (const char * unencoded) {
-  char * encoded = malloc (strlen (unencoded) * 3 + 1);
-  if (encoded==NULL) return NULL;
+    char * encoded = malloc (strlen (unencoded) * 3 + 1);
+    if (encoded==NULL) return NULL;
 
-  const char * pu = unencoded;
-  char * pe = encoded;  
-  while (*pu) {
-    if (isalnum (*pu) 
-	|| *pu == '-' 
-	|| *pu == '_' 
-	|| *pu == '.' 
-	|| *pu == '~') 
-      *pe++ = *pu;
-    else if (*pu == ' ') 
-      *pe++ = '+';
-    else {
-      *pe++ = '%';
-      *pe++ = int_to_hch (*pu >> 4);
-      *pe++ = int_to_hch (*pu & 15);
+    const char * pu = unencoded;
+    char * pe = encoded;
+    while (*pu) {
+        if (isalnum (*pu)
+            || *pu == '-'
+            || *pu == '_'
+            || *pu == '.'
+            || *pu == '~')
+            *pe++ = *pu;
+        else if (*pu == ' ')
+            *pe++ = '+';
+        else {
+            *pe++ = '%';
+            *pe++ = int_to_hch (*pu >> 4);
+            *pe++ = int_to_hch (*pu & 15);
+        }
+        pu++;
     }
-    pu++;
-  }
-  *pe = '\0';
+    *pe = '\0';
 
-  return encoded;
+    return encoded;
 }
 
 // converts a url-encoded string to regular (which must be freed)
 char * url_decode (const char * encoded) {
-  char * unencoded = malloc (strlen (encoded) + 1);
-  if (unencoded==NULL) return NULL;
-  
-  const char * pe = encoded;
-  char * pu = unencoded;
-  while (*pe) {
-    if (*pe == '%') {
-      if (pe[1] && pe[2]) {
-        *pu++ = hch_to_int (pe[1]) << 4 | hch_to_int (pe[2]);
-        pe += 2;
-      }
-    } else if (*pe == '+') { 
-      *pu++ = ' ';
-    } else {
-      *pu++ = *pe;
+    char * unencoded = malloc (strlen (encoded) + 1);
+    if (unencoded==NULL) return NULL;
+
+    const char * pe = encoded;
+    char * pu = unencoded;
+    while (*pe) {
+        if (*pe == '%') {
+            if (pe[1] && pe[2]) {
+                *pu++ = hch_to_int (pe[1]) << 4 | hch_to_int (pe[2]);
+                pe += 2;
+            }
+        } else if (*pe == '+') {
+            *pu++ = ' ';
+        } else {
+            *pu++ = *pe;
+        }
+        pe++;
     }
-    pe++;
-  }
-  *pu = '\0';
-  
-  return unencoded;
+    *pu = '\0';
+
+    return unencoded;
 }
 
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
 #define _T(_S) { char * e = url_encode (_S); char * u = url_decode (e); printf ("orig: %s\nenco: %s\ndeco: %s\n\n", _S, e, u); free (e); free (u); }
-  _T("hello world");
-  _T("~`!1@2#3$4%5^6&7*8(9)0_-+={[}]|\\:;\"'<,>.?/");
-  _T("[datastore1 (1)] windows 2003 enterprise/windows 2003 enterprise.vmx");
+    _T("hello world");
+    _T("~`!1@2#3$4%5^6&7*8(9)0_-+={[}]|\\:;\"'<,>.?/");
+    _T("[datastore1 (1)] windows 2003 enterprise/windows 2003 enterprise.vmx");
 }
 #endif

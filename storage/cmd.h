@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
  * header that defines signatures of all commands
  */
@@ -46,13 +49,13 @@ int bundle_execute (imager_request *);
 int bundle_cleanup (imager_request *, boolean);
 
 static imager_command known_cmds [] = {
-	{ "fsck", fsck_parameters, fsck_validate, NULL, fsck_execute, NULL },
-	{ "download", download_parameters, download_validate, download_requirements, download_execute, download_cleanup },
-	{ "create", create_parameters, create_validate, create_requirements, create_execute, create_cleanup },
-	{ "convert", convert_parameters, convert_validate, convert_requirements, convert_execute, convert_cleanup },
-	{ "inject", inject_parameters, inject_validate, inject_requirements, inject_execute, inject_cleanup },
-	{ "upload", upload_parameters, upload_validate, upload_requirements, upload_execute, upload_cleanup },
-	{ "bundle", bundle_parameters, bundle_validate, bundle_requirements, bundle_execute, bundle_cleanup }
+    { "fsck", fsck_parameters, fsck_validate, NULL, fsck_execute, NULL },
+    { "download", download_parameters, download_validate, download_requirements, download_execute, download_cleanup },
+    { "create", create_parameters, create_validate, create_requirements, create_execute, create_cleanup },
+    { "convert", convert_parameters, convert_validate, convert_requirements, convert_execute, convert_cleanup },
+    { "inject", inject_parameters, inject_validate, inject_requirements, inject_execute, inject_cleanup },
+    { "upload", upload_parameters, upload_validate, upload_requirements, upload_execute, upload_cleanup },
+    { "bundle", bundle_parameters, bundle_validate, bundle_requirements, bundle_execute, bundle_cleanup }
 };
 
 #endif // _CMD_H_
