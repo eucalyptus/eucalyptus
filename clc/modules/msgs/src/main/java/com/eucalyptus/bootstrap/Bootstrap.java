@@ -83,6 +83,7 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Join;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -406,26 +407,26 @@ public class Bootstrap {
     return finished;
   }
   private static final Integer parentNum = Integer.parseInt( System.getProperty( "euca.child" ) );
-  private static final List<InetAddress> parents;
+  private static final ImmutableList<InetAddress> parents = getParentAddresses( );
   public static Boolean isChild( ) {
     return parentNum > -1;
   }
-  public static List<InetAddress> getParentAddresses( ) {
+  public static ImmutableList<InetAddress> getParentAddresses( ) {
     synchronized(Bootstrap.class) {
       if( parents == null ) {
-        parents = Lists.newArrayList( );
+        List<InetAddress> rents = Lists.newArrayList( );
         for( int i = 0; i < parentNum; i++ ) {
           String addr = System.getProperty( "euca.parent." + i );
-          InetAddress ret = null;
           try {
-            parents.add( InetAddress.getByName( addr ) );
+            rents.add( InetAddress.getByName( addr ) );
           } catch ( UnknownHostException ex ) {
             LOG.error( "Ignoring specified parent address as it is not a valid address: addr=" + addr + " error=" + ex.getMessage( ) );
           }
         }
-        if( parents.isEmpty( ) ) {
+        if( rents.isEmpty( ) ) {
           LOG.error( "Invalid parent addresses provided:  This is most likely an error!" );//GRZE:NOTIFY
         }
+        return ImmutableList.copyOf( rents );
       } else {
         return parents;
       }
