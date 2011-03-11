@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+import sys
+from euca_admin.storagecontrollers import StorageController
+
+def main():
+  c = StorageController().cli_register()
+  sys.exit()
+
+if __name__ == "__main__":
+    main()
+ 

@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+import sys
+from euca_admin.users import User
+
+def main():
+  c = User().cli_describe()
+  sys.exit()
+
+if __name__ == "__main__":
+  main()
+ 
