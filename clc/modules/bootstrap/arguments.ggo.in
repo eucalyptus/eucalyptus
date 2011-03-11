@@ -14,7 +14,7 @@ option "pidfile"               -   "Location for the pidfile."                  
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #
-option "verbose"               v   "Verbose bootstrapper output."                      flag                              off                            hidden # DEPRECATED
+option "verbose"               v   "DEPRECATEDVerbose bootstrapper output."            flag                              off                            hidden # DEPRECATED
 option "log-level"             l   "Control the log level for console output."         string  typestr="filename"        default="INFO"          no
 option "log-appender"          L   "Control the destination for console output."       string  typestr="appender-name"   default="console-log"   no
 option "exhaustive"            x   "Exhaustive logging of all connections."            flag                              off
@@ -42,7 +42,7 @@ option "jvm-name"              -   "Which JVM type to run (see jvm.cfg)."       
 option "jvm-args"              X   "Arguments to pass to the JVM."                     string                                                  optional multiple
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
-option "debug-suspend"         -   "Set the port to use for the debugger."             flag                              off                            dependon="debug"          
+option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
 ######                   #       #                                                    #       #                         #                      #      #           
 option "profile"               -   "Launch with jprofiler enabled."                    flag                              off                            hidden
 option "profiler-home"         -   "Set the home for jprofiler."                       string  typestr="jprofilerhome"   default="/opt/profile"  no     dependon="profile" hidden
