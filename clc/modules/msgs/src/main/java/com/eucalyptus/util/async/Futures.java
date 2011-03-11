@@ -65,7 +65,7 @@ public class Futures {
           this.doFail( ex );
         }
       } catch ( Throwable e ) {
-        this.LOG.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ), e );
+        this.LOG.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ), Exceptions.filterStackTrace( e ) );
         this.doFail( e );
       }
     }
