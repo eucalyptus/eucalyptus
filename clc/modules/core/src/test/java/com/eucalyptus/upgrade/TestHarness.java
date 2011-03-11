@@ -21,7 +21,12 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.upgrade.StandalonePersistence;
+import com.eucalyptus.upgrade.TestDescription;
+import com.eucalyptus.upgrade.TestListener;
 import com.google.common.base.Predicate;
 import com.google.common.collect.*;
 
@@ -127,10 +132,10 @@ public class TestHarness
 						throw new RuntimeException(
 								"Failed to find required 'euca.upgrade.destination' property");
 					}
-
-					StandalonePersistence.setupConfigurations();
+					ServiceJarDiscovery.processLibraries( );
+					ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
 					StandalonePersistence.setupInitProviders();
-					StandalonePersistence.runDiscovery();
+					StandalonePersistence.runSetupDiscovery();
 					StandalonePersistence.setupProviders();
 					StandalonePersistence.setupNewDatabase();
 				} catch (Exception e) {
@@ -329,7 +334,7 @@ public class TestHarness
 			
 			try {
 				Class clazz = Class.forName(className);
-				clazz.getDeclaredMethod(methodName, params).invoke(null, methodArgsArray);
+				clazz.getDeclaredMethod(methodName, params).invoke(null, (Object[])methodArgsArray);
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}

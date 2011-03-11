@@ -5,6 +5,7 @@ import java.util.*;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.queue.QueueBroker;
 import com.eucalyptus.reporting.queue.QueueFactory;
 import com.eucalyptus.reporting.queue.QueueSender;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
@@ -73,7 +74,6 @@ public class FalseDataGenerator
 					availZone);
 			fakeInstances.add(insAttrs);
 		}
-
 		QueueSender queueSender = null;
 		TestEventListener listener = null;
 		if (isLocal) {
@@ -95,8 +95,8 @@ public class FalseDataGenerator
 						insAttrs.getAvailabilityZone(), new Long(netIoMegs),
 						new Long(diskIoMegs));
 				System.out.println("Generating:" + i);
-				if (isLocal) {
-					listener.receiveEvent(event);
+				if (isLocal) { 
+					listener.fireEvent(event);
 				} else {
 					queueSender.send(event);
 				}
