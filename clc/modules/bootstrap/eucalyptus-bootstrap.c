@@ -232,7 +232,7 @@ static int wait_child( euca_opts *args, int pid ) {
     int rc=0,status;
     while(rc <= 0 && timer < (15000000)) {
         usleep(50000),timer += 50000;
-        __die((rc = waitpid(pid, &status, WNOHANG))<0,"Waiting for child failed?!?");
+        __abort(rc,(rc = waitpid(-1, &status, WNOHANG))<0,"Waiting for child failed?!?");
         if( WIFEXITED( status ) ) return WEXITSTATUS( status );
     }
     return 1;
@@ -306,7 +306,7 @@ int main( int argc, char *argv[ ] ) {
     gid_t gid = 0;
     if( arguments( argc, argv, args ) != 0 ) exit( 1 );
     debug = args->verbose_flag || args->debug_flag;
-    if( args->stop_flag == 1 ) return stop_child( args );
+    if( args->kill_flag == 1 ) return stop_child( args );
     if( checkuser( GETARG( args, user ), &uid, &gid ) == 0 ) return 1;
     char* java_home_user = GETARG(args,java_home);
     char* java_home_env = getenv( "JAVA_HOME" );
@@ -369,23 +369,22 @@ int main( int argc, char *argv[ ] ) {
         signal( SIGHUP, controller );
         signal( SIGTERM, controller );
         signal( SIGINT, controller );
-        while( waitpid( pid, &status, 0 ) != pid );
+        while( waitpid( -1, &status, 0 ) != pid );
         if( WIFEXITED( status ) ) {
             status = WEXITSTATUS( status );
             __debug( "Eucalyptus exited with status: %d", status );
-            if( status != 122 ) unlink( GETARG( args, pidfile ) );
-            if( status == 123 ) {
-                __debug( "Reloading service" );
+        	unlink( GETARG( args, pidfile ) );
+            if( status == EUCA_RET_RELOAD ) {
+                __debug( "Reloading service." );
                 continue;
-            }
-            if( status == 0 ) {
-                __debug( "Service shut down" );
+            } else if( status == 0 ) {
+                __debug( "Service shut down cleanly." );
                 return 0;
             }
-            __error( "Service exit with a return value of %d", status );
+            __error( "Service exit with a return value of %d.", status );
             return 1;
         } else {
-            __error( "Service did not exit cleanly exit value %d", status );
+            __error( "Service did not exit cleanly: exit value=%d.", status );
             return 1;
         }
     }
@@ -570,39 +569,8 @@ int java_init(euca_opts *args, java_home_t *data) {
     }
     JVM_ARG(opt[++x],"-Deuca.log.level=%1$s",GETARG(args,log_level));
     JVM_ARG(opt[++x],"-Deuca.log.appender=%1$s",GETARG(args,log_appender));
-    JVM_ARG(opt[++x],"-Deuca.walrus.host=%1$s",GETARG(args,walrus_host));
-    if(args->disable_dns_flag) {
-        JVM_ARG(opt[++x],"-Deuca.disable.dns=true");
-    }
-    if(args->disable_storage_flag) {
-        JVM_ARG(opt[++x],"-Deuca.disable.storage=true");
-    }
-    if(args->disable_cloud_flag) {
-    	//TODO: this should be replaced by a runtime dependency computation based on @Provides @Depends
-     	JVM_ARG(opt[++x],"-Deuca.disable.eucalyptus=true");
-     	JVM_ARG(opt[++x],"-Deuca.disable.jetty=true");
-     	JVM_ARG(opt[++x],"-Deuca.disable.db=true");
-     	JVM_ARG(opt[++x],"-Deuca.disable.configuration=true");
-     	JVM_ARG(opt[++x],"-Deuca.disable.component=true");
-     	JVM_ARG(opt[++x],"-Deuca.disable.ldap=true");
-    }
-    if(args->disable_walrus_flag) {
-         JVM_ARG(opt[++x],"-Deuca.disable.walrus=true");
-    }
-    if(args->disable_vmwarebroker_flag) {
-       	JVM_ARG(opt[++x],"-Deuca.disable.vmwarebroker=true");
-    }
     if(args->remote_dns_flag) {
         JVM_ARG(opt[++x],"-Deuca.remote.dns=true");
-    }
-    if(args->remote_storage_flag) {
-        JVM_ARG(opt[++x],"-Deuca.remote.storage=true");
-    }
-    if(args->remote_cloud_flag) {
-         JVM_ARG(opt[++x],"-Deuca.remote.cloud=true");
-    }
-    if(args->remote_walrus_flag) {
-         JVM_ARG(opt[++x],"-Deuca.remote.walrus=true");
     }
     if(args->disable_iscsi_flag) {
        	JVM_ARG(opt[++x],"-Deuca.disable.iscsi=true");
@@ -612,7 +580,7 @@ int java_init(euca_opts *args, java_home_t *data) {
         JVM_ARG(opt[++x],"-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d",GETARG(args,debug_port),(args->debug_suspend_flag?"y":"n"));
     }
     if(args->debug_flag||args->profile_flag) {
-    	JVM_ARG(opt[++x],"-Dcom.sun.management.jmxremote");
+    	JVM_ARG(opt[++x],"-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
     	JVM_ARG(opt[++x],"-XX:+HeapDumpOnOutOfMemoryError");
     	JVM_ARG(opt[++x],"-XX:HeapDumpPath=%s/var/log/eucalyptus/",GETARG(args,home));
     	JVM_ARG(opt[++x],"-verbose:gc");
