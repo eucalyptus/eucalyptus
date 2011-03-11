@@ -76,14 +76,14 @@ public class Futures {
       if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
         try {
           this.LOG.trace( EventRecord.here( this.callback.getClass( ), EventType.CALLBACK, "fireException(" + failure.getClass( ).getSimpleName( ) + ")",
-                                            failure.getMessage( ) ), Exceptions.filterStackTrace( failure, 2 ) );
+                                            failure.getMessage( ) )/*, Exceptions.filterStackTrace( failure, 2 )*/ );
           ( ( Checked ) this.callback ).fireException( failure );
         } catch ( Throwable t ) {
           this.LOG.error( "BUG: an error occurred while trying to process an error.  Previous error was: " + failure.getMessage( ), t );
         }
       } else if ( Callback.Completion.class.isAssignableFrom( this.callback.getClass( ) ) ) {
         this.LOG.trace( EventRecord.here( this.callback.getClass( ), EventType.CALLBACK, "fire(" + failure.getClass( ).getSimpleName( ) + ")",
-                                          failure.getMessage( ) ), Exceptions.filterStackTrace( failure, 2 ) );
+                                          failure.getMessage( ) )/*, Exceptions.filterStackTrace( failure, 2 )*/ );
         ( ( Callback.Completion ) this.callback ).fire( );
       }
     }
