@@ -98,8 +98,10 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.B64;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class EuareService {
@@ -133,8 +135,9 @@ public class EuareService {
     ListGroupsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
@@ -158,8 +161,9 @@ public class EuareService {
     DeleteAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -186,8 +190,9 @@ public class EuareService {
     ListSigningCertificatesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -228,8 +233,9 @@ public class EuareService {
     UploadSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -277,8 +283,9 @@ public class EuareService {
     DeleteUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -305,8 +312,9 @@ public class EuareService {
     PutUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -341,8 +349,9 @@ public class EuareService {
     GetUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -383,8 +392,9 @@ public class EuareService {
     UpdateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -419,8 +429,9 @@ public class EuareService {
     UpdateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -451,8 +462,9 @@ public class EuareService {
     DeleteLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -482,8 +494,9 @@ public class EuareService {
     UpdateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -514,8 +527,9 @@ public class EuareService {
     DeleteGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -542,8 +556,9 @@ public class EuareService {
     ListUsersResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     // TODO(Ye Wen, 01/16/2011): support pagination
     ListUsersResultType result = reply.getListUsersResult( );
     result.setIsTruncated( false );
@@ -568,8 +583,9 @@ public class EuareService {
     UpdateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -607,8 +623,9 @@ public class EuareService {
     PutGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -637,8 +654,9 @@ public class EuareService {
     CreateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, "", account, action, requestUser ) ) {
       throw new EuareException( 403, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + requestUser.getName( ) );
     }
@@ -663,8 +681,9 @@ public class EuareService {
     DeleteSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -697,8 +716,9 @@ public class EuareService {
     ListUserPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -731,8 +751,9 @@ public class EuareService {
     ListAccessKeysResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -769,8 +790,9 @@ public class EuareService {
     GetLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -796,8 +818,9 @@ public class EuareService {
     ListGroupsForUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -834,8 +857,9 @@ public class EuareService {
     CreateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_GROUP, "", account, action, requestUser ) ) {
       throw new EuareException( 403, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + requestUser.getName( ) );
     }
@@ -869,8 +893,9 @@ public class EuareService {
     GetGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -911,8 +936,9 @@ public class EuareService {
     DeleteUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
@@ -948,8 +974,9 @@ public class EuareService {
     RemoveUserFromGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -994,8 +1021,9 @@ public class EuareService {
     ListGroupPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1028,8 +1056,9 @@ public class EuareService {
     CreateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1060,8 +1089,9 @@ public class EuareService {
     CreateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1094,8 +1124,9 @@ public class EuareService {
     GetUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1130,8 +1161,9 @@ public class EuareService {
     UpdateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1159,8 +1191,9 @@ public class EuareService {
     AddUserToGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1200,8 +1233,9 @@ public class EuareService {
     GetGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1237,8 +1271,9 @@ public class EuareService {
     DeleteGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
-    User requestUser = Permissions.getUserById( request.getUserId( ) );
-    Account account = Permissions.getUserAccount( requestUser );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );

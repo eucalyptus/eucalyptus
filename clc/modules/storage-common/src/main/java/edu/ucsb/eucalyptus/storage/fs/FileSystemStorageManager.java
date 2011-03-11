@@ -107,10 +107,10 @@ public class FileSystemStorageManager implements StorageManager {
 	private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
 	private String rootDirectory;
-	
+
 	public FileSystemStorageManager() {
 	}
-	
+
 	public FileSystemStorageManager(String rootDirectory) {
 		this.rootDirectory = rootDirectory;
 	}
@@ -334,7 +334,7 @@ public class FileSystemStorageManager implements StorageManager {
 				file = new ChunkedDataFile(raf, start, end, (int)Math.min((end - start), 8192));
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf((end - start)));
 			}
-			httpResponse.addHeader("Content-Range", start + "-" + end + "/" + size);
+			httpResponse.addHeader("Content-Range", start + "-" + (end -1) + "/" + size);		
 			if(logData != null) {
 				logData.setTurnAroundTime(System.currentTimeMillis() - logData.getTurnAroundTime());
 				logData.setBytesSent(size);
@@ -481,19 +481,19 @@ public class FileSystemStorageManager implements StorageManager {
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	@Override
 	public void check() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void start() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 }

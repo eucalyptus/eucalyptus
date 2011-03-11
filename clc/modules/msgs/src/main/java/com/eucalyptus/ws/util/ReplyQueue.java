@@ -107,14 +107,14 @@ public class ReplyQueue {
       Object payload = muleMsg.getPayload( );
       BaseMessage msg = convert( payload );
       if( msg != null ) {
-        this.handle( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.INTERNAL_SERVER_ERROR, cause ) );
+        this.handle( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
         return;
       } else {
         LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
       }
     } else if ( cause instanceof MuleException ) {
       LOG.error( "Error service request: " + cause.getMessage( ), cause );
-      cause = new WebServicesException( cause.getMessage( ), cause, HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      cause = new WebServicesException( cause.getMessage( ), cause, HttpResponseStatus.NOT_FOUND );
       try {
         Context ctx = Contexts.lookup( );
         Channels.fireExceptionCaught( ctx.getChannel( ), cause );

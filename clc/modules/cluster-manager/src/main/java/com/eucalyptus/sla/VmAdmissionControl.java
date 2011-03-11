@@ -68,9 +68,10 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.entities.Counters;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
@@ -89,6 +90,7 @@ public class VmAdmissionControl {
     if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
       vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
     }
+    vmAllocInfo.setOwnerId( Contexts.lookup( ).getUserFullName( ).getAccountId( ) );
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
     
     byte[] userData = new byte[0];
@@ -107,7 +109,7 @@ public class VmAdmissionControl {
     List<ResourceAllocator> pending = Lists.newArrayList( );
     pending.add( new NodeResourceAllocator() );
     if( Clusters.getInstance( ).hasNetworking( ) ) {
-      pending.add( new AddressAllocator() );
+      pending.add( new PublicAddressAllocator() );
       pending.add( new PrivateNetworkAllocator( ) );
       pending.add( new SubnetIndexAllocator( ) );
     }

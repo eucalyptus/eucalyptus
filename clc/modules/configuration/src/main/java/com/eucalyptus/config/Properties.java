@@ -1,20 +1,23 @@
 package com.eucalyptus.config;
 
 import java.util.List;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class Properties {
-  
+  private static Logger LOG = Logger.getLogger( Properties.class );
   public DescribePropertiesResponseType describeProperties( DescribePropertiesType request ) throws EucalyptusCloudException {
-    if( !request.isAdministrator( ) ) {
+    if( !Contexts.lookup().hasAdministrativePrivileges() ) {
       throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
     }
     DescribePropertiesResponseType reply = request.getReply( );
@@ -33,7 +36,11 @@ public class Properties {
           return arg0.matches( "euca=.*" );
         }});
       for( String altValue : eucas ) {
-        props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) );
+        try {
+          props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) );
+        } catch ( Exception ex ) {
+          props.add( new Property( altValue, ex.getMessage( ), Exceptions.string( ex ) ) ); 
+        }
       }
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
@@ -59,7 +66,7 @@ public class Properties {
   }
 
   public ModifyPropertyValueResponseType modifyProperty( ModifyPropertyValueType request ) throws EucalyptusCloudException {
-    if( !request.isAdministrator( ) ) {
+    if( !Contexts.lookup().hasAdministrativePrivileges() ) {
       throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
     }
     ModifyPropertyValueResponseType reply = request.getReply( );

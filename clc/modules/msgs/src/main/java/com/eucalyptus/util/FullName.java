@@ -68,14 +68,14 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
-public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */ {
-
-  public final static String EMPTY      = "";
-  public final static String SEP_PATH   = "/";
-  public final static String SEP        = ":";
-  public final static String PREFIX     = "arn:aws";
+public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
+  
+  public final static String EMPTY     = "";
+  public final static String SEP_PATH  = "/";
+  public final static String SEP       = ":";
+  public final static String PREFIX    = "arn:aws";
   public final static String NOBODY_ID = "d00d";
-  public final static String SYSTEM_ID  = Integer.toString( 0xC0FFEE, 2 );
+  public final static String SYSTEM_ID = Integer.toString( 0xC0FFEE, 2 );
   
   public abstract String getUniqueId( );
   
@@ -86,68 +86,88 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */ {
   public abstract String getNamespace( );
   
   public abstract String getAuthority( );
-
+  
   public abstract String getRelativeId( );
   
   public abstract String getPartition( );
   
   public abstract String getName( );
-
+  
   public abstract String getFullyQualifiedName( );
-
+  
   public abstract String toString( );
   
   public abstract int hashCode( );
   
   public abstract boolean equals( Object obj );
-
-  public static final Function<String[],String> ASSEMBLE_PATH_PARTS = new Function<String[],String>() {
-    @Override
-    public String apply( String[] pathParts ) {
-      StringBuilder rId = new StringBuilder( );
-      for ( String pathPart : pathParts ) {
-        rId.append( SEP_PATH.substring( 0, rId.length( ) == 0 ? 0 : 1 ) ).append( pathPart );
-      }
-      return rId.toString( );
-    }}; 
+  
+  public static final Function<String[], String> ASSEMBLE_PATH_PARTS = new Function<String[], String>( ) {
+                                                                       @Override
+                                                                       public String apply( String[] pathParts ) {
+                                                                         StringBuilder rId = new StringBuilder( );
+                                                                         for ( String pathPart : pathParts ) {
+                                                                           rId.append( SEP_PATH.substring( 0, rId.length( ) == 0
+                                                                             ? 0
+                                                                             : 1 ) ).append( pathPart );
+                                                                         }
+                                                                         return rId.toString( );
+                                                                       }
+                                                                     };
   
   public class create {
-    enum part { VENDOR, REGION, NAMESPACE, RELATIVEID, DONE }
-    private Map<part,String> partMap = Maps.newHashMap( );
-    private part current = part.VENDOR;
+    enum part {
+      VENDOR, REGION, NAMESPACE, RELATIVEID, DONE
+    }
+    
+    private Map<part, String>   partMap = Maps.newHashMap( );
+    private part                current = part.VENDOR;
     private final StringBuilder buf;
-    create( String name ) { this.buf = new StringBuilder( ); this.buf.append( PREFIX ).append( SEP ).append( name ).append( SEP ); this.current = part.REGION; }
+    
+    create( String name ) {
+      this.buf = new StringBuilder( );
+      this.buf.append( PREFIX ).append( SEP ).append( name ).append( SEP );
+      this.current = part.REGION;
+    }
+    
     public static create vendor( String name ) {
       return new create( name );
     }
+    
     public create region( String region ) {
-      if( this.current.ordinal( ) == part.REGION.ordinal( ) ) {
+      if ( this.current.ordinal( ) == part.REGION.ordinal( ) ) {
         this.buf.append( region ).append( SEP );
         this.current = part.NAMESPACE;
-        this.partMap.put( part.REGION, region == null || region.length( ) == 0 ? FullName.EMPTY : region );
+        this.partMap.put( part.REGION, region == null || region.length( ) == 0
+          ? FullName.EMPTY
+          : region );
       } else {
         throw new IllegalStateException( "Attempt to set region when the current part is: " + this.current );
       }
       return this;
     }
+    
     public create namespace( String namespace ) {
-      if( this.current.ordinal( ) == part.NAMESPACE.ordinal( ) ) {
+      if ( this.current.ordinal( ) == part.NAMESPACE.ordinal( ) ) {
         this.buf.append( namespace ).append( SEP );
         this.current = part.RELATIVEID;
-        this.partMap.put( part.NAMESPACE, namespace == null || namespace.length( ) == 0 ? FullName.EMPTY : namespace );
+        this.partMap.put( part.NAMESPACE, namespace == null || namespace.length( ) == 0
+          ? FullName.EMPTY
+          : namespace );
       } else {
         throw new IllegalStateException( "Attempt to set namespace when the current part is: " + this.current );
       }
       return this;
     }
+    
     public FullName end( ) {
       return relativeId( );
     }
+    
     public FullName relativeId( String... relativePath ) {
-      if( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
-        StringBuilder rId = new StringBuilder();
-        for( String s : relativePath ) {
-          rId.append( relativePath ).append( SEP_PATH );
+      if ( this.current.ordinal( ) == part.RELATIVEID.ordinal( ) ) {
+        StringBuilder rId = new StringBuilder( );
+        for ( String s : relativePath ) {
+          rId.append( s ).append( SEP_PATH );
         }
         this.partMap.put( part.DONE, this.buf.toString( ) );
         this.buf.append( rId.toString( ) );
@@ -156,50 +176,59 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */ {
       } else {
         throw new IllegalStateException( "Attempt to set relative path when the current part is: " + this.current );
       }
-      return new FullName() {
-        @Override public String getUniqueId( ) {
+      return new FullName( ) {
+        @Override
+        public String getUniqueId( ) {
           return this.getNamespace( );
         }
-        @Override public String getFullyQualifiedName( ) {
+        
+        @Override
+        public String getFullyQualifiedName( ) {
           return create.this.buf.toString( );
         }
-
+        
         @Override
         public String getVendor( ) {
           return create.this.partMap.get( part.VENDOR );
         }
-
+        
         @Override
         public String getRegion( ) {
           return create.this.partMap.get( part.REGION );
         }
-
+        
         @Override
         public String getNamespace( ) {
           return create.this.partMap.get( part.NAMESPACE );
         }
-
+        
         @Override
         public String getAuthority( ) {
           return create.this.partMap.get( part.DONE );
         }
-
+        
         @Override
         public String getRelativeId( ) {
           return create.this.partMap.get( part.RELATIVEID );
         }
-
+        
         @Override
         public String getPartition( ) {
           return create.this.partMap.get( part.REGION );
         }
-
+        
         @Override
         public String getName( ) {
           return create.this.buf.toString( );
-        }};
+        }
+        
+        @Override
+        public String toString( ) {
+          return create.this.buf.toString( );
+        }
+      };
     }
-  
+    
   }
-
+  
 }

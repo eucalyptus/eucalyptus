@@ -205,7 +205,7 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, rsvId, keyInfo, vmInfo, this.vmAllocInfo.getPlatform( ) , vlan, networkNames, userData );
+        cb = makeRunRequest( request, childToken, this.vmAllocInfo.getOwnerId( ),rsvId, keyInfo, vmInfo, this.vmAllocInfo.getPlatform( ) , vlan, networkNames, userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;
       }
@@ -214,7 +214,7 @@ public class ClusterAllocator extends Thread {
     }
   }
   
-  private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String rsvId, 
+  private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, String ownerId, String rsvId, 
                                   VmKeyInfo keyInfo, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override
@@ -228,6 +228,7 @@ public class ClusterAllocator extends Thread {
                                    vmInfo, keyInfo, platform != null ? platform : "linux",/**ASAP:FIXME:GRZE**/
                                    childToken.getInstanceIds( ), macs, 
                                    vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regarding( request );
+    run.setUserId( ownerId );
     Request<VmRunType, VmRunResponseType> req = Callbacks.newRequest( new VmRunCallback( run, childToken ) );
     if ( !childToken.getAddresses( ).isEmpty( ) ) {
       req.then( new Callback.Success<VmRunResponseType>( ) {

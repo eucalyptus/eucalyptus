@@ -3,6 +3,7 @@ package com.eucalyptus.address;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -78,14 +79,14 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     if ( allocCount > 0 ) {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          this.allocateNext( ComponentIds.lookup( Eucalyptus.class ).getFullName( ) );
+          this.allocateNext( FakePrincipals.SYSTEM_USER_ERN );
         } catch ( NotEnoughResourcesAvailable e ) {
           break;
         }
       }
     } else {
       for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-        if ( addr.getOwner( ).getName( ).equals( Address.SYSTEM_ALLOCATED_USERID ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( addr.getOwner( ).equals( FakePrincipals.SYSTEM_USER_ERN ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
           addr.release( );
           if ( allocCount++ >= 0 ) break;
         }

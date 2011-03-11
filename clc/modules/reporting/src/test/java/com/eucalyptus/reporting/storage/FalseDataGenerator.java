@@ -5,7 +5,7 @@ import java.util.*;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.*;
-import com.eucalyptus.reporting.event.EventListener;
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 

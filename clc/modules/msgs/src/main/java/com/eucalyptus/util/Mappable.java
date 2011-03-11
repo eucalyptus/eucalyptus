@@ -65,5 +65,9 @@ package com.eucalyptus.util;
  */
 
 public interface Mappable<T,K> extends Comparable<T> {
-  public K getName( );
+  public abstract K getName( );
+  public abstract boolean equals( final Object o );  
+  public abstract int hashCode( );
+  public abstract String toString( );
+
 }

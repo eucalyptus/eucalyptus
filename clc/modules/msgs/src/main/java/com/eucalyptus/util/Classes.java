@@ -79,7 +79,9 @@ public class Classes {
       }
     };
     List<Class> ret = Lists.newArrayList( );
-    for( Class t = ( o instanceof Class ? (Class)o : o.getClass() ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
+    for ( Class t = ( o instanceof Class
+      ? ( Class ) o
+      : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
     return ret;
   }
   
@@ -93,14 +95,17 @@ public class Classes {
   private static List<Class> processTypeForGenerics( Type... types ) {
     List<Class> ret = Lists.newArrayList( );
     for ( Type t : types ) {
-      if ( t instanceof Class && t != Object.class ) {
-        ret.add( ( Class ) t );
-        ret.addAll( processTypeForGenerics( ( ( ( Class ) t ).getSuperclass( ) ) ) );
-      } else if ( t instanceof ParameterizedType ) {
+      if ( t instanceof ParameterizedType ) {
         ParameterizedType pt = ( ParameterizedType ) t;
         for ( Type ptType : pt.getActualTypeArguments( ) ) {
-          ret.addAll( processTypeForGenerics( ptType ) );
+          if( ptType instanceof Class ) {
+            ret.add( (Class) ptType );
+          }
         }
+      }
+      if( t instanceof Class ) {
+        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericSuperclass( ) ) );
+        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericInterfaces( ) ) );
       }
     }
     return ret;

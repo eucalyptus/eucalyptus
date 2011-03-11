@@ -116,7 +116,7 @@ public class CompileBindings extends Task {
       for ( String d : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String buildDir = dirName + File.separator + d.replaceAll( "build/.*", "build" );
         if ( !dirs.contains( buildDir ) ) {
-          log( "Found class directory: " + buildDir );
+          System.out.println( "Found class directory: " + buildDir );
           dirs.add( buildDir );
         }
       }
@@ -138,7 +138,7 @@ public class CompileBindings extends Task {
       final String dirName = fs.getDir( getProject( ) ).getAbsolutePath( );
       for ( String b : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
         final String bindingFilePath = dirName + File.separator + b;
-        log( "Found binding: " + bindingFilePath );
+        System.out.println( "Found binding: " + bindingFilePath );
         if ( !bindingFilePath.endsWith( "msgs-binding.xml" ) ) {
           bindings.add( bindingFilePath );
         }
@@ -159,21 +159,10 @@ public class CompileBindings extends Task {
       }} ) ) {
       path.add( new Path( getProject( ), f.getAbsolutePath( ) ) );
     }
-//    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
     try {
       AntClassLoader loader = this.getProject( ).createClassLoader( path );
-//      Thread.currentThread( ).setContextClassLoader( loader );
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-//      for ( FileSet fs : this.classFileSets ) {
-//        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-//          try {
-//            Class c = loader.forceLoadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-//          } catch ( ClassNotFoundException e ) {
-//            e.printStackTrace( );
-//          }
-//        }
-//      }
       Compile compiler = new Compile( false, false, false, false, false, false );
       compiler.compile( paths( ), bindings() );
     } catch ( ClassNotFoundException e1 ) {
@@ -182,45 +171,7 @@ public class CompileBindings extends Task {
     } catch ( Throwable e ) {
       e.printStackTrace( );
       throw new RuntimeException( e );
-    } finally {
-//      Thread.currentThread( ).setContextClassLoader( old );
-    }
+    } 
   }
   
-//  private void runBindingCompiler( Path path ) {
-//    ClassLoader old = Thread.currentThread( ).getContextClassLoader( );
-//    ClassLoader cl = this.getProject( ).createClassLoader( path );
-//    Thread.currentThread( ).setContextClassLoader( cl );
-//    try {
-//      BindingGenerator.MSG_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
-//      BindingGenerator.DATA_TYPE = cl.loadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-//      Map<String, Class> classes = new TreeMap<String, Class>( ) {
-//        {
-//          put( BindingGenerator.MSG_TYPE.getName( ), BindingGenerator.MSG_TYPE );
-//          put( BindingGenerator.DATA_TYPE.getName( ), BindingGenerator.DATA_TYPE );
-//        }
-//      };
-//      for ( FileSet fs : this.classFileSets ) {
-//        for ( String classFileName : fs.getDirectoryScanner( getProject( ) ).getIncludedFiles( ) ) {
-//          try {
-//            if ( !classFileName.endsWith( "class" ) ) continue;
-//            Class c = cl.loadClass( classFileName.replaceFirst( "[^/]*/[^/]*/", "" ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" ) );
-//            if( !( c.getCanonicalName( ) == null ) ) {
-//              System.out.println( "Loaded class: " + c );
-//              classes.put( c.getName( ), c );
-//            }
-//          } catch ( ClassNotFoundException e ) {
-//            e.printStackTrace( );
-//          }
-//        }
-//      }
-//      Compile compiler = new Compile( true, true, false, false, false, false );
-//      compiler.compile( paths( ), bindings( ) );
-//    } catch ( Throwable e ) {
-//      e.printStackTrace( );
-//      throw new RuntimeException( e );
-//    } finally {
-//      Thread.currentThread( ).setContextClassLoader( old );
-//    }
-//  }
 }

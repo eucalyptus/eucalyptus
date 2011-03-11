@@ -83,6 +83,7 @@ permission notice:
 extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
+extern struct nc_state_t nc_state;
 
 #define HYPERVISOR_URI "qemu:///system"
 
@@ -128,12 +129,35 @@ static int doInitialize (struct nc_state_t *nc)
 	return OK;
 }
 
+static int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml) {
+        int virtio_dev = 0;
+        int rc = 0;
+        struct stat statbuf;
+        /* only attach using virtio when the device is /dev/vdXX */
+        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+             virtio_dev = 1;
+        }
+        if (nc->config_use_virtio_disk && virtio_dev) {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+        } else {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+        }
+        rc = stat(remoteDev, &statbuf);
+        if (rc) {
+             logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+             rc = 1;
+        }
+        return rc;
+}
+
 /* thread that does the actual reboot */
 static void * rebooting_thread (void *arg) 
 {
     virConnectPtr *conn;
     ncInstance * instance = (ncInstance *)arg;
-
+ 
+    struct stat statbuf;
+    int rc = 0;
     char xml_path [MAX_PATH];
     snprintf (xml_path, MAX_PATH, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
     char * xml = file2str (xml_path);
@@ -177,16 +201,19 @@ static void * rebooting_thread (void *arg)
     for (i=0 ; i < instance->volumesSize; ++i) {
         char attach_xml[1024];
         int err = 0;
+        int rc = 0;
         ncVolume *volume = &instance->volumes[i];
-        snprintf (attach_xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", volume->remoteDev, volume->localDevReal);
-        sem_p (hyp_sem);
-        err = virDomainAttachDevice (dom, attach_xml);
-        sem_v (hyp_sem);      
-        if (err) {
-            logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, attach_xml);
-        } else {
-            logprintfl (EUCAINFO, "reattached %s to %s in domain %s\n", volume->remoteDev, volume->localDevReal, instance->instanceId);
-        }
+        rc = generate_attach_xml(volume->localDevReal, volume->remoteDev, &nc_state, attach_xml);
+        if(!rc) {
+            sem_p (hyp_sem);
+            err = virDomainAttachDevice (dom, attach_xml);
+            sem_v (hyp_sem);      
+            if (err) {
+                logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, attach_xml);
+            } else {
+                logprintfl (EUCAINFO, "reattached %s to %s in domain %s\n", volume->remoteDev, volume->localDevReal, instance->instanceId);
+            }
+	}
     }
     if (dom==NULL) {
         logprintfl (EUCAFATAL, "Failed to restart instance %s\n", instance->instanceId);
@@ -232,14 +259,27 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 			char **consoleOutput) {
 
   char *console_output=NULL, *console_append=NULL, *console_main=NULL;
-  char console_file[MAX_PATH];
+  char console_file[MAX_PATH], userId[48];
   int rc, fd, ret, readsize;
   struct stat statbuf;
+  ncInstance *instance=NULL;
 
   *consoleOutput = NULL;
   readsize = 64 * 1024;
 
-  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), meta->userId, instanceId);
+  // find the instance record
+  sem_p (inst_sem); 
+  instance = find_instance(&global_instances, instanceId);
+  if (instance) {
+    snprintf(userId, 48, "%s", instance->userId);
+  }
+  sem_v (inst_sem);
+  if (!instance) {
+    logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
+    return(1);
+  }
+
+  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), userId, instanceId);
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
     fd = open(console_file, O_RDONLY);
@@ -253,7 +293,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     }
   }
   
-  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), meta->userId, instanceId);
+  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), userId, instanceId);
 
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
@@ -337,40 +377,23 @@ doAttachVolume (	struct nc_state_t *nc,
             int err = 0;
             char xml [1024];
             int is_iscsi_target = 0;
-            char *local_iscsi_dev;
+            //char *local_iscsi_dev;
             int virtio_dev = 0;
             rc = 0;
             /* only attach using virtio when the device is /dev/vdXX */
-            if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
-                virtio_dev = 1;
-            }
             if(check_iscsi(remoteDev)) {
                 is_iscsi_target = 1;
                 /*get credentials, decrypt them*/
-                //parse_target(remoteDev);
                 /*login to target*/
-		local_iscsi_dev = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
-		if (!local_iscsi_dev || !strstr(local_iscsi_dev, "/dev")) {
+		remoteDev = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
+		if (!remoteDev || !strstr(remoteDev, "/dev")) {
 		  logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		  rc = 1;
-		} else {
-		  if (nc->config_use_virtio_disk && virtio_dev) {
-		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
-		  } else {
-		      snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", local_iscsi_dev, localDevReal);
-		  }
-		}
-            } else {
-                if (nc->config_use_virtio_disk && virtio_dev) {
-                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
-                } else {
-                    snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
-                }
-                rc = stat(remoteDev, &statbuf);
-                if (rc) {
-                   logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
-                   rc = 1;
-                }
+		} 
+	    }
+
+	    if (!rc) {
+	        rc = generate_attach_xml(localDevReal, remoteDev, nc, xml);
 	    }
 	    if (!rc) {
 	      /* protect KVM calls, just in case */
@@ -387,9 +410,6 @@ doAttachVolume (	struct nc_state_t *nc,
 	      ret = ERROR;
 	    }
             virDomainFree(dom);
-            if(is_iscsi_target) {
-                free(local_iscsi_dev);
-            }
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl (EUCAWARN, "warning: domain %s not running on hypervisor, cannot attach device\n", instanceId);

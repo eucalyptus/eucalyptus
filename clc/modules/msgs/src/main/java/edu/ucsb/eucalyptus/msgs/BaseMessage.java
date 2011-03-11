@@ -33,15 +33,15 @@ import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger      LOG          = Logger.getLogger( BaseMessage.class );
-  String                     correlationId;
-  String                     userId;
-  String                     effectiveUserId;
-  Boolean                    _return      = true;
-  String                     statusMessage;
-  Integer                    epoch        = currentEpoch++;
-  ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
-  private static Integer     currentEpoch = 0;
+  private static Logger              LOG          = Logger.getLogger( BaseMessage.class );
+  private String                     correlationId;
+  private String                     userId;
+  private String                     effectiveUserId;
+  private Boolean                    _return      = true;
+  private String                     statusMessage;
+  private Integer                    epoch        = currentEpoch++;
+  private ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
+  private static Integer             currentEpoch = 0;
   
   public BaseMessage( ) {
     super( );
@@ -58,7 +58,6 @@ public class BaseMessage {
   
   public BaseMessage( BaseMessage copy ) {
     this( );
-    this.setUserId( copy.getUserId( ) );
     this.effectiveUserId = copy.getEffectiveUserId( );
     this.correlationId = copy.getCorrelationId( );
   }
@@ -81,12 +80,9 @@ public class BaseMessage {
     this.userId = userId;
   }
   
+  @Deprecated
   public String getUserId( ) {
-    if ( this.getUser( ) == null ) {
-      return FakePrincipals.NOBODY_ID;
-    } else {
-      return this.getUser( ).getId( );
-    }
+    return this.userId;
   }
   
   public Boolean get_return( ) {
@@ -104,7 +100,7 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
-    this.effectiveUserId = this.getUser( ).getName( );
+    this.effectiveUserId = this.userId;
     return ( TYPE ) this;
   }
   
@@ -136,7 +132,7 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    this.setUser( FakePrincipals.SYSTEM_USER );
+    regarding( null, null );
     return ( TYPE ) this;
   }
   
@@ -149,22 +145,33 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
-    this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
-    return ( TYPE ) regarding( );
+    String corrId = null;
+    if( msg == null ) {
+      this.correlationId = UUID.randomUUID( ).toString( );
+    } else {
+      corrId = msg.correlationId;
+    }
+    if( subCorrelationId == null ) {
+      subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
+    }    
+    this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    this.correlationId = corrId + "-" + subCorrelationId;
+    return ( TYPE ) this;
   }
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
     this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
-    String userId = msg.userId;
-    this.setUser( msg.getUser( ) );
-    if ( userId != null && !Account.NOBODY_ACCOUNT.equals( userId ) ) {
-      this.userId = userId;//TODO:GRZE:HACKHACKHACK
-    }
+    this.userId = msg.userId;
     return ( TYPE ) this;
   }
   
-  public boolean isAdministrator( ) {
-    return ( FakePrincipals.SYSTEM_USER.getName( ).equals( this.effectiveUserId ) ) || this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( );
+  @Deprecated
+  /** this cannot work correctly anymore **/
+  private boolean isAdministrator( ) {
+//    return ( FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( this.effectiveUserId ) ) || this.getUser( ).isSystemAdmin( )
+//           || this.getUser( ).isSystemInternal( );
+    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().hasAdministrativePrivileges() instead." );
   }
   
   public String toString( ) {
@@ -211,17 +218,23 @@ public class BaseMessage {
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
+      reply.setCorrelationId( this.getCorrelationId( ) );
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( this.correlationId, e );
     }
-    reply.setCorrelationId( this.getCorrelationId( ) );
     return reply;
   }
   
   public String toSimpleString( ) {
-    return String.format( "%s:%s:%s:%s:%s:%s", this.getClass( ).getSimpleName( ), this.correlationId, this.getUserErn( ), this.effectiveUserId,
-                          this.get_return( ), this.getStatusMessage( ) );
+    StringBuilder buf = new StringBuilder( );
+    buf.append( this.getClass( ).getSimpleName( ) )
+       .append( ":" ).append( this.correlationId )
+       .append( ":" ).append( this.userId )
+       .append( ":" ).append( this.effectiveUserId )
+       .append( ":return=" ).append( this.get_return( ) )
+       .append( ":status=" ).append( this.getStatusMessage( ) );
+    return buf.toString( );
   }
   
   /**
@@ -293,11 +306,7 @@ public class BaseMessage {
    * @see {@link Context#getAccount()}
    */
   public Account getAccount( ) {
-    try {
-      return Contexts.lookup( this.correlationId ).getAccount( );
-    } catch ( NoSuchContextException ex ) {
-      return FakePrincipals.NOBODY_ACCOUNT;
-    }
+    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getAccount() instead." );
   }
   
   /**
@@ -306,44 +315,11 @@ public class BaseMessage {
    */
   @Deprecated
   public User getUser( ) {
-    if ( !Contexts.exists( this.correlationId ) ) {
-      if ( this.userId != null ) {
-        if ( FakePrincipals.NOBODY_USER_ERN.getName( ).equals( this.userId ) ) {
-          return FakePrincipals.NOBODY_USER;
-        } else if ( FakePrincipals.SYSTEM_USER_ERN.getName( ).equals( this.userId ) ) {
-          return FakePrincipals.SYSTEM_USER;
-        } else {
-          try {
-            return Accounts.lookupUserById( this.userId );
-          } catch ( AuthException ex ) {
-            LOG.error( ex );
-            return FakePrincipals.NOBODY_USER;
-          }
-        }
-      } else {
-        return FakePrincipals.NOBODY_USER;
-      }
-    } else {
-//      if ( this.userId != null && FakePrincipals.isFakeIdentify( this.userId ) ) {
-//        return Account.SYSTEM_ACCOUNT.equals( this.userId )
-//          ? FakePrincipals.SYSTEM_USER
-//          : FakePrincipals.NOBODY_USER;
-//      } else {
-        try {
-          return Contexts.lookup( this.correlationId ).getUser( );
-        } catch ( NoSuchContextException ex ) {
-          return FakePrincipals.NOBODY_USER;
-        }
-//      }
-    }
+    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUser() instead." );
   }
   
-  /**
-   * @deprecated
-   * @see {@link Context#getUserErn()}
-   */
   @Deprecated
-  public UserFullName getUserErn( ) {
-    return UserFullName.getInstance( this.getUser( ) );
+  private UserFullName getUserErn( ) {
+    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUserFullName() instead." );
   }
 }

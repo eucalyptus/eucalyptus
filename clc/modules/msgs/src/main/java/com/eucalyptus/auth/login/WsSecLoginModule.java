@@ -8,8 +8,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.WSSecurity;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.crypto.util.WSSecurity;
 
 public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
   private static Logger LOG = Logger.getLogger( WsSecLoginModule.class );

@@ -64,7 +64,6 @@
 package com.eucalyptus.auth;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.crypto.Hmacs;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsRemote;
@@ -76,6 +75,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
 
 @Provides(Empyrean.class)
@@ -102,13 +102,17 @@ public class RemoteComponentCredentialBootstrapper extends Bootstrapper {
   }
 
   private boolean checkAllKeys( ) {
-    for ( com.eucalyptus.component.Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
+      if( !c.hasCredentials( ) ) {
+        continue;
+      } else {
         try {
-          if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.getName( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
+          if( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {//ASAP: this is where the keys thing happens during bootstrap.
+            LOG.error( "Failed to lookup key for " + c.getCapitalizedName( ) + " with alias=" + c.name( ) + " in file " + EucaKeyStore.getInstance( ).getFileName( ) );
             return false;
           }
         } catch ( Exception e ) {
+          LOG.error( e, e );
           return false;
         }
       }

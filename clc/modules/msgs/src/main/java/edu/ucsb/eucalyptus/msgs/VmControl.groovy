@@ -76,6 +76,7 @@ public class TerminateInstancesResponseType extends VmControlMessage {
   boolean terminated = false;
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_TERMINATEINSTANCES )
 public class TerminateInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -87,14 +88,9 @@ public class TerminateInstancesType extends VmControlMessage {
     this.instancesSet.add(instanceId);
   }
 
-  def TerminateInstancesType(String instanceId, EucalyptusMessage parent) {
-    this.instancesSet.add(instanceId);
-    this.correlationId = parent.correlationId;
-    this.userId = parent.userId;
-    this.effectiveUserId = parent.effectiveUserId;
-  }
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCES )
 public class DescribeInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -105,6 +101,7 @@ public class DescribeInstancesResponseType extends VmControlMessage {
   ArrayList<ReservationInfoType> reservationSet = new ArrayList<ReservationInfoType>();
 }
 /** *******************************************************************************/
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_REBOOTINSTANCES )
 public class RebootInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -115,12 +112,6 @@ public class RebootInstancesType extends VmControlMessage {
     this.instancesSet.add(instanceId);
   }
 
-  def RebootInstancesType(String instanceId, EucalyptusMessage parent) {
-    this.instancesSet.add(instanceId);
-    this.correlationId = parent.correlationId;
-    this.userId = parent.userId;
-    this.effectiveUserId = parent.effectiveUserId;
-  }
 }
 public class RebootInstancesResponseType extends VmControlMessage {
 }
@@ -195,10 +186,12 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   Date timestamp;
   String output;
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETCONSOLEOUTPUT )
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETPASSWORDDATA )
 public class GetPasswordDataType extends VmControlMessage {
   String instanceId;
 }
@@ -244,6 +237,37 @@ public class RunningInstancesItemType extends EucalyptusData {
   Boolean monitoring = false;
   Boolean disableApiTermination = false;
   Boolean instanceInitiatedShutdownBehavior = "stop"; //or "terminate"
+  String ipAddress;
+  String privateIpAddress;
+  String rootDeviceType = "instance-store";
+  String rootDeviceName = "/dev/sda1";
+  ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+}
+
+public class InstanceBlockDeviceMapping extends EucalyptusData {
+  String deviceName;
+  EbsInstanceBlockDeviceMapping ebs;
+  public InstanceBlockDeviceMapping() {}
+  public InstanceBlockDeviceMapping( String deviceName ) {
+    this.deviceName = deviceName;
+  }
+  public InstanceBlockDeviceMapping( String deviceName, String volumeId, String status, Date attachTime ) {
+    this.deviceName = deviceName;
+    this.ebs = new EbsInstanceBlockDeviceMapping( volumeId, status, attachTime );
+  }
+}
+
+public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
+  String volumeId;
+  String status;
+  Date attachTime;
+  Boolean deleteOnTermination = Boolean.FALSE;
+  public EbsInstanceBlockDeviceMapping() {}
+  public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime ) {
+    this.volumeId = volumeId;
+    this.status = status;
+    this.attachTime = attachTime;
+  }
 }
 public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/
   String snapshotId;
@@ -293,6 +317,7 @@ public class StopInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StopInstancesResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STOPINSTANCES )
 public class StopInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
@@ -302,11 +327,12 @@ public class StartInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StartInstancesResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STARTINSTANCES )
 public class StartInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }
-
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MODIFYINSTANCEATTRIBUTE )
 public class ModifyInstanceAttributeType extends VmControlMessage {
   String instanceId;
   Attr element;
@@ -324,6 +350,7 @@ public class ModifyInstanceAttributeType extends VmControlMessage {
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
   public ModifyInstanceAttributeResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RESETINSTANCEATTRIBUTE )
 public class ResetInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public ResetInstanceAttributeType() {  }
@@ -331,6 +358,7 @@ public class ResetInstanceAttributeType extends VmControlMessage {
 public class ResetInstanceAttributeResponseType extends VmControlMessage {
   public ResetInstanceAttributeResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCEATTRIBUTE )
 public class DescribeInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public DescribeInstanceAttributeType() {  }
@@ -357,6 +385,7 @@ public class MonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public MonitorInstancesResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MONITORINSTANCES )
 public class MonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
@@ -365,6 +394,7 @@ public class UnmonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public UnmonitorInstancesResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_UNMONITORINSTANCES )
 public class UnmonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
@@ -373,6 +403,7 @@ public class UnmonitorInstancesType extends VmControlMessage {
 public class CreateTagsResponseType extends ResourceTagMessage  {
   public CreateTagsResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATETAGS )
 public class CreateTagsType extends ResourceTagMessage  {
   ArrayList<String> resourcesSet = new ArrayList<String>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
@@ -389,6 +420,7 @@ public class ResourceTag extends EucalyptusData {
   String value;
   public ResourceTagSetItemType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBETAGS )
 public class DescribeTagsType extends ResourceTagMessage  {
   ArrayList<FilterType> filterSet = new ArrayList<FilterType>();
   public DescribeTagsType() {  }
@@ -402,6 +434,7 @@ public class DeleteTagsResponseType extends ResourceTagMessage {
   String requestId;
   public DeleteTagsResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETETAGS )
 public class DeleteTagsType extends ResourceTagMessage {
   ArrayList<String> resourcesSet = new ArrayList<String>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
@@ -414,6 +447,7 @@ public class TagInfo extends EucalyptusData {
   String value;
   public TagSetItemType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEPLACEMENTGROUP )
 public class CreatePlacementGroupType extends VmPlacementMessage {
   String groupName;
   String strategy;
@@ -422,6 +456,7 @@ public class CreatePlacementGroupType extends VmPlacementMessage {
 public class CreatePlacementGroupResponseType extends VmPlacementMessage {
   public CreatePlacementGroupResponseType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETEPLACEMENTGROUP )
 public class DeletePlacementGroupType extends VmPlacementMessage {
   String groupName;
   public DeletePlacementGroupType() {  }
@@ -435,6 +470,7 @@ public class PlacementGroupInfo extends EucalyptusData {
   String state;
   public PlacementGroupInfoType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEPLACEMENTGROUPS )
 public class DescribePlacementGroupsType extends VmPlacementMessage {
   ArrayList<String> placementGroupSet = new ArrayList<String>();
   ArrayList<FilterType> filterSet = new ArrayList<FilterType>();

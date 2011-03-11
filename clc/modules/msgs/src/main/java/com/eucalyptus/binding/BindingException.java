@@ -73,15 +73,15 @@ public class BindingException extends WebServicesException {
   }
 
   public BindingException( String arg0, Throwable arg1 ) {
-    super( arg0, arg1, HttpResponseStatus.BAD_REQUEST );
+    super( arg0, arg1, HttpResponseStatus.PRECONDITION_FAILED );
   }
 
   public BindingException( String arg0 ) {
-    super( arg0, HttpResponseStatus.BAD_REQUEST );
+    super( arg0, HttpResponseStatus.PRECONDITION_FAILED );
   }
 
   public BindingException( Throwable arg0 ) {
-    super( arg0, HttpResponseStatus.BAD_REQUEST );
+    super( arg0, HttpResponseStatus.PRECONDITION_FAILED );
   }
 
 }

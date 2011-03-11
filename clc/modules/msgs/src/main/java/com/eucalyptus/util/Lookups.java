@@ -95,10 +95,10 @@ public class Lookups {
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  public static <T extends HasOwner> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends HasOwningAccount> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
-    if( lookupTypes.size( ) != 1 ) {
+    if( lookupTypes.isEmpty( ) ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( ) + " so the policy type for looking up " + identifier + " cannot be determined." );
     } else {
       PolicyResourceType type = PolicyAnnotationRegistry.extractResourceType( lookupTypes.get( 0 ) );
@@ -125,4 +125,33 @@ public class Lookups {
       }
     }
   }
+  
+  public static boolean checkPrivilege( BaseMessage request, String resourceType, String resourceId, FullName resourceOwner ) {
+    Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    User requestUser = ctx.getUser( );
+    Account account = null;
+    try {
+      account = Accounts.lookupUserById( resourceOwner.getUniqueId( ) ).getAccount( );
+    } catch ( AuthException e ) {
+      LOG.error( e, e );
+      return false;
+    }
+    return ( ctx.hasAdministrativePrivileges( ) ||
+             Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser ));
+  }
+  
+  public static boolean checkPrivilege( String action, String resourceType, String resourceId, String resourceOwnerAccountId ) {
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = null;
+    try {
+      account = Accounts.lookupAccountById( resourceOwnerAccountId );
+    } catch ( AuthException e ) {
+      LOG.error( e, e );
+      return false;
+    }
+    return Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser );
+  }
+  
 }

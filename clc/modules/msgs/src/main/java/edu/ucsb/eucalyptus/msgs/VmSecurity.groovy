@@ -63,6 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 
@@ -70,6 +72,7 @@ public class VmSecurityMessage extends EucalyptusMessage{}
 /** *******************************************************************************/
 public class AuthorizeSecurityGroupIngressResponseType extends VmSecurityMessage {
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_AUTHORIZESECURITYGROUPINGRESS )
 public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
@@ -80,6 +83,7 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
 /** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATESECURITYGROUP )
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
   String groupDescription;
@@ -87,12 +91,14 @@ public class CreateSecurityGroupType extends VmSecurityMessage {
 /** *******************************************************************************/
 public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETESECURITYGROUP )
 public class DeleteSecurityGroupType extends VmSecurityMessage {
   String groupName;
 }
 /** *******************************************************************************/
 public class RevokeSecurityGroupIngressResponseType extends VmSecurityMessage {
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_REVOKESECURITYGROUPINGRESS )
 public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
@@ -104,6 +110,7 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
 public class DescribeSecurityGroupsResponseType extends VmSecurityMessage {
   ArrayList<SecurityGroupItemType> securityGroupInfo = new ArrayList<SecurityGroupItemType>();
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBESECURITYGROUPS )
 public class DescribeSecurityGroupsType extends VmSecurityMessage {
   @HttpParameterMapping (parameter = "GroupName")
   ArrayList<String> securityGroupSet = new ArrayList<String>();

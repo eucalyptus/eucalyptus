@@ -182,6 +182,8 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
   
   public EucalyptusMessage( EucalyptusMessage msg ) {
     this();
+    regarding(msg);
+    regardingUserRequest(msg);
     this.userId = msg.userId;
     this.effectiveUserId = msg.effectiveUserId;
     this.correlationId = msg.correlationId;
@@ -204,12 +206,12 @@ public class ExceptionResponseType extends BaseMessage {
   String message = "not available";
   String requestType = "not available";
   Throwable exception;
-  HttpResponseStatus httpStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+  HttpResponseStatus httpStatus = HttpResponseStatus.BAD_REQUEST;
   public ExceptionResponseType() {}
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
     this.message = message!=null?message:"not available";
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    this.setUserId( msg.getUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
@@ -217,8 +219,8 @@ public class ExceptionResponseType extends BaseMessage {
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     this.httpStatus = httpStatus;
     this.message = message!=null?message:"not available"
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    this.setUserId( msg.getUserId( ) );
+    this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
@@ -242,8 +244,7 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   
   public EucalyptusErrorMessageType(String source, BaseMessage msg, String message) {
     this(source, message);
-    this.correlationId = msg.getCorrelationId();
-    this.userId = msg.getUserId();
+    regardingUserRequest( msg );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
   }
   

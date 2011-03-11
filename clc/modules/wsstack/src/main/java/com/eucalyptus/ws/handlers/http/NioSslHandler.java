@@ -9,7 +9,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.ssl.SslHandler;
 
-import com.eucalyptus.auth.util.SslSetup;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.ws.util.HttpUtils;
 
 @ChannelPipelineCoverage("one")

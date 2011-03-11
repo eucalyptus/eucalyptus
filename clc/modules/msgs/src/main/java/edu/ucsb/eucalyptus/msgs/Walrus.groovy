@@ -139,9 +139,10 @@ public class WalrusDeleteType extends WalrusRequestType {
 public class WalrusDeleteResponseType extends WalrusResponseType {
 }
 
+//TODO(wenye): The usage of the fields in this class is very confusing at this point. Make it be more sane.
 public class CanonicalUserType extends EucalyptusData {
-	String ID;
-	String DisplayName;
+	String ID; // account name
+	String DisplayName; // account ID
 
 	public CanonicalUserType() {}
 
@@ -215,7 +216,6 @@ public class GetBucketAccessControlPolicyType extends WalrusRequestType {
 public class GetObjectAccessControlPolicyResponseType extends WalrusResponseType {
 	AccessControlPolicyType accessControlPolicy;
 }
-
 public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
@@ -428,7 +428,6 @@ public class PostObjectType extends WalrusDataRequestType {
 	Integer successActionStatus;
 	String contentType;
 }
-
 public class CopyObjectType extends WalrusRequestType {
 	String sourceBucket;
 	String sourceObject;
@@ -599,7 +598,6 @@ public class SetRESTObjectAccessControlPolicyResponseType extends WalrusResponse
 	String code;
 	String description;
 }
-
 
 public class GetObjectType extends WalrusDataGetRequestType {
 	Boolean getMetaData;
