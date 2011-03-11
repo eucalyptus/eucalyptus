@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 #ifndef DISKFILE_H
 #define DISKFILE_H
 
@@ -7,38 +10,38 @@
 #define MAX_PARTS 20
 
 typedef struct _diskpart {
-	// public fields
-	long long size_bytes;
-	enum diskpart_t { // partition ids (as known by MBR)
-		DISKPART_UNKNOWN=0,
-		DISKPART_SWAP,
-		DISKPART_EXT234,
-		DISKPART_WINDOWS // not supported yet
-	} type;
-	// private fields
-	enum pformat_t { // partition formats (swap, file system types)
-		PFORMAT_UNKNOWN=0,
-		PFORMAT_EXT3,
-		PFORMAT_SWAP,
-		PFORMAT_NTFS
-	} format;
-	long long first_sector;
-	long long last_sector;
-	char lodev [MAX_PATH];
-	char mntpt [MAX_PATH];
+    // public fields
+    long long size_bytes;
+    enum diskpart_t { // partition ids (as known by MBR)
+        DISKPART_UNKNOWN=0,
+        DISKPART_SWAP,
+        DISKPART_EXT234,
+        DISKPART_WINDOWS // not supported yet
+    } type;
+    // private fields
+    enum pformat_t { // partition formats (swap, file system types)
+        PFORMAT_UNKNOWN=0,
+        PFORMAT_EXT3,
+        PFORMAT_SWAP,
+        PFORMAT_NTFS
+    } format;
+    long long first_sector;
+    long long last_sector;
+    char lodev [MAX_PATH];
+    char mntpt [MAX_PATH];
 } diskpart;
 
 typedef struct _diskfile {
-	// private fields
+    // private fields
     char path [MAX_PATH];
-	long long limit_bytes;
-	long long size_sectors;
-	enum mbr_t {
-		MBR_NONE=0,
-		MBR_MSDOS
-	} mbr;
-	diskpart parts [MAX_PARTS];
-	int nparts;
+    long long limit_bytes;
+    long long size_sectors;
+    enum mbr_t {
+        MBR_NONE=0,
+        MBR_MSDOS
+    } mbr;
+    diskpart parts [MAX_PARTS];
+    int nparts;
 } diskfile;
 
 diskfile * df_create (const char * path, const long long limit_bytes, boolean zero_fill);
@@ -51,7 +54,7 @@ int df_umount (diskfile * df, const int part, boolean tune2fs);
 int df_grub (diskfile * df, const int part);
 int df_close (diskfile * df);
 
-// helpers
+// diskutil
 enum mbr_t parse_mbr_t_enum (const char * s);
 char * enum_diskpart_t_string (enum diskpart_t t);
 long long round_up_sec   (long long bytes);

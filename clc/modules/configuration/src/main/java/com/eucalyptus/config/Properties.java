@@ -10,6 +10,7 @@ import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -38,7 +39,7 @@ public class Properties {
         try {
           props.add( new Property( (altValue = altValue.replaceAll( "euca=","") ), ""+GroovyUtil.eval( altValue ), altValue ) );
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          props.add( new Property( altValue, ex.getMessage( ), Exceptions.string( ex ) ) ); 
         }
       }
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {

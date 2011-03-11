@@ -62,7 +62,6 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +74,6 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -120,7 +118,7 @@ import com.google.common.collect.Lists;
  * @see SystemBootstrapper#start()
  */
 public class Bootstrap {
-  private static Logger LOG = Logger.getLogger( Bootstrap.class );
+  static Logger LOG = Logger.getLogger( Bootstrap.class );
   
   /**
    * Mechanism for setting up and progressing through the sequence of stages the system goes through
@@ -299,19 +297,7 @@ public class Bootstrap {
    * dependency constraints.
    */
   private static void doDiscovery( ) {
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
-        try {
-          ServiceJarDiscovery.processFile( f );
-        } catch ( Throwable e ) {
-          LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
-    }
+    ServiceJarDiscovery.processLibraries( );
     ServiceJarDiscovery.runDiscovery( );
   }
   
