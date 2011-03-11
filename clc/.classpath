@@ -49,6 +49,7 @@
     <classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/test/java"/>
     <classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
     <classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
+    <classpathentry kind="src" output="modules/www/build" path="modules/www/src/test/java"/>
     <classpathentry kind="con" path="GROOVY_SUPPORT"/>
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
@@ -123,6 +124,7 @@
     <classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
     <classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
     <classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
+    <classpathentry kind="lib" path="lib/infinispan-core-4.2.1.CR4.jar"/>
     <classpathentry kind="lib" path="lib/iText-2.1.7.jar"/>
     <classpathentry kind="lib" path="lib/janino-2.5.15-1.jar"/>
     <classpathentry kind="lib" path="lib/jasperreports-3.7.2.jar"/>
@@ -132,6 +134,9 @@
     <classpathentry kind="lib" path="lib/jbosscache-core-3.2.1.GA.jar"/>
     <classpathentry kind="lib" path="lib/jboss-common-core.jar"/>
     <classpathentry kind="lib" path="lib/jboss-logging-spi.jar"/>
+    <classpathentry kind="lib" path="lib/jboss-marshalling-api-1.2.3.GA.jar"/>
+    <classpathentry kind="lib" path="lib/jboss-river-1.2.3.GA.jar"/>
+    <classpathentry kind="lib" path="lib/jcip-annotations-1.0.jar"/>
     <classpathentry kind="lib" path="lib/jcl-over-slf4j-1.5.2.jar"/>
     <classpathentry kind="lib" path="lib/jettison-1.0.jar"/>
     <classpathentry kind="lib" path="lib/jetty6-6.1.19.jar"/>
@@ -171,6 +176,7 @@
     <classpathentry kind="lib" path="lib/proxool-cglib.jar"/>
     <classpathentry kind="lib" path="lib/quartz-1.6.5.jar"/>
     <classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
+    <classpathentry kind="lib" path="lib/rhq-pluginAnnotations-3.0.1.jar"/>
     <classpathentry kind="lib" path="lib/serializer.jar"/>
     <classpathentry kind="lib" path="lib/servlet-api-2.5.jar"/>
     <classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
