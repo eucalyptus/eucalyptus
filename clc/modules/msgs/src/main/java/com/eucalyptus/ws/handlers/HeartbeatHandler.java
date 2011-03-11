@@ -108,7 +108,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -185,7 +185,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       }
       boolean foundDb = false;
       try {
-        foundDb = NetworkUtil.testReachability( addr.getHostName( ) );
+        foundDb = Internets.testReachability( addr.getHostName( ) );
         LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
         foundDb = true;
       } catch ( Throwable e ) {

@@ -62,6 +62,8 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +76,9 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
@@ -400,6 +404,32 @@ public class Bootstrap {
   
   public static Boolean isFinished( ) {
     return finished;
+  }
+  private static final Integer parentNum = Integer.parseInt( System.getProperty( "euca.child" ) );
+  private static final List<InetAddress> parents;
+  public static Boolean isChild( ) {
+    return parentNum > -1;
+  }
+  public static List<InetAddress> getParentAddresses( ) {
+    synchronized(Bootstrap.class) {
+      if( parents == null ) {
+        parents = Lists.newArrayList( );
+        for( int i = 0; i < parentNum; i++ ) {
+          String addr = System.getProperty( "euca.parent." + i );
+          InetAddress ret = null;
+          try {
+            parents.add( InetAddress.getByName( addr ) );
+          } catch ( UnknownHostException ex ) {
+            LOG.error( "Ignoring specified parent address as it is not a valid address: addr=" + addr + " error=" + ex.getMessage( ) );
+          }
+        }
+        if( parents.isEmpty( ) ) {
+          LOG.error( "Invalid parent addresses provided:  This is most likely an error!" );//GRZE:NOTIFY
+        }
+      } else {
+        return parents;
+      }
+    }
   }
   
   /**

@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef ARGUMENTS_VERSION
 /** @brief the program version */
-#define ARGUMENTS_VERSION "veee-2.1.0-merge"
+#define ARGUMENTS_VERSION "eee-2.1.0-merge"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -46,9 +46,13 @@ struct eucalyptus_opts
   char * home_arg;	/**< @brief Eucalyptus home directory. (default='/opt/grze_eee/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
-  char * parent_arg;	/**< @brief Host address of parent for bootstrap. (default='127.0.0.1').  */
-  char * parent_orig;	/**< @brief Host address of parent for bootstrap. original value given at command line.  */
-  const char *parent_help; /**< @brief Host address of parent for bootstrap. help description.  */
+  int child_flag;	/**< @brief This system is a child/secondary host. (default=off).  */
+  const char *child_help; /**< @brief This system is a child/secondary host. help description.  */
+  char ** parent_arg;	/**< @brief Host address of parent(s) for bootstrap..  */
+  char ** parent_orig;	/**< @brief Host address of parent(s) for bootstrap. original value given at command line.  */
+  unsigned int parent_min; /**< @brief Host address of parent(s) for bootstrap.'s minimum occurreces */
+  unsigned int parent_max; /**< @brief Host address of parent(s) for bootstrap.'s maximum occurreces */
+  const char *parent_help; /**< @brief Host address of parent(s) for bootstrap. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -61,8 +65,8 @@ struct eucalyptus_opts
   char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/opt/grze_eee/var/run/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
   const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
-  int verbose_flag;	/**< @brief Verbose bootstrapper output. (default=off).  */
-  const char *verbose_help; /**< @brief Verbose bootstrapper output. help description.  */
+  int verbose_flag;	/**< @brief DEPRECATEDVerbose bootstrapper output. (default=off).  */
+  const char *verbose_help; /**< @brief DEPRECATEDVerbose bootstrapper output. help description.  */
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
   char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
   const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
@@ -115,8 +119,8 @@ struct eucalyptus_opts
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
   char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
   const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
-  int debug_suspend_flag;	/**< @brief Set the port to use for the debugger. (default=off).  */
-  const char *debug_suspend_help; /**< @brief Set the port to use for the debugger. help description.  */
+  int debug_suspend_flag;	/**< @brief Force debugger to wait at main(). (default=off).  */
+  const char *debug_suspend_help; /**< @brief Force debugger to wait at main(). help description.  */
   int profile_flag;	/**< @brief Launch with jprofiler enabled. (default=off).  */
   const char *profile_help; /**< @brief Launch with jprofiler enabled. help description.  */
   char * profiler_home_arg;	/**< @brief Set the home for jprofiler. (default='/opt/profile').  */
@@ -131,6 +135,7 @@ struct eucalyptus_opts
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
+  unsigned int child_given ;	/**< @brief Whether child was given.  */
   unsigned int parent_given ;	/**< @brief Whether parent was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */

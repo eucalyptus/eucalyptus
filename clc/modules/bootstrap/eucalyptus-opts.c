@@ -36,24 +36,25 @@ const char *eucalyptus_opts_full_help[] = {
   "      --full-help               Print help, including hidden options, and exit",
   "  -V, --version                 Print version and exit",
   "\nBootstrap Configuration:",
-  "  -u, --user=username           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
-  "  -h, --home=directory          Eucalyptus home directory.  \n                                  (default=`/opt/grze_eee/')",
-  "  -p, --parent=address          Host address of parent for bootstrap.  \n                                  (default=`127.0.0.1')",
+  "  -u, --user=USERNAME           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
+  "  -h, --home=DIRECTORY          Eucalyptus home directory.  \n                                  (default=`/opt/grze_eee/')",
+  "  -c, --child                   This system is a child/secondary host.  \n                                  (default=off)",
+  "  -p, --parent=HOSTNAME         Host address of parent(s) for bootstrap.",
   "  -D, --define=STRING           Set system properties.",
   "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=off)",
   "  -k, --kill                    Kill a daemonized Eucalyptus.  (default=off)",
-  "      --pidfile=filename        Location for the pidfile.  \n                                  (default=`/opt/grze_eee/var/run/eucalyptus-cloud.pid')",
+  "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/opt/grze_eee/var/run/eucalyptus-cloud.pid')",
   "\nLogging Configuration:",
-  "  -v, --verbose                 Verbose bootstrapper output.  (default=off)",
-  "  -l, --log-level=filename      Control the log level for console output.  \n                                  (default=`INFO')",
-  "  -L, --log-appender=appender-name\n                                Control the destination for console output.  \n                                  (default=`console-log')",
+  "  -v, --verbose                 DEPRECATEDVerbose bootstrapper output.  \n                                  (default=off)",
+  "  -l, --log-level=FILENAME      Control the log level for console output.  \n                                  (default=`INFO')",
+  "  -L, --log-appender=APPENDERNAME\n                                Control the destination for console output.  \n                                  (default=`console-log')",
   "  -x, --exhaustive              Exhaustive logging of all connections.  \n                                  (default=off)",
   "      --exhaustive-db           Exhaustive logging for database connections.  \n                                  (default=off)",
   "      --exhaustive-user         Exhaustive logging for client connections.  \n                                  (default=off)",
   "      --exhaustive-cc           Exhaustive logging for cluster connections.  \n                                  (default=off)",
   "      --exhaustive-external     Exhaustive logging for external libraries.  \n                                  (default=off)",
-  "  -o, --out=filename            Redirect standard out to file.  (default=`&1')",
-  "  -e, --err=filename            Redirect standard error to file.  \n                                  (default=`&2')",
+  "  -o, --out=FILENAME            Redirect standard out to file.  (default=`&1')",
+  "  -e, --err=FILENAME            Redirect standard error to file.  \n                                  (default=`&2')",
   "\nDisable Features:",
   "      --remote-dns              Eucalyptus will not try to bind port 53.  \n                                  (default=off)",
   "      --disable-iscsi           Disable ISCSI support for dynamic block \n                                  storage.  (default=off)",
@@ -63,15 +64,15 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-storage         DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --disable-vmwarebroker    DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "\nJava Options:",
-  "  -j, --java-home=directory     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-6-openjdk/')",
-  "      --jvm-name=jvm-name       Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
+  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-6-openjdk/')",
+  "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "  -d, --debug                   Launch with debugger enabled.  (default=off)",
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
-  "      --debug-suspend           Set the port to use for the debugger.  \n                                  (default=off)",
+  "      --debug-suspend           Force debugger to wait at main().  \n                                  (default=off)",
   "      --profile                 Launch with jprofiler enabled.  (default=off)",
-  "      --profiler-home=jprofilerhome\n                                Set the home for jprofiler.  \n                                  (default=`/opt/profile')",
-  "      --agentlib=agentlib       Launch with agentlib enabled.",
+  "      --profiler-home=DIRECTORY Set the home for jprofiler.  \n                                  (default=`/opt/profile')",
+  "      --agentlib=AGENTLIB       Launch with agentlib enabled.",
     0
 };
 
@@ -90,7 +91,7 @@ init_help_array(void)
   eucalyptus_opts_help[9] = eucalyptus_opts_full_help[9];
   eucalyptus_opts_help[10] = eucalyptus_opts_full_help[10];
   eucalyptus_opts_help[11] = eucalyptus_opts_full_help[11];
-  eucalyptus_opts_help[12] = eucalyptus_opts_full_help[13];
+  eucalyptus_opts_help[12] = eucalyptus_opts_full_help[12];
   eucalyptus_opts_help[13] = eucalyptus_opts_full_help[14];
   eucalyptus_opts_help[14] = eucalyptus_opts_full_help[15];
   eucalyptus_opts_help[15] = eucalyptus_opts_full_help[16];
@@ -102,17 +103,18 @@ init_help_array(void)
   eucalyptus_opts_help[21] = eucalyptus_opts_full_help[22];
   eucalyptus_opts_help[22] = eucalyptus_opts_full_help[23];
   eucalyptus_opts_help[23] = eucalyptus_opts_full_help[24];
-  eucalyptus_opts_help[24] = eucalyptus_opts_full_help[30];
+  eucalyptus_opts_help[24] = eucalyptus_opts_full_help[25];
   eucalyptus_opts_help[25] = eucalyptus_opts_full_help[31];
-  eucalyptus_opts_help[26] = eucalyptus_opts_full_help[33];
+  eucalyptus_opts_help[26] = eucalyptus_opts_full_help[32];
   eucalyptus_opts_help[27] = eucalyptus_opts_full_help[34];
   eucalyptus_opts_help[28] = eucalyptus_opts_full_help[35];
   eucalyptus_opts_help[29] = eucalyptus_opts_full_help[36];
-  eucalyptus_opts_help[30] = 0; 
+  eucalyptus_opts_help[30] = eucalyptus_opts_full_help[37];
+  eucalyptus_opts_help[31] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[31];
+const char *eucalyptus_opts_help[32];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -143,6 +145,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->version_given = 0 ;
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
+  args_info->child_given = 0 ;
   args_info->parent_given = 0 ;
   args_info->define_given = 0 ;
   args_info->fork_given = 0 ;
@@ -184,7 +187,8 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->user_orig = NULL;
   args_info->home_arg = gengetopt_strdup ("/opt/grze_eee/");
   args_info->home_orig = NULL;
-  args_info->parent_arg = gengetopt_strdup ("127.0.0.1");
+  args_info->child_flag = 0;
+  args_info->parent_arg = NULL;
   args_info->parent_orig = NULL;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
@@ -241,41 +245,44 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->version_help = eucalyptus_opts_full_help[2] ;
   args_info->user_help = eucalyptus_opts_full_help[4] ;
   args_info->home_help = eucalyptus_opts_full_help[5] ;
-  args_info->parent_help = eucalyptus_opts_full_help[6] ;
-  args_info->define_help = eucalyptus_opts_full_help[7] ;
+  args_info->child_help = eucalyptus_opts_full_help[6] ;
+  args_info->parent_help = eucalyptus_opts_full_help[7] ;
+  args_info->parent_min = 0;
+  args_info->parent_max = 0;
+  args_info->define_help = eucalyptus_opts_full_help[8] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->fork_help = eucalyptus_opts_full_help[8] ;
-  args_info->kill_help = eucalyptus_opts_full_help[9] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[10] ;
-  args_info->verbose_help = eucalyptus_opts_full_help[12] ;
-  args_info->log_level_help = eucalyptus_opts_full_help[13] ;
-  args_info->log_appender_help = eucalyptus_opts_full_help[14] ;
-  args_info->exhaustive_help = eucalyptus_opts_full_help[15] ;
-  args_info->exhaustive_db_help = eucalyptus_opts_full_help[16] ;
-  args_info->exhaustive_user_help = eucalyptus_opts_full_help[17] ;
-  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[18] ;
-  args_info->exhaustive_external_help = eucalyptus_opts_full_help[19] ;
-  args_info->out_help = eucalyptus_opts_full_help[20] ;
-  args_info->err_help = eucalyptus_opts_full_help[21] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[23] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[24] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[25] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[26] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[27] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[28] ;
-  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[29] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[31] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[32] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[33] ;
+  args_info->fork_help = eucalyptus_opts_full_help[9] ;
+  args_info->kill_help = eucalyptus_opts_full_help[10] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[11] ;
+  args_info->verbose_help = eucalyptus_opts_full_help[13] ;
+  args_info->log_level_help = eucalyptus_opts_full_help[14] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[15] ;
+  args_info->exhaustive_help = eucalyptus_opts_full_help[16] ;
+  args_info->exhaustive_db_help = eucalyptus_opts_full_help[17] ;
+  args_info->exhaustive_user_help = eucalyptus_opts_full_help[18] ;
+  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[19] ;
+  args_info->exhaustive_external_help = eucalyptus_opts_full_help[20] ;
+  args_info->out_help = eucalyptus_opts_full_help[21] ;
+  args_info->err_help = eucalyptus_opts_full_help[22] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[24] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[25] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[26] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[27] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[28] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[29] ;
+  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[30] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[32] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[33] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[34] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[34] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[35] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[36] ;
-  args_info->profile_help = eucalyptus_opts_full_help[37] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[38] ;
-  args_info->agentlib_help = eucalyptus_opts_full_help[39] ;
+  args_info->debug_help = eucalyptus_opts_full_help[35] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[36] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[37] ;
+  args_info->profile_help = eucalyptus_opts_full_help[38] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[39] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[40] ;
   
 }
 
@@ -414,8 +421,7 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->user_orig));
   free_string_field (&(args_info->home_arg));
   free_string_field (&(args_info->home_orig));
-  free_string_field (&(args_info->parent_arg));
-  free_string_field (&(args_info->parent_orig));
+  free_multiple_string_field (args_info->parent_given, &(args_info->parent_arg), &(args_info->parent_orig));
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
   free_string_field (&(args_info->pidfile_arg));
   free_string_field (&(args_info->pidfile_orig));
@@ -485,8 +491,9 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "user", args_info->user_orig, 0);
   if (args_info->home_given)
     write_into_file(outfile, "home", args_info->home_orig, 0);
-  if (args_info->parent_given)
-    write_into_file(outfile, "parent", args_info->parent_orig, 0);
+  if (args_info->child_given)
+    write_into_file(outfile, "child", 0, 0 );
+  write_multiple_into_file(outfile, args_info->parent_given, "parent", args_info->parent_orig, 0);
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
   if (args_info->fork_given)
     write_into_file(outfile, "fork", 0, 0 );
@@ -795,6 +802,9 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   int error = 0;
 
   /* checks for required options */
+  if (check_multiple_option_occurrences(prog_name, args_info->parent_given, args_info->parent_min, args_info->parent_max, "'--parent' ('-p')"))
+     error = 1;
+  
   if (check_multiple_option_occurrences(prog_name, args_info->define_given, args_info->define_min, args_info->define_max, "'--define' ('-D')"))
      error = 1;
   
@@ -1080,6 +1090,7 @@ arguments_internal (
 {
   int c;	/* Character of the parsed option.  */
 
+  struct generic_list * parent_list = NULL;
   struct generic_list * define_list = NULL;
   struct generic_list * jvm_args_list = NULL;
   int error = 0;
@@ -1117,6 +1128,7 @@ arguments_internal (
         { "version",	0, NULL, 'V' },
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
+        { "child",	0, NULL, 'c' },
         { "parent",	1, NULL, 'p' },
         { "define",	1, NULL, 'D' },
         { "fork",	0, NULL, 'f' },
@@ -1151,7 +1163,7 @@ arguments_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:p:D:fkvl:L:xo:e:j:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:cp:D:fkvl:L:xo:e:j:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1186,13 +1198,20 @@ arguments_internal (
             goto failure;
         
           break;
-        case 'p':	/* Host address of parent for bootstrap..  */
+        case 'c':	/* This system is a child/secondary host..  */
         
         
-          if (update_arg( (void *)&(args_info->parent_arg), 
-               &(args_info->parent_orig), &(args_info->parent_given),
-              &(local_args_info.parent_given), optarg, 0, "127.0.0.1", ARG_STRING,
-              check_ambiguity, override, 0, 0,
+          if (update_arg((void *)&(args_info->child_flag), 0, &(args_info->child_given),
+              &(local_args_info.child_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "child", 'c',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'p':	/* Host address of parent(s) for bootstrap..  */
+        
+          if (update_multiple_arg_temp(&parent_list, 
+              &(local_args_info.parent_given), optarg, 0, 0, ARG_STRING,
               "parent", 'p',
               additional_error))
             goto failure;
@@ -1227,7 +1246,7 @@ arguments_internal (
             goto failure;
         
           break;
-        case 'v':	/* Verbose bootstrapper output..  */
+        case 'v':	/* DEPRECATEDVerbose bootstrapper output..  */
         
         
           if (update_arg((void *)&(args_info->verbose_flag), 0, &(args_info->verbose_given),
@@ -1514,7 +1533,7 @@ arguments_internal (
               goto failure;
           
           }
-          /* Set the port to use for the debugger..  */
+          /* Force debugger to wait at main()..  */
           else if (strcmp (long_options[option_index].name, "debug-suspend") == 0)
           {
           
@@ -1579,6 +1598,10 @@ arguments_internal (
     } /* while */
 
 
+  update_multiple_arg((void *)&(args_info->parent_arg),
+    &(args_info->parent_orig), args_info->parent_given,
+    local_args_info.parent_given, 0,
+    ARG_STRING, parent_list);
   update_multiple_arg((void *)&(args_info->define_arg),
     &(args_info->define_orig), args_info->define_given,
     local_args_info.define_given, 0,
@@ -1588,6 +1611,8 @@ arguments_internal (
     local_args_info.jvm_args_given, 0,
     ARG_STRING, jvm_args_list);
 
+  args_info->parent_given += local_args_info.parent_given;
+  local_args_info.parent_given = 0;
   args_info->define_given += local_args_info.define_given;
   local_args_info.define_given = 0;
   args_info->jvm_args_given += local_args_info.jvm_args_given;
@@ -1606,6 +1631,7 @@ arguments_internal (
   return 0;
 
 failure:
+  free_list (parent_list, 1 );
   free_list (define_list, 1 );
   free_list (jvm_args_list, 1 );
   

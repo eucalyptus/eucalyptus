@@ -716,8 +716,16 @@ int java_init(euca_opts *args, java_home_t *data) {
 			JVM_ARG(opt[++x], "-Deuca.log.exhaustive=FATAL");
 		}
 	}
+	JVM_ARG(opt[++x], "-Deuca.version=%1$s", ARGUMENTS_VERSION);
 	JVM_ARG(opt[++x], "-Deuca.log.level=%1$s", GETARG(args, log_level));
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
+	int parentNum = -1;
+	if (args->child_flag) {
+		for (parentNum = 0; parentNum < args->parent_given; parentNum++) {
+			JVM_ARG(opt[++x], "-Deuca.parent.%1$d=%2$s", parentNum, args->parent_arg[parentNum]);
+		}
+	}
+	JVM_ARG(opt[++x], "-Deuca.child=%d",parentNum);//euca.child gives the number of parent's supplied to bootstrap this child.  euca.child < 0 means parent.
 	if (args->remote_dns_flag) {
 		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
 	}

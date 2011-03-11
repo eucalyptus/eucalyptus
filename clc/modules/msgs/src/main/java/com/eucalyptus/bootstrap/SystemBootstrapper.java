@@ -83,7 +83,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
@@ -377,7 +377,7 @@ public class SystemBootstrapper {
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
-    for ( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
+    for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
       banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
         banner += prefix + iface.getDisplayName( ) + SEP + addr;
