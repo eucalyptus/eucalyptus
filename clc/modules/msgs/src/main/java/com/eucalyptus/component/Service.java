@@ -72,7 +72,7 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Service implements ComponentInformation, HasParent<Component>, HasFullName<Service> {
@@ -114,7 +114,7 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
       Boolean local = false;
       try {
         if ( serviceConfig.getHostName( ) != null ) {
-          local = NetworkUtil.testLocal( serviceConfig.getHostName( ) );
+          local = Internets.testLocal( serviceConfig.getHostName( ) );
         } else {
           local = true;
         }

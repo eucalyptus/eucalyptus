@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.config.LocalConfiguration;
 import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 
 public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> extends AbstractServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
@@ -107,9 +107,9 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
-      if ( !NetworkUtil.testGoodAddress( host ) ) {
+      if ( !Internets.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      } else if ( NetworkUtil.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
+      } else if ( Internets.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
         throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
                                             + " enabled (or it is not installed)." );
       }

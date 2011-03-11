@@ -92,7 +92,7 @@ import com.eucalyptus.images.ForwardImages;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.StorageProperties;
 
 @Entity
@@ -281,7 +281,7 @@ public class SystemConfiguration {
       String cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
         for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+          if( Internets.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
           }
@@ -289,7 +289,7 @@ public class SystemConfiguration {
       }
       if( cloudHost == null ) {
         try {
-          cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+          cloudHost = Internets.getAllAddresses( ).get( 0 );
         } catch ( SocketException e ) {}
       }
       return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
@@ -317,7 +317,7 @@ public class SystemConfiguration {
       cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
         for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+          if( Internets.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
           }
@@ -327,7 +327,7 @@ public class SystemConfiguration {
     }
     if( cloudHost == null ) {
       try {
-        cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+        cloudHost = Internets.getAllAddresses( ).get( 0 );
       } catch ( SocketException e ) {}
     }
     return cloudHost;
@@ -337,7 +337,7 @@ public class SystemConfiguration {
   {
     String ipAddr = null;
     try {
-      for( String addr : NetworkUtil.getAllAddresses( ) ) {
+      for( String addr : Internets.getAllAddresses( ) ) {
         ipAddr = addr;
         break;
       }

@@ -70,7 +70,7 @@ import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.DatabaseInit)
@@ -81,7 +81,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
 
   public boolean load( ) throws Exception {
     try {
-      if ( NetworkUtil.testReachability( Components.lookup(Database.class).getUri( ).getHost( ) ) ) {
+      if ( Internets.testReachability( Components.lookup(Database.class).getUri( ).getHost( ) ) ) {
         LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
       } else {
         LOG.error( "Failed with invalid DB address" );
