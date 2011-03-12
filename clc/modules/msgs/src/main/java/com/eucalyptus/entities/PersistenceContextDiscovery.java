@@ -1,16 +1,13 @@
 package com.eucalyptus.entities;
 
-import java.io.File;
 import javax.persistence.Embeddable;
-import org.hibernate.annotations.Entity;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.system.BaseDirectory;
-import com.google.common.collect.Multimap;
 
 public class PersistenceContextDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( PersistenceContextDiscovery.class );
@@ -24,7 +21,7 @@ public class PersistenceContextDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
-    if ( Ats.from( candidate ).has( Entity.class ) ) {
+    if ( Ats.from( candidate ).has( Entity.class ) || Ats.from( candidate ).has( javax.persistence.Entity.class ) ) {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw BootstrapException.throwFatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
       } else {

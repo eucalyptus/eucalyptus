@@ -1,8 +1,11 @@
 package com.eucalyptus.reporting.instance;
 
 import java.io.Serializable;
-
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Entity;
 
 @SuppressWarnings("serial")
 @Entity
