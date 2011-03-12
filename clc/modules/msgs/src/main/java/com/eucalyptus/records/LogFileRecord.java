@@ -2,7 +2,7 @@ package com.eucalyptus.records;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;

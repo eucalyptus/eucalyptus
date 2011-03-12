@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;

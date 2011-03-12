@@ -65,7 +65,7 @@ package com.eucalyptus.keys;
 
 import java.io.Serializable;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;

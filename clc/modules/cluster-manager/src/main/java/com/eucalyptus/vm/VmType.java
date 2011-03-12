@@ -78,7 +78,7 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;

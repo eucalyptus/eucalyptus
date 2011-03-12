@@ -5,7 +5,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import javax.persistence.Table;
 import javax.persistence.Id;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;

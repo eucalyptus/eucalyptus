@@ -3,7 +3,7 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;

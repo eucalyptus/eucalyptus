@@ -67,7 +67,7 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.Date;
 
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Id;
 
 import org.hibernate.annotations.Cache;

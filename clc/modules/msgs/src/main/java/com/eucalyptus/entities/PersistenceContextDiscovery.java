@@ -2,7 +2,7 @@ package com.eucalyptus.entities;
 
 import java.io.File;
 import javax.persistence.Embeddable;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;

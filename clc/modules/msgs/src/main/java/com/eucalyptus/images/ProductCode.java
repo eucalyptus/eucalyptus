@@ -67,7 +67,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.*;
 import com.eucalyptus.entities.AbstractPersistent;
 import javax.persistence.*;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Table;
 
 @Entity
