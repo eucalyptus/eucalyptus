@@ -117,7 +117,7 @@ public class RemoteInfoHandler {
         ClusterConfiguration ccConfig = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, clusterWeb.getName( ) );
         ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
         ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
-        ServiceConfigurations.getEntityWrapper( ).mergeAndCommit( ccConfig );
+        EntityWrapper.get( ccConfig ).mergeAndCommit( ccConfig );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
