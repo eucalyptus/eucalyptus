@@ -74,7 +74,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   
   @Override
   public String getValue( ) {
-    EntityWrapper db = new EntityWrapper( this.persistenceContext );
+    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
       Method getter = this.getGetter( );
@@ -93,7 +93,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   
   @Override
   public String setValue( String s ) {
-    EntityWrapper db = new EntityWrapper( this.persistenceContext );
+    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
       Object prop = this.getTypeParser( ).parse( s );
