@@ -65,14 +65,16 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.util.StorageProperties;
-
-import javax.persistence.*;
-
-import java.util.Date;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")

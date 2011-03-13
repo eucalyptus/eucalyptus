@@ -60,10 +60,14 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.persistence.*;
 
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")

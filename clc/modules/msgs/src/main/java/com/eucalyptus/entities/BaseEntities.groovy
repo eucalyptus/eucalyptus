@@ -1,5 +1,7 @@
 package com.eucalyptus.entities;
 
+import java.io.Serializable;
+import java.util.Date;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;

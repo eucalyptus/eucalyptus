@@ -65,22 +65,22 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.ArrayList;
+import java.util.List;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import edu.ucsb.eucalyptus.util.UserManagement;
-
-import javax.persistence.*;
-
-import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 
 @Entity
 @PersistenceContext(name="eucalyptus_walrus")
