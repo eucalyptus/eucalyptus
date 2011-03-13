@@ -104,8 +104,13 @@ public class EntityWrapper<TYPE> {
     return get( ( Class<T> ) obj.getClass( ) );
   }
   
+  /**
+   * @see {@link EntityWrapper#get(Class)}
+   * @param persistenceContext
+   */
+  @Deprecated
   @SuppressWarnings( "unchecked" )
-  private EntityWrapper( String persistenceContext ) {
+  public EntityWrapper( String persistenceContext ) {
     try {
       if ( LogLevels.EXTREME ) LOG.debug( Join.join( ":", EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
