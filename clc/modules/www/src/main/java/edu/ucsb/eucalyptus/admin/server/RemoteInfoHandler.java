@@ -84,6 +84,7 @@ import com.eucalyptus.config.RegisterStorageControllerType;
 import com.eucalyptus.config.RegisterWalrusType;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
