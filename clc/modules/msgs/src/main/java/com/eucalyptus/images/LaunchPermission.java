@@ -12,7 +12,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_image_launch_permission" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

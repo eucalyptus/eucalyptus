@@ -73,7 +73,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "CHAPUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

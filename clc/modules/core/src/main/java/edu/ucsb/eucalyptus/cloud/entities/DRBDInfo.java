@@ -74,7 +74,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "drbd_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

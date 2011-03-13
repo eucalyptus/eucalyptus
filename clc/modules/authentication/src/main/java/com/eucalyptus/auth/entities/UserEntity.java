@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -74,7 +74,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIVolumeInfo" )
-@Entity
+@Entity @javax.persistence.Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ISCSIVolumeInfo extends LVMVolumeInfo {
     private String storeName;

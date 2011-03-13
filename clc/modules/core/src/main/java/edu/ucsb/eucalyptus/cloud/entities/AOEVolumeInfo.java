@@ -73,7 +73,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEVolumeInfo" )
-@Entity
+@Entity @javax.persistence.Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AOEVolumeInfo extends LVMVolumeInfo {
     @Column(name="vbladepid")

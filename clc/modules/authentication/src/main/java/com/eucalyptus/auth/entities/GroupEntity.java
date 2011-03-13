@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

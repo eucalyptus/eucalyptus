@@ -26,7 +26,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

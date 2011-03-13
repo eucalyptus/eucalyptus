@@ -87,7 +87,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.util.UserManagement;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

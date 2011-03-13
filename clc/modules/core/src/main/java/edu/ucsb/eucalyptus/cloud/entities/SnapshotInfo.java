@@ -76,7 +76,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

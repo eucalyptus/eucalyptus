@@ -106,7 +106,7 @@ import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

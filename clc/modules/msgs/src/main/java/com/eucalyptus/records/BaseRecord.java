@@ -27,7 +27,7 @@ import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.google.common.collect.Lists;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

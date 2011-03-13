@@ -82,7 +82,7 @@ import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

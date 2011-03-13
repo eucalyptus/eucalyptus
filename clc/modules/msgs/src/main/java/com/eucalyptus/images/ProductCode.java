@@ -70,7 +70,7 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 import javax.persistence.Table;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_image_product_code" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -8,7 +8,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.LogLevels;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records_logs" )
 @DiscriminatorValue( value = "base" )

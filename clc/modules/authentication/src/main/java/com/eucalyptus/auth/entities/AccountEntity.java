@@ -17,7 +17,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  *
  */
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_account" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

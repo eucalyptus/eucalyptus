@@ -17,7 +17,7 @@ import org.hibernate.annotations.Entity;
  * 
  * @author tom.werges
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
 class InstanceUsageSnapshot

@@ -80,7 +80,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

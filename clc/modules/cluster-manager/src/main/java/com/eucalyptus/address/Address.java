@@ -105,7 +105,7 @@ import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

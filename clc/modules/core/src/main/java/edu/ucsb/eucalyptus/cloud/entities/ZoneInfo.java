@@ -74,7 +74,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "Zones" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

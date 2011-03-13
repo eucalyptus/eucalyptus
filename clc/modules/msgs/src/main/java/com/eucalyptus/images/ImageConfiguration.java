@@ -79,7 +79,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

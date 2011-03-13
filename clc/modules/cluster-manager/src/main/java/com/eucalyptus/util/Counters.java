@@ -81,7 +81,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_counters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

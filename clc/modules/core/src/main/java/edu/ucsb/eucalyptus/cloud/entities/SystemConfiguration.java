@@ -95,7 +95,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

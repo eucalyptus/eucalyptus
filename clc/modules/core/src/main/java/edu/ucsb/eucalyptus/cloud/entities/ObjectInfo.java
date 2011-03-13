@@ -89,7 +89,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

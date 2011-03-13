@@ -81,7 +81,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.google.common.collect.Sets;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

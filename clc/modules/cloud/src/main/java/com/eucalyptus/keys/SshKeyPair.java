@@ -82,7 +82,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

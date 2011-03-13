@@ -93,7 +93,7 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

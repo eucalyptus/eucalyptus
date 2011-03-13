@@ -12,7 +12,7 @@ import org.hibernate.annotations.Entity;
  * 
  * @author twerges
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="storage_usage_snapshot")
 class StorageUsageSnapshot

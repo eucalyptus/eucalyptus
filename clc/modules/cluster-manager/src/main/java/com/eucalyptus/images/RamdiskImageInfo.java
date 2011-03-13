@@ -79,7 +79,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )

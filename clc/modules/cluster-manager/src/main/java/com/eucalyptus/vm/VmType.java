@@ -84,7 +84,7 @@ import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

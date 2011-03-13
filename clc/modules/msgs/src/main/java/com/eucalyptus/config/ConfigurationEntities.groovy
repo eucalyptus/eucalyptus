@@ -252,7 +252,7 @@ public class RemoteConfiguration extends EphemeralConfiguration {
   }
 }
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -297,7 +297,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
 }
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_sc" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -312,7 +312,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
     return ComponentIds.lookup(Storage.class);
   }
 }
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -332,7 +332,7 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
     return this.getComponentId().makeFullName( "walrus", this.name );
   }
 }
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_eucalyptus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -354,7 +354,7 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
 }
 
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -372,7 +372,7 @@ public class System implements Serializable {
   String registrationId
 }
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_vmwarebroker" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -389,7 +389,7 @@ public class VMwareBrokerConfiguration extends ComponentConfiguration implements
   }
 }
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_arbitrator" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

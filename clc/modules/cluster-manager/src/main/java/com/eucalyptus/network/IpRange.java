@@ -72,7 +72,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule_ip_range" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
