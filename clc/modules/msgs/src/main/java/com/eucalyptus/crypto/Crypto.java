@@ -3,7 +3,6 @@ package com.eucalyptus.crypto;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Authentication;
 
 /**
  * Facade for helpers and a set of generator methods providing non-trivial random tokens.
