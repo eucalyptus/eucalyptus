@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
