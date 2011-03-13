@@ -88,13 +88,9 @@ import com.google.common.collect.Sets;
 public class EntityWrapper<TYPE> {
   
   static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
-  private TxHandle             tx;
+  private final TxHandle             tx;
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
-  
-  public EntityWrapper( ) {
-    this( "eucalyptus_general" );
-  }
-  
+
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
@@ -109,7 +105,7 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public EntityWrapper( String persistenceContext ) {
+  private EntityWrapper( String persistenceContext ) {
     try {
       if ( LogLevels.EXTREME ) LOG.debug( Join.join( ":", EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
