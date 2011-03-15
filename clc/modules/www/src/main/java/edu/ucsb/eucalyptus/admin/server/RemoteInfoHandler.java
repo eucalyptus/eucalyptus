@@ -141,24 +141,30 @@ public class RemoteInfoHandler {
   
   public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList ) throws EucalyptusCloudException {
     List<StorageControllerConfiguration> storageControllerConfig = Lists.newArrayList( );
+    List<Runnable> dispatchParameters = Lists.newArrayList( );
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
-      storageControllerConfig.add( new StorageControllerConfiguration( null /**ASAP: FIXME: GRZE **/, storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
-                                                                       storageControllerWeb.getPort( ) ) );
+      final StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null /**ASAP: FIXME: GRZE **/, storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
+                                          storageControllerWeb.getPort( ) );
+      final UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
+      updateStorageConfiguration.setName( scConfig.getName( ) );
+      updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
+      dispatchParameters.add( new Runnable( ) {
+        @Override
+        public void run( ) {
+          Dispatcher scDispatch = ServiceDispatcher.lookup( scConfig );
+          try {
+            scDispatch.send( updateStorageConfiguration );
+          } catch ( Exception e ) {
+            LOG.error( "Error sending update configuration message to storage controller: " + updateStorageConfiguration );
+            LOG.error( "The storage controller's configuration may be out of sync!" );
+            LOG.debug( e, e );
+          }
+        }} );
+      storageControllerConfig.add( scConfig );
     }
     updateStorageControllerConfigurations( storageControllerConfig );
-    
-    for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
-      UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
-      updateStorageConfiguration.setName( storageControllerWeb.getName( ) );
-      updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
-      Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), storageControllerWeb.getHost( ) );
-      try {
-        scDispatch.send( updateStorageConfiguration );
-      } catch ( Exception e ) {
-        LOG.error( "Error sending update configuration message to storage controller: " + updateStorageConfiguration );
-        LOG.error( "The storage controller's configuration may be out of sync!" );
-        LOG.debug( e, e );
-      }
+    for ( Runnable dispatch : dispatchParameters ) {
+      dispatch.run( );
     }
   }
   
@@ -199,7 +205,7 @@ public class RemoteInfoHandler {
   
   private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
-    Dispatcher scDispatch = ServiceDispatcher.lookup( Components.lookup( "storage" ), c.getHostName( ) );
+    Dispatcher scDispatch = ServiceDispatcher.lookup( c );
     GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
     return getStorageConfigResponse;
   }

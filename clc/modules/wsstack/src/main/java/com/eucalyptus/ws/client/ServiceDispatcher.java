@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
@@ -37,20 +38,17 @@ public abstract class ServiceDispatcher implements Dispatcher {
     }
     return dispatcherList;
   }
-  public static Dispatcher lookup( Component c, String hostName ) {
-    return proxies.get( c.getRegistryKey( hostName ) );
+  public static Dispatcher lookup( ServiceConfiguration config ) {
+    return proxies.get( config.getFullName( ) );
   }
-  public static Dispatcher register( String registryKey, Dispatcher proxy ) {
-    LOG.info( "Registering "+ registryKey + " as "  + proxy );
-    return proxies.put( registryKey, proxy );
+
+  public static Dispatcher register( ServiceConfiguration serviceConfiguration, Dispatcher proxy ) {
+    LOG.info( "Registering "+ serviceConfiguration.getFullName( ).toString( ) + " as "  + proxy );
+    return proxies.put( serviceConfiguration.getFullName( ).toString( ), proxy );
   }
-  public static Dispatcher deregister( String name ) {
-    LOG.info( "Deregistering "+ name );
-    return proxies.remove( name );
-  }
-  public static Dispatcher deregister( Component c, String hostName ) {
-    LOG.info( "Deregistering "+ c.getRegistryKey( hostName ) );
-    return proxies.remove( c.getRegistryKey( hostName ) );
+  public static Dispatcher deregister( ServiceConfiguration serviceConfiguration ) {
+    LOG.info( "Deregistering "+ serviceConfiguration.getFullName( ).toString( ) );
+    return proxies.remove( serviceConfiguration.getFullName( ).toString( ) );
   }
   public static Collection<Dispatcher> values( ) {
     return proxies.values( );

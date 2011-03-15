@@ -144,7 +144,7 @@ public class SnapshotManager {
       //temporary workaround to update the volume state.
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Components.lookup( "storage" ), sc.getServiceConfiguration( ).getHostName( ) )
+        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc.getServiceConfiguration( ) )
                                                                        .send( descVols );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
