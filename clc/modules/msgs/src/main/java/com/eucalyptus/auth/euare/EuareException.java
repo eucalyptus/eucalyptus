@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.euare;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class EuareException extends EucalyptusCloudException {
@@ -17,35 +18,35 @@ public class EuareException extends EucalyptusCloudException {
   public static final String DUPLICATE_CERTIFICATE = "DuplicateCertificate";
   public static final String INVALID_CERTIFICATE = "InvalidCertificate";
   
-  private int code;
+  private HttpResponseStatus status;
   private String error;
   
-  public EuareException( int code, String error ) {
+  public EuareException( HttpResponseStatus status, String error ) {
     super( );
-    this.code = code;
+    this.status = status;
     this.error = error;
   }
   
-  public EuareException( int code, String error, String message, Throwable cause ) {
+  public EuareException( HttpResponseStatus status, String error, String message, Throwable cause ) {
     super( message, cause );
-    this.code = code;
+    this.status = status;
     this.error = error;
   }
   
-  public EuareException( int code, String error, String message ) {
+  public EuareException( HttpResponseStatus status, String error, String message ) {
     super( message );
-    this.code = code;
+    this.status = status;
     this.error = error;
   }
   
-  public EuareException( int code, String error, Throwable cause ) {
+  public EuareException( HttpResponseStatus status, String error, Throwable cause ) {
     super( cause );
-    this.code = code;
+    this.status = status;
     this.error = error;
   }
   
-  public int getCode( ) {
-    return this.code;
+  public HttpResponseStatus getStatus( ) {
+    return this.status;
   }
   
   public String getError( ) {
