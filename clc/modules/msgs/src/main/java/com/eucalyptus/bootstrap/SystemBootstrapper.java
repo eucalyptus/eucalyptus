@@ -130,7 +130,7 @@ public class SystemBootstrapper {
        * ActiveMQ broker from working properly. 
        */
       try {
-         GroovyUtil.eval("com.eucalyptus.reporting.queue.QueueBroker.getInstance().startup()");
+         //GroovyUtil.eval("com.eucalyptus.reporting.queue.QueueBroker.getInstance().startup()");
          LOG.info("Groovy eval of queue factory startup succeeded.");
       } catch (Exception ex) {
          LOG.error("Groovy eval of queue factory startup failed.", ex);
