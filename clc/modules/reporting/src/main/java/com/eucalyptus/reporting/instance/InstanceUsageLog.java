@@ -20,8 +20,8 @@ import com.eucalyptus.reporting.Period;
  * <p>The data in the log is not indexed, in order to minimize write time.
  * As a result, you can't search through the log for specific instances or
  * specific data; you can only get a full dump between dates. However, there
- * exist groovy scripts to filter the data, or to transfer the data into a
- * data warehouse for subsequent searching.
+ * exist groovy scripts to transfer the data into a data warehouse for
+ * subsequent searching.
  * 
  * <p>The usage data in logs is <i>sampled</i>, meaning data is collected
  * every <i>n</i> seconds and written. As a result, some small error will
@@ -57,14 +57,18 @@ public class InstanceUsageLog
 	}
 
 	/**
-	 * <p>Scans through the usage log, then summarizes and groups the data it finds.
-	 * For example, if you provide the criterion of "user", in scans through the usage
-	 * log and adds up all usage data for each user, then returns a Map of
-	 * UserId:UsageSummary. 
+	 * <p>Scans through the usage log, then summarizes the data it finds.
+	 * Returns a map of instance usage, keyed by the value of the criterion you
+	 * specified. For example, if you provide the criterion of "user", it scans
+	 * through the usage log and adds up all usage data for each user, then
+	 * returns a Map of UserId (String) -> UsageSummary.
+	 * 
+	 * <p>This method is used for generating visual reports. For example, it
+	 * could be used to generate a report of user id's in a left column with
+	 * usage stats in various right-hand cols.
 	 *
 	 * @return A summary of all usage and instance data for a given criterion
-	 *   keyed by the criterion value. For example, a summary of all instance
-	 *   and usage data for each user, keyed by user. 
+	 *   keyed by the criterion value.
 	 */
 	public Map<String, InstanceUsageSummary> scanSummarize(Period period,
 			GroupByCriterion criterion)
@@ -96,7 +100,10 @@ public class InstanceUsageLog
 	 * <p>Scans through the usage log, then summarizes and groups the data it finds.
 	 * For example, scans through the usage log and adds up all usage data
 	 * for each user, within each Availability Zone, then returns the results
-	 * as <pre>AvailZone->UserId->UsageSummary</pre>. 
+	 * as <pre>AvailZoneId->UserId->UsageSummary</pre>.
+	 * 
+	 * <p>This is used to generate nested reports in which we list (for example)
+	 * usage by user, grouped by availability zone. 
 	 *
 	 * @return A summary of all usage and instance data for given criteria
 	 *   keyed by the criterion values. 
@@ -152,6 +159,12 @@ public class InstanceUsageLog
 		}
 	}
 
+	/**
+	 * <p>LogScanResult is conceptually similar to a ResultSet. It contains the
+	 * instance data and usage data for a particular period.
+	 * 
+	 * @author tom.werges
+	 */
 	public class LogScanResult
 	{
 		private final InstanceAttributes insAttrs;
@@ -183,7 +196,8 @@ public class InstanceUsageLog
 	}
 
 	/**
-	 * <p>Scans log for all results during some period.
+	 * <p>Scans log for all results during some period. This method is used
+	 * internally by the scanSummarize methods.
 	 */
 	public List<LogScanResult> scanLog(Period period)
 	{
