@@ -178,7 +178,7 @@
 			<srcfiles dir="${test.dir}" includes="**/*" />
 		</uptodate>
 	    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
-		<antcall target="do-${builder.target}" inheritall="true" inheritrefs="true" />
+		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
 		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
 			<javac target="1.5" debug="true" />
