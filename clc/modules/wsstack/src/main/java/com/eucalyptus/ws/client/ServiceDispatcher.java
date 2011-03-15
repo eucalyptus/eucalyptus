@@ -11,6 +11,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
@@ -19,7 +20,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ServiceDispatcher implements Dispatcher {
   private static Logger LOG = Logger.getLogger( ServiceDispatcher.class );
-  private static ConcurrentMap<String,Dispatcher> proxies = new ConcurrentHashMap<String,Dispatcher>(); 
+  private static ConcurrentMap<FullName,Dispatcher> proxies = new ConcurrentHashMap<FullName,Dispatcher>(); 
   
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
     List<Dispatcher> dispatcherList = lookupMany( c );
@@ -31,7 +32,8 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
   public static List<Dispatcher> lookupMany( Component c ) {
     List<Dispatcher> dispatcherList = Lists.newArrayList( );
-    for( String key : proxies.keySet( ) ) {
+    for( FullName key : proxies.keySet( ) ) {
+      key.get
       if( key.startsWith( c.getName() )) {
         dispatcherList.add( proxies.get( key ) );
       }
@@ -44,11 +46,11 @@ public abstract class ServiceDispatcher implements Dispatcher {
 
   public static Dispatcher register( ServiceConfiguration serviceConfiguration, Dispatcher proxy ) {
     LOG.info( "Registering "+ serviceConfiguration.getFullName( ).toString( ) + " as "  + proxy );
-    return proxies.put( serviceConfiguration.getFullName( ).toString( ), proxy );
+    return proxies.put( serviceConfiguration.getFullName( ), proxy );
   }
   public static Dispatcher deregister( ServiceConfiguration serviceConfiguration ) {
     LOG.info( "Deregistering "+ serviceConfiguration.getFullName( ).toString( ) );
-    return proxies.remove( serviceConfiguration.getFullName( ).toString( ) );
+    return proxies.remove( serviceConfiguration.getFullName( ) );
   }
   public static Collection<Dispatcher> values( ) {
     return proxies.values( );
