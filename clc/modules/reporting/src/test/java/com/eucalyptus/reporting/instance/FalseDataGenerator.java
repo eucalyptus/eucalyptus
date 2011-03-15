@@ -136,7 +136,7 @@ public class FalseDataGenerator
 			removeFalseData();
 			printFalseData();
 			Thread.sleep(100000);
-			generateFalseData("remote");
+			generateFalseData();
 			Thread.sleep(100000);
 			printFalseData();
 			removeFalseData();
@@ -211,7 +211,6 @@ public class FalseDataGenerator
 	 */
 	private static class TestEventListener
 		extends InstanceEventListener
-		implements QueueSender
 	{
 		private long fakeCurrentTimeMillis = 0l;
 
@@ -223,12 +222,6 @@ public class FalseDataGenerator
 		protected long getCurrentTimeMillis()
 		{
 			return fakeCurrentTimeMillis;
-		}
-
-		@Override
-		public void send(Event e)
-		{
-			super.fireEvent(e);
 		}
 	}
 
