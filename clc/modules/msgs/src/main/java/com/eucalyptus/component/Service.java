@@ -84,8 +84,16 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   private final ComponentId          id;
   private final Component.State      state          = State.ENABLED/** ASAP:FIXME:GRZE **/
                                                     ;
-  private final FullName             fullName;
   
+  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
+    this.id = id;
+    this.serviceConfiguration = serviceConfig;
+    this.name = serviceConfig.getFullName( ).toString( );
+    this.endpoint = new ServiceEndpoint( this, true, serviceConfig.isLocal( ) ? this.id.getLocalEndpointUri( ) : this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) ) );
+    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
+  }
+  
+  /** TODO:GRZE: clean this up **/
   public final ServiceId getServiceId( ) {
     return new ServiceId( ) {
       {
@@ -96,42 +104,6 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
         this.setUri( serviceConfiguration.getUri( ) );
       }
     };
-  }
-  
-  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
-    this.id = id;
-    this.serviceConfiguration = serviceConfig;
-    this.fullName = this.id.getMyFullName( this.serviceConfiguration );
-    if ( "cluster".equals( id.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
-      this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      this.endpoint = new ServiceEndpoint( this, false, uri );
-    } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.id.getLocalEndpointUri( );
-      this.name = id.getName( ) + LOCAL_HOSTNAME;
-      this.endpoint = new ServiceEndpoint( this, true, uri );
-    } else {
-      Boolean local = false;
-      try {
-        if ( serviceConfig.getHostName( ) != null ) {
-          local = Internets.testLocal( serviceConfig.getHostName( ) );
-        } else {
-          local = true;
-        }
-      } catch ( Exception e ) {
-        local = true;
-      }
-      URI uri = null;
-      if ( !local ) {
-        this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      } else {
-        this.name = id.getName( ) + LOCAL_HOSTNAME;
-        uri = this.id.getLocalEndpointUri( );
-      }
-      this.endpoint = new ServiceEndpoint( this, local, uri );
-    }
-    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
   }
   
   public Boolean isLocal( ) {
@@ -229,19 +201,17 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   /**
-   * TODO: DOCUMENT
-   * 
    * @see com.eucalyptus.util.HasFullName#getPartition()
    * @return
    */
   @Override
   public String getPartition( ) {
-    return this.fullName.getPartition( );
+    return this.serviceConfiguration.getPartition( );
   }
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName;
+    return this.serviceConfiguration.getFullName( );
   }
   
 }

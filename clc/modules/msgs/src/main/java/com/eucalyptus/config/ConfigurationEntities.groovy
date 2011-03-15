@@ -160,8 +160,8 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     }
   }
 
-  public FullName getFullName( ) {
-    return this.getComponentId().makeFullName( this.partition != null ? this.partition : this.name, this.name );
+  public final FullName getFullName( ) {
+    return this.getComponentId().makeFullName( this );
   }
   
 
@@ -327,10 +327,6 @@ public class WalrusConfiguration extends ComponentConfiguration implements Seria
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Walrus.class);
   }
-  @Override
-  public FullName getFullName( ) {
-    return this.getComponentId().makeFullName( "walrus", this.name );
-  }
 }
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
@@ -346,10 +342,6 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   }
   public ComponentId getComponentId() {
     return ComponentIds.lookup(Eucalyptus.class);
-  }
-  @Override
-  public FullName getFullName( ) {
-    return this.getComponentId().makeFullName( "eucalyptus", this.name );
   }
 }
 

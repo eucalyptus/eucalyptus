@@ -370,7 +370,7 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
         for ( Service s : c.lookupServices( ) ) {
-          if ( s.isLocal( ) ) {
+          if ( s.getServiceConfiguration( ).isLocal( ) ) {
             banner += prefix + c.getName( ) + SEP + s.toString( );
           }
         }
