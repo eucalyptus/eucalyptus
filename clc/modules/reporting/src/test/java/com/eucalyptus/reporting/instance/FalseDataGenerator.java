@@ -49,30 +49,19 @@ public class FalseDataGenerator
 		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
 	}
 
-	/**
-	 * @param remote Must equal "local" if this is to be run locally; any other
-	 *   value means it will run over the MQ and will search for a broker.
-	 */
-	public static void generateFalseData(String remote)
+	public static void generateFalseData()
 	{
-		boolean isLocal = (remote != null && remote.equalsIgnoreCase("local"));
+		System.out.println(" ----> GENERATING FALSE DATA");
 
-		/* Slightly confusing here...
-		 * 
-		 */
-		QueueSender queueSender = null;
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
-		if (isLocal) {
-			queueSender = listener;
-		} else {
-			reportingBootstrapper = new ReportingBootstrapper();
-			reportingBootstrapper.setOverriddenInstanceEventListener(listener);
-			reportingBootstrapper.start();
-			queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
-		}
 
-		System.out.println(" ----> GENERATING FALSE DATA " + (isLocal ? "(local)" : "(remote)"));
+		reportingBootstrapper = new ReportingBootstrapper();
+		reportingBootstrapper.setOverriddenInstanceEventListener(listener);
+		reportingBootstrapper.start();
+
+		QueueSender	queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
+
 
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
