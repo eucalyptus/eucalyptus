@@ -33,8 +33,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static List<Dispatcher> lookupMany( Component c ) {
     List<Dispatcher> dispatcherList = Lists.newArrayList( );
     for( FullName key : proxies.keySet( ) ) {
-      key.get
-      if( key.startsWith( c.getName() )) {
+      if( c.getComponentId( ).getName( ).equals( key.getNamespace( ) ) ) {
         dispatcherList.add( proxies.get( key ) );
       }
     }
