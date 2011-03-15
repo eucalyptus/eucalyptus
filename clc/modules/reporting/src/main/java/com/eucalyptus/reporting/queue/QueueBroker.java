@@ -1,40 +1,42 @@
 package com.eucalyptus.reporting.queue;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.log4j.*;
+
+import com.eucalyptus.component.*;
+import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.system.SubDirectory;
 
 public class QueueBroker
 {
 	private static Logger log = Logger.getLogger( QueueBroker.class );
 
 	public static final String DEFAULT_NAME = "reportingBroker";
-	public static final String DEFAULT_DIR  = "/tmp";
-	public static final String DEFAULT_URL  = "tcp://localhost:63636";
+	public static final String DEFAULT_DIR  = SubDirectory.QUEUE.toString();
+	public static final int    DEFAULT_PORT = 63636;
+	public static final String DEFAULT_URL  = "tcp://localhost:" + DEFAULT_PORT;
+	public static final String DEFAULT_REMOTE_URL_FORMAT = "static:(tcp://%s:%d)";
 		
 	private boolean started = false;
 
 	private String brokerName;
 	private String brokerDataDir;
 	private String brokerUrl;
-	//static:(tcp://remoteServer:63636)
-	private String remoteBrokerUrl;
 	
 	private List<ActiveMQDestination> destinations;
 
 	private BrokerService brokerService;
 	private JmsBrokerThread brokerThread;
 
-	private QueueBroker(String brokerName, String brokerUrl, String remoteBrokerUrl,
-			String brokerDataDir)
+	private QueueBroker(String brokerName, String brokerUrl, String brokerDataDir)
 	{
 		this.brokerName = brokerName;
 		this.brokerUrl = brokerUrl;
 		this.brokerDataDir = brokerDataDir;
 		this.destinations = new ArrayList<ActiveMQDestination>();
-		this.remoteBrokerUrl = remoteBrokerUrl;
 	}
 	
 	private static QueueBroker instance;
@@ -42,7 +44,7 @@ public class QueueBroker
 	public static QueueBroker getInstance()
 	{
 		if (instance == null) {
-			return instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL, null,
+			return instance = new QueueBroker(DEFAULT_NAME, DEFAULT_URL,
 					DEFAULT_DIR);
 		}
 		return instance;
@@ -57,9 +59,23 @@ public class QueueBroker
 	
 	public void startup()
 	{
-		/* TODO: Determine our current location.
-		 *   Determine where the main reporting component lives.
-		 *   Establish a network connector.
+		/* Find remote broker if we're not running on the reporting machine
+		 */
+		String remoteBrokerUrl = null;
+		Component reportingComponent = Components.lookup(Reporting.class);
+		if (null!=reportingComponent && !reportingComponent.isLocal()) {
+			log.info("Searching for remote reporting broker");
+			NavigableSet<Service> services = reportingComponent.getServices();
+			for (Service service: services) {
+				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
+						service.getHost(), DEFAULT_PORT);
+			}
+		} else {
+			log.info("Reporting broker will run locally");
+			remoteBrokerUrl = null;
+		}
+		
+		/* Startup BrokerService in separate thread and provide url and remoteUrl
 		 */
 		try {
 			brokerService = new BrokerService();
@@ -69,7 +85,7 @@ public class QueueBroker
 			if (remoteBrokerUrl != null) {
 				brokerService.addNetworkConnector(remoteBrokerUrl);
 			}
-			brokerService.setUseJmx(true);
+			brokerService.setUseJmx(false);
 			brokerThread = new JmsBrokerThread(brokerService);
 			brokerThread.start();
 			Thread.sleep(1000); // give the broker a moment to startup; TODO:
@@ -111,7 +127,7 @@ public class QueueBroker
 			remoteBrokerUrl = args[0];
 		}
 		QueueBroker broker = new QueueBroker(DEFAULT_NAME, DEFAULT_URL,
-				remoteBrokerUrl, DEFAULT_DIR);
+				DEFAULT_DIR);
 		broker.startup();
 	}
 
