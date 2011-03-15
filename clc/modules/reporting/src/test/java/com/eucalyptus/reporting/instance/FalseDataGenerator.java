@@ -2,8 +2,10 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
+import com.eucalyptus.reporting.ReportingBootstrapper;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.QueueFactory;
 import com.eucalyptus.reporting.queue.QueueSender;
@@ -11,13 +13,13 @@ import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.upgrade.TestDescription;
 
 /**
- * <p>FalseDataGenerator generates false data about instances.
- * It generates fake starting and ending times, imaginary resource
- * usage, fictitious clusters, and non-existent accounts and users.
+ * <p>FalseDataGenerator generates false data about instances. It generates
+ * fake starting and ending times, imaginary resource usage, fictitious
+ * clusters, and non-existent accounts and users.
  * 
- * <p>The main use of this class is to be called from the
- * <pre>clc/tools/runTest.sh</pre> tool, specifying the class name and a
- * method below.
+ * <p>FalseDataGenerator is meant to be called from the command-line tool,
+ * <pre>clc/tools/runTest.sh</pre>, specifying the class name and a method
+ * below.
  * 
  * <p>False data should be deleted afterward by calling the
  * <pre>deleteFalseData</pre> method.
@@ -39,6 +41,8 @@ public class FalseDataGenerator
 	private static final int NUM_ACCOUNT    = 16;
 	private static final int NUM_CLUSTER    = 4;
 	private static final int NUM_AVAIL_ZONE = 2;
+	
+	private static ReportingBootstrapper reportingBootstrapper = null;
 
 	private enum FalseInstanceType
 	{
@@ -52,11 +56,27 @@ public class FalseDataGenerator
 	public static void generateFalseData(String remote)
 	{
 		boolean isLocal = (remote != null && remote.equalsIgnoreCase("local"));
+
+		/* Slightly confusing here...
+		 * 
+		 */
+		QueueSender queueSender = null;
+		TestEventListener listener = new TestEventListener();
+		listener.setCurrentTimeMillis(START_TIME);
+		if (isLocal) {
+			queueSender = listener;
+		} else {
+			reportingBootstrapper = new ReportingBootstrapper();
+			reportingBootstrapper.setOverriddenInstanceEventListener(listener);
+			reportingBootstrapper.start();
+			queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
+		}
+
 		System.out.println(" ----> GENERATING FALSE DATA " + (isLocal ? "(local)" : "(remote)"));
-		
+
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
-		
+
 		for (int i = 0; i < NUM_INSTANCE; i++) {
 
 			String uuid = new Long(i).toString();
@@ -72,18 +92,11 @@ public class FalseDataGenerator
 					instanceId, instanceType, userId, accountId, clusterName,
 					availZone);
 			fakeInstances.add(insAttrs);
+
 		}
 
-		QueueSender queueSender = null;
-		TestEventListener listener = null;
-		if (isLocal) {
-			listener = new TestEventListener();
-			listener.setCurrentTimeMillis(START_TIME);
-		} else {
-			queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
-		}
 		for (int i=0; i<NUM_USAGE; i++) {
-			if (isLocal) listener.setCurrentTimeMillis(START_TIME + (i * TIME_USAGE_APART));
+			listener.setCurrentTimeMillis(START_TIME + (i * TIME_USAGE_APART));
 			for (InstanceAttributes insAttrs : fakeInstances) {
 				long instanceNum = Long.parseLong(insAttrs.getUuid());
 				long netIoMegs = (instanceNum + i) * 1024;
@@ -95,11 +108,7 @@ public class FalseDataGenerator
 						insAttrs.getAvailabilityZone(), new Long(netIoMegs),
 						new Long(diskIoMegs));
 				System.out.println("Generating:" + i);
-				if (isLocal) {
-					listener.fireEvent(event);
-				} else {
-					queueSender.send(event);
-				}
+				queueSender.send(event);
 			}
 		}
 
@@ -132,6 +141,21 @@ public class FalseDataGenerator
 		}
 	}
 
+	public static void runTest()
+	{
+		try {
+			removeFalseData();
+			printFalseData();
+			Thread.sleep(100000);
+			generateFalseData("remote");
+			Thread.sleep(100000);
+			printFalseData();
+			removeFalseData();
+		} catch (InterruptedException iex) {
+			throw new RuntimeException(iex);
+		}
+	}
+	
 	private static GroupByCriterion getCriterion(String name)
 	{
 		/* throws an IllegalArgument which we allow to percolate up
@@ -198,6 +222,7 @@ public class FalseDataGenerator
 	 */
 	private static class TestEventListener
 		extends InstanceEventListener
+		implements QueueSender
 	{
 		private long fakeCurrentTimeMillis = 0l;
 
@@ -210,8 +235,14 @@ public class FalseDataGenerator
 		{
 			return fakeCurrentTimeMillis;
 		}
+
+		@Override
+		public void send(Event e)
+		{
+			super.fireEvent(e);
+		}
 	}
-	
+
 	public static void main(String[] args) throws Exception
 	{
 		String methodName = args[0];
