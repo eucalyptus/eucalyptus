@@ -119,7 +119,6 @@
 	</target>
   <target name="build-test">
     <ant dir="." inheritall="false" target="build-test-all" />
-    <ant dir="." inheritall="false" target="bind" />
     <ant dir="." inheritall="false" target="jar" />
 	</target>
   <target name="build-test-all">
@@ -129,7 +128,6 @@
   <target name="build-test-nogwt">
 		<ant dir="modules/msgs" inheritall="false" target="builder-test" />
 		<ant dir="modules/mysql" inheritall="false" target="builder-test" />
-		<ant dir="modules/ldap" inheritall="false" target="builder-test" />
 		<ant dir="modules/authentication" inheritall="false" target="builder-test" />
 		<ant dir="modules/configuration" inheritall="false" target="builder-test" />
 		<ant dir="modules/core" inheritall="false" target="builder-test" />
