@@ -661,7 +661,7 @@ public class EuareService {
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + requestUser.getName( ) );
     }
-    if ( !Permissions.canAllocate( PolicySpec.IAM_RESOURCE_USER, "", action, requestUser, 1 ) ) {
+    if ( !Permissions.canAllocate( PolicySpec.IAM_RESOURCE_USER, "", action, requestUser, 1L ) ) {
       throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "User quota exceeded" );
     }
     try {
@@ -864,7 +864,7 @@ public class EuareService {
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_GROUP, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + requestUser.getName( ) );
     }
-    if ( !Permissions.canAllocate( PolicySpec.IAM_RESOURCE_GROUP, "", action, requestUser, 1 ) ) {
+    if ( !Permissions.canAllocate( PolicySpec.IAM_RESOURCE_GROUP, "", action, requestUser, 1L ) ) {
       throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Group quota exceeded" );
     }
     try {

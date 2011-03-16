@@ -112,7 +112,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
    */
   @Override
-  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Integer quantity) throws AuthException {
+  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException {
     try {
       // System admins are not restricted by quota limits.
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
@@ -280,7 +280,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @param quantity The quantity to allocate.
    * @throws AuthException for any error.
    */
-  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Integer quantity ) throws AuthException {
+  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Long quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
       LOG.debug( "YE " + "evaluate quota " + auth );

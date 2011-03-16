@@ -72,6 +72,9 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
@@ -80,6 +83,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
@@ -180,5 +184,85 @@ public class StorageUtil {
     }
     return reply;
   }
+  
+  public static long countVolumeByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
 
+  public static long countVolumeByUser( String userId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
+  
+  public static long countSnapshotByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    try {
+      List<Snapshot> vols = db.query( new Snapshot( accountId, null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search snapshot info", e );
+    }
+  }
+  
+  public static long countSnapshotByUser( String userId ) throws AuthException {
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    try {
+      List<Snapshot> vols = db.query( new Snapshot( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search snapshot info", e );
+    }
+  }
+
+  public static long countVolumeSizeByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
+      long size = 0;
+      for ( Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.commit( );
+      return size;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
+
+  public static long countVolumeSizeByUser( String userId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      long size = 0;
+      for ( Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.commit( );
+      return size;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
+  
 }

@@ -112,11 +112,11 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     super.setCreationTime( new Date( ) );
   }
   
-  private Volume( final UserFullName userFullName, String displayName ) {
+  public Volume( final UserFullName userFullName, String displayName ) {
     super( userFullName, displayName );
   }
   
-  private Volume( final String accountId, String displayName ) {
+  public Volume( final String accountId, String displayName ) {
     this.setOwnerAccountId( accountId );
     this.setDisplayName( displayName );
   }

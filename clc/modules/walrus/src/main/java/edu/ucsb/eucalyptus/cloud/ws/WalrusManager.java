@@ -361,9 +361,9 @@ public class WalrusManager {
 		                            "",
 		                            PolicySpec.S3_CREATEBUCKET,
 		                            ctx.getUser(),
-		                            1))){
+		                            1L))){
 			// create bucket and set its acl
-			BucketInfo bucket = new BucketInfo(account.getId(), bucketName, new Date());
+			BucketInfo bucket = new BucketInfo(account.getId(), ctx.getUser( ).getId( ), bucketName, new Date());
 			ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 			bucket.addGrants(account.getId(), grantInfos, accessControlList);
 			bucket.setGrants(grantInfos);
@@ -725,23 +725,29 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
-			BucketLogData logData = bucket.getLoggingEnabled() ? request
-					.getLogData() : null;
-					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canWrite(account.getId()) &&
-					      Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-					                             PolicySpec.S3_RESOURCE_BUCKET,
-					                             bucketName,
-					                             bucket.getOwnerId()) &&
-                Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-                                       PolicySpec.S3_RESOURCE_OBJECT,
-                                       PolicySpec.objectFullName(bucketName, objectKey),
-                                       bucket.getOwnerId()) &&
-					      Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
-					                              bucketName,
-					                              PolicySpec.S3_PUTOBJECT,
-					                              ctx.getUser(),
-					                              1))) {
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			long objSize = 0;
+			try {
+			  objSize = Long.valueOf( request.getContentLength( ) );
+			} catch ( NumberFormatException e ) {
+			  LOG.error( "Invalid content length " + request.getContentLength( ) );
+			  throw new EucalyptusCloudException( e );
+			}
+			if (ctx.hasAdministrativePrivileges() || (
+			    bucket.canWrite(account.getId()) &&
+			    Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
+			                           PolicySpec.S3_RESOURCE_BUCKET,
+			                           bucketName,
+			                           bucket.getOwnerId()) &&
+			    Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
+			                           PolicySpec.S3_RESOURCE_OBJECT,
+			                           PolicySpec.objectFullName(bucketName, objectKey),
+			                           bucket.getOwnerId()) &&
+			    Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
+			                            bucketName,
+			                            PolicySpec.S3_PUTOBJECT,
+			                            ctx.getUser(),
+			                            objSize))) {
 						if (logData != null)
 							reply.setLogData(logData);
 						String objectName;
@@ -1093,23 +1099,29 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
-			BucketLogData logData = bucket.getLoggingEnabled() ? request
-					.getLogData() : null;
-          if (ctx.hasAdministrativePrivileges() || (
-              bucket.canWrite(account.getId()) &&
-              Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-                                     PolicySpec.S3_RESOURCE_BUCKET,
-                                     bucketName,
-                                     bucket.getOwnerId()) &&
-              Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-                                     PolicySpec.S3_RESOURCE_OBJECT,
-                                     PolicySpec.objectFullName(bucketName, objectKey),
-                                     bucket.getOwnerId()) &&
-              Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
-                                      bucketName,
-                                      PolicySpec.S3_PUTOBJECT,
-                                      ctx.getUser(),
-                                      1))) {
+			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+	    long objSize = 0;
+	    try {
+	      objSize = Long.valueOf( request.getContentLength( ) );
+	    } catch ( NumberFormatException e ) {
+	      LOG.error( "Invalid content length " + request.getContentLength( ) );
+	      throw new EucalyptusCloudException( e );
+	    }
+      if (ctx.hasAdministrativePrivileges() || (
+          bucket.canWrite(account.getId()) &&
+          Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
+                                 PolicySpec.S3_RESOURCE_BUCKET,
+                                 bucketName,
+                                 bucket.getOwnerId()) &&
+          Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
+                                 PolicySpec.S3_RESOURCE_OBJECT,
+                                 PolicySpec.objectFullName(bucketName, objectKey),
+                                 bucket.getOwnerId()) &&
+          Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
+                                  bucketName,
+                                  PolicySpec.S3_PUTOBJECT,
+                                  ctx.getUser(),
+                                  objSize))) {
             EntityWrapper<ObjectInfo> dbObject = db
 						.recast(ObjectInfo.class);
 						ObjectInfo searchObjectInfo = new ObjectInfo();
@@ -2544,15 +2556,15 @@ public class WalrusManager {
                 // not found. create a new one
 							  if (ctx.hasAdministrativePrivileges() || (
 							        Permissions.isAuthorized(PolicySpec.S3_RESOURCE_OBJECT,
-							                                 "",
+							                                 sourceBucket,
 							                                 ctx.getAccount(),
 							                                 PolicySpec.S3_PUTOBJECT,
 							                                 ctx.getUser()) &&
 							        Permissions.canAllocate(PolicySpec.S3_RESOURCE_OBJECT,
-							                                "",
+							                                sourceBucket,
 							                                PolicySpec.S3_PUTOBJECT,
 							                                ctx.getUser(),
-							                                1))) {
+							                                sourceObjectInfo.getSize()))) {
   								addNew = true;
   								destinationObjectInfo = new ObjectInfo();
   								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
