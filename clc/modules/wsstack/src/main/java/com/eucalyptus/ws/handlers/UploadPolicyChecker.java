@@ -149,11 +149,11 @@ public class UploadPolicyChecker {
 				throw new AuthenticationException(ex);
 			}
 			//all form uploads without a policy are anonymous
-			if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
+			if(formFields.containsKey(WalrusProperties.IGNORE_PREFIX + WalrusProperties.FormField.AWSAccessKeyId.toString())) {
 				String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
 				authenticationHeader += "AWS" + " " + accessKeyId + ":";
 			}
-			if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
+			if(formFields.containsKey(WalrusProperties.IGNORE_PREFIX + WalrusProperties.FormField.signature.toString())) {
 				String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
 				authenticationHeader += signature;
 				httpRequest.addHeader(WalrusPOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);

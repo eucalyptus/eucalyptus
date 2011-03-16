@@ -440,7 +440,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					Map formFields = httpRequest.getFormFields();
 
 					String objectKey = null;
-					String file = (String) formFields.get(WalrusProperties.FormField.file.toString());
+					String file = (String) formFields.get(WalrusProperties.IGNORE_PREFIX + WalrusProperties.FormField.file.toString());
 					String authenticationHeader = "";
 					if(formFields.containsKey(WalrusProperties.FormField.key.toString())) {
 						objectKey = (String) formFields.get(WalrusProperties.FormField.key.toString());
