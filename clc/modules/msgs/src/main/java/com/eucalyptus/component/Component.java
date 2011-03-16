@@ -93,7 +93,7 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -193,7 +193,7 @@ public class Component implements HasName<Component> {
   }
   
   public String getRegistryKey( String hostName ) {
-    if ( NetworkUtil.testLocal( hostName ) ) {
+    if ( Internets.testLocal( hostName ) ) {
       return this.getName( ) + "@localhost";
     } else {
       return this.getName( ) + "@" + hostName;

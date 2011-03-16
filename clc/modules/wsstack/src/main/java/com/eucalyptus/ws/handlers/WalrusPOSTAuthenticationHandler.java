@@ -238,13 +238,12 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 					if(contentType != null) {
 						getFirstChunk(formFields, buffer, contentType, boundary);
 					}
-					formFields.put(WalrusProperties.IGNORE_PREFIX + key, keyMap.get(key));
+					formFields.put(key, keyMap.get(key));
 				} else if(WalrusProperties.CONTENT_TYPE.toLowerCase().equals(key.toLowerCase())) {
 					formFields.put(WalrusProperties.CONTENT_TYPE, keyMap.get(key));
 				} else {
-					if (!"submit".equals(key)) {
-						formFields.put(key, keyMap.get(key));
-					}
+					formFields.put(key, keyMap.get(key));
+
 				}
 			}
 		}
@@ -303,7 +302,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		int startValue = part.indexOf(WalrusProperties.CONTENT_TYPE + ":") + WalrusProperties.CONTENT_TYPE.length() + 1;
 		if(endValue > startValue) {
 			String contentType = part.substring(startValue, endValue);
-			//formFields.put(WalrusProperties.CONTENT_TYPE, contentType);
 			return contentType;
 		}
 		return null;

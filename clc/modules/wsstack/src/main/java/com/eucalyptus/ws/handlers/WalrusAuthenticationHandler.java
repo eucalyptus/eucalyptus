@@ -309,8 +309,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String awsAccessKeyId = httpRequest.getAndRemoveHeader(SecurityParameter.AWSAccessKeyId.toString());
 		if(awsAccessKeyId == null)
 			throw new AuthenticationException("AWSAccessKeyID must be specified.");
-		fields.put(WalrusProperties.IGNORE_PREFIX + WalrusProperties.FormField.signature.toString(), policySignature);
-		fields.put(WalrusProperties.IGNORE_PREFIX + SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
+		fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
+		fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
 		String acl = httpRequest.getAndRemoveHeader(WalrusProperties.AMZ_ACL.toString());
 		if(acl != null)
 			fields.put(WalrusProperties.FormField.acl.toString(), acl);

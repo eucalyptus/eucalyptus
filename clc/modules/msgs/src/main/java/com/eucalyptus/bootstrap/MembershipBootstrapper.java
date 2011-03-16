@@ -89,7 +89,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Join;
 
 @Provides( Empyrean.class )
@@ -116,7 +116,7 @@ public class MembershipBootstrapper extends Bootstrapper {
                   if ( !MembershipBootstrapper.this.membershipChannel.getAddress( ).equals( addr ) ) {
                     LOG.info( "Sending to address=" + addr + " of type=" + addr.getClass( ) );
                     try {
-                      MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", NetworkUtil.getAllAddresses( ) ) ) );
+                      MembershipBootstrapper.this.membershipChannel.send( new Message( addr, null, Join.join( ":", Internets.getAllAddresses( ) ) ) );
                     } catch ( ChannelNotConnectedException ex ) {
                       LOG.error( ex, ex );
                     } catch ( ChannelClosedException ex ) {
@@ -148,7 +148,7 @@ public class MembershipBootstrapper extends Bootstrapper {
               String[] dbAddrs = ( ( String ) msg.getObject( ) ).split( ":" );
               for ( String maybeDbAddr : dbAddrs ) {
                 try {
-                  if ( NetworkUtil.testReachability( maybeDbAddr ) ) {
+                  if ( Internets.testReachability( maybeDbAddr ) ) {
                     String host = maybeDbAddr;
                     for ( Component c : Components.list( ) ) {
                       if ( c.getComponentId( ).isCloudLocal( ) ) {

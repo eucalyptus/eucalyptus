@@ -84,8 +84,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class NetworkUtil {
-  private static Logger LOG = Logger.getLogger( NetworkUtil.class );
+public class Internets {
+  private static Logger LOG = Logger.getLogger( Internets.class );
   private static List<NetworkInterface> interfaces = Lists.newArrayList( );
   static {
     try {
@@ -204,10 +204,10 @@ public class NetworkUtil {
 
   
   public static void main( String[] args) throws Exception {
-    for( String addr : NetworkUtil.getAllAddresses( ) ) {
+    for( String addr : Internets.getAllAddresses( ) ) {
       System.out.println( addr );
     }
-    System.out.println("Testing if 192.168.7.8 is reachable: " + NetworkUtil.testReachability( "192.168.7.8" ) );
+    System.out.println("Testing if 192.168.7.8 is reachable: " + Internets.testReachability( "192.168.7.8" ) );
   }
 
 }
