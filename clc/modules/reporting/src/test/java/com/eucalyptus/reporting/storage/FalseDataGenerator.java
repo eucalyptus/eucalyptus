@@ -3,8 +3,7 @@ package com.eucalyptus.reporting.storage;
 import java.util.*;
 
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.reporting.GroupByCriterion;
-import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.queue.*;
@@ -19,32 +18,27 @@ public class FalseDataGenerator
 	private static final int SNAPSHOTS_PER_USER = 64;
 	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
 	private static final int TIME_USAGE_APART = 100000; //ms
-	private static final int WRITE_INTERVAL = 8;
 	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART) + START_TIME;
 
-	
-	/**
-	 * @param remote Must equal "local" if this is to be run locally; any other
-	 *   value means it will run over the MQ and will search for a broker.
-	 */
-	public static void generateFalseData(String remote)
+	private static ReportingBootstrapper reportingBootstrapper;
+
+	public static void generateFalseData()
 	{
-		boolean isLocal = (remote != null && remote.equalsIgnoreCase("local"));
-		System.out.println(" ----> GENERATING FALSE DATA " + (isLocal ? "(local)" : "(remote)"));
+		System.out.println(" ----> GENERATING FALSE DATA");
+
+		QueueFactory queueFactory = QueueFactory.getInstance();
+		QueueSender queueSender = queueFactory.getSender(QueueIdentifier.STORAGE);
+		QueueReceiver queueReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
+		TestStorageEventPoller storagePoller = new TestStorageEventPoller(queueReceiver);
 		
-		QueueSender queueSender = null;
-		TestPoller testPoller = null;
-		if (isLocal) {
-			FakeQueue fakeQueue = new FakeQueue();
-			queueSender = fakeQueue;
-			testPoller = new TestPoller(fakeQueue);
-		} else {
-			QueueFactory queueFactory = QueueFactory.getInstance();
-			queueSender = queueFactory.getSender(QueueIdentifier.STORAGE);
-		}
-		long timestampMs = 0l;
+		reportingBootstrapper = new ReportingBootstrapper();
+		reportingBootstrapper.setOverriddenStorageEventPoller(storagePoller);
+		reportingBootstrapper.start();
+
 		for (int i = 0; i < SNAPSHOTS_PER_USER; i++) {
-			timestampMs = (i * TIME_USAGE_APART) + START_TIME;
+			
+			long timestampMs = (i * TIME_USAGE_APART) + START_TIME;
+			storagePoller.setTimestampMs(timestampMs);
 
 			for (int j = 0; j < NUM_USERS; j++) {
 				String userId = String.format("user-%d", j);
@@ -59,77 +53,36 @@ public class FalseDataGenerator
 						StorageEvent.EventType.values()[k];
 					StorageEvent event = new StorageEvent(eventType, true,
 							sizeMegs, userId, accountId, clusterId, zoneId);
-					if (!isLocal) queueSender.send(event);
-					System.out.println("Sending event " + k + " for " + i + "," + j);
+					queueSender.send(event);
+					System.out.printf("Sending event %d for %d,%d\n", k, i, j);
 				}
 				
 			}
-			if (isLocal && (i % WRITE_INTERVAL == 0)) {
-				testPoller.setTimestampMs(timestampMs);
-				testPoller.writeEvents();
-			}
 		}
 
 	}
 	
-	private static class FakeQueue
-		implements QueueReceiver, QueueSender
-	{
-		private final Queue<Event> events;
-
-		FakeQueue()
-		{
-			events = new LinkedList<Event>();
-		}
-		
-		@Override
-		public void send(Event e)
-		{
-			events.add(e);
-		}
-
-		@Override
-		public void addEventListener(EventListener<Event> el)
-		{
-			// empty
-		}
-
-		@Override
-		public void removeEventListener(EventListener<Event> el)
-		{
-			// empty
-		}
-
-		@Override
-		public Event receiveEventNoWait()
-		{
-			return events.poll();
-		}
-		
-	}
-	
-	private static class TestPoller
+	private static class TestStorageEventPoller
 		extends StorageEventPoller
 	{
 		private long timestampMs;
 		
-		TestPoller(QueueReceiver receiver)
+		public TestStorageEventPoller(QueueReceiver receiver)
 		{
 			super(receiver);
 		}
 
+		@Override
+		protected long getTimestampMs()
+		{
+			return this.timestampMs;
+		}
+		
 		void setTimestampMs(long timestampMs)
 		{
 			this.timestampMs = timestampMs;
 		}
-		
-		@Override
-		protected long getTimestampMs()
-		{
-			return timestampMs;
-		}
-	
-		
+
 	}
 	
 	public static void removeFalseData()
@@ -150,6 +103,21 @@ public class FalseDataGenerator
 			System.out.println(snapshot);
 		}
 
+	}
+	
+	public static void runTest()
+	{
+		try {
+			removeFalseData();
+			printFalseData();
+			Thread.sleep(100000);
+			generateFalseData();
+			Thread.sleep(100000);
+			printFalseData();
+			removeFalseData();
+		} catch (InterruptedException iex) {
+			throw new RuntimeException(iex);
+		}
 	}
 
 	private static GroupByCriterion getCriterion(String name)
@@ -233,6 +201,5 @@ public class FalseDataGenerator
 		FalseDataGenerator.class.getDeclaredMethod(methodName, paramTypes)
 				.invoke(null, methodArgsArray);
 	}
-
 
 }
