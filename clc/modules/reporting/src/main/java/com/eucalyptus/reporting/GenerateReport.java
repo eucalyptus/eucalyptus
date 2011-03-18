@@ -29,6 +29,13 @@ import com.eucalyptus.reporting.storage.StorageDisplayBean;
 import com.eucalyptus.reporting.storage.StorageDisplayDb;
 import com.eucalyptus.reporting.units.Units;
 
+/**
+ * <p>GenerateReport is a command-line tool for rapid testing which uses
+ * jasper reports internally. It takes command-line args from the
+ * <pre>runTest.sh</pre> mechanism and writes a resultant report to a file.
+ * 
+ * @author tom.werges
+ */
 public class GenerateReport
 {
 	public static enum Format
@@ -62,6 +69,8 @@ public class GenerateReport
 
 	}
 	
+	/* Expects jrxml files to be in /tmp and writes results there.
+	 */
 	private static File baseDir = new File("/tmp/");
 	private static File storageReportFile = new File(baseDir, "storage.jrxml");
 	private static File nestedStorageReportFile = new File(baseDir, "nested_storage.jrxml");
