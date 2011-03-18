@@ -37,7 +37,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static Multimap<Class, String>        classList = Multimaps.newArrayListMultimap( );
   
   @SuppressWarnings( { "deprecation", "unchecked" } )
-  public static void processFile( File f ) throws IOException {
+  private static void processFile( File f ) throws IOException {
     JarFile jar = new JarFile( f );
     Properties props = new Properties( );
     Enumeration<JarEntry> jarList = jar.entries( );
@@ -165,6 +165,22 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   @Override
   public int compareTo( ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
+  }
+
+  public static void processLibraries( ) {
+    File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( File f : libDir.listFiles( ) ) {
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+           && !f.getName( ).matches( ".*-ext-.*" ) ) {
+        Bootstrap.LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
+        try {
+          processFile( f );
+        } catch ( Throwable e ) {
+          Bootstrap.LOG.error( e.getMessage( ) );
+          continue;
+        }
+      }
+    }
   }
 
   public static URLClassLoader makeClassLoader( File libDir ) {

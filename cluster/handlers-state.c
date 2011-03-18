@@ -96,31 +96,39 @@ extern vnetConfig *vnetconfig;
 
 int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen) {
   int i, rc, ret=0;
+  serviceStatusType *myStatus=NULL;
 
   rc = initialize(ccMeta);
-  if (rc || ccIsEnabled()) {
+  if (rc) {
     return(1);
   }
 
   logprintfl(EUCAINFO, "DescribeServices(): called\n");
   logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
-  // go through input service descriptions and match with self and node states
-
-  *outStatusesLen = serviceIdsLen;
-  *outStatuses = malloc(sizeof(serviceStatusType) * *outStatusesLen);
-  for (i=0; i<serviceIdsLen; i++) {
-    char statestr[32];
-    logprintfl(EUCADEBUG, "DescribeServices(): serviceId=%d type=%s name=%s urisLen=%d\n", i, serviceIds[i].type, serviceIds[i].name, serviceIds[i].urisLen);
-    
-    snprintf((*outStatuses)[i].localState, 32, "%s", config->ccStatus.localState);    
-    snprintf((*outStatuses)[i].details, 1024, "%s", config->ccStatus.details);
-    (*outStatuses)[i].localEpoch = config->ccStatus.localEpoch;    
-    memcpy(&((*outStatuses)[i].serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
+  // TODO: for now, return error if list of services is passed in as parameter
+  if (serviceIdsLen > 0) {
+    logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
+    *outStatusesLen = 0;
+    *outStatuses = NULL;
+    return(1);
   }
-  
+
+  *outStatusesLen = 1;
+  *outStatuses = malloc(sizeof(serviceStatusType));
+  if (!*outStatuses) {
+    logprintfl(EUCAFATAL, "DescribeServices(): out of memory!\n");
+    unlock_exit(1);
+  }
+
+  myStatus = *outStatuses;
+  snprintf(myStatus->localState, 32, "%s", config->ccStatus.localState);
+  snprintf(myStatus->details, 1024, "%s", config->ccStatus.details);
+  myStatus->localEpoch = config->ccStatus.localEpoch;
+  memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
+
   logprintfl(EUCAINFO, "DescribeServices(): done\n");
-  return(ret);
+  return(0);
 }
 
 int doStartService(ncMetadata *ccMeta) {
@@ -136,7 +144,8 @@ int doStartService(ncMetadata *ccMeta) {
 
   // this is actually a NOP
   sem_mywait(CONFIG);
-  ccChangeState(DISABLED);
+  config->kick_enabled = 0;
+  ccChangeState(LOADED);
   sem_mypost(CONFIG);
   
   logprintfl(EUCAINFO, "StartService(): done\n");
@@ -177,11 +186,10 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  // set state to ENABLED
+  // tell monitor thread to (re)enable
   config->kick_network = 1;
   config->kick_dhcp = 1;
   config->kick_enabled = 1;
-  //  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
@@ -222,12 +230,89 @@ int validCmp(ccInstance *inst, void *in) {
   return(0);
 }
 
+int instIpSync(ccInstance *inst, void *in) {
+  int ret=0;
+
+  /*
+  if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
+    return(0);
+  }
+  */
+
+  if (!inst) {
+    return(1);
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
+    return(0);
+  }
+
+  logprintfl(EUCADEBUG, "instIpSync(): instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+
+  if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
+    // ccnet is completely empty, make a copy of ncnet
+    logprintfl(EUCADEBUG, "instIpSync(): ccnet is empty, copying ncnet\n");
+    memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
+    return(1);
+  }
+  
+  // IP cases
+  // 1.) local CC cache has no IP info for VM, NC VM has no IP info
+  //     - do nothing
+  // 2.) local CC cache has no IP info, NC VM has IP info
+  //     - ingress NC info, kick_network
+  // 3.) local CC cache has IP info, NC VM has no IP info
+  //     - send ncAssignAddress
+  // 4.) local CC cache has IP info, NC VM has different IP info
+  //     - ingress NC info, kick_network
+  // 5.) local CC cache has IP info, NC VM has same IP info
+  //     - do nothing
+  if ((inst->ccnet.publicIp[0] == '\0' || !strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
+    // case 2
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp is empty, NC publicIp is set\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  } else if (( (inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0")) && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")) ) && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
+    // case 4
+    logprintfl(EUCADEBUG, "instIpSync(): CC publicIp and NC publicIp differ\n");
+    snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+    ret++;
+  }
+
+  // VLAN cases
+  if (inst->ccnet.vlan != inst->ncnet.vlan) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
+  }
+  inst->ccnet.vlan = inst->ncnet.vlan;
+
+  // networkIndex cases
+  if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
+    // problem
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+  }
+  inst->ccnet.networkIndex = inst->ncnet.networkIndex;
+
+  // mac addr cases
+  if (strcmp(inst->ccnet.privateMac, inst->ncnet.privateMac)) {
+    // problem;
+    logprintfl(EUCAERROR, "instIpSync(): CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
+  }
+  snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
+
+  // privateIp cases
+  if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
+     // sync em
+     snprintf(inst->ccnet.privateIp, 24, "%s", inst->ncnet.privateIp);
+  }
+
+  return(ret);
+}
+
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
 
   if (!inst) {
     return(1);
-  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     return(0);
   }
 
@@ -238,16 +323,17 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     vnetconfig->networks[inst->ccnet.vlan].active = 1;
     
     // set up groupName and userName
-    if (inst->groupNames[0][0] != '\0' && inst->ownerId[0] != '\0') {
-      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->ownerId)) ) {
+    if (inst->groupNames[0][0] != '\0' && inst->accountId[0] != '\0') {
+      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId)) ) {
 	// this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
+	logprintfl(EUCAERROR, "instNetParamsSet(): input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, inst->groupNames[0], inst->ccnet.vlan);
 	ret = 1;
       } else {
 	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
-	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 32, "%s", inst->ownerId);
+	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 48, "%s", inst->accountId);
       }
     }
-  }
+  } 
 
   if (!ret) {
     // so far so good
@@ -259,9 +345,9 @@ int instNetParamsSet(ccInstance *inst, void *in) {
   }
 
   if (ret) {
-    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   } else {
-    logprintfl(EUCAERROR, "instNetParamsSet(): sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
+    logprintfl(EUCADEBUG, "instNetParamsSet(): sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex); 
   }
 
   return(0);
@@ -272,7 +358,7 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
 
   if (!inst) {
     return(1);
-  } else if (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) {
+  } else if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) ) {
     return(0);
   }
 
@@ -288,13 +374,58 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
 
 int clean_network_state(void) {
   int rc, i;
-  char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH];
+  char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH], *pidstr=NULL, *ipstr=NULL;
   struct stat statbuf;
   vnetConfig *tmpvnetconfig;
 
   tmpvnetconfig = malloc(sizeof(vnetConfig));
   memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
   
+  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc && (rc != 2)) {
+    logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip 169.254.169.254\n", cmd);
+  }
+  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
+    if (tmpvnetconfig->publicips[i].ip != 0) {
+      ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
+      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
+      rc = system(cmd);
+      rc = rc>>8;
+      if (rc && rc != 2) {
+	logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
+      }
+      if (ipstr) free(ipstr);
+    }
+  }
+
+
+  // dhcp
+  snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
+  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
+  if (!check_file(file)) {
+    pidstr = file2str(file);
+    if (pidstr) {
+      rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
+      if (rc) {
+	logprintfl(EUCAERROR, "clean_network_state(): could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
+      }
+      free(pidstr);
+    }
+  }
+
+  sem_mywait(VNET);
+  for (i=2; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+      if (rc) {
+	logprintfl(EUCADEBUG, "clean_network_state(): failed to tear down network %d\n");
+      }
+    }
+  }
+  sem_mypost(VNET);
+
   // clean up assigned addrs, iptables, dhcpd (and configs)
   rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-F");
   if (rc) {
@@ -306,42 +437,6 @@ int clean_network_state(void) {
   if (rc) {
   }
   
-  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
-  logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
-  rc = system(cmd);
-  if (rc) {
-    logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip 169.254.169.254\n");
-  }
-  for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
-    if (tmpvnetconfig->publicips[i].ip != 0) {
-      logprintfl(EUCADEBUG, "clean_network_state(): IP addr: %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, hex2dot(tmpvnetconfig->publicips[i].ip), tmpvnetconfig->pubInterface);
-      logprintfl(EUCAINFO,"clean_network_state(): running cmd %s\n", cmd);
-      rc = system(cmd);
-      if (rc) {
-	logprintfl(EUCAWARN, "clean_network_state(): cannot remove ip %s\n", hex2dot(tmpvnetconfig->publicips[i].ip));
-      }
-    }
-  }
-
-
-  // dhcp
-  snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
-  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
-  rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
-  if (rc) {
-    logprintfl(EUCAERROR, "clean_network_state(): could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
-  }
-
-  for (i=2; i<NUMBER_OF_VLANS; i++) {
-    if (tmpvnetconfig->networks[i].active) {
-      rc = vnetStopNetwork(tmpvnetconfig, i, tmpvnetconfig->users[i].userName, tmpvnetconfig->users[i].netName);
-      if (rc) {
-	logprintfl(EUCADEBUG, "clean_network_state(): failed to tear down network %d\n");
-      }
-    }
-  }
-
   if (tmpvnetconfig) free(tmpvnetconfig);
   return(0);
 }

@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+import getopt, sys, os, boto
+from boto.ec2.regioninfo import RegionInfo
+from euca_admin.properties import Property
+
+def main():
+  c = Property().cli_modify()
+  sys.exit()
+
+if __name__ == "__main__":
+  main()
+ 

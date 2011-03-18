@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 #ifndef _CACHE_H
 #define _CACHE_H
 
@@ -9,8 +12,8 @@ typedef struct _disk_item {
     char id [EUCA_MAX_PATH];
     char base [EUCA_MAX_PATH];
     char path [EUCA_MAX_PATH];
-	char summ [EUCA_MAX_PATH];
-	boolean cache_item;
+    char summ [EUCA_MAX_PATH];
+    boolean cache_item;
     long long content_size;
     long long total_size;
     struct _disk_item * next;
@@ -20,28 +23,28 @@ typedef struct _disk_item {
 #define MAX_DEPS 16
 
 typedef struct _artifacts_spec {
-	struct _artifacts_spec * deps [MAX_DEPS];
-	imager_request * req; // the request associated with this stage
-	imager_param * attrs; // attributes uniquely describing artifacts of this stage
-	long long size; // total expected size of artifacts produced by this stage
+    struct _artifacts_spec * deps [MAX_DEPS];
+    imager_request * req; // the request associated with this stage
+    imager_param * attrs; // attributes uniquely describing artifacts of this stage
+    long long size; // total expected size of artifacts produced by this stage
 } artifacts_spec;
 
 typedef struct _output_file {
-	char id [EUCA_MAX_PATH];
-	char path [EUCA_MAX_PATH];
+    char id [EUCA_MAX_PATH];
+    char path [EUCA_MAX_PATH];
 
-	boolean predecessor;
+    boolean predecessor;
 
-	boolean do_work;
-	boolean in_work;
+    boolean do_work;
+    boolean in_work;
 
-	boolean do_cache;
-	boolean in_cache;
+    boolean do_cache;
+    boolean in_cache;
 
-	boolean to_cache;
+    boolean to_cache;
 
-	disk_item * cache_copy;
-	disk_item * work_copy;
+    disk_item * cache_copy;
+    disk_item * work_copy;
 } output_file;
 
 void lock_cache (void);

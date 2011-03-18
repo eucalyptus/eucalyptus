@@ -61,11 +61,9 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
-import java.net.URLDecoder;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -81,6 +79,8 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -108,7 +108,6 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -117,7 +116,6 @@ import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
 import com.eucalyptus.ws.InvalidOperationException;
-import com.eucalyptus.ws.handlers.WalrusAuthenticationHandler.SecurityParameter;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 import com.eucalyptus.ws.util.XMLParser;
 import com.google.common.collect.Lists;
@@ -128,19 +126,16 @@ import edu.ucsb.eucalyptus.msgs.AccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.msgs.LoggingEnabled;
 import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
-import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.TargetGrants;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
-import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
@@ -159,10 +154,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private WalrusDataQueue<WalrusDataMessage> putQueue;
 
 	public WalrusRESTBinding( ) {
-    super( "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
-  }
+		super( "http://s3.amazonaws.com/doc/" + WalrusProperties.NAMESPACE_VERSION );
+	}
 
-  @Override
+	@Override
 	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
 		LOG.trace( LogUtil.dumpObject( channelEvent ) );
 		if ( channelEvent instanceof MessageEvent ) {
@@ -255,42 +250,42 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(SERVICE + WalrusProperties.HTTPVerb.GET.toString(), "ListAllMyBuckets");
 
 		//Bucket operations
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.acl.toString(), "GetBucketAccessControlPolicy");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetRESTBucketAccessControlPolicy");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.acl.toString(), "SetRESTBucketAccessControlPolicy");
 
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString(), "ListBucket");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.prefix.toString(), "ListBucket");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.maxkeys.toString(), "ListBucket");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.marker.toString(), "ListBucket");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.delimiter.toString(), "ListBucket");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.prefix.toString(), "ListBucket");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.maxkeys.toString(), "ListBucket");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.marker.toString(), "ListBucket");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.delimiter.toString(), "ListBucket");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString(), "CreateBucket");
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString(), "DeleteBucket");
 
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.location.toString(), "GetBucketLocation");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.location.toString(), "GetBucketLocation");
 
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.logging.toString(), "GetBucketLoggingStatus");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.logging.toString(), "SetBucketLoggingStatus");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
 
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.versions.toString(), "ListVersions");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.versioning.toString(), "GetBucketVersioningStatus");
-		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.versioning.toString(), "SetBucketVersioningStatus");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.versions.toString(), "ListVersions");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
+		newMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
 
 		//Object operations
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.acl.toString(), "GetObjectAccessControlPolicy");
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.OperationParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
 
 		newMap.put(BUCKET + WalrusProperties.HTTPVerb.POST.toString(), "PostObject");
 
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString(), "PutObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.COPY_SOURCE.toString(), "CopyObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString(), "GetObject");
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.OperationParameter.torrent.toString(), "GetObject");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.ObjectParameter.torrent.toString(), "GetObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString(), "DeleteObject");
 
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.HEAD.toString(), "GetObject");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
-		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.OperationParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
 		return newMap;
 	}
 
@@ -315,7 +310,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			//:: try to create the target class :://
 			targetType = ClassLoader.getSystemClassLoader().loadClass( "edu.ucsb.eucalyptus.msgs.".concat( operationName ).concat( "Type" ) );
 			if( !GroovyObject.class.isAssignableFrom( targetType ) ) {
-			  throw new Exception( );
+				throw new Exception( );
 			}
 			//:: get the map of parameters to fields :://
 			fieldMap = this.buildFieldMap( targetType );
@@ -376,7 +371,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 	private void setRequiredParams(final GroovyObject msg, User user) throws Exception {
 		if(user != null) {
-		  // YE TODO: can we just use any key here?
+			// YE TODO: can we just use any key here?
 			msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
 		}
 		msg.setProperty("timeStamp", new Date());
@@ -484,10 +479,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					putQueue = getWriteMessenger().interruptAllAndGetQueue(key, randomKey);
 					handleFirstChunk(httpRequest, (ChannelBuffer)formFields.get(WalrusProperties.IGNORE_PREFIX + "FirstDataChunk"), contentLength);
 				} else if(WalrusProperties.HTTPVerb.PUT.toString().equals(verb)) {  
-					if(params.containsKey(WalrusProperties.OperationParameter.logging.toString())) {
+					if(params.containsKey(WalrusProperties.BucketParameter.logging.toString())) {
 						//read logging params
 						getTargetBucketParams(operationParams, httpRequest);
-					} else if(params.containsKey(WalrusProperties.OperationParameter.versioning.toString())) {
+					} else if(params.containsKey(WalrusProperties.BucketParameter.versioning.toString())) {
 						getVersioningStatus(operationParams, httpRequest);
 					}
 				}
@@ -503,19 +498,19 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				objectKey += splitOn + target[i];
 				splitOn = "/";
 			}
-			try {
-				objectKey = WalrusUtil.URLdecode(objectKey);
-			} catch (UnsupportedEncodingException e) {
-				throw new BindingException("Unable to get key: " + e.getMessage());
-			}
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
 			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
 
-			if(!params.containsKey(WalrusProperties.OperationParameter.acl.toString())) {
+			if(!params.containsKey(WalrusProperties.BucketParameter.acl.toString())) {
 				if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString())) {
 					if(httpRequest.containsHeader(WalrusProperties.COPY_SOURCE.toString())) {
 						String copySource = httpRequest.getHeader(WalrusProperties.COPY_SOURCE.toString());
+						try {
+							copySource = new URLCodec().decode(copySource);
+						} catch(DecoderException ex) {
+							throw new BindingException("Unable to decode copy source: " + copySource);
+						}
 						String[] sourceParts = copySource.split("\\?");
 						if(sourceParts.length > 1) {
 							operationParams.put("SourceVersionId", sourceParts[1].replaceFirst("versionId=", "").trim());
@@ -528,11 +523,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							for(int i = 1; i < sourceTarget.length; ++i) {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
-							}
-							try {
-								sourceObjectKey = WalrusUtil.URLdecode(sourceObjectKey);
-							} catch (UnsupportedEncodingException e) {
-								throw new BindingException("Unable to get source key: " + e.getMessage());
 							}
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);
@@ -623,14 +613,14 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					}
 				}
 			}
-			if(params.containsKey(WalrusProperties.OperationParameter.versionId.toString())) {
+			if(params.containsKey(WalrusProperties.ObjectParameter.versionId.toString())) {
 				if(!verb.equals(WalrusProperties.HTTPVerb.DELETE.toString()))
-					operationParams.put("VersionId", params.remove(WalrusProperties.OperationParameter.versionId.toString()));
+					operationParams.put("VersionId", params.remove(WalrusProperties.ObjectParameter.versionId.toString()));
 			}
 		}
 
 
-		if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString()) && params.containsKey(WalrusProperties.OperationParameter.acl.toString())) {
+		if (verb.equals(WalrusProperties.HTTPVerb.PUT.toString()) && params.containsKey(WalrusProperties.BucketParameter.acl.toString())) {
 			operationParams.put("AccessControlPolicy", getAccessControlPolicy(httpRequest));
 		}
 
@@ -648,19 +638,50 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					break;
 				}
 			}
+			if(!dontIncludeParam) {
+				String value = params.get(key);
+				if(value != null) {
+					String[] keyStringParts = keyString.split("-");
+					if(keyStringParts.length > 1) {
+						keyString = "";
+						for(int i=0; i < keyStringParts.length; ++i) {
+							keyString += toUpperFirst(keyStringParts[i]);
+						}
+					} else {
+						keyString = toUpperFirst(keyString);
+					}
+				}
+				dontIncludeParam = true;
+				if(operationKey.startsWith(SERVICE)) {
+					for(WalrusProperties.ServiceParameter param : WalrusProperties.ServiceParameter.values()) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+							dontIncludeParam = false;							
+							break;
+						}
+					}
+				} else if(operationKey.startsWith(BUCKET)) {
+					for(WalrusProperties.BucketParameter param : WalrusProperties.BucketParameter.values()) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+							dontIncludeParam = false;							
+							break;
+						}
+					}
+				} else if(operationKey.startsWith(OBJECT)) {
+					for(WalrusProperties.ObjectParameter param : WalrusProperties.ObjectParameter.values()) {
+						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+							dontIncludeParam = false;
+							break;
+						}
+					}
+				}
+				if(dontIncludeParam) {
+					paramsToRemove.add(key);
+				}
+			}
 			if(dontIncludeParam)
 				continue;
 			String value = params.get(key);
 			if(value != null) {
-				String[] keyStringParts = keyString.split("-");
-				if(keyStringParts.length > 1) {
-					keyString = "";
-					for(int i=0; i < keyStringParts.length; ++i) {
-						keyString += toUpperFirst(keyStringParts[i]);
-					}
-				} else {
-					keyString = toUpperFirst(keyString);
-				}
 				operationParams.put(keyString, value);
 			}
 			if(addMore) {
@@ -762,14 +783,17 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			assert(value.startsWith(prefix));
 			value = value.substring(prefix.length());
 			String[]values = value.split("-");
-			assert(values.length == 2);
 			if(values[0].equals("")) {
 				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), new Long(0));
 			} else {
 				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), Long.parseLong(values[0]));
 			}
-			assert(!values[1].equals(""));
-			operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
+			if((values.length < 2) || (values[1].equals(""))) {
+				//-1 is treated by the back end as end of object
+				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), new Long(-1));
+			} else {
+				operationParams.put(WalrusProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
+			}
 		} else if(WalrusProperties.ExtendedHeaderDateTypes.contains(headerString)) {
 			try {
 				List<String> dateFormats = new ArrayList<String>();

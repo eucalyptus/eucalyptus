@@ -75,6 +75,7 @@ permission notice:
 #include "config.h"
 #include "eucalyptus.h"
 #include "misc.h"
+#include "http.h"
 
 #define TOTAL_RETRIES 3 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */

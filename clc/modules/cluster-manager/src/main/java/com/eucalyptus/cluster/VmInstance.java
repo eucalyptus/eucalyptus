@@ -109,6 +109,8 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BundleTask;
+import edu.ucsb.eucalyptus.msgs.EbsInstanceBlockDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -575,6 +577,14 @@ public class VmInstance implements HasName<VmInstance> {
         runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       }
     }
+
+    runningInstance.setPrivateIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
+    if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
+      runningInstance.setIpAddress( this.getPublicAddress( ) );
+    } else {
+      runningInstance.setIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
+    }
+
     runningInstance.setReason( this.getReason( ) );
     
     if ( this.getKeyInfo( ) != null )
@@ -585,6 +595,11 @@ public class VmInstance implements HasName<VmInstance> {
     runningInstance.setPlacement( this.placement );
     
     runningInstance.setLaunchTime( this.launchTime );
+
+    runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
+    for( AttachedVolume attachedVol : this.volumes.values( ) ) {
+      runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ), attachedVol.getAttachTime( ) ) );      
+    }
     
     return runningInstance;
   }

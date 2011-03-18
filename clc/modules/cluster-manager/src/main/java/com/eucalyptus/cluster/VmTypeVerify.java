@@ -63,20 +63,39 @@
  */
 package com.eucalyptus.cluster;
 
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.VmType;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmType;
 
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VmTypeVerify {
-
+  private static Logger LOG = Logger.getLogger( VmTypeVerify.class );
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
   {
+    Context ctx;
+    try {
+      ctx = Contexts.lookup(vmAllocInfo.getCorrelationId( ));
+    } catch ( NoSuchContextException ex ) {
+      LOG.debug( ex );
+      try {
+        ctx = Contexts.lookup(vmAllocInfo.getRequest( ).getCorrelationId( ));
+      } catch ( NoSuchContextException ex1 ) {
+        LOG.debug( ex );
+        throw new EucalyptusCloudException( "Failed to lookup context for correlationId=" + vmAllocInfo.getCorrelationId( ), ex );
+      }
+    }
+    Account account = Accounts.lookupAccount( ctx.getUser( ) );
     RunInstancesType request = vmAllocInfo.getRequest( );
     String instanceType = request.getInstanceType( );
     VmType v = VmTypes.getVmType( ( instanceType == null ) ? "m1.small" : instanceType );
@@ -84,8 +103,8 @@ public class VmTypeVerify {
       throw new EucalyptusCloudException( "instance type does not exist: " + request.getInstanceType( ) );
     }
     String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
-    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, null /* resourceAccount */, action, request.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + request.getUserErn( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, account, action, ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
     }
     vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
     return vmAllocInfo;

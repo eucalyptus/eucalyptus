@@ -62,7 +62,8 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -75,12 +76,14 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Join;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -120,7 +123,7 @@ import com.google.common.collect.Lists;
  * @see SystemBootstrapper#start()
  */
 public class Bootstrap {
-  private static Logger LOG = Logger.getLogger( Bootstrap.class );
+  static Logger LOG = Logger.getLogger( Bootstrap.class );
   
   /**
    * Mechanism for setting up and progressing through the sequence of stages the system goes through
@@ -299,19 +302,7 @@ public class Bootstrap {
    * dependency constraints.
    */
   private static void doDiscovery( ) {
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
-        try {
-          ServiceJarDiscovery.processFile( f );
-        } catch ( Throwable e ) {
-          LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
-    }
+    ServiceJarDiscovery.processLibraries( );
     ServiceJarDiscovery.runDiscovery( );
   }
   
@@ -414,6 +405,32 @@ public class Bootstrap {
   
   public static Boolean isFinished( ) {
     return finished;
+  }
+  private static final Integer parentNum = Integer.parseInt( System.getProperty( "euca.child" ) );
+  private static final ImmutableList<InetAddress> parents = getParentAddresses( );
+  public static Boolean isChild( ) {
+    return parentNum > -1;
+  }
+  public static ImmutableList<InetAddress> getParentAddresses( ) {
+    synchronized(Bootstrap.class) {
+      if( parents == null ) {
+        List<InetAddress> rents = Lists.newArrayList( );
+        for( int i = 0; i < parentNum; i++ ) {
+          String addr = System.getProperty( "euca.parent." + i );
+          try {
+            rents.add( InetAddress.getByName( addr ) );
+          } catch ( UnknownHostException ex ) {
+            LOG.error( "Ignoring specified parent address as it is not a valid address: addr=" + addr + " error=" + ex.getMessage( ) );
+          }
+        }
+        if( rents.isEmpty( ) ) {
+          LOG.error( "Invalid parent addresses provided:  This is most likely an error!" );//GRZE:NOTIFY
+        }
+        return ImmutableList.copyOf( rents );
+      } else {
+        return parents;
+      }
+    }
   }
   
   /**

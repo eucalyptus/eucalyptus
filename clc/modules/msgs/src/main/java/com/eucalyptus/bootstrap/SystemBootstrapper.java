@@ -83,7 +83,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
@@ -124,6 +124,12 @@ public class SystemBootstrapper {
       LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
       if ( LogLevels.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );
+        System.setProperty( "euca.exhaust.level", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
 
       /* This is a workaround for log4j brain damage which prevented the
@@ -389,7 +395,7 @@ public class SystemBootstrapper {
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
-    for ( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
+    for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
       banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
         banner += prefix + iface.getDisplayName( ) + SEP + addr;

@@ -47,10 +47,29 @@ build: deps extras
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind
-	@$(ANT) jar
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
 	@make -C modules/storage-controller/native
+	@make -C modules/storage-san/native
+	@make -C modules/bootstrap
+
+build-test: deps extras
+	@# we need JAVA_HOME
+	@if test -z "${JAVA_HOME}" ; then \
+		echo "You need to define JAVA_HOME!"; exit 1; fi
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-test
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
+	#HACK!
+	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
+	@make -C modules/storage-controller/native
+	@make -C modules/storage-san/native
 	@make -C modules/bootstrap
 
 build-test: deps extras
@@ -71,11 +90,13 @@ clean:
 	$(ANT) clean
 	make -C modules/bootstrap clean
 	make -C modules/storage-controller/native clean
+	make -C modules/storage-san/native clean
 
 distclean: clean
 	$(ANT) distclean
 	make -C modules/bootstrap distclean
 	make -C modules/storage-controller/native distclean
+	make -C modules/storage-san/native distclean
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
@@ -85,12 +106,21 @@ install-test: build-test
 install: build
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
 	@make -C modules/storage-controller/native install
+	@make -C modules/storage-san/native install
 	@make -C modules/bootstrap install
+
+install-test: build-test
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) install
+	@make -C modules/storage-controller/native install
+	@make -C modules/storage-san/native install
+	@make -C modules/bootstrap install
+
 
 deploy: install
 
 uninstall:
 	make -C modules/storage-controller/native uninstall
+	make -C modules/storage-san/native uninstall
 	make -C modules/bootstrap uninstall
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar

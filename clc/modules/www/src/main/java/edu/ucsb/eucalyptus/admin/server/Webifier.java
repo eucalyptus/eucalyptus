@@ -4,10 +4,10 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.crypto.Crypto;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.crypto.Crypto;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 

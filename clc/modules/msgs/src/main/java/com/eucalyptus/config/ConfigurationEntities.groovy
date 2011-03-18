@@ -103,7 +103,7 @@ import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -154,7 +154,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public Boolean isLocal() {
     try {
-      return NetworkUtil.testLocal( this.getHostName( ) );
+      return Internets.testLocal( this.getHostName( ) );
     } catch ( Exception e ) {
       return false;
     }

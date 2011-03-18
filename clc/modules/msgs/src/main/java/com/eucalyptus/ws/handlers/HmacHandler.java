@@ -70,11 +70,11 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.crypto.Hmac;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.util.SecurityParameter;
+import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 

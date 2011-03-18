@@ -136,7 +136,7 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp);
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp);
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
@@ -162,6 +162,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig);
 
 int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network);
+int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, int *len);
 
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen);
 int vnetAddCCS(vnetConfig *vnetconfig, uint32_t cc);

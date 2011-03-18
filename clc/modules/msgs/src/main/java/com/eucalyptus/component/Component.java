@@ -93,7 +93,7 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -174,8 +174,8 @@ public class Component implements HasName<Component> {
     return this.identity.name( );
   }
   
-  public final List<ServiceInfoType> getServiceSnapshot( ) {
-    return this.serviceRegistry.getServiceInfos( );
+  public final List<ServiceInfoType> getServiceSnapshot( String localhostAddr ) {
+    return this.serviceRegistry.getServiceInfos( localhostAddr );
   }
   
   public State getState( ) {
@@ -193,7 +193,7 @@ public class Component implements HasName<Component> {
   }
   
   public String getRegistryKey( String hostName ) {
-    if ( NetworkUtil.testLocal( hostName ) ) {
+    if ( Internets.testLocal( hostName ) ) {
       return this.getName( ) + "@localhost";
     } else {
       return this.getName( ) + "@" + hostName;
@@ -715,7 +715,7 @@ public class Component implements HasName<Component> {
       return Sets.newTreeSet( this.services.values( ) );
     }
     
-    public List<ServiceInfoType> getServiceInfos( ) {
+    List<ServiceInfoType> getServiceInfos( final String localhostAddr ) {
       List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
       for ( final Service s : this.services.values( ) ) {
         if ( State.ENABLED.equals( s.getState( ) ) ) {
@@ -724,7 +724,11 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+                getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+              } else {
+                getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+              }
             }
           } );
         } else {
@@ -733,7 +737,11 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+                getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+              } else {
+                getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
+              }
             }
           } );
         }
@@ -844,7 +852,7 @@ public class Component implements HasName<Component> {
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
     public Service getService( String name ) throws NoSuchElementException {
-      Assertions.assertArgumentNotNull( name );
+      Assertions.assertNotNull( name );
       for ( Service s : this.services.values( ) ) {
         if ( s.getServiceConfiguration( ).getName( ).equals( name ) ) {
           return s;

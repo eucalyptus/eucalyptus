@@ -2,7 +2,9 @@ package com.eucalyptus.auth.util;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import com.eucalyptus.auth.crypto.Certs;
+import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 
 public class X509CertHelper {
   

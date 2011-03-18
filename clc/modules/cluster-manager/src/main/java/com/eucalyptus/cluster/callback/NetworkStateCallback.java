@@ -10,7 +10,7 @@ import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -28,7 +28,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
         try {
-          setNameserver( NetworkUtil.getAllAddresses( ).get( 0 ) );
+          setNameserver( Internets.getAllAddresses( ).get( 0 ) );
         } catch ( SocketException e ) {
           LOG.error( e, e );
         }

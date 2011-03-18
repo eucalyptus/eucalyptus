@@ -1,5 +1,6 @@
 package com.eucalyptus.util.async;
 
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import com.eucalyptus.component.ServiceEndpoint;

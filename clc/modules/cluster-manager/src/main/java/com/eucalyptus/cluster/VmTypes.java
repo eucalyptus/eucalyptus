@@ -64,8 +64,8 @@
 package com.eucalyptus.cluster;
 
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.VmType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmType;
 
 import java.util.List;
 import java.util.NavigableSet;
@@ -97,7 +97,7 @@ public class VmTypes {
     if ( newVmTypes.size( ) != newList.size( ) ) throw new EucalyptusCloudException( "Proposed VmTypes fail to satisfy well-ordering requirement." );
     for ( VmType newVm : newVmTypes ) {
       if ( !getSingleton( ).vmTypeMap.containsValue( newVm ) ) {
-        EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
+        EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
         try {
           VmType oldVm = db.getUnique( new VmType( newVm.getName( ) ) );
           oldVm.setCpu( newVm.getCpu( ) );
@@ -116,7 +116,7 @@ public class VmTypes {
   }
 
   private synchronized void update( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( );
+    EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
     try {
       List<VmType> vmTypeList = db.query( new VmType( ) );
 
@@ -127,8 +127,8 @@ public class VmTypes {
       }
 
       if ( vmTypeList.isEmpty( ) ) {
-        db.add( new VmType( "m1.small", 1, 10, 128 ) );
-        db.add( new VmType( "c1.medium", 2, 10, 128 ) );
+        db.add( new VmType( "m1.small", 1, 2, 128 ) );
+        db.add( new VmType( "c1.medium", 2, 5, 128 ) );
         db.add( new VmType( "m1.large", 2, 10, 512 ) );
         db.add( new VmType( "m1.xlarge", 2, 10, 1024 ) );
         db.add( new VmType( "c1.xlarge", 4, 10, 2048 ) );

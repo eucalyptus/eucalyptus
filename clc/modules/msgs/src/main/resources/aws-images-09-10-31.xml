@@ -83,7 +83,7 @@
 
   <mapping name="DeregisterImageResponse" class="edu.ucsb.eucalyptus.msgs.DeregisterImageResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" field="_return" />
+    <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
 
   <mapping name="DeregisterImage" class="edu.ucsb.eucalyptus.msgs.DeregisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

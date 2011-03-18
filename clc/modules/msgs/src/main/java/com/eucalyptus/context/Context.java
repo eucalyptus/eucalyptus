@@ -7,9 +7,11 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.api.MuleEvent;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -58,13 +60,13 @@ public class Context {
   
   public void setRequest( BaseMessage msg ) {
     if ( msg != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.getClass( ).getSimpleName( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.toSimpleString( ) ).debug( );
       this.request = msg;
     }
   }
   
   public BaseMessage getRequest( ) {
-    if( this.request == null && this.httpRequest != null ) {
+    if( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
       this.request = ( BaseMessage ) this.httpRequest.getMessage( );
     }
     return check( this.request );
@@ -77,8 +79,30 @@ public class Context {
     }
   }
   
-  public UserFullName getUserErn( ) {
+  public UserFullName getUserFullName( ) {
     return UserFullName.getInstance( this.getUser( ) );
+  }
+
+  public UserFullName getEffectiveUserFullName( ) {
+    String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
+    if( this.getRequest( ) != null && FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( effectiveUserId ) ) {
+      return FakePrincipals.SYSTEM_USER_ERN;/** system **/
+    } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
+      return FakePrincipals.NOBODY_USER_ERN;/** unset **/
+    } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
+      try {
+        return Accounts.lookupUserFullNameByName( effectiveUserId );
+      } catch ( RuntimeException ex ) {
+        LOG.error( ex );
+        return UserFullName.getInstance( this.getUser( ) );
+      }
+    } else {
+      return UserFullName.getInstance( this.getUser( ) );
+    }
+  }
+  
+  public boolean hasAdministrativePrivileges( ) {
+    return this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( ) || FakePrincipals.SYSTEM_USER_ERN.equals( this.getEffectiveUserFullName( ) );
   }
   
   public User getUser( ) {
@@ -86,8 +110,8 @@ public class Context {
   }
   
   void setMuleEvent( MuleEvent event ) {
-    if ( event != null ) {
-      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
+    if ( event != null && this.muleEvent.get( ) == null ) {
+//      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
       this.muleEvent = new WeakReference<MuleEvent>( event );
     }
   }

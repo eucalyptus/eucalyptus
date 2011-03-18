@@ -123,7 +123,7 @@
 
     <mapping name="DeleteVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" field="_return" usage="required"/>
+        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
     </mapping>
     <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>

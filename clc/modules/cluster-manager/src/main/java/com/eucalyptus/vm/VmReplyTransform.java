@@ -68,6 +68,8 @@ import java.util.List;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -80,12 +82,13 @@ public class VmReplyTransform {
   public RunInstancesResponseType allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
   {
     RunInstancesResponseType reply = vmAllocInfo.getReply();
+    Context ctx = Contexts.lookup( );
 
     List<String> networkNames = new ArrayList<String>();
     for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
 
     ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
-                                                               reply.getUserErn(),
+                                                               ctx.getUserFullName().getNamespace( ),
                                                                networkNames );
 
     for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )

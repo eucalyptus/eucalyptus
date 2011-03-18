@@ -72,7 +72,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
 
       // System admin can do everything
-      if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
         String userId = requestUser.getId( );
         Account account = requestUser.getAccount( );
         
@@ -115,7 +115,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Integer quantity) throws AuthException {
     try {
       // System admins are not restricted by quota limits.
-      if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
         List<Authorization> quotas = lookupQuotas( resourceType, requestUser, requestUser.getAccount( ), requestUser.isAccountAdmin( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }

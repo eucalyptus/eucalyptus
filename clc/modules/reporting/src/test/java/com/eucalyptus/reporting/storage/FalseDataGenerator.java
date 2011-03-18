@@ -3,7 +3,7 @@ package com.eucalyptus.reporting.storage;
 import java.util.*;
 
 import com.eucalyptus.reporting.*;
-import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 

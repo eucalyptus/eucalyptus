@@ -15,7 +15,7 @@ import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
@@ -68,7 +68,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).debug( );
     StopComponentEvent e = null;
-    if ( NetworkUtil.testLocal( config.getHostName( ) ) ) {
+    if ( Internets.testLocal( config.getHostName( ) ) ) {
       e = StopComponentEvent.getLocal( config );
     } else {
       e = StopComponentEvent.getRemote( config );

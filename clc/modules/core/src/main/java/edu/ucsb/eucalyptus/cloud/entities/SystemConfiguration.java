@@ -86,12 +86,13 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Image;
+import com.eucalyptus.images.ForwardImages;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.StorageProperties;
 
 @Entity
@@ -254,7 +255,7 @@ public class SystemConfiguration {
   }
 
   public static SystemConfiguration getSystemConfiguration() {
-  	EntityWrapper<SystemConfiguration> confDb = new EntityWrapper<SystemConfiguration>();
+  	EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
   	SystemConfiguration conf = null;
   	try {
   		conf = confDb.getUnique( new SystemConfiguration());
@@ -280,7 +281,7 @@ public class SystemConfiguration {
       String cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
         for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+          if( Internets.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
           }
@@ -288,7 +289,7 @@ public class SystemConfiguration {
       }
       if( cloudHost == null ) {
         try {
-          cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+          cloudHost = Internets.getAllAddresses( ).get( 0 );
         } catch ( SocketException e ) {}
       }
       return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
@@ -316,7 +317,7 @@ public class SystemConfiguration {
       cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
       if( cloudHost == null ) {
         for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( NetworkUtil.testLocal( w.getHostName( ) ) ) {
+          if( Internets.testLocal( w.getHostName( ) ) ) {
             cloudHost = w.getHostName( );
             break;
           }
@@ -326,7 +327,7 @@ public class SystemConfiguration {
     }
     if( cloudHost == null ) {
       try {
-        cloudHost = NetworkUtil.getAllAddresses( ).get( 0 );
+        cloudHost = Internets.getAllAddresses( ).get( 0 );
       } catch ( SocketException e ) {}
     }
     return cloudHost;
@@ -336,7 +337,7 @@ public class SystemConfiguration {
   {
     String ipAddr = null;
     try {
-      for( String addr : NetworkUtil.getAllAddresses( ) ) {
+      for( String addr : Internets.getAllAddresses( ) ) {
         ipAddr = addr;
         break;
       }
@@ -354,30 +355,10 @@ public class SystemConfiguration {
       sysConf.setCloudHost(ipAddr);
     }
     if(sysConf.getDefaultKernel() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-      try {
-        q.setImageType( "kernel" );
-        List<ImageInfo> res = db2.query(q);
-        if( res.size() > 0 )
-          sysConf.setDefaultKernel(res.get(0).getImageId());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultKernel( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDefaultRamdisk() == null) {
-      ImageInfo q = new ImageInfo();
-      EntityWrapper<ImageInfo> db2 = new EntityWrapper<ImageInfo>();
-      try {
-        q.setImageType( "ramdisk" );
-        List<ImageInfo> res = db2.query(q);
-        if( res.size() > 0 )
-          sysConf.setDefaultRamdisk(res.get(0).getImageId());
-        db2.commit( );
-      } catch ( Exception e ) {
-        db2.rollback( );
-      }
+      sysConf.setDefaultRamdisk( ForwardImages.defaultRamdisk( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDnsDomain() == null) {
       sysConf.setDnsDomain(DNSProperties.DOMAIN);

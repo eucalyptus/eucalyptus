@@ -86,7 +86,7 @@ permission notice:
 
 char *iptablesCache=NULL;
 
-int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *cloudIp) {
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
@@ -203,6 +203,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	free(ipbuf);
       }
     }
+    /*
     if (cloudIp) {
       char *ipbuf=NULL;
       ipbuf = host2ip(cloudIp);
@@ -211,6 +212,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	free(ipbuf);
       }
     }
+    */
     vnetconfig->tunnels.localIpId = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
@@ -288,7 +290,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	rc = vnetSetMetadataRedirect(vnetconfig);
+	//	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -360,16 +362,16 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 }
 
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
-  char cmd[256], *network=NULL;
-  int rc, slashnet;
+  char cmd[256];
+  int rc;
 
   if (!vnetconfig) {
     logprintfl(EUCAERROR, "vnetSetMetadataRedirect(): bad input params\n");
     return(1);
   }
 
-  network = hex2dot(vnetconfig->nw);
-  slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
+  //network = hex2dot(vnetconfig->nw);
+  //slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1); 
 
   snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
   rc = system(cmd);
@@ -377,14 +379,16 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
   if (vnetconfig->cloudIp != 0) {
     char *ipbuf;
     ipbuf = hex2dot(vnetconfig->cloudIp);
-    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
+    //    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
+    snprintf(cmd, 256, "-A PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
     if (ipbuf) free(ipbuf);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   } else {
-    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
+    //    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination 169.254.169.254:8773", network, slashnet);
+    logprintfl(EUCAWARN, "vnetSetMetadataRedirect(): cloudIp is not yet set, not installing redirect rule\n");
   }
-  rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   
-  if (network) free(network);
+  //  if (network) free(network);
 
   return(0);
 }
@@ -1030,33 +1034,102 @@ int vnetGetVlan(vnetConfig *vnetconfig, char *user, char *network) {
   return(-1);
 }
 
+int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, int *len) {
+  int i, rc;
+
+  if (!vnetconfig || !outusers || !outnets || !len) {
+    logprintfl(EUCAERROR, "vnetGetAllVlans(): bad input parameters\n");
+  }
+  
+  *outusers = malloc(sizeof (char *) * vnetconfig->max_vlan);
+  if (!*outusers) {
+    logprintfl(EUCAFATAL, "vnetGetAllVlans(): out of memory!\n");
+    return(1);
+  }
+
+  *outnets = malloc(sizeof (char *) * vnetconfig->max_vlan);
+  if (!*outnets) {
+    logprintfl(EUCAFATAL, "vnetGetAllVlans(): out of memory!\n");
+    if (*outusers) free(*outusers);
+    return(1);
+  }
+
+  *len = 0;
+  for (i=0; i<vnetconfig->max_vlan; i++) {
+    char userNetString[MAX_PATH], netslash[24];
+    char *net=NULL, *chain=NULL;
+    int slashnet=0;
+    if (vnetconfig->networks[i].active) {
+      snprintf(userNetString, MAX_PATH, "%s%s", vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+      rc = hash_b64enc_string(userNetString, &chain);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGetAllVlans(): cannot hash user/net string (userNetString=%s)\n", userNetString);
+      } else {
+	net = hex2dot(vnetconfig->networks[i].nw);
+	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+	if (net && slashnet >= 0 && slashnet <= 32) {
+	  //	  fprintf(FH, "%s %s/%d\n", chain, net, slashnet);
+	  netslash[0] = '\0';
+	  snprintf(netslash, 24, "%s/%d", net, slashnet);
+	  (*outusers)[(*len)] = strdup(chain);
+	  (*outnets)[(*len)] = strdup(netslash);
+	  (*len)++;
+	}
+	if (net) free(net);
+      }
+    }
+  }
+
+  return(0);
+}
+
 int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip) {
-  int rc, ret=0, networkIdx;
+  int rc, ret=0, networkIdx, found, i;
+  uint32_t inip;
   
   if (!instId || !outmac || !outpubip || !outprivip) {
     logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): bad input params\n");
     return(1);
   }
   
-  rc = instId2mac(instId, outmac);
-  if (rc) {
-    logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-    return(1);
-  }
-  
   ret = 1;
   // define/get next mac and allocate IP
   if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    // search for existing entry
+    inip = dot2hex(outprivip);
+    found=0;
+    for (i=2; i<vnetconfig->numaddrs-2 && !found; i++) {
+      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+      if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
+	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+	vnetconfig->networks[0].addrs[i].active = 1;
+	found++;
+	ret=0;
+      }
+    }
     // get the next valid mac/ip pairing for this vlan
-    outmac[0] = '\0';
-    rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
-    if (!rc) {
-      snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
-      ret = 0;
+    if (!found) {
+      outmac[0] = '\0';
+      rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1);
+      if (!rc) {
+	snprintf(outpubip, strlen(outprivip)+1, "%s", outprivip);
+	ret = 0;
+      }
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    rc = instId2mac(instId, outmac);
+    if (rc) {
+      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+      return(1);
+    }
     ret = 0;
   } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    rc = instId2mac(instId, outmac);
+    if (rc) {
+      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+      return(1);
+    }
+ 
     if (nidx == -1) {
       networkIdx = -1;
     } else {
@@ -2436,7 +2509,7 @@ int instId2mac(char *instId, char *outmac) {
   }
   p += 2;
   if (strlen(p) == 8) {
-    strncat(dst, "d0:0d", 5);
+    strncat(dst, "D0:0D", 5);
     for (i=0; i<4; i++) {
       strncat(dst, ":", 1);
       strncat(dst, p, 2);

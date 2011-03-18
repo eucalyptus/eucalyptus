@@ -1,12 +1,19 @@
 package com.eucalyptus.context;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
+import com.eucalyptus.auth.Contract;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.Assertions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Contexts {
@@ -40,6 +47,7 @@ public class Contexts {
   }
   
   public static Context lookup( String correlationId ) throws NoSuchContextException {
+    Assertions.assertNotNull( correlationId );
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {
@@ -73,22 +81,20 @@ public class Contexts {
     }
   }
   
-  public static void clear( Context context ) {
-    Context ctx = uuidContexts.remove( context.getCorrelationId( ) );
+  public static void clear( String corrId ) {
+    Assertions.assertNotNull( corrId );
+    Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
       channelContexts.remove( channel );
     } else {
-      throw new RuntimeException( "Missing reference to channel for the request." );
+      LOG.debug( "Context.clear() failed for correlationId=" + corrId, new RuntimeException( "Missing reference to channel for the request." ) );
     }
     ctx.clear( );
   }
-  
-  public static void clear( String correlationId ) {
-    try {
-      clear( lookup( correlationId ) );
-    } catch ( NoSuchContextException e ) {
-      LOG.error( e, e );
-    }
+
+  public static void clear( Context context ) {
+    clear( context.getCorrelationId( ) );
   }
+  
 }

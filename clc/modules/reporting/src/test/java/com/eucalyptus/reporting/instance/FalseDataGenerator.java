@@ -7,6 +7,7 @@ import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.queue.QueueBroker;
 import com.eucalyptus.reporting.queue.QueueFactory;
 import com.eucalyptus.reporting.queue.QueueSender;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
@@ -81,7 +82,6 @@ public class FalseDataGenerator
 					instanceId, instanceType, userId, accountId, clusterName,
 					availZone);
 			fakeInstances.add(insAttrs);
-
 		}
 
 		for (int i=0; i<NUM_USAGE; i++) {

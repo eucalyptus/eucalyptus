@@ -299,33 +299,6 @@
 	</xs:complexContent>
       </xs:complexType>
 
-      <xs:complexType name="describeBundleTasksType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="instanceIds" type="xs:string"/>
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-      
-      <xs:complexType name="bundleTaskType">
-	<xs:sequence>
-	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
-	  <xs:element minOccurs="0" name="state" type="xs:string"/>
-	</xs:sequence>
-      </xs:complexType>
-
-      <xs:complexType name="describeBundleTasksResponseType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="bundleTasks" type="tns:bundleTaskType"/>
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-
       <xs:complexType name="getConsoleOutputType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -374,6 +347,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
 	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -395,6 +369,7 @@
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -520,6 +495,7 @@
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="rules" type="tns:networkRule"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -574,6 +550,7 @@
 	      <xs:element name="launchIndex" type="xs:string"/>
 	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -723,9 +700,6 @@
       <xs:element name="CancelBundleTask" nillable="true" type="tns:cancelBundleTaskType"/>
       <xs:element name="CancelBundleTaskResponse" nillable="true" type="tns:cancelBundleTaskResponseType"/>
 
-      <xs:element name="DescribeBundleTasks" nillable="true" type="tns:describeBundleTasksType"/>
-      <xs:element name="DescribeBundleTasksResponse" nillable="true" type="tns:describeBundleTasksResponseType"/>
-
       <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
       <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
 
@@ -843,11 +817,6 @@
     </wsdl:part>
   </wsdl:message>
 
-  <wsdl:message name="DescribeBundleTasksResponse">
-    <wsdl:part element="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
-    </wsdl:part>
-  </wsdl:message>
-
   <wsdl:message name="GetConsoleOutputResponse">
     <wsdl:part element="tns:GetConsoleOutputResponse" name="GetConsoleOutputResponse">
     </wsdl:part>
@@ -960,11 +929,6 @@
 
   <wsdl:message name="CancelBundleTask">
     <wsdl:part element="tns:CancelBundleTask" name="CancelBundleTask">
-    </wsdl:part>
-  </wsdl:message>
-
-  <wsdl:message name="DescribeBundleTasks">
-    <wsdl:part element="tns:DescribeBundleTasks" name="DescribeBundleTasks">
     </wsdl:part>
   </wsdl:message>
 
@@ -1109,13 +1073,6 @@
       <wsdl:input message="tns:CancelBundleTask" name="CancelBundleTask">
       </wsdl:input>
       <wsdl:output message="tns:CancelBundleTaskResponse" name="CancelBundleTaskResponse">
-      </wsdl:output>
-    </wsdl:operation>
-
-    <wsdl:operation name="DescribeBundleTasks">
-      <wsdl:input message="tns:DescribeBundleTasks" name="DescribeBundleTasks">
-      </wsdl:input>
-      <wsdl:output message="tns:DescribeBundleTasksResponse" name="DescribeBundleTasksResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1319,16 +1276,6 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="CancelBundleTaskResponse">
-        <soap:body use="literal"/>
-      </wsdl:output>
-    </wsdl:operation>
-
-    <wsdl:operation name="DescribeBundleTasks">
-      <soap:operation soapAction="EucalyptusCC#DescribeBundleTasks" style="document"/>
-      <wsdl:input name="DescribeBundleTasks">
-        <soap:body use="literal"/>
-      </wsdl:input>
-      <wsdl:output name="DescribeBundleTasksResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

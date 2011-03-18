@@ -81,6 +81,7 @@ permission notice:
 #include <limits.h>
 #include <euca_auth.h>
 #include <openssl/md5.h>
+#include <sys/mman.h> // mmap
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -780,7 +781,7 @@ int logprintfl(int level, const char *format, ...) {
       }
     }
   } else {
-    file = stdout;
+    file = stderr;
   }
 
   
@@ -1635,6 +1636,86 @@ char * xpath_content (const char * xml, const char * xpath)
     return ret;
 }
 
+int construct_uri(char *uri, char *uriType, char *host, int port, char *path) {
+  
+  if (!uri || !uriType || !host || !strlen(uriType) || !strlen(host)) {
+    return(1);
+  }
+  
+  uri[0] = '\0';
+  strncat(uri, uriType, strlen(uriType));
+  strncat(uri, "://", 3);
+  
+  strncat(uri, host, strlen(host));
+  
+  if (port > 0) {
+    char tmp[32];
+    snprintf(tmp, 32, ":%d", port);
+    strncat(uri, tmp, strlen(tmp));
+  }
+  strncat(uri, "/", 1);
+
+  if (path && strlen(path)) {
+    strncat(uri, path, strlen(path));
+  }
+  
+  return(0);
+}
+
+int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path) {
+  char *tok, *start;
+
+  uriType[0] = host[0] = path[0] = '\0';
+  *port = 0;
+
+  start = uri;
+
+  // must have a type
+  tok = strsep(&start, "://");
+  if (!start) {
+    return(1);
+  }
+  snprintf(uriType, strlen(tok)+1, "%s", tok);
+  start += 2;
+  //  printf("HERE: %s %s\n", start, tok);
+
+  tok = strsep(&start, ":");
+  if (!start) {
+    // no port
+    start = tok;
+    tok = strsep(&start, "/");
+    if (!start) {
+      // no path
+      if (tok) {
+	snprintf(host, strlen(tok)+1, "%s", tok);
+      } else {
+	// no host
+	// must have a host
+	return(1);
+      }
+    } else {
+      // path present
+      snprintf(host, strlen(tok)+1, "%s", tok);
+      snprintf(path, strlen(start)+1, "%s", start);
+    }
+  } else {
+    // port present
+    snprintf(host, strlen(tok)+1, "%s", tok);
+    tok = strsep(&start, "/");
+    if (!start) {
+      // no path present
+      if (tok) {
+	*port = atoi(tok);
+      }
+    } else {
+      // path present
+      *port = atoi(tok);
+      snprintf(path, strlen(start)+1, "%s", start);
+    }
+  }
+  return(0);
+}
+
 int hash_b64enc_string(const char *in, char **out) {
   unsigned char *md5ret=NULL;
   unsigned char hash[17];
@@ -1643,7 +1724,7 @@ int hash_b64enc_string(const char *in, char **out) {
     return(1);
   }
   *out = NULL;
-
+  logprintfl(EUCADEBUG, "hash_b64enc_string(): in=%s\n", in);
   bzero(hash, 17);
   md5ret = MD5((const unsigned char *)in, strlen(in), hash);
   if (md5ret) {
@@ -1651,9 +1732,70 @@ int hash_b64enc_string(const char *in, char **out) {
     if (*out == NULL) {
       return(1);
     }
-  } else {
-    return(1);
   }
 
   return(0);
+}
+
+// returns a new string in which 'new' is appended to 'original'
+// and frees 'original'
+char * strdupcat (char * original, char * new)
+{
+        int len = 0;
+        int olen = 0;
+
+        if (original) {
+                olen = strlen (original);
+                len += olen;
+        }
+        
+        if (new) {
+                len += strlen (new);
+        }
+        
+        char * ret = calloc (len + 1, sizeof (char));
+        if ( ret ) {
+                if (original) {
+                        strncat (ret, original, len);
+                        free (original);
+                }
+                if (new) {
+                        strncat (ret, new, len-olen);
+                }
+        }
+        
+        return ret;
+}
+
+// returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
+// or NULL if there was an error; the string must be freed by the caller
+char * file2md5str (const char * path)
+{
+    char * md5string = NULL;
+
+    int fd = open (path, O_RDONLY);
+    if (fd<0) return NULL;
+
+    struct stat mystat;
+    if (fstat(fd, &mystat) < 0) goto cleanup;
+
+    char * buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (buf==MAP_FAILED) goto cleanup;
+
+    unsigned char md5digest [MD5_DIGEST_LENGTH];
+    if (MD5((unsigned char*) buf, mystat.st_size, md5digest)==NULL) goto cleanup;
+
+    md5string = calloc (MD5_DIGEST_LENGTH * 2 + 1, sizeof (char));
+    if (md5string==NULL) goto cleanup;
+
+    char * p = md5string;
+    for (int i=0; i<MD5_DIGEST_LENGTH; i++) {
+        sprintf (p, "%02x", md5digest [i]);
+        p += 2;
+    }
+
+ cleanup:
+
+    close (fd);
+    return md5string;
 }
