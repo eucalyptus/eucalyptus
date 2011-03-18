@@ -70,6 +70,9 @@ public class QueueBroker
 				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
 						service.getHost(), DEFAULT_PORT);
 			}
+			if (remoteBrokerUrl==null) {
+				throw new QueueRuntimeException("Unable to locate reporting broker over network");
+			}
 		} else {
 			log.info("Reporting broker will run locally");
 			remoteBrokerUrl = null;
@@ -167,4 +170,3 @@ public class QueueBroker
 	}
 
 }
-
