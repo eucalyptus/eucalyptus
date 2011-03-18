@@ -2,22 +2,20 @@ package com.eucalyptus.reporting.storage;
 
 import java.util.*;
 
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.*;
-import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
 public class FalseDataGenerator
 {
-	private static final int NUM_USERS    = 128;
-	private static final int NUM_ACCOUNTS = 64;
-	private static final int NUM_CLUSTERS = 16;
-	private static final int NUM_ZONES    = 4;
-	private static final int SNAPSHOTS_PER_USER = 64;
+	private static final int  NUM_USERS    = 128;
+	private static final int  NUM_ACCOUNTS = 64;
+	private static final int  NUM_CLUSTERS = 16;
+	private static final int  NUM_ZONES    = 4;
+	private static final int  SNAPSHOTS_PER_USER = 64;
 	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final int TIME_USAGE_APART = 100000; //ms
+	private static final int  TIME_USAGE_APART = 100000; //ms
 	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART) + START_TIME;
 
 	private static ReportingBootstrapper reportingBootstrapper;
@@ -30,7 +28,7 @@ public class FalseDataGenerator
 		QueueSender queueSender = queueFactory.getSender(QueueIdentifier.STORAGE);
 		QueueReceiver queueReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
 		TestStorageEventPoller storagePoller = new TestStorageEventPoller(queueReceiver);
-		
+
 		reportingBootstrapper = new ReportingBootstrapper();
 		reportingBootstrapper.setOverriddenStorageEventPoller(storagePoller);
 		reportingBootstrapper.start();
