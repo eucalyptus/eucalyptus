@@ -298,6 +298,12 @@ int instIpSync(ccInstance *inst, void *in) {
   }
   snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
 
+  // privateIp cases
+  if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
+     // sync em
+     snprintf(inst->ccnet.privateIp, 24, "%s", inst->ncnet.privateIp);
+  }
+
   return(ret);
 }
 
