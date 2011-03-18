@@ -88,8 +88,15 @@ public class ReportingBootstrapper
 			
 			/* Start storage receiver and storage queue poller thread
 			 */
-			QueueReceiver storageReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
-			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+			final StorageEventPoller poller;
+			if (this.storagePoller == null) {
+				QueueReceiver storageReceiver =
+					queueFactory.getReceiver(QueueIdentifier.STORAGE);
+				poller = new StorageEventPoller(storageReceiver);
+				this.storagePoller = poller;
+			} else {
+				poller = this.storagePoller;
+			}
 			timer = new Timer(true);
 			timer.schedule(new TimerTask() {
 				@Override
@@ -98,7 +105,6 @@ public class ReportingBootstrapper
 					poller.writeEvents();
 				}
 			}, 0, POLLER_DELAY_MS);
-			this.storagePoller = poller;
 			log.info("Storage queue poller started");
 			
 			/* Start instance receiver and instance listener
@@ -151,10 +157,30 @@ public class ReportingBootstrapper
 		}
 	}
 
+	
+	/* Following methods are used by the testing framework only
+	 */
+	
+	/**
+	 * This method is used by the testing framework only. It inserts its own
+	 * event listener which extends the normal one but makes up fake
+	 * timestamps. 
+	 */
 	public void setOverriddenInstanceEventListener(
 			InstanceEventListener overriddenListener)
 	{
 		this.instanceListener = overriddenListener;
 	}
 
+	/**
+	 * This method is used by the testing framework only. It inserts its own
+	 * storage poller which extends the normal one but makes up fake
+	 * timestamps. 
+	 */
+	public void setOverriddenStorageEventPoller(
+			StorageEventPoller overriddenPoller)
+	{
+		this.storagePoller = overriddenPoller;
+	}
+	
 }
