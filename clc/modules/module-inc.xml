@@ -140,13 +140,6 @@
     	<srcfiles dir="${test.dir}" includes="**/*" />
     </uptodate>
   </target>
-  <target name="builder-test" depends="should-build-test" unless="build.notRequired" description="--> build the jar file from source.">
-    <antcall target="builder" inheritall="true" inheritrefs="true" />
-    <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-    <groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-      <javac target="1.5" debug="true" />
-    </groovyc>
-  </target>
 	<target name="should-build-java">
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
