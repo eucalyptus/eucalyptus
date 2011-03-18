@@ -65,6 +65,7 @@ package com.eucalyptus.auth.ws;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.euare.ErrorResponseType;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
@@ -79,7 +80,7 @@ public class EuareQueryBinding extends BaseQueryBinding<OperationParameter> {
       MappingHttpResponse httpResponse = ( MappingHttpResponse )event.getMessage( );
       ErrorResponseType errorResponse = ( ErrorResponseType )httpResponse.getMessage( );
       super.outgoingMessage( ctx, event );
-      httpResponse.setStatus( errorResponse.getHttpStatus( ) );
+      httpResponse.setStatus( new HttpResponseStatus( errorResponse.getCode( ), errorResponse.getReason( ) ) );
     } else {
       super.outgoingMessage( ctx, event );
     }

@@ -625,7 +625,8 @@ public class ListServerCertificatesType extends EuareMessage {
 }
 public class ErrorResponseType extends EuareMessage {
   String requestId;
-  HttpResponseStatus httpStatus;
+  Integer code;
+  String reason;
   public ErrorResponseType() {  }
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
 }
