@@ -11,7 +11,7 @@ import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceAttributes;
 
 /**
- * <p>StorageUsageLog
+ * <p>StorageUsageLog is the main API for accessing storage usage information.
  * 
  * @author tom.werges
  */
@@ -232,6 +232,7 @@ public class StorageUsageLog
 				SummaryInfo info = innerMap.get(innerCritVal);
 				StorageUsageData lastData = info.getLastData();
 				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
+				System.out.println("info:" + info + " summary:" + info.getSummary() + " lastData:" + lastData);
 				info.getSummary().updateValues(lastData.getVolumesMegs(),
 						lastData.getSnapshotsMegs(), lastData.getObjectsMegs(),
 						durationSecs);

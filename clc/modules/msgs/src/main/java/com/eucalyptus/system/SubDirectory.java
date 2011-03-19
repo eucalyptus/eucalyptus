@@ -83,6 +83,7 @@ public enum SubDirectory {
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
+  QUEUE( BaseDirectory.VAR, "queue" ),
   LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   BaseDirectory parent;

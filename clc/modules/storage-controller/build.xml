@@ -67,6 +67,9 @@
 	<import file="../module-inc.xml" />
 	<!--================================== BUILD TARGETS ==================================-->
   <property name="builder.suffix" value="jni" />
+	<target name="do-build-jni">
+		<antcall target="build-jni"/>
+	</target>
 	<target name="build-jni">
 		<antcall target="build-java" />
     <antcall target="jar" />

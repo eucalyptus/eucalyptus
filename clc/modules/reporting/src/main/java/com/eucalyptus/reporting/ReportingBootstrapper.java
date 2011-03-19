@@ -1,7 +1,6 @@
 package com.eucalyptus.reporting;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 import org.apache.log4j.*;
 
@@ -9,6 +8,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -37,6 +37,7 @@ public class ReportingBootstrapper
 
 	public ReportingBootstrapper()
 	{
+		this.instanceListener = null;
 	}
 
 	@Override
@@ -80,12 +81,15 @@ public class ReportingBootstrapper
 	public boolean start()
 	{
 		try {
-			//TODO: brokers must FIND EACH OTHER here...
+			
 
 			/* Start queue broker
 			 */
+			QueueBroker.getInstance().startup();
+			log.info("Queue broker started");
+			
 			queueFactory = QueueFactory.getInstance();
-			//QueueFactory has been started in SystemBootstrapper.init()
+			queueFactory.startup();
 			
 			/* Start storage receiver and storage queue poller thread
 			 */
@@ -106,7 +110,12 @@ public class ReportingBootstrapper
 			 */
 			QueueReceiver instanceReceiver =
 				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
-			instanceListener = new InstanceEventListener();
+			if (instanceListener == null) {
+				instanceListener = new InstanceEventListener();
+				log.info("New instance listener instantiated");
+			} else {
+				log.info("Used existing instance listener");
+			}
 			instanceReceiver.addEventListener(instanceListener);
 			
       ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
@@ -169,6 +178,12 @@ public class ReportingBootstrapper
 			log.error("ReportingBootstrapper failed to stop", ex);
 			return false;
 		}
+	}
+
+	public void setOverriddenInstanceEventListener(
+			InstanceEventListener overriddenListener)
+	{
+		this.instanceListener = overriddenListener;
 	}
 
 }

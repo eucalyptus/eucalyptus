@@ -29,9 +29,9 @@ FILES=$(\ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/*.jar)
 for FILE in $FILES; do
   export CLASSPATH=${FILE}:${CLASSPATH}
 done
-CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
-
-java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} \
+CLuSSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
+echo -e "${CLASSPATH//:/\n}"
+java -Xms1g -Xmx3g -XX:MaxPermSize=768m -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} \
 	-Deuca.home=${EUCALYPTUS} \
 	-Deuca.lib.dir=${EUCALYPTUS} \
 	-Deuca.upgrade.new.dir=${EUCALYPTUS} \

@@ -1000,7 +1000,7 @@ public class OverlayManager implements LogicalStorageManager {
 						LOG.error(e);
 						return null;
 					}
-					return System.getProperty("euca.home") + "," + StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
 				}
 			}
 			return null;
