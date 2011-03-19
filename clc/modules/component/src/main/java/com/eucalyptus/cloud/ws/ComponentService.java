@@ -35,10 +35,12 @@
 package com.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 
@@ -51,7 +53,7 @@ public class ComponentService {
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
-	    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup(component), host );
+    Dispatcher sc = lookupDispatcher( component, host );
 		if(sc.isLocal()) {
 			return request;
  		} else {
@@ -65,4 +67,15 @@ public class ComponentService {
  			return reply;
  		}
 	}
+
+  private Dispatcher lookupDispatcher( String component, String host ) throws EucalyptusCloudException {
+    Component destinationComponent = Components.lookup( component );
+    String canonicalHostName = Internets.toAddress( host ).getCanonicalHostName( );
+    for( Service s : destinationComponent.getServices( ) ) {
+		  if( Internets.toAddress( s.getHost( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
+		    return s.getDispatcher( );
+		  }
+		}
+    throw new EucalyptusCloudException("Unable to dispatch message to: " + component + "@" + host);
+  }
 }

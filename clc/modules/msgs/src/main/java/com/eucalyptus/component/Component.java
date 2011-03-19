@@ -192,14 +192,6 @@ public class Component implements HasName<Component> {
     return this.identity.name( );
   }
   
-  public String getRegistryKey( String hostName ) {
-    if ( Internets.testLocal( hostName ) ) {
-      return this.getName( ) + "@localhost";
-    } else {
-      return this.getName( ) + "@" + hostName;
-    }
-  }
-  
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
     ServiceBuilder<? extends ServiceConfiguration> ret = ServiceBuilderRegistry.lookup( this.identity );
     return ret != null

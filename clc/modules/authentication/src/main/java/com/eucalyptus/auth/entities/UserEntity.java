@@ -7,7 +7,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Enumerated;
 import javax.persistence.EnumType;
 import javax.persistence.FetchType;
@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

@@ -3,7 +3,7 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -85,7 +85,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
 
 	@Override
 	public String getValue( ) {
-		EntityWrapper db = new EntityWrapper( this.persistenceContext );
+		EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
 		try {
 			Object o = db.getUnique( this.getQueryObject( ) );
 			Method getter = this.getGetter( );
@@ -104,7 +104,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
 
 	@Override
 	public String setValue( String s ) {
-		EntityWrapper db = new EntityWrapper( this.persistenceContext );
+		EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
 		try {
 			Object o = db.getUnique( this.getQueryObject( ) );
 			Object prop = this.getTypeParser( ).parse( s );

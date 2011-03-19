@@ -20,10 +20,6 @@ public class ServiceConfigurations {
     return singleton;
   }
   
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( "eucalyptus_config" );
-  }
-  
   public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {
     if( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );

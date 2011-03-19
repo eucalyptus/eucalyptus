@@ -1,6 +1,10 @@
 package com.eucalyptus.reporting.storage;
 
-import javax.persistence.*;
+import javax.persistence.Embedded;
+import javax.persistence.EmbeddedId;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Entity;
 
 /**
  * <p>StorageUsageSnapshot is a snapshot of disk data usage at some point in
@@ -8,7 +12,7 @@ import javax.persistence.*;
  * 
  * @author tom.werges
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="storage_usage_snapshot")
 class StorageUsageSnapshot
