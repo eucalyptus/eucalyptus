@@ -409,4 +409,24 @@ public class SystemState {
 //    }
 //  }
   
+  public static Long countByAccount( String accountId ) throws AuthException {
+    long vmNum = 0;
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getId( ).equals( accountId ) ) {
+        vmNum++;
+      }
+    }
+    return vmNum;
+  }
+
+  public static long countByUser( String userId ) throws AuthException {
+    long vmNum = 0;
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {
+        vmNum++;
+      }
+    }
+    return vmNum;
+  }
+
 }

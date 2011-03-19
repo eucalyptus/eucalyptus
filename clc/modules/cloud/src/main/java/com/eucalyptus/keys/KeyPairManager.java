@@ -104,7 +104,7 @@ public class KeyPairManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1 ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
       }
     }

@@ -31,6 +31,6 @@ public interface PolicyEngine {
    * @param quantity
    * @throws AuthException
    */
-  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Integer quantity) throws AuthException;
+  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException;
 
 }
