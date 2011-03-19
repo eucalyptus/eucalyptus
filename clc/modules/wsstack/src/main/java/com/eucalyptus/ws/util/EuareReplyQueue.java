@@ -147,8 +147,7 @@ public class EuareReplyQueue {
         LOG.error( "Failed to parse payload ", e );
       }
       if ( payload != null ) {
-        errorResp.setCode( status.getCode( ) );
-        errorResp.setReason( status.getReasonPhrase( ) );
+        errorResp.setHttpStatus( status );
         errorResp.setCorrelationId( payload.getCorrelationId( ) );
         errorResp.setRequestId( payload.getCorrelationId( ) );
         ErrorType error = new ErrorType( );
