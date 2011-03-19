@@ -83,7 +83,7 @@ public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    int quantity = getVmAllocationNumber( vmAllocInfo );
+    long quantity = getVmAllocationNumber( vmAllocInfo );
     RunInstancesType request = vmAllocInfo.getRequest( );
     Context ctx;
     try {
@@ -103,7 +103,7 @@ public class CreateVmInstances {
     String action = PolicySpec.requestToAction( request );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances
-    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1 ) ) {
+    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
     }
     // Allocate vm instances

@@ -1,9 +1,11 @@
 package com.eucalyptus.auth.policy.key;
 
 import net.sf.json.JSONException;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
+import com.eucalyptus.auth.principal.Account;
 
 public abstract class QuotaKey implements Key {
 
@@ -13,7 +15,7 @@ public abstract class QuotaKey implements Key {
     USER,
   }
   
-  public abstract String value( Scope scope, String id, String resource, Integer quantity );
+  public abstract String value( Scope scope, String id, String resource, Long quantity ) throws AuthException;
   
   @Override
   public final String value( ) throws AuthException {
@@ -26,5 +28,5 @@ public abstract class QuotaKey implements Key {
       throw new JSONException( "A quota key is not allowed in condition " + conditionClass.getName( ) + ". NumericLessThanEquals is required." );
     }
   }
-
+  
 }

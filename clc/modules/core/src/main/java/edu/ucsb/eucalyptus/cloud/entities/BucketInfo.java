@@ -97,9 +97,13 @@ public class BucketInfo {
 	@Column( name = "bucket_id" )
 	private Long id = -1l;
 
+	// Hold the real owner ID. At this point, it is the account ID.
 	@Column( name = "owner_id" )
 	private String ownerId;
 
+	@Column( name = "user_id" )
+	private String userId;
+	
 	@Column( name = "bucket_name", unique=true )
 	private String bucketName;
 
@@ -155,8 +159,9 @@ public class BucketInfo {
 		this.bucketName = bucketName;
 	}
 
-	public BucketInfo(String ownerId, String bucketName, Date creationDate) {
+	public BucketInfo(String ownerId, String userId, String bucketName, Date creationDate) {
 		this.ownerId = ownerId;
+		this.userId = userId;
 		this.bucketName = bucketName;
 		this.creationDate = creationDate;
 	}
@@ -544,5 +549,13 @@ public class BucketInfo {
 		} else if (!bucketName.equals(other.bucketName))
 			return false;
 		return true;
-	}	
+	}
+
+  public void setUserId( String userId ) {
+    this.userId = userId;
+  }
+
+  public String getUserId( ) {
+    return userId;
+  }	
 }
