@@ -86,4 +86,8 @@ public class Hosts {
     return h != null ? h : newHost;
   }
   
+  public static Host getLocalHost( ) {
+    
+  }
+  
 }

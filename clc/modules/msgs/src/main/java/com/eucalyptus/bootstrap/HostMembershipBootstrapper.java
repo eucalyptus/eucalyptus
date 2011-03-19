@@ -63,35 +63,53 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.net.InetAddress;
-import org.jgroups.JChannel;
-import org.jgroups.conf.ClassConfigurator;
-import org.jgroups.protocols.FC;
-import org.jgroups.protocols.FD;
-import org.jgroups.protocols.FD_SOCK;
-import org.jgroups.protocols.FRAG2;
-import org.jgroups.protocols.MERGE2;
-import org.jgroups.protocols.MFC;
-import org.jgroups.protocols.PING;
-import org.jgroups.protocols.UDP;
-import org.jgroups.protocols.UFC;
-import org.jgroups.protocols.UNICAST;
-import org.jgroups.protocols.VERIFY_SUSPECT;
-import org.jgroups.protocols.pbcast.GMS;
-import org.jgroups.protocols.pbcast.NAKACK;
-import org.jgroups.protocols.pbcast.STABLE;
-import org.jgroups.protocols.pbcast.STATE_TRANSFER;
-import org.jgroups.stack.Protocol;
-import org.jgroups.stack.ProtocolStack;
+import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 
-public class MembershipManager {
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.RemoteConfiguration )
+public class HostMembershipBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( HostMembershipBootstrapper.class );
   
-  public static JChannel buildChannel( ) throws Exception {
-    final JChannel channel = new JChannel( false );
-    ProtocolStack stack = new ProtocolStack( );
-    channel.setProtocolStack( stack );
-    stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
-    stack.init( );
-    return channel;
+  @Override
+  public boolean load( ) throws Exception {
+    try {
+      HostManager.getInstance( );
+      LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+      return true;
+    } catch ( Exception ex ) {
+      LOG.fatal( ex, ex );
+      BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+      return false;
+    }
   }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+  
 }
