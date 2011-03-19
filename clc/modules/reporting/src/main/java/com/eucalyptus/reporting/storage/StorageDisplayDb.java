@@ -15,7 +15,7 @@ public class StorageDisplayDb
 	}
 
 	private static StorageDisplayDb instance = null;
-	
+
 	public static StorageDisplayDb getInstance()
 	{
 		if (instance == null) {
@@ -23,7 +23,7 @@ public class StorageDisplayDb
 		}
 		return instance;
 	}
-	
+
 	public List<StorageDisplayBean> search(Period period, GroupByCriterion criterion,
 			Units displayUnits)
 	{
@@ -37,7 +37,7 @@ public class StorageDisplayDb
 		}
 		return items;
 	}
-	
+
 	public List<StorageDisplayBean> searchGroupBy(
 			Period period, GroupByCriterion groupByCrit,
 			GroupByCriterion crit, Units displayUnits)

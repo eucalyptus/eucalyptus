@@ -97,5 +97,10 @@ public class InstanceDisplayBean
 		return UnitUtil.convertSize(summary.getDiskIoMegs(),
 				INTERNAL_UNITS.getSizeUnit(), units.getSizeUnit());
 	}
+	
+	public Units getUnits()
+	{
+		return units;
+	}
 
 }

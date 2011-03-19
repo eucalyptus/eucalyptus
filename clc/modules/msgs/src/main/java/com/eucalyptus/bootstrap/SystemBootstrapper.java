@@ -131,6 +131,18 @@ public class SystemBootstrapper {
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
+
+      /* This is a workaround for log4j brain damage which prevented the
+       * ActiveMQ broker from working properly. 
+       */
+      try {
+         //GroovyUtil.eval("com.eucalyptus.reporting.queue.QueueBroker.getInstance().startup()");
+         LOG.info("Groovy eval of queue factory startup succeeded.");
+      } catch (Exception ex) {
+         LOG.error("Groovy eval of queue factory startup failed.", ex);
+      }
+
+      
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -138,7 +150,12 @@ public class SystemBootstrapper {
           }
         }
       }
+      
+
+      
             );
+
+      
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -147,6 +164,7 @@ public class SystemBootstrapper {
         }
       }
             );
+      
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
       try {
         Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );

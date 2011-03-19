@@ -2,6 +2,7 @@ package com.eucalyptus.reporting.storage;
 
 import java.util.*;
 
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.*;
@@ -47,10 +48,10 @@ public class FalseDataGenerator
 
 			for (int j = 0; j < NUM_USERS; j++) {
 				String userId = String.format("user-%d", j);
-				String accountId = String.format("instance-%d",
+				String accountId = String.format("account-%d",
 						(j % NUM_ACCOUNTS));
 				String clusterId = String.format("cluster-%d", (j % NUM_CLUSTERS));
-				String zoneId = String.format("account-%d", (j % NUM_ZONES));
+				String zoneId = String.format("zone-%d", (j % NUM_ZONES));
 
 				for (int k = 0; k < StorageEvent.EventType.values().length; k++) {
 					long sizeMegs = 1024 + (i * k);
@@ -88,13 +89,13 @@ public class FalseDataGenerator
 		}
 
 		@Override
-		public void addEventListener(EventListener el)
+		public void addEventListener(EventListener<Event> el)
 		{
 			// empty
 		}
 
 		@Override
-		public void removeEventListener(EventListener el)
+		public void removeEventListener(EventListener<Event> el)
 		{
 			// empty
 		}
