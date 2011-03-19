@@ -65,16 +65,58 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentSkipListSet;
+import org.jgroups.Address;
 
-public class Host {
-  private final String jgroupsId;
-  private final List<InetAddress> hostAddresses;
-  public Host( String jgroupsId, List<InetAddress> hostAddresses ) {
+public class Host implements java.io.Serializable {
+  private final Address                   jgroupsId;
+  private final NavigableSet<InetAddress> hostAddresses = new ConcurrentSkipListSet<InetAddress>( );
+  
+  public Host( Address jgroupsId, List<InetAddress> hostAddresses ) {
     super( );
     this.jgroupsId = jgroupsId;
-    this.hostAddresses = hostAddresses;
+    this.hostAddresses.addAll( hostAddresses );
   }
-
   
+  public Address getJgroupsId( ) {
+    return this.jgroupsId;
+  }
+  
+  public NavigableSet<InetAddress> getHostAddresses( ) {
+    return this.hostAddresses;
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.jgroupsId == null )
+      ? 0
+      : this.jgroupsId.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    Host other = ( Host ) obj;
+    if ( this.jgroupsId == null ) {
+      if ( other.jgroupsId != null ) {
+        return false;
+      }
+    } else if ( this.jgroupsId.compareTo( other.jgroupsId ) != 0 ) {
+      return false;
+    }
+    return true;
+  }
   
 }

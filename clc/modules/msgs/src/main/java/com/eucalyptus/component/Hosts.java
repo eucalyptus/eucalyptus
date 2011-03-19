@@ -63,6 +63,27 @@
 
 package com.eucalyptus.component;
 
-public class Hosts {
+import java.net.InetAddress;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import org.jgroups.Address;
 
+public class Hosts {
+  private static final ConcurrentMap<Address,Host> hostMap = new ConcurrentHashMap<Address,Host>();
+  public static Host getHostInstance( Address jgroupsId ) {
+    Host h = hostMap.get( jgroupsId );
+    if( h == null ) {
+      throw new NoSuchElementException( "Failed to lookup host for jgroups address: " + jgroupsId );
+    } else {
+      return h;
+    }
+  }
+  public static Host getHostInstance( Address jgroupsId, List<InetAddress> addresses ) {
+    Host newHost = new Host( jgroupsId, addresses );
+    Host h = hostMap.putIfAbsent( jgroupsId, newHost );
+    return h != null ? h : newHost;
+  }
+  
 }

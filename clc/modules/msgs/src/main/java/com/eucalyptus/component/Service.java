@@ -82,8 +82,8 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   private final Dispatcher           dispatcher;
   private final ServiceConfiguration serviceConfiguration;
   private final ComponentId          id;
-  private final Component.State      state          = State.ENABLED/** ASAP:FIXME:GRZE **/
-                                                    ;
+  private final Component.State      state          = State.ENABLED;/** ASAP:FIXME:GRZE **/
+
   
   public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
     this.id = id;
