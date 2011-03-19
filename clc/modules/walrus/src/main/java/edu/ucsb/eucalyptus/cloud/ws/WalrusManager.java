@@ -731,7 +731,8 @@ public class WalrusManager {
 			  objSize = Long.valueOf( request.getContentLength( ) );
 			} catch ( NumberFormatException e ) {
 			  LOG.error( "Invalid content length " + request.getContentLength( ) );
-			  throw new EucalyptusCloudException( e );
+	       // TODO(wenye): should handle this properly.
+        objSize = 1L;
 			}
 			if (ctx.hasAdministrativePrivileges() || (
 			    bucket.canWrite(account.getId()) &&
@@ -1105,7 +1106,8 @@ public class WalrusManager {
 	      objSize = Long.valueOf( request.getContentLength( ) );
 	    } catch ( NumberFormatException e ) {
 	      LOG.error( "Invalid content length " + request.getContentLength( ) );
-	      throw new EucalyptusCloudException( e );
+	      // TODO(wenye): should handle this properly.
+	      objSize = 1L;
 	    }
       if (ctx.hasAdministrativePrivileges() || (
           bucket.canWrite(account.getId()) &&
