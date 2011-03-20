@@ -100,7 +100,9 @@ import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
-  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class.toString( ) );
+  private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
+  private static Logger                                       CONFIG_LOG                     = Logger.getLogger( "com.eucalyptus.context.Configs" );
+  
   private static final VelocityEngine                         ve                             = new VelocityEngine( );
   static {
     ve.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
@@ -132,14 +134,16 @@ public class ServiceContextManager {
       return client.get( );
     }
   }
+  
   private static volatile Callable<MuleContext> caller;
+  
   public static final void restart( ) {
-    if( !Bootstrap.isFinished( ) && caller == null ) {
+    if ( !Bootstrap.isFinished( ) && caller == null ) {
       caller = new Callable<MuleContext>( ) {
         @Override
         public MuleContext call( ) throws Exception {
           try {
-            while( !Bootstrap.isFinished( ) ) {
+            while ( !Bootstrap.isFinished( ) ) {
               TimeUnit.MILLISECONDS.sleep( 30 );
             }
             startup( );
@@ -150,14 +154,13 @@ public class ServiceContextManager {
         }
       };
       ctxMgmtThreadPool.submit( caller );
-    } else if( !Bootstrap.isFinished( ) ) {
-    } else {
-      if( caller == null ) {
+    } else if ( !Bootstrap.isFinished( ) ) {} else {
+      if ( caller == null ) {
         caller = new Callable<MuleContext>( ) {
           @Override
           public MuleContext call( ) throws Exception {
             try {
-              while( !Bootstrap.isFinished( ) ) {
+              while ( !Bootstrap.isFinished( ) ) {
                 TimeUnit.MILLISECONDS.sleep( 30 );
               }
               startup( );
@@ -234,10 +237,10 @@ public class ServiceContextManager {
         out.close( );
         String outString = out.toString( );
         ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
-        if ( LogLevels.DEBUG ) {
-          LOG.info( "===================================" );
-          LOG.info( outString );
-          LOG.info( "===================================" );
+        if ( LogLevels.EXTREME ) {
+          CONFIG_LOG.trace( "===================================" );
+          CONFIG_LOG.trace( outString );
+          CONFIG_LOG.trace( "===================================" );
         }
         ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), bis );
         configs.add( configRsc );

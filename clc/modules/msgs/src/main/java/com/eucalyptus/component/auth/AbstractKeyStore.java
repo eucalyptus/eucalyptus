@@ -73,6 +73,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -169,12 +170,7 @@ public abstract class AbstractKeyStore {
   }
 
   public List<String> getAliases( ) throws KeyStoreException {
-    final List<String> aliasList = new ArrayList<String>( );
-    final Enumeration<String> aliases = this.keyStore.aliases( );
-    while ( aliases.hasMoreElements( ) ) {
-      aliasList.add( aliases.nextElement( ) );
-    }
-    return aliasList;
+    return Collections.list( this.keyStore.aliases( ) );
   }
 
   public String getFileName( ) {

@@ -40,12 +40,16 @@ public class PersistenceContexts {
   }
   
   public static boolean isEntityClass( Class candidate ) {
-    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) || Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
+    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw Exceptions.fatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
       } else {
         return true;
       }
+    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
     } else {
       return false;
     }

@@ -7,7 +7,8 @@ section "Bootstrap Configuration"#                                              
 option "user"                  u   "User to drop privs to after starting."             string  typestr="USERNAME"        default="eucalyptus"    no
 option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@/"     no
 option "child"                 c   "This system is a child/secondary host."            flag                              off
-option "parent"                p   "Host address of parent(s) for bootstrap."          string  typestr="HOSTNAME"                              optional multiple 
+option "parent"                p   "Host address of parent(s) for bootstrap."          string  typestr="HOSTNAME"                              optional multiple dependon="child"
+option "merge-db"              m   "Attempt to merge the database from a parent."      flag                              off                            dependon="child"            
 option "define"                D   "Set system properties."                            string                                                  optional multiple
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off

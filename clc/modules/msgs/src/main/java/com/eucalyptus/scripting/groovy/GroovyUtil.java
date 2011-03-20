@@ -9,11 +9,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Map;
 
+import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 
 import org.apache.log4j.Logger;
@@ -79,6 +82,18 @@ public class GroovyUtil {
       return (Integer) getGroovyEngine().eval( "p=hi.execute();p.waitFor();System.out.print(p.in.text);System.err.print(p.err.text);p.exitValue()", new SimpleScriptContext() {{
         setAttribute( "hi", code, ENGINE_SCOPE );
       }});
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
+    }
+  }
+
+  public static Object eval( String code, Map context ) throws ScriptExecutionFailedException {
+    try {
+      Bindings bindings = new SimpleBindings(context);
+      SimpleScriptContext scriptContext = new SimpleScriptContext();
+      scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
+      return getGroovyEngine().eval( code, scriptContext );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );

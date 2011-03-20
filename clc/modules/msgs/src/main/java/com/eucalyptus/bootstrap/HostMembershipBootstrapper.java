@@ -63,6 +63,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 
@@ -76,6 +77,10 @@ public class HostMembershipBootstrapper extends Bootstrapper {
     try {
       HostManager.getInstance( );
       LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+      while( !HostManager.isReady( ) ) {
+        TimeUnit.SECONDS.sleep( 1 );
+        LOG.info( "Waiting for system view with database..." );
+      }
       return true;
     } catch ( Exception ex ) {
       LOG.fatal( ex, ex );

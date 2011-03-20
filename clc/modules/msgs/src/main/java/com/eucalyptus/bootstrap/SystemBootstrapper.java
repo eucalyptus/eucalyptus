@@ -84,6 +84,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Functions;
 import com.google.common.base.Join;
 import com.google.common.collect.Iterators;
@@ -131,17 +132,6 @@ public class SystemBootstrapper {
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
-
-      /* This is a workaround for log4j brain damage which prevented the
-       * ActiveMQ broker from working properly. 
-       */
-      try {
-         //GroovyUtil.eval("com.eucalyptus.reporting.queue.QueueBroker.getInstance().startup()");
-         LOG.info("Groovy eval of queue factory startup succeeded.");
-      } catch (Exception ex) {
-         LOG.error("Groovy eval of queue factory startup failed.", ex);
-      }
-
       
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
@@ -166,15 +156,8 @@ public class SystemBootstrapper {
             );
       
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
-      try {
-        Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
-        Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-      }
       Security.addProvider( new BouncyCastleProvider( ) );
+      Mbeans.init( );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );

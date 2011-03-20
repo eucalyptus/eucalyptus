@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,48 +61,21 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.util;
 
-import java.util.ArrayList;
-import java.util.List;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class Eucalyptus extends ComponentId {
-  public static final Eucalyptus INCOGNITO = new Eucalyptus( );//NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-  @SuppressWarnings( "unchecked" )
-  public static final List<Class<? extends ComponentId>> LIST = ComponentId.getList( Eucalyptus.class );
-  
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://EucalyptusRequestQueue";
-  }
-
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isPartitioned( ) {
-    return false;
-  }
-  
+@Target( { ElementType.TYPE, ElementType.FIELD } )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface Managed {
+  /**
+   * Groovy script which is passed as an argument to JmxBuilder.export.
+   * Note that the object which is being export can be referenced as 'obj'.
+   * 
+   * @return
+   */
+  String value( ) default "bean( obj )";
 }
