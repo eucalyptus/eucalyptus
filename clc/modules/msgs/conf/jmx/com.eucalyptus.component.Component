@@ -2,7 +2,7 @@ jmx.export{
   bean( 
     target: obj,
     name: "com.eucalyptus.component:type=Component,name=${obj.componentId.fullName},componentId=${obj.componentId.name()}",
-    desc: 
+    desc: "${obj.toString()}", 
     constructors:[],
     attributes:"*",
     operations: "*",
