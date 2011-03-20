@@ -107,7 +107,6 @@ public class Mbeans {
     Mbeans.init( );
   }
   public static void init( ) {////TODO:GRZE: make it a bootstrapper
-    System.setSecurityManager( new RMISecurityManager( ) );
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
     
