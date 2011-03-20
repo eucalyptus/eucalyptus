@@ -866,8 +866,8 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s name=%s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
-                          this.getName( ), this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ) );
+    return String.format( "Component %s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
+                          this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ).getClass( ).getSimpleName( ) );
   }
   
   /**

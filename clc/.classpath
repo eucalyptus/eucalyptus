@@ -117,7 +117,7 @@
 	<classpathentry kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
+	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar" sourcepath="/bzr/third-party/groovy-1.7.1/src"/>
 	<classpathentry kind="lib" path="lib/guava-r08-gwt.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r08.jar" sourcepath="/bzr/third-party/guava-r08/guava-src-r08.zip"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.0.jar"/>
