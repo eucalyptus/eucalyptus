@@ -68,6 +68,7 @@ import groovy.util.GroovyMBean;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -104,6 +105,7 @@ public class Mbeans {
                                                     };
   
   public static void init( ) {////TODO:GRZE: make it a bootstrapper
+    System.setSecurityManager( new RMISecurityManager( ) );
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
     
