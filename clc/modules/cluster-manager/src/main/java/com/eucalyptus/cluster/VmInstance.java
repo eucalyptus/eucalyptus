@@ -101,6 +101,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -755,7 +756,11 @@ public class VmInstance implements HasName<VmInstance> {
       return v;
     }
   }
-  
+
+  public <T> Iterable<T> transformVolumeAttachments( Function<? super AttachedVolume,T> function ) throws NoSuchElementException {
+    return Iterables.transform( this.volumes.values( ), function );
+  }
+
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     return Iterables.all( this.volumes.values( ), pred );
   }
@@ -784,8 +789,8 @@ public class VmInstance implements HasName<VmInstance> {
         String volId = arg0.getVolumeId( );
         if ( "detaching".equals( arg0.getStatus( ) ) && !volMap.containsKey( volId ) ) {
           VmInstance.this.removeVolumeAttachment( volId );
-        } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
-          VmInstance.this.updateVolumeAttachment( volId, volMap.get( volId ).getStatus( ) );
+        } else if( ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) && volMap.containsKey( volId ) ) {
+          VmInstance.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
         }
         volMap.remove( volId );
         return true;

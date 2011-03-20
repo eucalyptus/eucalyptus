@@ -26,10 +26,12 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.util.ReplyQueue;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
@@ -93,6 +95,7 @@ public class ServiceContext {
     }
     MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
     LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
+    final Context ctx = msg instanceof BaseMessage ? Contexts.createWrapped( dest, ( BaseMessage ) msg ) : null;
     try {
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( DispatchException ex ) {
@@ -102,12 +105,29 @@ public class ServiceContext {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
                                           + ex.getMessage( ), ex );
+    } finally {
+      Threads.lookup( Empyrean.class, ServiceContext.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          try {
+            TimeUnit.SECONDS.sleep( 60 );
+            Contexts.clear( ctx );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            return;
+          }
+        }
+      } );
     }
   }
   
   public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
     dest = ServiceContextManager.mapEndpointToService( dest );
     MuleEvent context = RequestContext.getEvent( );
+    Context ctx = null;
+    if ( msg instanceof BaseMessage ) {
+      ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
+    }
     try {
       LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
@@ -122,6 +142,7 @@ public class ServiceContext {
       throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
                                                                   + " because of " + e.getMessage( ), e ) );
     } finally {
+      Contexts.clear( ctx );
       RequestContext.setEvent( context );
     }
   }

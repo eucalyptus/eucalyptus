@@ -106,17 +106,9 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
-  public static void checkValid( ImageInfo imgInfo ) {
-//    String[] parts = imgInfo.getImageLocation( ).split( "/" );
-//    CheckImageType check = new CheckImageType( ).regarding( );
-//    check.setBucket( parts[0] );
-//    check.setKey( parts[1] );
-//    ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( check );
-  }
-  
   public static void triggerCaching( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    CacheImageType cache = new CacheImageType( ).regarding( );
+    CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
     ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );

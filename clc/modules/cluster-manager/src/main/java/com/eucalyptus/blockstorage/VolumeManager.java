@@ -376,10 +376,10 @@ public class VolumeManager {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
-    Callbacks.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
-    
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
+    Callbacks.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getServiceEndpoint( ) );
+    
     vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
