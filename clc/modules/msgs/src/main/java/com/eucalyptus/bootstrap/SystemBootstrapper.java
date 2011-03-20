@@ -157,7 +157,6 @@ public class SystemBootstrapper {
       
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on("\n").join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
-      Mbeans.init( );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
