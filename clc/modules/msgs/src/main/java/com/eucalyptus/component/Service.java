@@ -91,7 +91,13 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
     this.id = id;
     this.serviceConfiguration = serviceConfig;
     this.name = serviceConfig.getFullName( ).toString( );
-    URI remoteUri = this.id.makeRemoteUri( this.serviceConfiguration.getHostName( ), this.serviceConfiguration.getPort( ) );
+    
+    URI remoteUri;
+    if ( this.serviceConfiguration.isLocal( ) ) {
+      remoteUri = this.id.makeRemoteUri( "127.0.0.1", this.id.getPort( ) );
+    } else {
+      remoteUri = this.id.makeRemoteUri( this.serviceConfiguration.getHostName( ), this.serviceConfiguration.getPort( ) );
+    }
     this.endpoint = new ServiceEndpoint( this, true, serviceConfig.isLocal( )
       ? this.id.getLocalEndpointUri( )
       : remoteUri );//TODO:GRZE: fix remote/local swaps
@@ -145,7 +151,9 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   public Dispatcher getDispatcher( ) {
-    return this.isLocal( ) ? this.localDispatcher : this.remoteDispatcher;
+    return this.isLocal( )
+      ? this.localDispatcher
+      : this.remoteDispatcher;
   }
   
   /**
