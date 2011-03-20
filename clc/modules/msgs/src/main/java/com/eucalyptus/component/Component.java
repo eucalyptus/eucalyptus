@@ -103,6 +103,7 @@ import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -922,6 +923,16 @@ public class Component implements HasName<Component> {
   
   public NavigableSet<Service> getServices( ) {
     return this.lookupServices( );
+  }
+  
+  public Iterable<Service> enabledServices( ) {
+    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<Service>( ) {
+      
+      @Override
+      public boolean apply( Service arg0 ) {
+        return Component.State.ENABLED.equals( arg0.getState( ) );
+      }
+    } );;
   }
   
 }

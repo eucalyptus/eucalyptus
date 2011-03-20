@@ -74,14 +74,9 @@ import java.rmi.registry.Registry;
 import java.rmi.server.ExportException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
@@ -90,15 +85,13 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.system.Ats;
-import com.google.common.collect.Maps;
 
 public class Mbeans {
   private static final Map<String, String> EMPTY    = new HashMap<String, String>( );
   private static Logger                    LOG      = Logger.getLogger( Mbeans.class );
-  private static final int                 JMX_PORT = 1099;
+  private static final int                 JMX_PORT = 1099;//TODO:GRZE: configurable
 //private static final int                 JMX_PORT = 8772;
-  private static final String              JMX_HOST = "localhost";
+  private static final String              JMX_HOST = "localhost";//TODO:GRZE: configurable
   private static final String              URI      = "service:jmx:rmi:///jndi/rmi://" + JMX_HOST + ":" + JMX_PORT + "/eucalyptus";
   private static MBeanServer               mbeanServer;
   private static JMXConnectorServer        jmxServer;
@@ -110,7 +103,7 @@ public class Mbeans {
                                                       }
                                                     };
   
-  public static void init( ) {
+  public static void init( ) {////TODO:GRZE: make it a bootstrapper
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
     
@@ -143,7 +136,13 @@ public class Mbeans {
   }
   
   public static void register( final Object obj ) {
-    String defaultExport = "bean( obj )";
+    if( obj.getClass( ).isAnonymousClass( ) ) {
+      throw Exceptions.uncatchable( "MBeans.register(Object) only supports the registration of concrete classes, your argument is anonymous: " + obj.getClass( ).getName( ) );
+    }
+    String defaultExport = "bean( " +
+        " target: obj, " +
+        " name: \"${(obj.class.package.name}:type=${obj.getClass().getSimpleName()},\"," +
+    		" )";
     //TODO:GRZE:load class specific config here
     try {
       List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( "jmx.export{ " + defaultExport + "}", new HashMap( ) {

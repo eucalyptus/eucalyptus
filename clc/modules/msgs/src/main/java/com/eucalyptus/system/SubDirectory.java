@@ -80,6 +80,7 @@ public enum SubDirectory {
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
+  MANAGEMENT( BaseDirectory.CONF, "jmx" ),
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),

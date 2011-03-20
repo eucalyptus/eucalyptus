@@ -117,8 +117,8 @@ public class StorageUtil {
   }
   
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( Dispatcher sc : ServiceDispatcher.lookupMany( Components.lookup("storage") ) ) {
-      sc.dispatch( message );
+    for( Service service : Components.lookup(Storage.class).enabledServices( ) ) {
+      service.getDispatcher( ).dispatch( message );
     }
   }
 

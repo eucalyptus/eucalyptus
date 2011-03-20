@@ -213,17 +213,7 @@ public class ClusterEndpoint implements Startable {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.info( val );
     }
-    retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for ( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
-    for ( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Bootstrappers", "" ) );
+    retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers", "" ) );
     for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
       retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
       LOG.info( stage.describe( ) );
@@ -231,17 +221,7 @@ public class ClusterEndpoint implements Startable {
     retList.add( new ClusterInfoType( "================== Components", "" ) );
     for( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
-    for( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Bootstrappers", "" ) );
-    for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-      retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
-      LOG.info( stage.describe( ) );
+      LOG.trace( val );
     }
     return retList;
   }

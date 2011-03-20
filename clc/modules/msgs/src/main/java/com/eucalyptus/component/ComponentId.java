@@ -320,13 +320,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return true;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
-                          this.getLocalEndpointName( ) );
-  }
 
   public String getExternalUriPattern( ) {
     return this.externalUriPattern;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s:localEndpointName=%s:serviceModel=%s:uriPattern=%s",
+                          this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
+                          this.hasCredentials( ), this.getClientPipeline( ), this.lookupBaseMessageType( ), this.getLocalEndpointName( ),
+                          this.getServiceModel( ), this.getUriPattern( ) );
   }
 }

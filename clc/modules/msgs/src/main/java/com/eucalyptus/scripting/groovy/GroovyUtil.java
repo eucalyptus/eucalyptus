@@ -59,11 +59,17 @@ public class GroovyUtil {
     }
   }
 
-  public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {
+  public static <T> T evaluateScript( SubDirectory dir, String fileName ) throws ScriptExecutionFailedException {
+    fileName = dir + File.separator + fileName;
+    String fileNameWExt = fileName + ".groovy";
+    if( !new File( fileName ).exists( ) && new File( fileNameWExt ).exists( ) ) {
+      fileName = fileNameWExt;
+    }
     FileReader fileReader = null;
     try {
-      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + (fileName.endsWith(".groovy")?"":".groovy") );
-      return getGroovyEngine().eval( fileReader );
+      fileReader = new FileReader( fileName );
+      T ret = ( T ) getGroovyEngine().eval( fileReader );
+      return ret;
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + fileName, e );
@@ -75,6 +81,10 @@ public class GroovyUtil {
         LOG.error(e);
       }
     }
+  }
+
+  public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {
+    return evaluateScript( SubDirectory.SCRIPTS, fileName );
   }
 
   public static int exec( final String code ) throws ScriptExecutionFailedException {
