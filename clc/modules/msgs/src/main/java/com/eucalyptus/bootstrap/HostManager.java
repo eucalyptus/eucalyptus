@@ -151,6 +151,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   private static JChannel buildChannel( ) {
     final JChannel channel = new JChannel( false );
+    channel.setName( InetAddress.getLocalHost( ).getCanonicalHostName( ) );
     ProtocolStack stack = new ProtocolStack( );
     channel.setProtocolStack( stack );
     stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
