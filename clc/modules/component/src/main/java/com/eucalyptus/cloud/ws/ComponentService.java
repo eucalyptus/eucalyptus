@@ -48,7 +48,7 @@ public class ComponentService {
 	private static Logger LOG = Logger.getLogger( ComponentService.class );
 
 	public BaseMessage handle(ComponentMessageType request) throws EucalyptusCloudException {
-		String component = request.lookupComponent();
+		String component = request.getComponent();
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
