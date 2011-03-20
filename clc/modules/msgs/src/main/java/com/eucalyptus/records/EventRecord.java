@@ -25,7 +25,7 @@ public class EventRecord extends EucalyptusMessage {
       userFn = ctx.getUserFullName( );
     } catch ( Exception ex ) {
     }
-    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "nobody" : userFn.toString( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "" : userFn.toString( ), msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
@@ -57,8 +57,8 @@ public class EventRecord extends EucalyptusMessage {
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   private static EucalyptusMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
-    hi.setCorrelationId( FakePrincipals.NOBODY_ID );
-    hi.setUserId( FakePrincipals.NOBODY_USER_ERN.getUserName( ) );
+    hi.setCorrelationId( "" );
+    hi.setUserId( "" );
     return hi;
   }
   private static EucalyptusMessage tryForMessage( ) {

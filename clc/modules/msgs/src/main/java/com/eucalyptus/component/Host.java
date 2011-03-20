@@ -70,6 +70,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -80,18 +81,18 @@ import org.jmanage.easymbean.annotations.ManagedResource;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Managed;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-@Managed
 public class Host implements java.io.Serializable, Comparable<Host> {
-  private static Logger              LOG = Logger.getLogger( Host.class );
+  private static Logger              LOG       = Logger.getLogger( Host.class );
   private final Address              groupsId;
   private ImmutableList<InetAddress> hostAddresses;
   private ViewId                     viewId;
   private Boolean                    hasDatabase;
+  private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
+  private Long                       lastTime  = 0l;
   
   public Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses ) {
     this.groupsId = jgroupsId;
@@ -104,6 +105,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {
+    this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     if ( this.viewId != null && this.viewId.equals( viewId ) ) {
       LOG.debug( "Spurious update (" + viewId + ") for host: " + this );
     } else {

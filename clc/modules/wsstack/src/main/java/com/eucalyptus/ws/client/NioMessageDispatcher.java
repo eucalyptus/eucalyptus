@@ -64,19 +64,14 @@
 package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
-
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleMessage;
-import org.mule.transport.AbstractMessageDispatcher;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
 import org.mule.api.endpoint.OutboundEndpoint;
-
+import org.mule.transport.AbstractMessageDispatcher;
 import com.eucalyptus.ws.Client;
-import com.eucalyptus.ws.client.pipeline.ClusterClientPipeline;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
-import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.NioResponseHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -96,11 +91,7 @@ public class NioMessageDispatcher extends AbstractMessageDispatcher {
     String host = outboundEndpoint.getEndpointURI( ).getHost( );
     int port = outboundEndpoint.getEndpointURI( ).getPort( );
     String servicePath = outboundEndpoint.getEndpointURI( ).getPath( );
-    try {
-      this.client = new NioClient( host, port, servicePath, new InternalClientPipeline( new NioResponseHandler( ) ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e );
-    }    
+    this.client = new NioClient( host, port, servicePath, new InternalClientPipeline( ) );    
   }
   
   @Override

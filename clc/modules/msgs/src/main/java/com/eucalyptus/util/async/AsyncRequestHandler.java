@@ -92,12 +92,11 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           @Override
           public ChannelPipeline getPipeline( ) throws Exception {
             ChannelPipeline pipeline = factory.getPipeline( );
-            ChannelUtil.addPipelineMonitors( pipeline, 30 );
             pipeline.addLast( "request-handler", AsyncRequestHandler.this );
             return pipeline;
           }
         } );
-        LOG.debug( request.getClass( ).getSimpleName( ) + ":" + request.getCorrelationId( ) + " connecting to " + serviceEndpoint.getSocketAddress( ) );
+//TODO:GRZE: better logging here        LOG.debug( request.getClass( ).getSimpleName( ) + ":" + request.getCorrelationId( ) + " connecting to " + serviceEndpoint.getSocketAddress( ) );
         EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
                           request.getCorrelationId( ), serviceEndpoint.getSocketAddress( ).toString( ) ).trace( );
         this.connectFuture = this.clientBootstrap.connect( serviceEndpoint.getSocketAddress( ) );
@@ -108,7 +107,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public void operationComplete( ChannelFuture future ) throws Exception {
             try {
               if ( future.isSuccess( ) ) {
-                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
+//TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
               final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getAddress( ).getHostAddress( );
               if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                 List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {

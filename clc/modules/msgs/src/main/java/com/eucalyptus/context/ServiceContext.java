@@ -92,7 +92,7 @@ public class ServiceContext {
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to contruct session: " + ex.getMessage( ), ex );
     }
     MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-    LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
+    LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
     try {
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( DispatchException ex ) {
@@ -109,7 +109,7 @@ public class ServiceContext {
     dest = ServiceContextManager.mapEndpointToService( dest );
     MuleEvent context = RequestContext.getEvent( );
     try {
-      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( new RuntimeException( ), 3 ) );
+      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {

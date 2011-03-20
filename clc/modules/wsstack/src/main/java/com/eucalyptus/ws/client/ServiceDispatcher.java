@@ -115,7 +115,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
 
   protected NioClient getNioClient( ) throws Exception {
-    return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), new InternalClientPipeline( new NioResponseHandler( ) ) );
+    return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), new InternalClientPipeline( ) );
   }
   /**
    * @see com.eucalyptus.component.Dispatcher#toString()

@@ -96,7 +96,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Managed;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -110,7 +109,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.eucalyptus.empyrean.ServiceInfoType;
 
-@Managed
 public class Component implements HasName<Component> {
   private static Logger               LOG     = Logger.getLogger( Component.class );
   private final ComponentId           identity;

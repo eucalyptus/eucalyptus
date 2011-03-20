@@ -63,11 +63,15 @@
 
 package com.eucalyptus.ws.client.pipeline;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
@@ -77,19 +81,39 @@ import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
+  private static ChannelHandler bindingHandler;
+  private static ChannelHandler wssecHandler;
+  
+  private static void setupHandlers( ) {
+    if ( wssecHandler == null ) {
+      synchronized ( ClusterClientPipelineFactory.class ) {
+        if ( wssecHandler == null ) {
+          wssecHandler = new ClusterWsSecHandler( );
+        }
+      }
+    }
+  }
+
+  public ClusterClientPipelineFactory( ) {
+    setupHandlers( );
+  }
+
+
+
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1048576 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "wssec", new ClusterWsSecHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
+    for( Map.Entry<String,ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 60 /** TODO:GRZE: configurable **/ ).entrySet( ) ) {
+      pipeline.addLast( e.getKey( ), e.getValue( ) );
+    }
+    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( 1024 * 1024 * 20 /** TODO:GRZE: configurable **/ ) );
+    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
+    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
+    pipeline.addLast( "wssec", ClusterClientPipelineFactory.wssecHandler );
+    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
+    pipeline.addLast( "soap", Handlers.soapHandler( ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
     return pipeline;
   }
 }

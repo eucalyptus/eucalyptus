@@ -63,7 +63,6 @@
 
 package com.eucalyptus.util;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
 import groovy.jmx.builder.JmxBuilder;
 import groovy.util.GroovyMBean;
 import java.io.IOException;
@@ -73,6 +72,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.ExportException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -87,7 +87,6 @@ import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import org.apache.log4j.Logger;
-import org.jmanage.easymbean.EasyMBean;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
@@ -113,7 +112,7 @@ public class Mbeans {
   
   public static void init( ) {
     System.setProperty( "euca.jmx.uri", URI );
-    mbeanServer = MBeanServerFactory.createMBeanServer( "eucalyptus" );
+    mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
     
     try {
       try {
@@ -129,9 +128,9 @@ public class Mbeans {
     try {
       jmxServer = JMXConnectorServerFactory.newJMXConnectorServer( new JMXServiceURL( URI ), jmxProps, mbeanServer );
       jmxServer.start( );
-      jmxBuilder = new JmxBuilder( mbeanServer );
+      jmxBuilder = new JmxBuilder( /*mbeanServer*/);
       jmxBuilder.setDefaultJmxNameDomain( "com.eucalyptus" );
-      jmxBuilder.setMBeanServer( mbeanServer );
+//      jmxBuilder.setMBeanServer( mbeanServer );
     } catch ( MalformedURLException ex ) {
       LOG.error( ex, ex );
     } catch ( IOException ex ) {
@@ -144,44 +143,24 @@ public class Mbeans {
   }
   
   public static void register( final Object obj ) {
-    if ( !Ats.from( obj ).has( Managed.class ) ) {
-      throw Exceptions.trace( new RuntimeException( "Attempted to register an object which doesn't have an @Managed annotation as an MBean." ) );
-    } else {
-      try {
-        List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( "jmx.export{ " + Ats.from( obj ).get( Managed.class ).value( ) + "}", new HashMap( ) {
-          {
-            put( "jmx", jmxBuilder );
-            put( "obj", obj );
-          }
-        } );
-        for( GroovyMBean mbean : mbeans ) {
-          LOG.info( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
-          LOG.info( "Exported MBean: " + mbean );
-        }
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( "Exporting MBean failed: " + ex.getMessage( ), ex );
-      } catch ( IOException ex ) {
-        LOG.error( "Error after export MBean: " + ex.getMessage( ), ex );
-      }
-    }
-  }
-  
-  public static ObjectInstance register( Object obj, String key, String value ) {
-    return register( obj, Maps.immutableBiMap( key, value ) );
-  }
-  
-  public static ObjectInstance register( Object obj, Map<String, String> properties ) {//TODO:GRZE:REMOVE
+    String defaultExport = "bean( obj )";
+    //TODO:GRZE:load class specific config here
     try {
-      ObjectInstance o = EasyMBean.getMBean( obj, new ObjectName( obj.getClass( ).getCanonicalName( ).replaceAll( "\\..*\\z", "" ),
-                                                                  new Hashtable<String, String>( properties ) ), mbeanServer );
-      LOG.info( "Registered MBean: " + o + " for " + obj );
-      return o;
-    } catch ( MalformedObjectNameException ex ) {
-      LOG.error( ex, ex );
-      throw new RuntimeException( ex );
-    } catch ( NullPointerException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
+      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( "jmx.export{ " + defaultExport + "}", new HashMap( ) {
+        {
+          put( "jmx", jmxBuilder );
+          put( "obj", obj );
+        }
+      } );
+      for ( GroovyMBean mbean : mbeans ) {
+        LOG.info( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
+        LOG.info( "Exported MBean: " + mbean );
+      }
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( "Exporting MBean failed: " + ex.getMessage( ), ex );
+    } catch ( IOException ex ) {
+      LOG.error( "Error after export MBean: " + ex.getMessage( ), ex );
     }
   }
+  
 }
