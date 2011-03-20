@@ -116,6 +116,9 @@ public enum SubDirectory {
     }
   }
   
+  public File getChildFile( String... args ) {
+    return new File( getChildPath( args ) );
+  }
   public String getChildPath( String... args ) {
     String ret = this.toString( );
     for( String s : args ) {

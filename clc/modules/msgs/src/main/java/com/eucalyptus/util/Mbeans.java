@@ -65,9 +65,11 @@ package com.eucalyptus.util;
 
 import groovy.jmx.builder.JmxBuilder;
 import groovy.util.GroovyMBean;
+import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.nio.charset.Charset;
 import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -86,13 +88,16 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 
 public class Mbeans {
   private static final Map<String, String> EMPTY    = new HashMap<String, String>( );
   private static Logger                    LOG      = Logger.getLogger( Mbeans.class );
-  private static final int                 JMX_PORT = 1099;//TODO:GRZE: configurable
+  private static final int                 JMX_PORT = 1099;                                                                        //TODO:GRZE: configurable
 //private static final int                 JMX_PORT = 8772;
-  private static final String              JMX_HOST = "localhost";//TODO:GRZE: configurable
+  private static final String              JMX_HOST = "localhost";                                                                 //TODO:GRZE: configurable
   private static final String              URI      = "service:jmx:rmi:///jndi/rmi://" + JMX_HOST + ":" + JMX_PORT + "/eucalyptus";
   private static MBeanServer               mbeanServer;
   private static JMXConnectorServer        jmxServer;
@@ -106,6 +111,7 @@ public class Mbeans {
   static {
     Mbeans.init( );
   }
+  
   public static void init( ) {////TODO:GRZE: make it a bootstrapper
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
@@ -139,16 +145,32 @@ public class Mbeans {
   }
   
   public static void register( final Object obj ) {
-    if( obj.getClass( ).isAnonymousClass( ) ) {
-      throw Exceptions.uncatchable( "MBeans.register(Object) only supports the registration of concrete classes, your argument is anonymous: " + obj.getClass( ).getName( ) );
+    Class targetType = obj.getClass( );
+    if( targetType.isAnonymousClass( ) ) {
+      targetType = ( targetType.getSuperclass( ) != null ? targetType.getSuperclass( ) : targetType.getInterfaces( )[0]);
     }
-    String defaultExport = "bean( " +
-        " target: obj, " +
-        " name: \"${(obj.class.package.name}:type=${obj.getClass().getSimpleName()},\"," +
-    		" )";
+    String exportString = "jmx.export{ bean( " +
+    " target: obj, " +
+    " name: \"${obj.class.package.name}:type=${obj.getClass().getSimpleName()},\"," +
+    " desc: \"${obj.toString()}\"" +
+    " ) }";
+    for( Class c : Classes.ancestry( targetType ) ) {
+      File jmxConfig = SubDirectory.MANAGEMENT.getChildFile( c.getCanonicalName( ) );
+      if(  jmxConfig.exists( ) ) {
+        LOG.debug( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
+        try {
+          exportString = Files.toString( jmxConfig, Charset.defaultCharset( ) );
+          LOG.debug( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
+          LOG.trace( exportString );
+          break;
+        } catch ( IOException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
     //TODO:GRZE:load class specific config here
     try {
-      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( "jmx.export{ " + defaultExport + "}", new HashMap( ) {
+      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( exportString, new HashMap( ) {
         {
           put( "jmx", jmxBuilder );
           put( "obj", obj );
@@ -164,5 +186,4 @@ public class Mbeans {
       LOG.error( "Error after export MBean: " + ex.getMessage( ), ex );
     }
   }
-  
 }
