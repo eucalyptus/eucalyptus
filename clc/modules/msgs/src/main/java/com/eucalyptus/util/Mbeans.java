@@ -161,7 +161,6 @@ public class Mbeans {
         try {
           exportString = Files.toString( jmxConfig, Charset.defaultCharset( ) );
           LOG.debug( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
-          LOG.trace( exportString );
           break;
         } catch ( IOException ex ) {
           LOG.error( ex , ex );
@@ -170,6 +169,8 @@ public class Mbeans {
     }
     //TODO:GRZE:load class specific config here
     try {
+      LOG.debug( "Exporting MBean: " + obj );
+      LOG.debug( "Exporting MBean: " + exportString );
       List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( exportString, new HashMap( ) {
         {
           put( "jmx", jmxBuilder );
