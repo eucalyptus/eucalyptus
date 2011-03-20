@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -31,6 +32,7 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
@@ -170,15 +172,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return false;
   }
   
-  
+  private static final ConcurrentMap<String,Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
   public ChannelPipelineFactory getClientPipeline( ) {
-    return helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.InternalClientPipeline" );//TODO:GRZE:URGENT: fix handling of internal pipeline
+    return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
-  private static Class<ChannelPipelineFactory> clientPipelineClass = null;
+  private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
   protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
-    if( clientPipelineClass != null ) {
+    if( clientPipelines.containsKey( fqName ) ) {
       try {
-        return clientPipelineClass.newInstance( );
+        return clientPipelines.get( fqName ).newInstance( );
       } catch ( InstantiationException ex ) {
         LOG.error( ex , ex );
       } catch ( IllegalAccessException ex ) {
@@ -186,8 +188,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       }
     } else {
       try {
-        clientPipelineClass = ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName );
-        return clientPipelineClass.newInstance( );
+        clientPipelines.putIfAbsent( fqName, ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
+        return clientPipelines.get( fqName ).newInstance( );
       } catch ( InstantiationException ex ) {
         LOG.error( ex, ex );
       } catch ( IllegalAccessException ex ) {
@@ -334,7 +336,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public String toString( ) {
     return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s:localEndpointName=%s:serviceModel=%s:uriPattern=%s",
                           this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
-                          this.hasCredentials( ), clientPipelineClass, this.lookupBaseMessageType( ), this.getLocalEndpointName( ),
+                          this.hasCredentials( ), defaultClientPipelineClass, this.lookupBaseMessageType( ), this.getLocalEndpointName( ),
                           this.getServiceModelFileName( ), this.getUriPattern( ) );
   }
 }
