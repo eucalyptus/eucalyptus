@@ -109,7 +109,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
           return false;
         }
       } );
-      Multimap<VmTypeAvailability, Cluster> sorted = Multimaps.newTreeMultimap( );
+      Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
       for ( Cluster c : authorizedClusters ) {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
       }

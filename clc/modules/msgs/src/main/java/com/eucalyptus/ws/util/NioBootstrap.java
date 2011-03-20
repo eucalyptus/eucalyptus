@@ -60,7 +60,7 @@
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util.async;
+package com.eucalyptus.ws.util;
 
 import java.net.SocketAddress;
 import java.nio.channels.NotYetConnectedException;

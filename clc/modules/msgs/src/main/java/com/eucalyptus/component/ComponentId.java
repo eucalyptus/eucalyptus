@@ -172,24 +172,29 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   
   public ChannelPipelineFactory getClientPipeline( ) {
-    return new ChannelPipelineFactory( ) {
-      
-      @Override
-      public ChannelPipeline getPipeline( ) throws Exception {
-        return Channels.pipeline( );
-      }
-    };
+    return helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.InternalClientPipeline" );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
-  
+  private static Class<ChannelPipelineFactory> clientPipelineClass = null;
   protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
-    try {
-      return ( ChannelPipelineFactory ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ).newInstance( );
-    } catch ( InstantiationException ex ) {
-      LOG.error( ex, ex );
-    } catch ( IllegalAccessException ex ) {
-      LOG.error( ex, ex );
-    } catch ( ClassNotFoundException ex ) {
-      LOG.error( ex, ex );
+    if( clientPipelineClass != null ) {
+      try {
+        return clientPipelineClass.newInstance( );
+      } catch ( InstantiationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( IllegalAccessException ex ) {
+        LOG.error( ex , ex );
+      }
+    } else {
+      try {
+        clientPipelineClass = ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName );
+        return clientPipelineClass.newInstance( );
+      } catch ( InstantiationException ex ) {
+        LOG.error( ex, ex );
+      } catch ( IllegalAccessException ex ) {
+        LOG.error( ex, ex );
+      } catch ( ClassNotFoundException ex ) {
+        LOG.error( ex, ex );
+      }
     }
     return new ChannelPipelineFactory( ) {
       

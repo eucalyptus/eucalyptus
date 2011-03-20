@@ -77,6 +77,7 @@ import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.ExtendedMembershipListener;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
+import org.jgroups.PhysicalAddress;
 import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
@@ -96,12 +97,12 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.google.common.base.Join;
 import com.google.common.collect.Lists;
 
 public class HostManager implements Receiver, ExtendedMembershipListener, EventListener {
   private static Logger                       LOG         = Logger.getLogger( HostManager.class );
   private final JChannel                      membershipChannel;
+  private final PhysicalAddress               physicalAddress;
   private final String                        membershipGroupName;
   private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
   public static HostManager                   singleton;
@@ -113,6 +114,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
+      this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS, this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
@@ -151,7 +153,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   private static JChannel buildChannel( ) {
     final JChannel channel = new JChannel( false );
-    channel.setName( InetAddress.getLocalHost( ).getCanonicalHostName( ) );
+    channel.setName( Internets.localhostIdentifier( ) );
     ProtocolStack stack = new ProtocolStack( );
     channel.setProtocolStack( stack );
     stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
@@ -281,6 +283,10 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   public JChannel getMembershipChannel( ) {
     return this.membershipChannel;
+  }
+
+  public PhysicalAddress getPhysicalAddress( ) {
+    return this.physicalAddress;
   }
   
 }

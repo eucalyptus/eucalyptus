@@ -97,8 +97,8 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
         } else {
           lastTime = System.currentTimeMillis( );
           StringBuilder buf = new StringBuilder( );
-          Multimap<String, String> networks = Multimaps.newArrayListMultimap( );
-          Multimap<String, String> rules = Multimaps.newArrayListMultimap( );
+          Multimap<String, String> networks = ArrayListMultimap.create( );
+          Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );

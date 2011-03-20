@@ -86,7 +86,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Functions;
-import com.google.common.base.Join;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Collections;
@@ -155,7 +155,7 @@ public class SystemBootstrapper {
       }
             );
       
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on("\n").join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       Mbeans.init( );
       System.setProperty( "euca.ws.port", "8773" );
@@ -379,7 +379,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
-      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING );
+      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
         banner += prefix + iface.getDisplayName( ) + SEP + addr;
       }

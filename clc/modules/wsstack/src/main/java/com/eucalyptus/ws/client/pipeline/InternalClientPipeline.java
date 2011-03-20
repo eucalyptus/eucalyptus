@@ -72,7 +72,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.client.NioClient.ResponseHandlingPipeline;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.ResponseHandler;
 import com.google.common.base.Supplier;

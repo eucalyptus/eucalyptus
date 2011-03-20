@@ -82,7 +82,7 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
-import com.google.common.base.Join;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -221,8 +221,8 @@ public class Bootstrap {
         LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( Bootstrap.loading
           ? "load()"
           : "start()" ) ) );
-        LOG.debug( Join.join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
-        LOG.debug( Join.join( this.name( ) + " skiptstrappers: ", this.bootstrappers ) );
+        LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
+        LOG.debug( Joiner.on( " " ).join( this.name( ) + " skiptstrappers: ", this.bootstrappers ) );
       }
     }
     

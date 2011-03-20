@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -13,9 +14,9 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 public class PropertyDirectory {
   private static Logger                                 LOG         = Logger.getLogger( PropertyDirectory.class );
   private static Map<String, ConfigurableProperty>      fqMap       = Maps.newHashMap( );
-  private static Multimap<String, ConfigurableProperty> fqPrefixMap = Multimaps.newHashMultimap( );
+  private static Multimap<String, ConfigurableProperty> fqPrefixMap = HashMultimap.create( );
   private static Map<String, ConfigurableProperty>      fqPendingMap       = Maps.newHashMap( );
- private static Multimap<String, ConfigurableProperty> fqPendingPrefixMap = Multimaps.newHashMultimap( );
+ private static Multimap<String, ConfigurableProperty> fqPendingPrefixMap = HashMultimap.create( );
 
   private static List<ConfigurablePropertyBuilder>      builders    = Lists.newArrayList( new StaticPropertyEntry.StaticPropertyBuilder( ),
                                                                                           new SingletonDatabasePropertyEntry.DatabasePropertyBuilder( ),

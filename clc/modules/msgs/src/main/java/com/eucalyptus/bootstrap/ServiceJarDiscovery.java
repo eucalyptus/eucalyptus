@@ -8,7 +8,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -24,9 +23,9 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
 /**
@@ -35,7 +34,7 @@ import com.google.common.collect.Sets;
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
-  private static Multimap<Class, String>        classList = Multimaps.newArrayListMultimap( );
+  private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
   @SuppressWarnings( { "deprecation", "unchecked" } )
   private static void processFile( File f ) throws IOException {

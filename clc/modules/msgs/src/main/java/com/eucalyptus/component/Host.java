@@ -73,6 +73,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Internets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
   private static Logger              LOG       = Logger.getLogger( Host.class );
@@ -99,7 +100,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       LOG.debug( "Spurious update (" + viewId + ") for host: " + this );
     } else {
       LOG.debug( "Applying update (" + viewId + ") for host: " + this );
-      ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Lists.sortedCopy( addresses, Internets.INET_ADDRESS_COMPARATOR ) );
+      ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
       if ( this.viewId == null ) {
         this.viewId = viewId;
         LOG.trace( "Adding host with addresses: " + addresses );

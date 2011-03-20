@@ -26,7 +26,7 @@ public class PersistenceContexts {
   public static int                                     MAX_FAIL        = 5;
   private static AtomicInteger                          failCount       = new AtomicInteger( 0 );
   private static Logger                                 LOG             = Logger.getLogger( PersistenceContexts.class );
-  private static final ArrayListMultimap<String, Class> entities        = Multimaps.newArrayListMultimap( );
+  private static final ArrayListMultimap<String, Class> entities        = ArrayListMultimap.create( );
   private static final List<Class>                      sharedEntities  = Lists.newArrayList( );
   private static Map<String, EntityManagerFactoryImpl>  emf             = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
   private static List<Exception>                        illegalAccesses = Collections.synchronizedList( Lists.newArrayList( ) );

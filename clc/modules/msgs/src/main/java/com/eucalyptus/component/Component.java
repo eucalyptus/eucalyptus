@@ -688,7 +688,7 @@ public class Component implements HasName<Component> {
   
   class ServiceRegistry {
     private final AtomicReference<Service> localService = new AtomicReference( null );
-    private final Map<FullName, Service>   services     = Maps.newConcurrentHashMap( );
+    private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return ( this.localService.get( ) == null );
@@ -932,7 +932,7 @@ public class Component implements HasName<Component> {
       public boolean apply( Service arg0 ) {
         return Component.State.ENABLED.equals( arg0.getState( ) );
       }
-    } );;
+    } );
   }
   
 }

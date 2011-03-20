@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.ws.client;
 
-import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleMessage;
 import org.mule.api.MuleEvent;
@@ -72,7 +71,6 @@ import org.mule.api.endpoint.OutboundEndpoint;
 import org.mule.transport.AbstractMessageDispatcher;
 import com.eucalyptus.ws.Client;
 import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
-import com.eucalyptus.ws.handlers.NioResponseHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class NioMessageDispatcher extends AbstractMessageDispatcher {

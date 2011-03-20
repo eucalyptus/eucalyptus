@@ -80,13 +80,22 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 public class Internets {
-  private static Logger LOG = Logger.getLogger( Internets.class );
+  private static Logger       LOG     = Logger.getLogger( Internets.class );
+  private static final String localId = localhostIdentifier( );
+  
+  public static String localhostIdentifier( ) {
+    return localId != null
+      ? localId
+      : Joiner.on( ":" ).join( getAllAddresses( ) );
+  }
   
   public static List<NetworkInterface> getNetworkInterfaces( ) {
     try {
@@ -119,7 +128,7 @@ public class Internets {
     return addrs;
   }
   
-  public static List<String> getAllAddresses( ) throws SocketException {
+  public static List<String> getAllAddresses( ) {
     return Lists.transform( Internets.getAllInetAddresses( ), new Function<InetAddress, String>( ) {
       @Override
       public String apply( InetAddress arg0 ) {
@@ -142,7 +151,7 @@ public class Internets {
     try {
       return inetAddr.isReachable( 10000 );
     } catch ( IOException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return false;
     }//TODO:GRZE:make reachability time tuneable
   }
@@ -153,7 +162,7 @@ public class Internets {
       InetAddress inetAddr = Inet4Address.getByName( addr );
       return testReachability( inetAddr );
     } catch ( UnknownHostException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return false;
     }
   }

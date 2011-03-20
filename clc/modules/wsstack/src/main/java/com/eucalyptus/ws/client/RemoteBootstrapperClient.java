@@ -112,12 +112,12 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.util.NioBootstrap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -262,7 +262,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   private void fireHeartbeat( ) {
-    Multimap<String,ServiceConfiguration> services = Multimaps.newArrayListMultimap( );
+    Multimap<String,ServiceConfiguration> services = ArrayListMultimap.create( );
     for( Component c : Components.list( ) ) {
       if( !c.getComponentId( ).isCloudLocal( ) && !c.getComponentId( ).isAlwaysLocal( ) ) {
         for( Service s : c.lookupServices( ) ) {

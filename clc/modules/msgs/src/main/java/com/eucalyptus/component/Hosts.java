@@ -144,6 +144,6 @@ public class Hosts {
   }
   
   public static Address localMembershipAddress( ) {
-    return HostManager.singleton.getMembershipChannel( ).getAddress( );
+    return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
   }
 }

@@ -29,7 +29,6 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.NioSslHandler;

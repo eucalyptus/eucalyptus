@@ -15,7 +15,7 @@ import com.google.common.collect.Multimaps;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                                  LOG           = Logger.getLogger( StatefulMessageSet.class );
-  private Multimap<E, Request>                           messages      = Multimaps.newArrayListMultimap( );
+  private Multimap<E, Request>                           messages      = ArrayListMultimap.create( );
   private ConcurrentLinkedQueue<CheckedListenableFuture> pendingEvents = new ConcurrentLinkedQueue<CheckedListenableFuture>( );
   private E[]                                            states;
   private E                                              state;

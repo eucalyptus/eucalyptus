@@ -7,20 +7,22 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
-import com.eucalyptus.ws.client.pipeline.InternalClientPipeline;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -28,8 +30,9 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ServiceDispatcher implements Dispatcher {
-  private static Logger                              LOG     = Logger.getLogger( ServiceDispatcher.class );
-  private static ConcurrentMap<FullName, Dispatcher> proxies = new ConcurrentHashMap<FullName, Dispatcher>( );
+  private static Logger                              LOG              = Logger.getLogger( ServiceDispatcher.class );
+  private static ConcurrentMap<FullName, Dispatcher> proxies          = new ConcurrentHashMap<FullName, Dispatcher>( );
+  private static ChannelPipelineFactory              internalPipeline = ComponentIds.lookup( Empyrean.class ).getClientPipeline( );
   
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
     try {
@@ -48,7 +51,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   
   public static Iterable<Dispatcher> lookupMany( Component c ) {
     return Iterables.transform( c.enabledServices( ), new Function<Service, Dispatcher>( ) {
-
+      
       @Override
       public Dispatcher apply( Service arg0 ) {
         return arg0.getDispatcher( );
@@ -82,7 +85,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
     }
     
     public final Component getComponent( ) {
-      return serviceConfiguration.getComponent( );
+      return serviceConfiguration.lookupComponent( );
     }
     
     public final String getName( ) {
@@ -94,7 +97,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
     }
     
     protected final NioClient getNioClient( ) throws Exception {
-      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), new InternalClientPipeline( ) );
+      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), ComponentIds.lookup( Empyrean.class ).getClientPipeline( ) );
     }
     
     protected final ServiceConfiguration getServiceConfiguration( ) {

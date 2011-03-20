@@ -46,6 +46,7 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.ws.util.NioBootstrap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
