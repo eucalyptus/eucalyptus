@@ -40,6 +40,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -h, --home=DIRECTORY          Eucalyptus home directory.  \n                                  (default=`/opt/grze_eee/')",
   "  -c, --child                   This system is a child/secondary host.  \n                                  (default=off)",
   "  -p, --parent=HOSTNAME         Host address of parent(s) for bootstrap.",
+  "  -m, --merge-db                Attempt to merge the database from a parent.  \n                                  (default=off)",
   "  -D, --define=STRING           Set system properties.",
   "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=off)",
   "  -k, --kill                    Kill a daemonized Eucalyptus.  (default=off)",
@@ -92,7 +93,7 @@ init_help_array(void)
   eucalyptus_opts_help[10] = eucalyptus_opts_full_help[10];
   eucalyptus_opts_help[11] = eucalyptus_opts_full_help[11];
   eucalyptus_opts_help[12] = eucalyptus_opts_full_help[12];
-  eucalyptus_opts_help[13] = eucalyptus_opts_full_help[14];
+  eucalyptus_opts_help[13] = eucalyptus_opts_full_help[13];
   eucalyptus_opts_help[14] = eucalyptus_opts_full_help[15];
   eucalyptus_opts_help[15] = eucalyptus_opts_full_help[16];
   eucalyptus_opts_help[16] = eucalyptus_opts_full_help[17];
@@ -104,17 +105,18 @@ init_help_array(void)
   eucalyptus_opts_help[22] = eucalyptus_opts_full_help[23];
   eucalyptus_opts_help[23] = eucalyptus_opts_full_help[24];
   eucalyptus_opts_help[24] = eucalyptus_opts_full_help[25];
-  eucalyptus_opts_help[25] = eucalyptus_opts_full_help[31];
+  eucalyptus_opts_help[25] = eucalyptus_opts_full_help[26];
   eucalyptus_opts_help[26] = eucalyptus_opts_full_help[32];
-  eucalyptus_opts_help[27] = eucalyptus_opts_full_help[34];
+  eucalyptus_opts_help[27] = eucalyptus_opts_full_help[33];
   eucalyptus_opts_help[28] = eucalyptus_opts_full_help[35];
   eucalyptus_opts_help[29] = eucalyptus_opts_full_help[36];
   eucalyptus_opts_help[30] = eucalyptus_opts_full_help[37];
-  eucalyptus_opts_help[31] = 0; 
+  eucalyptus_opts_help[31] = eucalyptus_opts_full_help[38];
+  eucalyptus_opts_help[32] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[32];
+const char *eucalyptus_opts_help[33];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -147,6 +149,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->home_given = 0 ;
   args_info->child_given = 0 ;
   args_info->parent_given = 0 ;
+  args_info->merge_db_given = 0 ;
   args_info->define_given = 0 ;
   args_info->fork_given = 0 ;
   args_info->kill_given = 0 ;
@@ -190,6 +193,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->child_flag = 0;
   args_info->parent_arg = NULL;
   args_info->parent_orig = NULL;
+  args_info->merge_db_flag = 0;
   args_info->define_arg = NULL;
   args_info->define_orig = NULL;
   args_info->fork_flag = 0;
@@ -249,40 +253,41 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->parent_help = eucalyptus_opts_full_help[7] ;
   args_info->parent_min = 0;
   args_info->parent_max = 0;
-  args_info->define_help = eucalyptus_opts_full_help[8] ;
+  args_info->merge_db_help = eucalyptus_opts_full_help[8] ;
+  args_info->define_help = eucalyptus_opts_full_help[9] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->fork_help = eucalyptus_opts_full_help[9] ;
-  args_info->kill_help = eucalyptus_opts_full_help[10] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[11] ;
-  args_info->verbose_help = eucalyptus_opts_full_help[13] ;
-  args_info->log_level_help = eucalyptus_opts_full_help[14] ;
-  args_info->log_appender_help = eucalyptus_opts_full_help[15] ;
-  args_info->exhaustive_help = eucalyptus_opts_full_help[16] ;
-  args_info->exhaustive_db_help = eucalyptus_opts_full_help[17] ;
-  args_info->exhaustive_user_help = eucalyptus_opts_full_help[18] ;
-  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[19] ;
-  args_info->exhaustive_external_help = eucalyptus_opts_full_help[20] ;
-  args_info->out_help = eucalyptus_opts_full_help[21] ;
-  args_info->err_help = eucalyptus_opts_full_help[22] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[24] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[25] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[26] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[27] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[28] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[29] ;
-  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[30] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[32] ;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[33] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[34] ;
+  args_info->fork_help = eucalyptus_opts_full_help[10] ;
+  args_info->kill_help = eucalyptus_opts_full_help[11] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[12] ;
+  args_info->verbose_help = eucalyptus_opts_full_help[14] ;
+  args_info->log_level_help = eucalyptus_opts_full_help[15] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[16] ;
+  args_info->exhaustive_help = eucalyptus_opts_full_help[17] ;
+  args_info->exhaustive_db_help = eucalyptus_opts_full_help[18] ;
+  args_info->exhaustive_user_help = eucalyptus_opts_full_help[19] ;
+  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[20] ;
+  args_info->exhaustive_external_help = eucalyptus_opts_full_help[21] ;
+  args_info->out_help = eucalyptus_opts_full_help[22] ;
+  args_info->err_help = eucalyptus_opts_full_help[23] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[25] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[26] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[27] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[28] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[29] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[30] ;
+  args_info->disable_vmwarebroker_help = eucalyptus_opts_full_help[31] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[33] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[34] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[35] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->debug_help = eucalyptus_opts_full_help[35] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[36] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[37] ;
-  args_info->profile_help = eucalyptus_opts_full_help[38] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[39] ;
-  args_info->agentlib_help = eucalyptus_opts_full_help[40] ;
+  args_info->debug_help = eucalyptus_opts_full_help[36] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[37] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[38] ;
+  args_info->profile_help = eucalyptus_opts_full_help[39] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[40] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[41] ;
   
 }
 
@@ -494,6 +499,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
   if (args_info->child_given)
     write_into_file(outfile, "child", 0, 0 );
   write_multiple_into_file(outfile, args_info->parent_given, "parent", args_info->parent_orig, 0);
+  if (args_info->merge_db_given)
+    write_into_file(outfile, "merge-db", 0, 0 );
   write_multiple_into_file(outfile, args_info->define_given, "define", args_info->define_orig, 0);
   if (args_info->fork_given)
     write_into_file(outfile, "fork", 0, 0 );
@@ -813,6 +820,16 @@ arguments_required2 (struct eucalyptus_opts *args_info, const char *prog_name, c
   
   
   /* checks for dependences among options */
+  if (args_info->parent_given && ! args_info->child_given)
+    {
+      fprintf (stderr, "%s: '--parent' ('-p') option depends on option 'child'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->merge_db_given && ! args_info->child_given)
+    {
+      fprintf (stderr, "%s: '--merge-db' ('-m') option depends on option 'child'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
   if (args_info->debug_port_given && ! args_info->debug_given)
     {
       fprintf (stderr, "%s: '--debug-port' option depends on option 'debug'%s\n", prog_name, (additional_error ? additional_error : ""));
@@ -1130,6 +1147,7 @@ arguments_internal (
         { "home",	1, NULL, 'h' },
         { "child",	0, NULL, 'c' },
         { "parent",	1, NULL, 'p' },
+        { "merge-db",	0, NULL, 'm' },
         { "define",	1, NULL, 'D' },
         { "fork",	0, NULL, 'f' },
         { "kill",	0, NULL, 'k' },
@@ -1163,7 +1181,7 @@ arguments_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:cp:D:fkvl:L:xo:e:j:X:d", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:cp:mD:fkvl:L:xo:e:j:X:d", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1213,6 +1231,16 @@ arguments_internal (
           if (update_multiple_arg_temp(&parent_list, 
               &(local_args_info.parent_given), optarg, 0, 0, ARG_STRING,
               "parent", 'p',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'm':	/* Attempt to merge the database from a parent..  */
+        
+        
+          if (update_arg((void *)&(args_info->merge_db_flag), 0, &(args_info->merge_db_given),
+              &(local_args_info.merge_db_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "merge-db", 'm',
               additional_error))
             goto failure;
         

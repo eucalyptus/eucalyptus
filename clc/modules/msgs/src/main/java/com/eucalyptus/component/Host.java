@@ -65,35 +65,76 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.log4j.Logger;
 import org.jgroups.Address;
+import org.jgroups.ViewId;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.Internets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
-public class Host implements java.io.Serializable {
-  private final Address                   jgroupsId;
-  private final NavigableSet<InetAddress> hostAddresses = new ConcurrentSkipListSet<InetAddress>( );
+public class Host implements java.io.Serializable, Comparable<Host> {
+  private static Logger              LOG       = Logger.getLogger( Host.class );
+  private final Address              groupsId;
+  private ImmutableList<InetAddress> hostAddresses;
+  private ViewId                     viewId;
+  private Boolean                    hasDatabase;
+  private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
+  private Long                       lastTime  = 0l;
   
-  public Host( Address jgroupsId, List<InetAddress> hostAddresses ) {
-    super( );
-    this.jgroupsId = jgroupsId;
-    this.hostAddresses.addAll( hostAddresses );
+  public Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses ) {
+    this.groupsId = jgroupsId;
+    this.update( viewId, hasDb, hostAddresses );
   }
   
-  public Address getJgroupsId( ) {
-    return this.jgroupsId;
+  public Host( ViewId viewId ) {
+    this.groupsId = Hosts.localMembershipAddress( );
+    this.update( viewId, Components.lookup( Eucalyptus.class ).isAvailableLocally( ), Internets.getAllInetAddresses( ) );
   }
   
-  public NavigableSet<InetAddress> getHostAddresses( ) {
+  synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {
+    this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
+    if ( this.viewId != null && this.viewId.equals( viewId ) ) {
+      LOG.debug( "Spurious update (" + viewId + ") for host: " + this );
+    } else {
+      LOG.debug( "Applying update (" + viewId + ") for host: " + this );
+      ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
+      if ( this.viewId == null ) {
+        this.viewId = viewId;
+        LOG.trace( "Adding host with addresses: " + addresses );
+      }
+      this.viewId = viewId;
+      this.hasDatabase = hasDb;
+      this.hostAddresses = newAddrs;
+      LOG.trace( "Updated host: " + this );
+    }
+  }
+  
+  public Address getGroupsId( ) {
+    return this.groupsId;
+  }
+  
+  public ImmutableList<InetAddress> getHostAddresses( ) {
     return this.hostAddresses;
+  }
+  
+  public ViewId getViewId( ) {
+    return this.viewId;
+  }
+  
+  public Boolean hasDatabase( ) {
+    return this.hasDatabase;
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.jgroupsId == null )
+    result = prime * result + ( ( this.groupsId == null )
       ? 0
-      : this.jgroupsId.hashCode( ) );
+      : this.groupsId.hashCode( ) );
     return result;
   }
   
@@ -109,14 +150,24 @@ public class Host implements java.io.Serializable {
       return false;
     }
     Host other = ( Host ) obj;
-    if ( this.jgroupsId == null ) {
-      if ( other.jgroupsId != null ) {
+    if ( this.groupsId == null ) {
+      if ( other.groupsId != null ) {
         return false;
       }
-    } else if ( this.jgroupsId.compareTo( other.jgroupsId ) != 0 ) {
+    } else if ( this.groupsId.toString( ).equals( other.groupsId.toString( ) ) ) {
       return false;
     }
     return true;
+  }
+  
+  @Override
+  public int compareTo( Host that ) {
+    return this.getGroupsId( ).compareTo( that.getGroupsId( ) );
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:hasDatabase=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase );
   }
   
 }

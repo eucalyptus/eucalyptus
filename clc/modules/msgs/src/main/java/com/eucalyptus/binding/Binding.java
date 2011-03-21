@@ -105,7 +105,7 @@ public class Binding {
   private Map<String, String> classToElementMap   = Maps.newHashMap( );
   private Map<String, String> classToNamespaceMap = Maps.newHashMap( );
   
-  protected Binding( final String name ) throws BindingException {
+  protected Binding( final String name ) {
     this.name = name;
   }
   

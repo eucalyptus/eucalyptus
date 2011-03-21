@@ -724,8 +724,13 @@ int java_init(euca_opts *args, java_home_t *data) {
 		for (parentNum = 0; parentNum < args->parent_given; parentNum++) {
 			JVM_ARG(opt[++x], "-Deuca.parent.%1$d=%2$s", parentNum, args->parent_arg[parentNum]);
 		}
+		JVM_ARG(opt[++x], "-Deuca.child=%d",parentNum);//euca.child gives the number of parent's supplied to bootstrap this child.  euca.child < 0 means parent.
+		if (args->merge_db_flag) {
+			JVM_ARG(opt[++x], "-Deuca.merge.db");//implies Eucalyptus component isLocal
+		}
+	} else {
+		JVM_ARG(opt[++x], "-Deuca.child=-1");
 	}
-	JVM_ARG(opt[++x], "-Deuca.child=%d",parentNum);//euca.child gives the number of parent's supplied to bootstrap this child.  euca.child < 0 means parent.
 	if (args->remote_dns_flag) {
 		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
 	}
@@ -742,6 +747,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 	}
 	if (args->debug_flag || args->profile_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
+//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
+		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(
 				args, home));

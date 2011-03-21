@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,49 +53,68 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.client.pipeline;
 
-import java.security.GeneralSecurityException;
+package com.eucalyptus.bootstrap;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
+import java.util.concurrent.TimeUnit;
+import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 
-import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.ResponseHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
-
-public class ClusterClientPipeline extends NioClientPipeline {
-  public ClusterClientPipeline( final ResponseHandler handler ) throws GeneralSecurityException {
-    super( handler, "eucalyptus_ucsb_edu", new ClusterWsSecHandler( ) );
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.RemoteConfiguration )
+public class HostMembershipBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( HostMembershipBootstrapper.class );
+  
+  @Override
+  public boolean load( ) throws Exception {
+    try {
+      HostManager.getInstance( );
+      LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+      while( !HostManager.isReady( ) ) {
+        TimeUnit.SECONDS.sleep( 1 );
+        LOG.info( "Waiting for system view with database..." );
+      }
+      return true;
+    } catch ( Exception ex ) {
+      LOG.fatal( ex, ex );
+      BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+      return false;
+    }
   }
   
-  @Override public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1024*1024*20 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "wssec", this.getWssecHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding", this.getBindingHandler( ) );
-    pipeline.addLast( "handler", this.getHandler( ) );
-    return pipeline;
+  @Override
+  public boolean start( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+  
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
   }
   
 }

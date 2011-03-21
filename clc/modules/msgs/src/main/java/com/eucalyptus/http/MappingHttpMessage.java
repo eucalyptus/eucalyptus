@@ -80,7 +80,7 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
   private String       messageString;
   private SOAPEnvelope soapEnvelope;
   private OMElement    omMessage;
-  private Object       message;
+  protected Object       message;
   private User         user;
   private Boolean      keepAlive = Boolean.TRUE;
   private final Long         timestamp = System.currentTimeMillis( );

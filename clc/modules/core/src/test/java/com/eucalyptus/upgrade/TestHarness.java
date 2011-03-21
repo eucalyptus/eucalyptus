@@ -245,8 +245,7 @@ public class TestHarness
 				try {
 					JarFile jar = new JarFile(f);
 					Enumeration<JarEntry> jarList = jar.entries();
-					while (jarList.hasMoreElements()) {
-						JarEntry j = jarList.nextElement();
+					for( JarEntry j : Collections.list( jar.entries() ) ) {
 						if (j.getName().matches(".*\\.class.{0,1}")) {
 							String classGuess = j.getName()
 									.replaceAll("/", ".")

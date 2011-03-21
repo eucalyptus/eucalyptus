@@ -17,9 +17,9 @@ import com.google.common.collect.Maps;
 
 public class StateUpdateHandler implements EventListener {
   private static Logger LOG = Logger.getLogger( StateUpdateHandler.class );
-  private static final ConcurrentMap<String,StateUpdateHandler> clusterMap = Maps.newConcurrentHashMap( );
-  private final ConcurrentMap<Class,AtomicBoolean> inflightMap = Maps.newConcurrentHashMap( );
-  private final ConcurrentMap<Class,MessageCallback> callbackMap = Maps.newConcurrentHashMap( );
+  private static final ConcurrentMap<String,StateUpdateHandler> clusterMap = Maps.newConcurrentMap( );
+  private final ConcurrentMap<Class,AtomicBoolean> inflightMap = Maps.newConcurrentMap( );
+  private final ConcurrentMap<Class,MessageCallback> callbackMap = Maps.newConcurrentMap( );
   private final Cluster cluster;
   
   public static void create( Cluster cluster, RemoteCallback callback ) {

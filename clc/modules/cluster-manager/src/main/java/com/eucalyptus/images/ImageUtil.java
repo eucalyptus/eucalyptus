@@ -213,8 +213,6 @@ public class ImageUtil {
       } catch ( XPathExpressionException e ) {}
       if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
                                                                                                                                  "Manifest signature has changed since registration." );
-      LOG.info( "Checking image: " + imgInfo.getImageLocation( ) );
-      WalrusUtil.checkValid( imgInfo );
       LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
       try {
         WalrusUtil.triggerCaching( imgInfo );

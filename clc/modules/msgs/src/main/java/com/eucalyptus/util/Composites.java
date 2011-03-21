@@ -11,7 +11,7 @@ import com.google.common.collect.Maps;
 
 public class Composites {
   private static Logger LOG = Logger.getLogger( Composites.class );
-  private static ConcurrentMap<Class, CompositeHelper> subTypeCache = Maps.newConcurrentHashMap( );
+  private static ConcurrentMap<Class, CompositeHelper> subTypeCache = Maps.newConcurrentMap( );
   
   private static <T> CompositeHelper<T> build( Class<T> destType ) {
     List<Class> sourceTypes = Lists.newArrayList( );

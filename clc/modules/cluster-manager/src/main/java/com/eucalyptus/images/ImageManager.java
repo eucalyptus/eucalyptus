@@ -320,7 +320,6 @@ public class ImageManager {
 //    imageInfo.grantPermission( ctx.getAccount( ) );
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getDisplayName( ) );
-    WalrusUtil.checkValid( imageInfo );
     WalrusUtil.triggerCaching( imageInfo );
     
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );
