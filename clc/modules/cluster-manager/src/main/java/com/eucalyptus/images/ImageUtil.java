@@ -420,4 +420,41 @@ public class ImageUtil {
       db.rollback( );
     }
   }
+  
+  public static int countByAccount( String accountId ) throws AuthException {
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    try {
+      List<ImageInfo> images = db.query( new ImageInfo( ) );
+      int imageNum = 0;
+      for ( ImageInfo img : images ) {
+        if ( img.getOwnerAccountId( ).equals( accountId ) ) {
+          imageNum ++;
+        }
+      }
+      db.commit( );
+      return imageNum;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Image database query failed", e );
+    }
+  }
+  
+  public static int countByUser( String userId ) throws AuthException {
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    try {
+      List<ImageInfo> images = db.query( new ImageInfo( ) );
+      int imageNum = 0;
+      for ( ImageInfo img : images ) {
+        if ( img.getOwnerUserId( ).equals( userId ) ) {
+          imageNum ++;
+        }
+      }
+      db.commit( );
+      return imageNum;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Image database query failed", e );
+    }
+  }
+  
 }

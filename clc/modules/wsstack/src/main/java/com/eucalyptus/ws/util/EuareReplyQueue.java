@@ -68,6 +68,7 @@ import java.io.PrintStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
@@ -131,11 +132,11 @@ public class EuareReplyQueue {
     LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
     Throwable exception = exMsg.getException( );
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
-      int code = 500;
+      HttpResponseStatus status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
       String errorName = EuareException.INTERNAL_FAILURE;
       if ( exception.getCause( ) instanceof EuareException ) {
         EuareException euareException = ( EuareException ) exception.getCause( );
-        code = euareException.getCode( );
+        status = euareException.getStatus( );
         errorName = euareException.getError( );
       }
       ErrorResponseType errorResp = new ErrorResponseType( );
@@ -146,6 +147,7 @@ public class EuareReplyQueue {
         LOG.error( "Failed to parse payload ", e );
       }
       if ( payload != null ) {
+        errorResp.setHttpStatus( status );
         errorResp.setCorrelationId( payload.getCorrelationId( ) );
         errorResp.setRequestId( payload.getCorrelationId( ) );
         ErrorType error = new ErrorType( );

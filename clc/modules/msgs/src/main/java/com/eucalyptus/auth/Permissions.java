@@ -38,7 +38,7 @@ public class Permissions {
     return false;
   }
   
-  public static boolean canAllocate( String resourceType, String resourceName, String action, User requestUser, Integer quantity ) {
+  public static boolean canAllocate( String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
     try {
       policyEngine.evaluateQuota( resourceType, resourceName, action, requestUser, quantity );
       return true;

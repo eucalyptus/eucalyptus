@@ -126,7 +126,14 @@ public class VolumeManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), 1 ) ) {
+      long volSize = 0;
+      try {
+        volSize = Long.valueOf( request.getSize( ) );
+      } catch ( NumberFormatException e ) {
+        LOG.error( "Invalid volume size " + request.getSize( ), e );
+        throw new EucalyptusCloudException( e );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), volSize ) ) {
         throw new EucalyptusCloudException( "Exceeded quota of volume creation by " + ctx.getUser( ).getName( ) );
       }
     }
