@@ -204,6 +204,7 @@ public class X509Download extends HttpServlet {
       }
       sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
       sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
+      sb.append( "\nexport EUARE_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Euare" ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
