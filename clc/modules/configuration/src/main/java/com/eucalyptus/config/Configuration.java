@@ -83,7 +83,6 @@ import com.google.common.collect.Sets;
 
 public class Configuration {
   public static Logger        LOG                 = Logger.getLogger( Configuration.class );
-  public static String DB_NAME             = "eucalyptus_config";
   static String        CLUSTER_KEY_FSTRING = "cc-%s";
   static String        NODE_KEY_FSTRING    = "nc-%s";
   
