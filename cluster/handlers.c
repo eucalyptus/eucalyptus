@@ -3881,6 +3881,7 @@ int reconfigureNetworkFromCLC() {
     return(1);
   }
 
+  sem_mywait(VNET);
   rc = vnetGetAllVlans(vnetconfig, &users, &nets, &usernetlen);
   if (rc) {
   } else {
@@ -3896,6 +3897,7 @@ int reconfigureNetworkFromCLC() {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
     ret = 1;
   }
+  sem_mypost(VNET);
 
   unlink(clcnetfile);
   unlink(chainmapfile);
