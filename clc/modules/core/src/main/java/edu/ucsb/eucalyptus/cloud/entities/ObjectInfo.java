@@ -65,22 +65,31 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.util.UserManagement;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.util.WalrusProperties;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.persistence.*;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.util.WalrusProperties;
+import edu.ucsb.eucalyptus.msgs.AccessControlListType;
+import edu.ucsb.eucalyptus.msgs.Grant;
+import edu.ucsb.eucalyptus.msgs.Grantee;
+import edu.ucsb.eucalyptus.msgs.Group;
+import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

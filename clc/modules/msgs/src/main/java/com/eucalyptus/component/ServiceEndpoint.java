@@ -63,31 +63,16 @@
 package com.eucalyptus.component;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.component.id.Cluster;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -104,8 +89,6 @@ import com.eucalyptus.util.async.Request;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );

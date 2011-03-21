@@ -80,7 +80,7 @@ public class Dns extends ComponentId {
 
   @Override
   public Boolean isAlwaysLocal( ) {
-    return false;
+    return true;
   }
 
   @Override

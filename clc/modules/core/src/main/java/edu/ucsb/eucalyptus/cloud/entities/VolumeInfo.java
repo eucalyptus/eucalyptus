@@ -73,11 +73,11 @@ import com.eucalyptus.util.StorageProperties;
 
 import javax.persistence.CascadeType;
 import javax.persistence.*;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Table;
 import java.util.*;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

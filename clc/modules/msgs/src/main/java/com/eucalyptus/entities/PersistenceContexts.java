@@ -13,6 +13,7 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -25,10 +26,34 @@ public class PersistenceContexts {
   public static int                                     MAX_FAIL        = 5;
   private static AtomicInteger                          failCount       = new AtomicInteger( 0 );
   private static Logger                                 LOG             = Logger.getLogger( PersistenceContexts.class );
-  private static final ArrayListMultimap<String, Class> entities        = Multimaps.newArrayListMultimap( );
+  private static final ArrayListMultimap<String, Class> entities        = ArrayListMultimap.create( );
   private static final List<Class>                      sharedEntities  = Lists.newArrayList( );
   private static Map<String, EntityManagerFactoryImpl>  emf             = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
   private static List<Exception>                        illegalAccesses = Collections.synchronizedList( Lists.newArrayList( ) );
+  
+  public static boolean isPersistentClass( Class candidate ) {
+    return isSharedEntityClass( candidate ) || isEntityClass( candidate );
+  }
+  
+  public static boolean isSharedEntityClass( Class candidate ) {
+    return Ats.from( candidate ).has( MappedSuperclass.class ) || Ats.from( candidate ).has( Embeddable.class );
+  }
+  
+  public static boolean isEntityClass( Class candidate ) {
+    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
+      if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
+        throw Exceptions.fatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
+      } else {
+        return true;
+      }
+    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+    } else {
+      return false;
+    }
+  }
   
   static void addEntity( Class entity ) {
     if ( !isDuplicate( entity ) ) {
@@ -47,10 +72,11 @@ public class PersistenceContexts {
   
   private static boolean isDuplicate( Class entity ) {
     PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
-    if( Ats.from( entity ).has( MappedSuperclass.class ) || Ats.from( entity ).has( Embeddable.class ) ) {
+    if ( Ats.from( entity ).has( MappedSuperclass.class ) || Ats.from( entity ).has( Embeddable.class ) ) {
       return false;
     } else if ( ctx == null || ctx.name( ) == null ) {
-      RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( ) + ".  Ensure that the class has a well-formed @PersistenceContext annotation.");
+      RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( )
+                                                  + ".  Ensure that the class has a well-formed @PersistenceContext annotation." );
       LOG.error( ex, ex );
       return false;
     } else if ( sharedEntities.contains( entity ) ) {
@@ -65,7 +91,8 @@ public class PersistenceContexts {
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
-      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( ) + "': " + entity.getCanonicalName( ) + ". See error logs for details." );
+      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( ) + "': " + entity.getCanonicalName( )
+                                           + ". See error logs for details." );
     } else {
       return false;
     }
@@ -116,18 +143,21 @@ public class PersistenceContexts {
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
     if ( !emf.containsKey( persistenceContext ) ) {
-      RuntimeException e = new RuntimeException( "Attempting to access an entity wrapper before the database has been configured: " + persistenceContext + ".  The available contexts are: " + emf.keySet( ));
-      illegalAccesses = illegalAccesses == null ? Collections.synchronizedList( Lists.newArrayList( ) ) : illegalAccesses;
+      RuntimeException e = new RuntimeException( "Attempting to access an entity wrapper before the database has been configured: " + persistenceContext
+                                                 + ".  The available contexts are: " + emf.keySet( ) );
+      illegalAccesses = illegalAccesses == null
+        ? Collections.synchronizedList( Lists.newArrayList( ) )
+        : illegalAccesses;
       illegalAccesses.add( e );
       throw e;
     }
     return emf.get( persistenceContext );
   }
-
-  public static void shutdown() {
-    for( String ctx : emf.keySet( ) ) {
+  
+  public static void shutdown( ) {
+    for ( String ctx : emf.keySet( ) ) {
       EntityManagerFactoryImpl em = emf.get( ctx );
-      if( em.isOpen( ) ) {
+      if ( em.isOpen( ) ) {
         LOG.info( "Closing persistence context: " + ctx );
         em.close( );
       } else {

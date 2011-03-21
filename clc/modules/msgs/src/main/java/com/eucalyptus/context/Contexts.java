@@ -1,17 +1,13 @@
 package com.eucalyptus.context;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
-import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Assertions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -27,7 +23,7 @@ public class Contexts {
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
-    uuidContexts.put( ctx.getCorrelationId( ), ctx );
+    uuidContexts.put( ctx.getCorrelationId( ), ctx );    
     channelContexts.put( channel, ctx );
     return ctx;
   }
@@ -94,7 +90,19 @@ public class Contexts {
   }
 
   public static void clear( Context context ) {
-    clear( context.getCorrelationId( ) );
+    if( context != null ) {
+      clear( context.getCorrelationId( ) );
+    }
+  }
+
+  public static Context createWrapped( String dest, final BaseMessage msg ) {
+    if( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
+      return null;
+    } else {
+      Context ctx = new Context( dest, msg );
+      uuidContexts.put( ctx.getCorrelationId( ), ctx );    
+      return ctx;
+    }
   }
   
 }

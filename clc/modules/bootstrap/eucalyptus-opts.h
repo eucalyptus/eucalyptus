@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef ARGUMENTS_VERSION
 /** @brief the program version */
-#define ARGUMENTS_VERSION "eee-2.1.0-merge"
+#define ARGUMENTS_VERSION "eee-2.1.0"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -53,6 +53,8 @@ struct eucalyptus_opts
   unsigned int parent_min; /**< @brief Host address of parent(s) for bootstrap.'s minimum occurreces */
   unsigned int parent_max; /**< @brief Host address of parent(s) for bootstrap.'s maximum occurreces */
   const char *parent_help; /**< @brief Host address of parent(s) for bootstrap. help description.  */
+  int merge_db_flag;	/**< @brief Attempt to merge the database from a parent. (default=off).  */
+  const char *merge_db_help; /**< @brief Attempt to merge the database from a parent. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -137,6 +139,7 @@ struct eucalyptus_opts
   unsigned int home_given ;	/**< @brief Whether home was given.  */
   unsigned int child_given ;	/**< @brief Whether child was given.  */
   unsigned int parent_given ;	/**< @brief Whether parent was given.  */
+  unsigned int merge_db_given ;	/**< @brief Whether merge-db was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */
   unsigned int kill_given ;	/**< @brief Whether kill was given.  */

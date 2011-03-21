@@ -65,15 +65,18 @@
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
   xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
+  xmlns:management="http://www.mulesource.org/schema/mule/management/2.0"
   xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://www.mulesource.org/schema/mule/management/2.0 http://www.mulesource.org/schema/mule/management/2.0/mule-management.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
   <mule:configuration>
     <mule:default-threading-profile doThreading="true" maxThreadsActive="16"
       poolExhaustedAction="RUN" />
   </mule:configuration>
+  <management:jmx-server/>
   <euca:connector name="eucaws" />
   <vm:connector name="internal-async" queueEvents="false">
     <mule:service-overrides inboundTransformer="org.mule.transformer.NoActionTransformer" outboundTransformer="org.mule.transformer.NoActionTransformer" responseTransformer="org.mule.transformer.NoActionTransformer" />

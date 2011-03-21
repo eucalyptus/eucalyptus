@@ -5,7 +5,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -26,7 +26,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

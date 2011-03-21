@@ -1,7 +1,7 @@
 package com.eucalyptus.reporting.instance;
 
 /**
- * Snapshot of the resource usage of some instance at some point in time.
+ * UsageSnapshot of the resource usage of some instance at some point in time.
  * Contains <i>cumulative</i> usage data so it's populated with
  * all resource usage which has occurred up until this snapshot was
  * instantiated. 

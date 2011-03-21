@@ -27,11 +27,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-        try {
-          setNameserver( Internets.getAllAddresses( ).get( 0 ) );
-        } catch ( SocketException e ) {
-          LOG.error( e, e );
-        }
+        setNameserver( Internets.getAllAddresses( ).get( 0 ) );//TODO:GRZE:FIXTHISDFSDFSDF
       }
     } );
   }

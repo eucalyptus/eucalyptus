@@ -75,8 +75,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
@@ -101,6 +103,7 @@ import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -127,11 +130,16 @@ public class Component implements HasName<Component> {
   Component( ComponentId componentId ) throws ServiceRegistrationException {
     this.identity = componentId;
     this.serviceRegistry = new ServiceRegistry( );
-    /** remove **/
-    if ( System.getProperty( "euca.disable." + this.identity.name( ) ) == null ) {
-      this.enabled.set( true );
-      if ( System.getProperty( "euca.remote." + this.identity.name( ) ) == null ) {
-        this.local.set( true );
+    /** TODO:GRZE:URGENTLY REMOVE ME KKTHX **/
+    if ( this.identity.isCloudLocal( ) && Bootstrap.isChild( ) && !Bootstrap.shouldMergeDatabase( ) ) {
+      this.enabled.set( false );
+      this.local.set( false );
+    } else {
+      if ( System.getProperty( "euca.disable." + this.identity.name( ) ) == null ) {
+        this.enabled.set( true );
+        if ( System.getProperty( "euca.remote." + this.identity.name( ) ) == null ) {
+          this.local.set( true );
+        }
       }
     }
     this.bootstrapper = new ComponentBootstrapper( this );
@@ -158,7 +166,6 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getServices( );
   }
   
-
   /**
    * @return the identity
    */
@@ -190,14 +197,6 @@ public class Component implements HasName<Component> {
    */
   public String getName( ) {
     return this.identity.name( );
-  }
-  
-  public String getRegistryKey( String hostName ) {
-    if ( Internets.testLocal( hostName ) ) {
-      return this.getName( ) + "@localhost";
-    } else {
-      return this.getName( ) + "@" + hostName;
-    }
   }
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
@@ -286,7 +285,7 @@ public class Component implements HasName<Component> {
   public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
     return this.serviceRegistry.lookup( config );
   }
-
+  
   /**
    * @param fullName
    * @return
@@ -301,7 +300,7 @@ public class Component implements HasName<Component> {
   public Service lookupService( String name ) {
     return this.serviceRegistry.getService( name );
   }
-
+  
   public NavigableSet<Service> lookupServices( String partition ) {
     return this.serviceRegistry.lookupPartition( partition );
   }
@@ -448,7 +447,7 @@ public class Component implements HasName<Component> {
       try {
         CheckedListenableFuture<Component> ret = this.stateMachine.transition( State.DISABLED );
         ServiceContextManager.restart( );
-        return ret;        
+        return ret;
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -689,7 +688,7 @@ public class Component implements HasName<Component> {
   
   class ServiceRegistry {
     private final AtomicReference<Service> localService = new AtomicReference( null );
-    private final Map<FullName, Service>   services     = Maps.newConcurrentHashMap( );
+    private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return ( this.localService.get( ) == null );
@@ -724,7 +723,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
                 getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
@@ -737,7 +736,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
                 getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
@@ -765,7 +764,7 @@ public class Component implements HasName<Component> {
       Service ret = this.services.remove( fullName );
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
-      } else if( ret.getServiceConfiguration( ).isLocal( ) ) {
+      } else if ( ret.getServiceConfiguration( ).isLocal( ) ) {
         this.localService.compareAndSet( ret, null );
       }
       return ret;
@@ -862,17 +861,13 @@ public class Component implements HasName<Component> {
     }
   }
   
-
-  
-  
-  
   /**
    * @see java.lang.Object#toString()
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s name=%s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
-                          this.getName( ), this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ) );
+    return String.format( "Component %s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
+                          this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ).getClass( ).getSimpleName( ) );
   }
   
   /**
@@ -925,9 +920,19 @@ public class Component implements HasName<Component> {
     }
     return true;
   }
-
+  
   public NavigableSet<Service> getServices( ) {
     return this.lookupServices( );
   }
-
+  
+  public Iterable<Service> enabledServices( ) {
+    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<Service>( ) {
+      
+      @Override
+      public boolean apply( Service arg0 ) {
+        return Component.State.ENABLED.equals( arg0.getState( ) );
+      }
+    } );
+  }
+  
 }

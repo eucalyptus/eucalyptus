@@ -2,7 +2,6 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
-import org.hibernate.*;
 import org.apache.log4j.*;
 
 import com.eucalyptus.entities.EntityWrapper;
@@ -56,17 +55,18 @@ public class InstanceEventListener
 			   * already.
 			   */
 			  if (! recentlySeenUuids.contains(uuid)) {
-          try {
-            entityWrapper.getUnique( new InstanceAttributes( ) {
-              {
-                setUuid( uuid );
-              }
-            } );
-          } catch ( Exception ex ) {
-            entityWrapper.add(insAttrs);
-            log.info("Wrote Reporting Instance:" + uuid);
-          }
-				  recentlySeenUuids.add(uuid);
+				try {
+					entityWrapper.getUnique(new InstanceAttributes()
+					{
+						{
+							setUuid(uuid);
+						}
+					});
+				} catch (Exception ex) {
+					entityWrapper.add(insAttrs);
+					log.info("Wrote Reporting Instance:" + uuid);
+				}
+				recentlySeenUuids.add(uuid);
 			  }
 
 			  /* Gather all usage snapshots, and write them all to the database

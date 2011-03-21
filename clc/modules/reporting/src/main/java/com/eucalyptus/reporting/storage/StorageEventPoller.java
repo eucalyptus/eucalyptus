@@ -10,6 +10,12 @@ import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.queue.QueueReceiver;
 
+/**
+ * <p>StorageEventPoller is run periodically and polls the message queue for
+ * new storage events. It then aggregates those events into snapshots.
+ * 
+ * @author tom.werges
+ */
 public class StorageEventPoller
 {
 	private static Logger LOG = Logger.getLogger( StorageEventPoller.class );
@@ -26,6 +32,8 @@ public class StorageEventPoller
 
 	public void writeEvents()
 	{
+		LOG.info("Queue poll:" + System.currentTimeMillis());
+		
 		EntityWrapper<StorageUsageSnapshot> entityWrapper =
 			EntityWrapper.get( StorageUsageSnapshot.class );
 		try {
@@ -56,6 +64,7 @@ public class StorageEventPoller
 					event = receiver.receiveEventNoWait())
 			{
 				StorageEvent storageEvent = (StorageEvent) event;
+				LOG.info("Receive event:" + storageEvent.toString());
 				UsageDataKey key = new UsageDataKey(storageEvent.getOwnerId(),
 						storageEvent.getAccountId(),
 						storageEvent.getClusterName(),

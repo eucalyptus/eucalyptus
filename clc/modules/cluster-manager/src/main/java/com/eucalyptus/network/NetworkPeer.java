@@ -66,7 +66,7 @@ package com.eucalyptus.network;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
@@ -75,7 +75,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule_peer_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

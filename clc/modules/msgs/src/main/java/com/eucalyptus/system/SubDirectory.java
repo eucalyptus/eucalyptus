@@ -80,9 +80,11 @@ public enum SubDirectory {
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
+  MANAGEMENT( BaseDirectory.CONF, "jmx" ),
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
+  QUEUE( BaseDirectory.VAR, "queue" ),
   LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   BaseDirectory parent;
@@ -114,6 +116,9 @@ public enum SubDirectory {
     }
   }
   
+  public File getChildFile( String... args ) {
+    return new File( getChildPath( args ) );
+  }
   public String getChildPath( String... args ) {
     String ret = this.toString( );
     for( String s : args ) {

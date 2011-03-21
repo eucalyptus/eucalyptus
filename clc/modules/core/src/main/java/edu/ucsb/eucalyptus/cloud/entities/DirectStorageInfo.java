@@ -63,10 +63,15 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -75,9 +80,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-import javax.persistence.*;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "direct_storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

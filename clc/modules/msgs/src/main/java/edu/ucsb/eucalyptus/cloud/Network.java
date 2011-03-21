@@ -85,6 +85,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SortedSetMultimap;
+import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
@@ -118,7 +119,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   private final AtomicReference<AddressRange>                      addrsPerNet            = new AtomicReference<AddressRange>( INITIAL_BOUNDS );
   
   private final ConcurrentNavigableMap<Integer, NetworkIndexState> networkIndexes;
-  private final SortedSetMultimap<String, NetworkToken>            volatileActiveNetworks = Multimaps.newTreeMultimap( );
+  private final SortedSetMultimap<String, NetworkToken>            volatileActiveNetworks = TreeMultimap.create( );
   private final SortedSetMultimap<String, NetworkToken>            activeNetworks         = Multimaps.synchronizedSortedSetMultimap( volatileActiveNetworks );
   private final FQDN                                               fullName;
   

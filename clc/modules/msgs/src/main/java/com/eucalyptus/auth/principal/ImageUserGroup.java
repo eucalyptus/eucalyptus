@@ -1,7 +1,5 @@
 package com.eucalyptus.auth.principal;
 
-import java.security.Principal;
-import java.util.Enumeration;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;

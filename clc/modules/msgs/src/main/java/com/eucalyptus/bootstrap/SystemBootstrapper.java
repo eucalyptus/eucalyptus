@@ -84,8 +84,9 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Functions;
-import com.google.common.base.Join;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Collections;
@@ -131,6 +132,7 @@ public class SystemBootstrapper {
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
+      
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -138,7 +140,12 @@ public class SystemBootstrapper {
           }
         }
       }
+      
+
+      
             );
+
+      
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -147,15 +154,8 @@ public class SystemBootstrapper {
         }
       }
             );
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
-      try {
-        Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
-        Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-      }
+      
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on("\n").join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
@@ -370,7 +370,7 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
         for ( Service s : c.lookupServices( ) ) {
-          if ( s.isLocal( ) ) {
+          if ( s.getServiceConfiguration( ).isLocal( ) ) {
             banner += prefix + c.getName( ) + SEP + s.toString( );
           }
         }
@@ -378,7 +378,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
-      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING );
+      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
         banner += prefix + iface.getDisplayName( ) + SEP + addr;
       }

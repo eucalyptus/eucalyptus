@@ -7,7 +7,7 @@ public class KeyUtils {
 
   public static void validateIntegerValue( String value, String key ) throws JSONException {
     try {
-      Integer.valueOf( value );
+      Long.valueOf( value );
     } catch ( NumberFormatException e ) {
       throw new JSONException( "Invalid value format for " + key + ": " + value + ". Integer is required." );
     }

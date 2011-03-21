@@ -65,7 +65,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -79,7 +79,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -95,7 +95,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( );
   }
   
-  private Snapshot( final UserFullName userFullName, final String displayName ) {
+  public Snapshot( final UserFullName userFullName, final String displayName ) {
     super( userFullName, displayName );
   }
   
@@ -104,6 +104,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.parentVolume = parentVolume;
     super.setState( State.NIHIL );
     super.setCreationTime( new Date( ) );
+  }
+  
+  public Snapshot( final String accountId, final String displayName ) {
+    this.setOwnerAccountId( accountId );
+    this.setDisplayName( displayName );
   }
   
   public static Snapshot named( final String snapshotId ) {
@@ -115,11 +120,23 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   }
   
   public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
-    return new Snapshot( userFullName, snapshotId );
+    //return new Snapshot( userFullName, snapshotId );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountId( );
+    }
+    Snapshot v = new Snapshot( accountId, snapshotId );
+    return v;
   }
   
   public static Snapshot ownedBy( final UserFullName userFullName ) {
-    return new Snapshot( userFullName, null );
+    //return new Snapshot( userFullName, null );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountId( );
+    }
+    Snapshot v = new Snapshot( accountId, null );
+    return v;
   }
   
   public String mapState( ) {

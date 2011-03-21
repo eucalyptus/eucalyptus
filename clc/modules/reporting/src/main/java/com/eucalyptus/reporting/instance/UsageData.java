@@ -2,7 +2,7 @@ package com.eucalyptus.reporting.instance;
 
 /**
  * <p>UsageData represents usage of resources (like disk bandwidth, etc)
- * by an instance over some period. UsageData is immutable.
+ * by an instance over a single period. UsageData is immutable.
  * 
  * <p>Null values for a field indicate unknown usage, not zero usage.
  * 

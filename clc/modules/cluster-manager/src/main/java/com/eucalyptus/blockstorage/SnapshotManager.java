@@ -126,7 +126,7 @@ public class SnapshotManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1 ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
       }
     }
@@ -144,7 +144,7 @@ public class SnapshotManager {
       //temporary workaround to update the volume state.
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( Components.lookup( "storage" ), sc.getServiceConfiguration( ).getHostName( ) )
+        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc.getServiceConfiguration( ) )
                                                                        .send( descVols );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );

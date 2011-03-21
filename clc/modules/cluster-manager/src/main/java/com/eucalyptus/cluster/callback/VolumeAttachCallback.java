@@ -81,21 +81,32 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Functions;
+import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,AttachVolumeResponseType> {
-
+  private final AttachedVolume attachedVolume;
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
-  public VolumeAttachCallback( AttachVolumeType request ) {
+  public VolumeAttachCallback( AttachVolumeType request, AttachedVolume attachVol ) {
+    this.attachedVolume = attachVol;
     this.setRequest( request );
   }
   
 
   @Override
-  public void initialize( AttachVolumeType msg ) {}
+  public void initialize( AttachVolumeType msg ) {
+    try {
+      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
+      LOG.debug( "Volumes marked as attaching " + vm.transformVolumeAttachments( Functions.toStringFunction( ) ) + " to " + vm.getInstanceId( ) );
+    } catch ( NoSuchElementException e1 ) {
+      LOG.error( "Failed to lookup volume attachment state in order to update: " + this.getRequest( ).getVolumeId( ) + " due to " + e1.getMessage( ), e1 );
+    }
+  }
 
   @Override
   public void fire( AttachVolumeResponseType reply ) {
@@ -107,6 +118,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
 //        LOG.debug( "Volumes marked as attached " + vm.collectVolumeAttachments( Predicates.alwaysTrue( ) ) + " to " + vm.getInstanceId( ) );
       } catch ( NoSuchElementException e1 ) {
+        LOG.error( "Failed to lookup volume attachment state in order to update: " + this.getRequest( ).getVolumeId( ) + " due to " + e1.getMessage( ), e1 );
       }
     }
   }
@@ -124,7 +136,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
           ServiceConfiguration sc = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
-          Dispatcher dispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
+          Dispatcher dispatcher = ServiceDispatcher.lookup( sc );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
           dispatcher.send( new DetachStorageVolumeType( iqn, volume.getVolumeId( ) ) );

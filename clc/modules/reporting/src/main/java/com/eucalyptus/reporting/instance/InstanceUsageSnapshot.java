@@ -1,17 +1,22 @@
 package com.eucalyptus.reporting.instance;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Entity;
 
 /**
  * <p>InstanceUsageSnapshot is a record of cumulative instance resource usage
  * at a certain point in time, keyed by instance uuid.
  * 
- * <p>InstanceUsageSnapshot allows null values for some of its fields. Null values
- * indicate unknown usage and not zero usage.
+ * <p>InstanceUsageSnapshot allows null values for some of its fields.
  * 
  * @author tom.werges
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
 class InstanceUsageSnapshot

@@ -12,6 +12,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Predicate;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -20,8 +21,8 @@ import com.google.common.collect.Multimaps;
 public class ConfigurationProperties {
   private static Logger LOG = Logger.getLogger( ConfigurationProperties.class );
 
-  private static Multimap<String,Class> fileToClassMap = Multimaps.newHashMultimap( );
-  private static Multimap<Class,String> classToFieldMap = Multimaps.newHashMultimap( );
+  private static Multimap<String,Class> fileToClassMap = HashMultimap.create( );
+  private static Multimap<Class,String> classToFieldMap = HashMultimap.create( );
   private static Map<String,PropertyTypeParser> fieldTypeMap = Maps.newHashMap( );
     
   @SuppressWarnings( "deprecation" )

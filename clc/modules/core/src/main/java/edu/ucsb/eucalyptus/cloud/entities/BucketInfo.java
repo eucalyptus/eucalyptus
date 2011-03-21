@@ -65,23 +65,29 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
 import edu.ucsb.eucalyptus.msgs.Group;
 import edu.ucsb.eucalyptus.util.UserManagement;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.util.WalrusProperties;
-
-import javax.persistence.*;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -91,9 +97,13 @@ public class BucketInfo {
 	@Column( name = "bucket_id" )
 	private Long id = -1l;
 
+	// Hold the real owner ID. At this point, it is the account ID.
 	@Column( name = "owner_id" )
 	private String ownerId;
 
+	@Column( name = "user_id" )
+	private String userId;
+	
 	@Column( name = "bucket_name", unique=true )
 	private String bucketName;
 
@@ -149,8 +159,9 @@ public class BucketInfo {
 		this.bucketName = bucketName;
 	}
 
-	public BucketInfo(String ownerId, String bucketName, Date creationDate) {
+	public BucketInfo(String ownerId, String userId, String bucketName, Date creationDate) {
 		this.ownerId = ownerId;
+		this.userId = userId;
 		this.bucketName = bucketName;
 		this.creationDate = creationDate;
 	}
@@ -538,5 +549,13 @@ public class BucketInfo {
 		} else if (!bucketName.equals(other.bucketName))
 			return false;
 		return true;
-	}	
+	}
+
+  public void setUserId( String userId ) {
+    this.userId = userId;
+  }
+
+  public String getUserId( ) {
+    return userId;
+  }	
 }

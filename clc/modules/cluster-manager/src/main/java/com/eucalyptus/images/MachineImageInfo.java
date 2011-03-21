@@ -67,7 +67,7 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
@@ -77,7 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "machine" )

@@ -12,7 +12,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.NioBootstrap;
+import com.eucalyptus.ws.util.NioBootstrap;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatType;
 

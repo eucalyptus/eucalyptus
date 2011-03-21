@@ -264,7 +264,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         public boolean apply( AttachedVolume arg0 ) {
           try {
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            Dispatcher scDispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
+            Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
             return true;
           } catch ( Throwable e ) {

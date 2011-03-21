@@ -85,13 +85,7 @@ public class BindingManager {
         if( DEFAULT != null ) {
           return DEFAULT;
         } else {
-          try {
-            DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) );
-            return DEFAULT;
-          } catch ( BindingException ex ) {
-            LOG.error( ex , ex );
-            throw new RuntimeException( ex );
-          }
+            return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) ) );
         }
       }
     }
@@ -114,13 +108,17 @@ public class BindingManager {
     return false;
   }
   
-  public static Binding getBinding( final String bindingName ) throws BindingException {
+  public static boolean isRegisteredBinding( final String bindingName ) {
+    return BindingManager.bindingMap.containsKey( bindingName );
+  }
+  public static Binding getBinding( final String bindingName ) {
     if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
       return BindingManager.bindingMap.get( bindingName );
+    } else {
+      final Binding newBinding = new Binding( bindingName );
+      BindingManager.bindingMap.put( bindingName, newBinding );
+      return newBinding;
     }
-    final Binding newBinding = new Binding( bindingName );
-    BindingManager.bindingMap.put( bindingName, newBinding );
-    return newBinding;
   }
   
 }

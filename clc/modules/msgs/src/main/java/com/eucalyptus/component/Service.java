@@ -72,20 +72,40 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Service implements ComponentInformation, HasParent<Component>, HasFullName<Service> {
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final String               name;
   private final ServiceEndpoint      endpoint;
-  private final Dispatcher           dispatcher;
+  private final Dispatcher           localDispatcher;
+  private final Dispatcher           remoteDispatcher;
   private final ServiceConfiguration serviceConfiguration;
   private final ComponentId          id;
-  private final Component.State      state          = State.ENABLED/** ASAP:FIXME:GRZE **/
-                                                    ;
-  private final FullName             fullName;
+  private final Component.State      state          = State.ENABLED;
   
+  /** ASAP:FIXME:GRZE **/
+  
+  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
+    this.id = id;
+    this.serviceConfiguration = serviceConfig;
+    this.name = serviceConfig.getFullName( ).toString( );
+    
+    URI remoteUri;
+    if ( this.serviceConfiguration.isLocal( ) ) {
+      remoteUri = this.id.makeRemoteUri( "127.0.0.1", this.id.getPort( ) );
+    } else {
+      remoteUri = this.id.makeRemoteUri( this.serviceConfiguration.getHostName( ), this.serviceConfiguration.getPort( ) );
+    }
+    this.endpoint = new ServiceEndpoint( this, true, serviceConfig.isLocal( )
+      ? this.id.getLocalEndpointUri( )
+      : remoteUri );//TODO:GRZE: fix remote/local swaps
+    this.localDispatcher = ServiceDispatcher.makeLocal( this.serviceConfiguration );
+    this.remoteDispatcher = ServiceDispatcher.makeRemote( this.serviceConfiguration );
+  }
+  
+  /** TODO:GRZE: clean this up **/
   public final ServiceId getServiceId( ) {
     return new ServiceId( ) {
       {
@@ -96,42 +116,6 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
         this.setUri( serviceConfiguration.getUri( ) );
       }
     };
-  }
-  
-  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
-    this.id = id;
-    this.serviceConfiguration = serviceConfig;
-    this.fullName = this.id.getMyFullName( this.serviceConfiguration );
-    if ( "cluster".equals( id.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
-      this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      this.endpoint = new ServiceEndpoint( this, false, uri );
-    } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.id.getLocalEndpointUri( );
-      this.name = id.getName( ) + LOCAL_HOSTNAME;
-      this.endpoint = new ServiceEndpoint( this, true, uri );
-    } else {
-      Boolean local = false;
-      try {
-        if ( serviceConfig.getHostName( ) != null ) {
-          local = Internets.testLocal( serviceConfig.getHostName( ) );
-        } else {
-          local = true;
-        }
-      } catch ( Exception e ) {
-        local = true;
-      }
-      URI uri = null;
-      if ( !local ) {
-        this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      } else {
-        this.name = id.getName( ) + LOCAL_HOSTNAME;
-        uri = this.id.getLocalEndpointUri( );
-      }
-      this.endpoint = new ServiceEndpoint( this, local, uri );
-    }
-    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
   }
   
   public Boolean isLocal( ) {
@@ -158,7 +142,7 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
     return this.endpoint.get( ).getPort( );
   }
   
-  public String getName( ) {
+  public final String getName( ) {
     return this.name;
   }
   
@@ -167,7 +151,9 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   public Dispatcher getDispatcher( ) {
-    return this.dispatcher;
+    return this.isLocal( )
+      ? this.localDispatcher
+      : this.remoteDispatcher;
   }
   
   /**
@@ -229,19 +215,17 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   /**
-   * TODO: DOCUMENT
-   * 
    * @see com.eucalyptus.util.HasFullName#getPartition()
    * @return
    */
   @Override
   public String getPartition( ) {
-    return this.fullName.getPartition( );
+    return this.serviceConfiguration.getPartition( );
   }
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName;
+    return this.serviceConfiguration.getFullName( );
   }
   
 }

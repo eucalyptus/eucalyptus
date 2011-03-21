@@ -20,7 +20,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   private static Logger                                       LOG       = Logger.getLogger( Transition.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
-  private final ConcurrentMap<Integer, TransitionListener<P>> listeners = Maps.newConcurrentHashMap( );
+  private final ConcurrentMap<Integer, TransitionListener<P>> listeners = Maps.newConcurrentMap( );
   private final TransitionAction<P>                           action;
   
   public Transition( final TransitionRule<S, T> transitionRule, final TransitionAction<P> action, TransitionListener<P>... listeners ) {
