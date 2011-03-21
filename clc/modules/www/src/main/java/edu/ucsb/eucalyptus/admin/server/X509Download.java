@@ -188,7 +188,7 @@ public class X509Download extends HttpServlet {
       String baseName = X509Download.NAME_SHORT + "-" + u.getName( ) + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
       
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
-      StringBuffer sb = new StringBuffer( );
+      StringBuilder sb = new StringBuilder( );
       
       BigInteger number = u.getNumber( );
       String userNumber = null;
@@ -204,14 +204,14 @@ public class X509Download extends HttpServlet {
       }
       sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
       sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
+      sb.append( "\nexport EUARE_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Euare" ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
-      sb.append( "\nexport AWSAccessKeyId='" + userAccessKey + "'" );
-      sb.append( "\nexport AWSSecretKey='" + userSecretKey + "'" );
+      sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
       if ( userNumber != null ) {
         sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
         sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
@@ -220,7 +220,14 @@ public class X509Download extends HttpServlet {
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
       zipOut.putNextEntry( new ZipEntry( "eucarc" ) );
-      zipOut.write( sb.toString( ).getBytes( ) );
+      zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
+      zipOut.closeEntry( );
+      
+      sb = new StringBuilder( );
+      sb.append( "AWSAccessKeyId=" ).append( userAccessKey ).append( '\n' );
+      sb.append( "AWSSecretKey=" ).append( userSecretKey );
+      zipOut.putNextEntry( new ZipEntry( "iamrc" ) );
+      zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
       zipOut.closeEntry( );
       
       /** write the private key to the zip stream **/
