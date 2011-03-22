@@ -1109,17 +1109,21 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
       }
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
-    rc = instId2mac(vnetconfig, instId, outmac);
-    if (rc) {
-      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-      return(1);
+    if (!strlen(outmac)) {
+      rc = instId2mac(vnetconfig, instId, outmac);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+	return(1);
+      }
     }
     ret = 0;
   } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    rc = instId2mac(vnetconfig, instId, outmac);
-    if (rc) {
-      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-      return(1);
+    if (!strlen(outmac)) {
+      rc = instId2mac(vnetconfig, instId, outmac);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+	return(1);
+      }
     }
  
     if (nidx == -1) {
