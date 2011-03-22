@@ -723,6 +723,10 @@ public class EuareService {
     }
     try {
       User newUser = account.addUser( request.getUserName( ), sanitizePath( request.getPath( ) ), true, true, null );
+      newUser.createKey( );
+      newUser.createToken( );
+      newUser.createConfirmationCode( );
+      newUser.createPassword( );
       UserType u = reply.getCreateUserResult( ).getUser( );
       fillUserResult( u, newUser, account.getId( ) );
     } catch ( Exception e ) {
