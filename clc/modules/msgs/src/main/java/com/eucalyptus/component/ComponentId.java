@@ -279,7 +279,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       u.parseServerAuthority( );
       return u;
     } catch ( URISyntaxException e ) {
-      LOG.error( e );
       return URI.create( uri );
     }
   }
