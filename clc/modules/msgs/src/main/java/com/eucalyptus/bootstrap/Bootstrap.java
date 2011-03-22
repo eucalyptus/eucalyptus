@@ -222,7 +222,6 @@ public class Bootstrap {
           ? "load()"
           : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
-        LOG.debug( Joiner.on( " " ).join( this.name( ) + " skiptstrappers: ", this.bootstrappers ) );
       }
     }
     

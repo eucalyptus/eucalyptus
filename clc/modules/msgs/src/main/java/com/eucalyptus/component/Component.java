@@ -320,11 +320,12 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
-    if ( this.isAvailableLocally( ) 
-        && ( this.getComponentId( ).isAlwaysLocal( ) )
-          || ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) ) {
+    if ( this.isAvailableLocally( )
+         && ( this.getComponentId( ).isAlwaysLocal( )
+          || ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ), uri.getPort( ) );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
+                                                                    uri.getPort( ) );
       Service service = new Service( this.getComponentId( ), config );
       this.serviceRegistry.register( service );
       return config;
@@ -341,7 +342,8 @@ public class Component implements HasName<Component> {
    */
   public ServiceConfiguration initService( InetAddress addr ) throws ServiceRegistrationException {
     if ( this.getComponentId( ).isCloudLocal( ) && !Bootstrap.isCloudLocal( ) ) {
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ), this.getComponentId( ).getPort( ) );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
+                                                                    this.getComponentId( ).getPort( ) );
       Service service = new Service( this.getComponentId( ), config );
       this.serviceRegistry.register( service );
       return config;
@@ -349,7 +351,6 @@ public class Component implements HasName<Component> {
       throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
     }
   }
-
   
   /**
    * Builds a Service instance for this component using the provided service
@@ -964,7 +965,8 @@ public class Component implements HasName<Component> {
     } );
   }
   
-  private ConcurrentNavigableMap<String,ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
+  private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
+  
   public void submitError( Throwable t ) {
     ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
     this.errors.put( e.getUuid( ), e );
