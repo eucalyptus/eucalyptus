@@ -79,6 +79,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -217,6 +218,7 @@ public class Components {
   public static Component create( ComponentId id ) throws ServiceRegistrationException {
     Component c = new Component( id );
     register( c );
+    Mbeans.register( c );
     return c;
   }
 
@@ -321,24 +323,6 @@ public class Components {
     }
   }
   
-  private final static Callback.Success<Component> configurationPrinter = configurationPrinter( );
-  
-  public static Callback.Success<Component> configurationPrinter( ) {
-    if ( configurationPrinter != null ) {
-      return configurationPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Component>( ) {
-          @Override
-          public void fire( Component comp ) {
-            LOG.info( configurationToString.apply( comp ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private final static Function<Component, String>    configurationToString = configurationToString( );
   private static final Function<Bootstrapper, String> bootstrapperToString  = new Function<Bootstrapper, String>( ) {
                                                                               @Override
                                                                               public String apply( Bootstrapper b ) {
@@ -349,29 +333,4 @@ public class Components {
                                                                               }
                                                                             };
   
-  public static Function<Component, String> configurationToString( ) {
-    if ( configurationToString != null ) {
-      return configurationToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Component, String>( ) {
-          
-          @Override
-          public String apply( Component comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
-                                       comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getComponentId( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getComponentId( ).name( ) ) ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
-                                       comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
-                                       Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
-            return buf.toString( );
-          }
-        };
-        
-      }
-    }
-  }
 }

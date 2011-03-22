@@ -33,7 +33,6 @@ public class QueueFactory
 	{
 		this.senders   = new HashMap<QueueIdentifier,QueueSenderImpl>();
 		this.receivers = new HashMap<QueueIdentifier,QueueReceiverImpl>();
-    QueueBroker.getInstance( ).startup( );
 	}
 
 	public enum QueueIdentifier

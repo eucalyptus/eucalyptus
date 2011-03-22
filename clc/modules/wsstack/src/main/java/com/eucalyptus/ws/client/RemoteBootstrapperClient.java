@@ -65,8 +65,6 @@ package com.eucalyptus.ws.client;
 
 import java.security.GeneralSecurityException;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -91,7 +89,6 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -104,24 +101,18 @@ import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.NioBootstrap;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.eucalyptus.ws.util.NioBootstrap;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.RemoteConfiguration)
@@ -262,7 +253,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
   }
 
   private void fireHeartbeat( ) {
-    Multimap<String,ServiceConfiguration> services = Multimaps.newArrayListMultimap( );
+    Multimap<String,ServiceConfiguration> services = ArrayListMultimap.create( );
     for( Component c : Components.list( ) ) {
       if( !c.getComponentId( ).isCloudLocal( ) && !c.getComponentId( ).isAlwaysLocal( ) ) {
         for( Service s : c.lookupServices( ) ) {

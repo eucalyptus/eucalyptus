@@ -151,6 +151,22 @@ public class Exceptions {
       : ex );
     return false;
   }
+
+  public static RuntimeException debug( String message ) {
+    return debug( new RuntimeException( message ) );
+  }
+  
+  public static <T extends Throwable> T debug( T t ) {
+    return debug( t.getMessage( ), t );
+  }
+  
+  public static <T extends Throwable> T debug( String message, T t ) {
+    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.debug( message, filtered );
+    return t;
+  }
+
   
   public static RuntimeException trace( String message ) {
     return trace( new RuntimeException( message ) );

@@ -73,13 +73,14 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CheckedFunction;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
   private static Logger LOG = Logger.getLogger( ComponentBootstrapper.class );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = Multimaps.newArrayListMultimap( );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = ArrayListMultimap.create( );
   private final Component component; 
   
   ComponentBootstrapper( Component component ) {

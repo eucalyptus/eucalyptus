@@ -92,7 +92,7 @@ import com.google.gwt.dom.client.EventTarget;
 
 public class ArbitratorControl {
   private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
-  private static Map<String, Exception>   error             = Maps.newConcurrentHashMap( );
+  private static Map<String, Exception>   error             = Maps.newConcurrentMap( );
   private static ScheduledExecutorService monitor;
   private final static int                CHECK_PERIODICITY = 5;
   

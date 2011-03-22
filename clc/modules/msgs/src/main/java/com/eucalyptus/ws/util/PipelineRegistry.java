@@ -66,13 +66,10 @@ package com.eucalyptus.ws.util;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
@@ -82,13 +79,13 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class PipelineRegistry {
   private static PipelineRegistry registry;
   private static Logger           LOG = Logger.getLogger( PipelineRegistry.class );
-  private static Multimap<ComponentId,FilteredPipeline> componentPipelines = Multimaps.newArrayListMultimap( ); 
+  private static Multimap<ComponentId,FilteredPipeline> componentPipelines = ArrayListMultimap.create( ); 
   public static PipelineRegistry getInstance( ) {
     synchronized ( PipelineRegistry.class ) {
       if ( PipelineRegistry.registry == null ) {

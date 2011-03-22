@@ -288,9 +288,7 @@ public class SystemConfiguration {
         }
       }
       if( cloudHost == null ) {
-        try {
-          cloudHost = Internets.getAllAddresses( ).get( 0 );
-        } catch ( SocketException e ) {}
+        cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
       }
       return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
     } catch ( PersistenceException e ) {
@@ -326,9 +324,7 @@ public class SystemConfiguration {
     } catch ( PersistenceException e ) {
     }
     if( cloudHost == null ) {
-      try {
-        cloudHost = Internets.getAllAddresses( ).get( 0 );
-      } catch ( SocketException e ) {}
+      cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
     }
     return cloudHost;
   }
@@ -336,12 +332,10 @@ public class SystemConfiguration {
   public static String getInternalIpAddress ()
   {
     String ipAddr = null;
-    try {
-      for( String addr : Internets.getAllAddresses( ) ) {
-        ipAddr = addr;
-        break;
-      }
-    } catch ( SocketException e ) {}
+    for( String addr : Internets.getAllAddresses( ) ) {//TODO:GRZE:FIXTHISDFSDFSDF
+      ipAddr = addr;
+      break;
+    }
     return ipAddr == null ? "127.0.0.1" : ipAddr;
   }
 

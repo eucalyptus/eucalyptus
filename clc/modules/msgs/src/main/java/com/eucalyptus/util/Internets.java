@@ -64,6 +64,7 @@
 package com.eucalyptus.util;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -73,39 +74,41 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 public class Internets {
-  private static Logger                 LOG        = Logger.getLogger( Internets.class );
+  private static Logger       LOG     = Logger.getLogger( Internets.class );
+  private static final String localId = localhostIdentifier( );
+  
+  public static String localhostIdentifier( ) {
+    return localId != null
+      ? localId
+      : Joiner.on( ":" ).join( getAllAddresses( ) );
+  }
+  
   public static List<NetworkInterface> getNetworkInterfaces( ) {
-    List<NetworkInterface> interfaces = Lists.newArrayList( );
     try {
-      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-      while ( ifaces.hasMoreElements( ) ) {
-        NetworkInterface iface = ifaces.nextElement( );
-        interfaces.add( iface );
-      }
-      interfaces = ImmutableList.copyOf( interfaces );
-      return interfaces;
+      return Collections.list( NetworkInterface.getNetworkInterfaces( ) );
     } catch ( SocketException ex ) {
       LOG.error( ex, ex );
       throw new RuntimeException( "Getting list of network interfaces failed because of " + ex.getMessage( ), ex );
     }
   }
   
-  public static List<InetAddress> getAllInetAddresses( ) throws SocketException {
+  public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
-    Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces( );
-    while ( ifaces.hasMoreElements( ) ) {
-      NetworkInterface iface = ifaces.nextElement( );
+    for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {
@@ -125,7 +128,7 @@ public class Internets {
     return addrs;
   }
   
-  public static List<String> getAllAddresses( ) throws SocketException {
+  public static List<String> getAllAddresses( ) {
     return Lists.transform( Internets.getAllInetAddresses( ), new Function<InetAddress, String>( ) {
       @Override
       public String apply( InetAddress arg0 ) {
@@ -134,10 +137,34 @@ public class Internets {
     } );
   }
   
-  public static boolean testReachability( String addr ) throws Exception {
+  public static class Inet4AddressComparator implements Comparator<InetAddress>, Serializable {
+    @Override
+    public int compare( InetAddress o1, InetAddress o2 ) {
+      return o1.getHostAddress( ).compareTo( o2.getHostAddress( ) );
+    }
+  }
+  
+  public static final Comparator<InetAddress> INET_ADDRESS_COMPARATOR = new Inet4AddressComparator( );
+  
+  public static boolean testReachability( InetAddress inetAddr ) {
+    Assertions.assertNotNull( inetAddr );
+    try {
+      return inetAddr.isReachable( 10000 );
+    } catch ( IOException ex ) {
+      LOG.error( ex, ex );
+      return false;
+    }//TODO:GRZE:make reachability time tuneable
+  }
+  
+  public static boolean testReachability( String addr ) {
     Assertions.assertNotNull( addr );
-    InetAddress inetAddr = Inet4Address.getByName( addr );
-    return inetAddr.isReachable( 10000 );
+    try {
+      InetAddress inetAddr = Inet4Address.getByName( addr );
+      return testReachability( inetAddr );
+    } catch ( UnknownHostException ex ) {
+      LOG.error( ex, ex );
+      return false;
+    }
   }
   
   public static InetAddress toAddress( URI uri ) {

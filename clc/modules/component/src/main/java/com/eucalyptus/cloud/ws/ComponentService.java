@@ -37,7 +37,6 @@ package com.eucalyptus.cloud.ws;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -53,27 +52,27 @@ public class ComponentService {
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
-    Dispatcher sc = lookupDispatcher( component, host );
-		if(sc.isLocal()) {
+    Service service = lookupService( component, host );
+		if(service.isLocal()) {
 			return request;
  		} else {
  			BaseMessage reply;
 			try {
-				reply = sc.send(request);
+				reply = service.getDispatcher( ).send(request);
 			} catch (Exception e) {
 				LOG.error(e);
-				throw new EucalyptusCloudException("Unable to dispatch message to: " + sc.getName());
+				throw new EucalyptusCloudException("Unable to dispatch message to: " + service.getName());
 			}
  			return reply;
  		}
 	}
 
-  private Dispatcher lookupDispatcher( String component, String host ) throws EucalyptusCloudException {
+  private Service lookupService( String component, String host ) throws EucalyptusCloudException {
     Component destinationComponent = Components.lookup( component );
     String canonicalHostName = Internets.toAddress( host ).getCanonicalHostName( );
     for( Service s : destinationComponent.getServices( ) ) {
 		  if( Internets.toAddress( s.getHost( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
-		    return s.getDispatcher( );
+		    return s;
 		  }
 		}
     throw new EucalyptusCloudException("Unable to dispatch message to: " + component + "@" + host);

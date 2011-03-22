@@ -63,11 +63,28 @@
 
 package com.eucalyptus.auth.ws;
 
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.auth.euare.ErrorResponseType;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 
 public class EuareQueryBinding extends BaseQueryBinding<OperationParameter> {
   
+  @Override
+  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpResponse &&
+         ( ( MappingHttpResponse ) event.getMessage( ) ).getMessage( ) instanceof ErrorResponseType ) {
+      MappingHttpResponse httpResponse = ( MappingHttpResponse )event.getMessage( );
+      ErrorResponseType errorResponse = ( ErrorResponseType )httpResponse.getMessage( );
+      super.outgoingMessage( ctx, event );
+      httpResponse.setStatus( errorResponse.getHttpStatus( ) );
+    } else {
+      super.outgoingMessage( ctx, event );
+    }
+  }
+
   public EuareQueryBinding( ) {
     super( "http://iam.amazonaws.com/doc/%s/", "2010-05-08", OperationParameter.Action, OperationParameter.Operation );
   }

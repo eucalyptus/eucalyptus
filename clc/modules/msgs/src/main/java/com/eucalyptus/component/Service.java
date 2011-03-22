@@ -72,25 +72,37 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Service implements ComponentInformation, HasParent<Component>, HasFullName<Service> {
   public static String               LOCAL_HOSTNAME = "@localhost";
   private final String               name;
   private final ServiceEndpoint      endpoint;
-  private final Dispatcher           dispatcher;
+  private final Dispatcher           localDispatcher;
+  private final Dispatcher           remoteDispatcher;
   private final ServiceConfiguration serviceConfiguration;
   private final ComponentId          id;
-  private final Component.State      state          = State.ENABLED;/** ASAP:FIXME:GRZE **/
-
+  private final Component.State      state          = State.ENABLED;
+  
+  /** ASAP:FIXME:GRZE **/
   
   public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
     this.id = id;
     this.serviceConfiguration = serviceConfig;
     this.name = serviceConfig.getFullName( ).toString( );
-    this.endpoint = new ServiceEndpoint( this, true, serviceConfig.isLocal( ) ? this.id.getLocalEndpointUri( ) : this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) ) );
-    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
+    
+    URI remoteUri;
+    if ( this.serviceConfiguration.isLocal( ) ) {
+      remoteUri = this.id.makeRemoteUri( "127.0.0.1", this.id.getPort( ) );
+    } else {
+      remoteUri = this.id.makeRemoteUri( this.serviceConfiguration.getHostName( ), this.serviceConfiguration.getPort( ) );
+    }
+    this.endpoint = new ServiceEndpoint( this, true, serviceConfig.isLocal( )
+      ? this.id.getLocalEndpointUri( )
+      : remoteUri );//TODO:GRZE: fix remote/local swaps
+    this.localDispatcher = ServiceDispatcher.makeLocal( this.serviceConfiguration );
+    this.remoteDispatcher = ServiceDispatcher.makeRemote( this.serviceConfiguration );
   }
   
   /** TODO:GRZE: clean this up **/
@@ -130,7 +142,7 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
     return this.endpoint.get( ).getPort( );
   }
   
-  public String getName( ) {
+  public final String getName( ) {
     return this.name;
   }
   
@@ -139,7 +151,9 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   public Dispatcher getDispatcher( ) {
-    return this.dispatcher;
+    return this.isLocal( )
+      ? this.localDispatcher
+      : this.remoteDispatcher;
   }
   
   /**

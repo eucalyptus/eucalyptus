@@ -93,7 +93,7 @@ import com.google.common.collect.Lists;
 public class InternalWsSecHandler extends WsSecHandler {
 
   public InternalWsSecHandler( ) throws GeneralSecurityException {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( ) ) );
+    super( new CredentialProxy( Eucalyptus.class ) );
   }
 
   @Override

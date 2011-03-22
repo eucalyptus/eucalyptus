@@ -11,7 +11,7 @@ import com.google.common.collect.Maps;
  */
 public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfiguration> {
   private Component                         component;
-  private Map<String, ServiceConfiguration> services = Maps.newConcurrentHashMap( );
+  private Map<String, ServiceConfiguration> services = Maps.newConcurrentMap( );
   
   public DummyServiceBuilder( Component component ) {
     this.component = component;

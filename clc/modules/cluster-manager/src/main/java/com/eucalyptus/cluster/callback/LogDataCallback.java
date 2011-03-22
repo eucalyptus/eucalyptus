@@ -5,8 +5,6 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.ws.client.pipeline.LogClientPipeline;
-import com.eucalyptus.ws.client.pipeline.NioClientPipeline;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
 import edu.ucsb.eucalyptus.msgs.GetLogsType;

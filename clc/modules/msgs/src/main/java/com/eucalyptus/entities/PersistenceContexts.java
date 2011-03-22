@@ -26,7 +26,7 @@ public class PersistenceContexts {
   public static int                                     MAX_FAIL        = 5;
   private static AtomicInteger                          failCount       = new AtomicInteger( 0 );
   private static Logger                                 LOG             = Logger.getLogger( PersistenceContexts.class );
-  private static final ArrayListMultimap<String, Class> entities        = Multimaps.newArrayListMultimap( );
+  private static final ArrayListMultimap<String, Class> entities        = ArrayListMultimap.create( );
   private static final List<Class>                      sharedEntities  = Lists.newArrayList( );
   private static Map<String, EntityManagerFactoryImpl>  emf             = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
   private static List<Exception>                        illegalAccesses = Collections.synchronizedList( Lists.newArrayList( ) );
@@ -40,12 +40,16 @@ public class PersistenceContexts {
   }
   
   public static boolean isEntityClass( Class candidate ) {
-    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) || Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
+    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw Exceptions.fatal( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
       } else {
         return true;
       }
+    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) { 
+      throw Exceptions.fatal( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
     } else {
       return false;
     }

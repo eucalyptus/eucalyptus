@@ -73,7 +73,6 @@ import javax.persistence.PessimisticLockException;
 import javax.persistence.RollbackException;
 import javax.persistence.TransactionRequiredException;
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.hibernate.InstantiationException;
 import org.hibernate.LazyInitializationException;
 import org.hibernate.MappingException;
@@ -96,9 +95,9 @@ import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
 import com.eucalyptus.system.LogLevels;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class PersistenceErrorFilter {
   private static Logger LOG = Logger.getLogger( PersistenceErrorFilter.class );
@@ -159,7 +158,7 @@ public class PersistenceErrorFilter {
   private static final Multimap<ErrorCategory, Class<? extends Exception>> errorCategorization = buildErrorMap( );
   
   private static Multimap<ErrorCategory, Class<? extends Exception>> buildErrorMap( ) {
-    Multimap<ErrorCategory, Class<? extends Exception>> map = Multimaps.newArrayListMultimap( );
+    Multimap<ErrorCategory, Class<? extends Exception>> map = ArrayListMultimap.create();
     map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
     map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class, PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class, EntityExistsException.class ) );
     map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class ) );

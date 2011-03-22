@@ -2,12 +2,13 @@ package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
-import java.util.Date;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.Euare;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.Euare;
+import java.util.Date;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {
@@ -624,6 +625,7 @@ public class ListServerCertificatesType extends EuareMessage {
 }
 public class ErrorResponseType extends EuareMessage {
   String requestId;
+  HttpResponseStatus httpStatus;
   public ErrorResponseType() {  }
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
 }

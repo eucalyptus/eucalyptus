@@ -64,8 +64,6 @@
 package com.eucalyptus.vm;
 
 import java.io.ByteArrayInputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,6 +78,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.mule.module.client.RemoteDispatcher;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -91,31 +90,27 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callbacks;
-import com.eucalyptus.ws.client.RemoteDispatcher;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -123,7 +118,6 @@ import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
@@ -240,7 +234,7 @@ public class SystemState {
       try {
         GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true ).regardingUserRequest( parentMsg );
 
-        reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
+        reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
       }
       catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
@@ -409,4 +403,24 @@ public class SystemState {
 //    }
 //  }
   
+  public static Long countByAccount( String accountId ) throws AuthException {
+    long vmNum = 0;
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getId( ).equals( accountId ) ) {
+        vmNum++;
+      }
+    }
+    return vmNum;
+  }
+
+  public static long countByUser( String userId ) throws AuthException {
+    long vmNum = 0;
+    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {
+        vmNum++;
+      }
+    }
+    return vmNum;
+  }
+
 }

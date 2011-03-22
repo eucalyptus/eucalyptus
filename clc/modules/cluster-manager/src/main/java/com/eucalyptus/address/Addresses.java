@@ -221,7 +221,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1 ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }

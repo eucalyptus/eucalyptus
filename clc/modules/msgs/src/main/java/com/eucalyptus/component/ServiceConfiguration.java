@@ -9,7 +9,7 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public abstract void setName( String name );
   
   public abstract void setPartition( String partition );
-
+  
   public abstract String getHostName( );
   
   public abstract void setHostName( String hostName );
@@ -22,9 +22,13 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract void setServicePath( String servicePath );
   
-  public abstract ComponentId getComponentId( );
-  
   public abstract String getUri( );
   
   public abstract Boolean isLocal( );
-  }
+  
+  public abstract Component lookupComponent( );
+  
+  public abstract ComponentId getComponentId( );
+  
+  public abstract Service lookupService( );
+}

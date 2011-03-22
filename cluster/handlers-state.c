@@ -316,7 +316,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     return(0);
   }
 
-  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s privateMac=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac);
 
   if (inst->ccnet.vlan >= 0) {
     // activate network

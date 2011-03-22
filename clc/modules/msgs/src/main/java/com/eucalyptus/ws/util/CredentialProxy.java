@@ -65,6 +65,9 @@ package com.eucalyptus.ws.util;
 
 import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.components.crypto.Crypto;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -76,23 +79,19 @@ import java.security.cert.X509Certificate;
 
 public class CredentialProxy implements Crypto {
 
-  private final X509Certificate cert;
-  private final PrivateKey pk;
-  
-  public CredentialProxy( X509Certificate cert, PrivateKey pk ) {
-    super( );
-    this.cert = cert;
-    this.pk = pk;
+  private final Class<? extends ComponentId> componentId;
+  public CredentialProxy( Class<? extends ComponentId> componentId ) {
+    this.componentId = componentId;
   }
 
   @Override
   public X509Certificate[] getCertificates( final String arg0 ) throws WSSecurityException {
-    return new X509Certificate[] { this.cert };
+    return new X509Certificate[] { SystemCredentialProvider.getCredentialProvider( this.componentId ).getCertificate( ) };
   }
 
   @Override
   public PrivateKey getPrivateKey( final String alias, final String password ) throws Exception {
-    return this.pk;
+    return SystemCredentialProvider.getCredentialProvider( this.componentId ).getPrivateKey( );
   }
 
   @Override public X509Certificate loadCertificate( final InputStream inputStream ) throws WSSecurityException { return null; }

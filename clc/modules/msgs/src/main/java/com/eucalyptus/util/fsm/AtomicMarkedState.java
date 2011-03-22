@@ -1,6 +1,5 @@
 package com.eucalyptus.util.fsm;
 
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -9,15 +8,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> {
   private static Logger                               LOG                  = Logger.getLogger( AtomicMarkedState.class );
@@ -26,11 +24,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private final S                                     startState;
   private final ImmutableList<S>                      immutableStates;
-  private final Multimap<S, Callback<S>>              inStateListeners     = Multimaps.newArrayListMultimap( );
-  private final Multimap<S, Callback<S>>              outStateListeners    = Multimaps.newArrayListMultimap( );
+  private final Multimap<S, Callback<S>>              inStateListeners     = ArrayListMultimap.create( );
+  private final Multimap<S, Callback<S>>              outStateListeners    = ArrayListMultimap.create( );
   
   private volatile ImmutableList<Transition<P, S, T>> immutableTransitions = null;
-  private final Multimap<T, Transition<P, S, T>>      transitions          = Multimaps.newArrayListMultimap( );
+  private final Multimap<T, Transition<P, S, T>>      transitions          = ArrayListMultimap.create( );
   private final Map<S, Map<S, Transition<P, S, T>>>   stateTransitions;
   
   private final AtomicMarkableReference<S>            state;

@@ -7,14 +7,13 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
-import java.util.Enumeration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.PersistenceContexts;
@@ -24,9 +23,9 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
 /**
@@ -35,16 +34,15 @@ import com.google.common.collect.Sets;
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
-  private static Multimap<Class, String>        classList = Multimaps.newArrayListMultimap( );
+  private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
   @SuppressWarnings( { "deprecation", "unchecked" } )
   private static void processFile( File f ) throws IOException {
     JarFile jar = new JarFile( f );
     Properties props = new Properties( );
-    Enumeration<JarEntry> jarList = jar.entries( );
+    List<JarEntry> jarList = Collections.list( jar.entries( ) );
     LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
-    while ( jarList.hasMoreElements( ) ) {
-      JarEntry j = jarList.nextElement( );
+    for ( JarEntry j : jarList ) {
       if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
         String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
         try {
@@ -86,22 +84,22 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   public static void doSingleDiscovery( ServiceJarDiscovery s ) {
-	    File libDir = new File( BaseDirectory.LIB.toString( ) );
-	    for ( File f : libDir.listFiles( ) ) {
-	      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-	           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-	        LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
-	        try {
-	          ServiceJarDiscovery.processFile( f );
-	        } catch ( Throwable e ) {
-	          LOG.error( e.getMessage( ) );
-	          continue;
-	        }
-	      }
-	    }
-	    ServiceJarDiscovery.runDiscovery( s );
-	  }
-
+    File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( File f : libDir.listFiles( ) ) {
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+             && !f.getName( ).matches( ".*-ext-.*" ) ) {
+        LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
+        try {
+          ServiceJarDiscovery.processFile( f );
+        } catch ( Throwable e ) {
+          LOG.error( e.getMessage( ) );
+          continue;
+        }
+      }
+    }
+    ServiceJarDiscovery.runDiscovery( s );
+  }
+  
   public static void checkUniqueness( Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
       
@@ -121,7 +119,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       runDiscovery( s );
     }
   }
-
+  
   public static void runDiscovery( ServiceJarDiscovery s ) {
     LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
     for ( Class c : classList.keySet( ) ) {
@@ -132,7 +130,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
     }
   }
-
+  
   private void checkClass( Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {
@@ -167,7 +165,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   public int compareTo( ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
-
+  
   public static void processLibraries( ) {
     File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( File f : libDir.listFiles( ) ) {
@@ -183,7 +181,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
     }
   }
-
+  
   public static URLClassLoader makeClassLoader( File libDir ) {
     URLClassLoader loader = new URLClassLoader( Lists.transform( Arrays.asList( libDir.listFiles( ) ), new Function<File, URL>( ) {
       @Override
@@ -198,13 +196,13 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     } ).toArray( new URL[] {} ) );
     return loader;
   }
-
+  
   public static List<String> contextsInDir( File libDir ) {
     ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
     try {
       Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
       Set<String> ctxs = Sets.newHashSet( );
-      for( Class candidate : getClassList( libDir ) ) {
+      for ( Class candidate : getClassList( libDir ) ) {
         if ( PersistenceContexts.isEntityClass( candidate ) ) {
           if ( Ats.from( candidate ).has( PersistenceContext.class ) ) {
             ctxs.add( Ats.from( candidate ).get( PersistenceContext.class ).name( ) );
@@ -216,7 +214,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       Thread.currentThread( ).setContextClassLoader( oldLoader );
     }
   }
-
+  
   public static List<Class> classesInDir( File libDir ) {
     ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
     try {
@@ -226,7 +224,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       Thread.currentThread( ).setContextClassLoader( oldLoader );
     }
   }
-
+  
   private static List<Class> getClassList( File libDir ) {
     List<Class> classList = Lists.newArrayList( );
     for ( File f : libDir.listFiles( ) ) {
@@ -234,9 +232,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
 //        LOG.trace( "Found eucalyptus component jar: " + f.getName( ) );
         try {
           JarFile jar = new JarFile( f );
-          Enumeration<JarEntry> jarList = jar.entries( );
-          while ( jarList.hasMoreElements( ) ) {
-            JarEntry j = jarList.nextElement( );
+          for( JarEntry j : Collections.list( jar.entries( ) ) ) {
             if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
               String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
               try {

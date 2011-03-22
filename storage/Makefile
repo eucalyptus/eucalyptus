@@ -17,7 +17,7 @@ all: storage.o storage-windows.o walrus.o Wclient $(IMAGER) test_blobstore
 build: all
 
 $(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) -lcurl -lrt -lssl -lcrypto $(EFENCE)
+	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) $(STORAGE_LIBS) -lrt $(EFENCE)
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o walrus.o http.o $(STORAGE_LIBS)
@@ -29,7 +29,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
 
 test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
-	$(CC) -g -rdynamic -std=gnu99 $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o -lpthread $(EFENCE) ../util/euca_auth.o -lssl 
+	$(CC) -g -rdynamic -std=gnu99 $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c

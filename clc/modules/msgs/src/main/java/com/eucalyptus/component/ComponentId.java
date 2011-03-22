@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -31,6 +32,7 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
@@ -148,6 +150,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public FullName makeFullName( String partition, String name, String... parts ) {
     if( this.isPartitioned( ) ) {
       return new ComponentFullName( this, partition, name, parts );
+    } else if( this.isCloudLocal( ) ) {
+      return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
     } else {
       return new ComponentFullName( this, this.getName( ), name, parts );
     }
@@ -168,26 +172,31 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return false;
   }
   
-  
+  private static final ConcurrentMap<String,Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
   public ChannelPipelineFactory getClientPipeline( ) {
-    return new ChannelPipelineFactory( ) {
-      
-      @Override
-      public ChannelPipeline getPipeline( ) throws Exception {
-        return Channels.pipeline( );
-      }
-    };
+    return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
-  
+  private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
   protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
-    try {
-      return ( ChannelPipelineFactory ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ).newInstance( );
-    } catch ( InstantiationException ex ) {
-      LOG.error( ex, ex );
-    } catch ( IllegalAccessException ex ) {
-      LOG.error( ex, ex );
-    } catch ( ClassNotFoundException ex ) {
-      LOG.error( ex, ex );
+    if( clientPipelines.containsKey( fqName ) ) {
+      try {
+        return clientPipelines.get( fqName ).newInstance( );
+      } catch ( InstantiationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( IllegalAccessException ex ) {
+        LOG.error( ex , ex );
+      }
+    } else {
+      try {
+        clientPipelines.putIfAbsent( fqName, ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
+        return clientPipelines.get( fqName ).newInstance( );
+      } catch ( InstantiationException ex ) {
+        LOG.error( ex, ex );
+      } catch ( IllegalAccessException ex ) {
+        LOG.error( ex, ex );
+      } catch ( ClassNotFoundException ex ) {
+        LOG.error( ex, ex );
+      }
     }
     return new ChannelPipelineFactory( ) {
       
@@ -269,7 +278,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       u.parseServerAuthority( );
       return u;
     } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
+      LOG.error( e );
       return URI.create( uri );
     }
   }
@@ -318,13 +327,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return true;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentIdentity:name=%s:port=%s:uriPattern=%s:uriLocal=%s", this.getName( ), this.getPort( ), this.getUriPattern( ),
-                          this.getLocalEndpointName( ) );
-  }
 
   public String getExternalUriPattern( ) {
     return this.externalUriPattern;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s:localEndpointName=%s:serviceModel=%s:uriPattern=%s",
+                          this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
+                          this.hasCredentials( ), defaultClientPipelineClass, this.lookupBaseMessageType( ), this.getLocalEndpointName( ),
+                          this.getServiceModelFileName( ), this.getUriPattern( ) );
   }
 }

@@ -118,11 +118,7 @@ public class HeartbeatPipeline extends FilteredPipeline {
     }
     pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
     pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    try {
-      pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
-    } catch ( BindingException e ) {
-      LOG.error( e, e );
-    }
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
     pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
     return pipeline;
   }
