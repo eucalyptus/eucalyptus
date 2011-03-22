@@ -75,7 +75,6 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
