@@ -617,4 +617,44 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
+  
+  <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="AccountId" field="accountId" usage="required"/>
+  </mapping>
+  <mapping name="CreateAccount" class="com.eucalyptus.auth.euare.CreateAccountType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+  </mapping>
+  <mapping name="CreateAccountResponse" class="com.eucalyptus.auth.euare.CreateAccountResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="createAccountResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateAccountResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="CreateAccountResult" class="com.eucalyptus.auth.euare.CreateAccountResultType">
+    <structure name="Account" field="account" usage="optional" type="com.eucalyptus.auth.euare.AccountType"/>
+  </mapping>
+  <mapping name="DeleteAccount" class="com.eucalyptus.auth.euare.DeleteAccountType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteAccountResponse" class="com.eucalyptus.auth.euare.DeleteAccountResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccounts" class="com.eucalyptus.auth.euare.ListAccountsType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="NamePattern" field="namePattern" usage="optional"/>
+  </mapping>
+  <mapping name="ListAccountsResponse" class="com.eucalyptus.auth.euare.ListAccountsResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="listAccountsResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccountsResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountsResult" class="com.eucalyptus.auth.euare.ListAccountsResultType">
+    <collection name="Accounts" field="accounts" usage="required">
+      <structure name="member" type="com.eucalyptus.auth.euare.AccountType"/>
+    </collection>
+  </mapping>
 </binding>
