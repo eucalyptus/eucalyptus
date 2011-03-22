@@ -136,7 +136,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
     sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
     sb.append( "regStat=" ).append( this.getRegistrationStatus( ) ).append( ", " );
-    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) ).append( ", " );
+    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) );
     sb.append( ")" );
     return sb.toString( );
   }
