@@ -108,6 +108,7 @@ static configEntry configKeysRestart[] = {
   {"VNET_PUBLICIPS", NULL},
   {"VNET_ROUTER", NULL},
   {"VNET_SUBNET", NULL},
+  {"VNET_MACPREFIX", "d0:0d"},
   {"POWER_IDLETHRESH", "300"},
   {"POWER_WAKETHRESH", "300"},
   {"CC_IMAGE_PROXY", NULL},
