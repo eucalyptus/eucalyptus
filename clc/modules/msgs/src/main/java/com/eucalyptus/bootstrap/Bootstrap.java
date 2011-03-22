@@ -449,7 +449,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudLocal( ) {
-    return mergeDatabase || !childHost;
+    return childHost ? mergeDatabase : true;
   }
   
   public static Boolean shouldMergeDatabase( ) {
