@@ -31,4 +31,5 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public abstract ComponentId getComponentId( );
   
   public abstract Service lookupService( );
+  
 }

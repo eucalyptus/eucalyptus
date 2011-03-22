@@ -66,34 +66,115 @@ package com.eucalyptus.component;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.AtomicMarkedState;
-import com.eucalyptus.util.fsm.AtomicMarkedState.ActiveTransition;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
+import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionListener;
 import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.ws.util.PipelineRegistry;
 import com.google.common.base.Predicate;
 
 public class ComponentState {
-  private static Logger                                         LOG     = Logger.getLogger( ComponentState.class );
+  private static Logger                                         LOG                = Logger.getLogger( ComponentState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
-  private Component.State                                       goal    = Component.State.ENABLED;
-  private final NavigableSet<String>                            details = new ConcurrentSkipListSet<String>( );
+  private Component.State                                       goal               = Component.State.ENABLED;                 //TODO:GRZE:OMGFIXME
+  private final NavigableSet<String>                            details            = new ConcurrentSkipListSet<String>( );
+  private static final TransitionAction<Component>              loadTransition     = new TransitionAction<Component>( ) {
+                                                                                     
+                                                                                     @Override
+                                                                                     public void leave( Component parent, Completion transitionCallback ) {
+                                                                                       try {
+                                                                                         parent.getBootstrapper( ).load( );
+                                                                                         transitionCallback.fire( );
+                                                                                       } catch ( Throwable ex ) {
+                                                                                         LOG.error( "Transition failed on " + parent.getName( ) + " due to "
+                                                                                                     + ex.toString( ), ex );
+                                                                                         parent.submitError( ex );
+                                                                                         transitionCallback.fireException( ex );
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  private final TransitionAction<Component>                     startTransition    = new TransitionAction<Component>( ) {
+                                                                                     @Override
+                                                                                     public void leave( final Component parent, final Completion transitionCallback ) {
+                                                                                       try {
+                                                                                         parent.getBootstrapper( ).start( );
+                                                                                         if ( parent.hasLocalService( ) ) {
+                                                                                           parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
+                                                                                         }
+                                                                                         transitionCallback.fire( );
+                                                                                       } catch ( Throwable ex ) {
+                                                                                         LOG.error( "Transition failed on " + parent.getName( ) + " due to "
+                                                                                                    + ex.toString( ), ex );
+                                                                                         parent.submitError( ex );
+                                                                                         transitionCallback.fireException( ex );
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  private static final TransitionAction<Component>              enableTransition   = new TransitionAction<Component>( ) {
+                                                                                     @Override
+                                                                                     public void leave( Component parent, Completion transitionCallback ) {
+                                                                                       try {
+                                                                                         if ( State.NOTREADY.equals( parent.getState( ) ) ) {
+                                                                                           parent.getBootstrapper( ).check( );
+                                                                                           if ( parent.hasLocalService( ) ) {
+                                                                                             parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
+                                                                                           }
+                                                                                         }
+                                                                                         parent.getBootstrapper( ).enable( );
+                                                                                         if ( parent.hasLocalService( ) ) {
+                                                                                           parent.getBuilder( ).fireEnable( parent.getLocalService( ).getServiceConfiguration( ) );
+                                                                                         }
+                                                                                         transitionCallback.fire( );
+                                                                                       } catch ( Throwable ex ) {
+                                                                                         LOG.error( "Transition failed on " + parent.getName( ) + " due to "
+                                                                                                    + ex.toString( ), ex );
+                                                                                         parent.submitError( ex );
+                                                                                         transitionCallback.fireException( ex );
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  private static final TransitionAction<Component>              DISABLE_TRANSITION = new TransitionAction<Component>( ) {
+                                                                                     @Override
+                                                                                     public void leave( Component parent, Completion transitionCallback ) {
+                                                                                       try {
+                                                                                         parent.getBootstrapper( ).disable( );
+                                                                                         parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
+                                                                                         transitionCallback.fire( );
+                                                                                       } catch ( Throwable ex ) {
+                                                                                         LOG.error( "Transition failed on " + parent.getName( ) + " due to "
+                                                                                                    + ex.toString( ), ex );
+                                                                                         parent.submitError( ex );
+                                                                                         transitionCallback.fireException( ex );
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  private static final TransitionAction<Component>              STOP_TRANSITION    = new TransitionAction<Component>( ) {
+                                                                                     @Override
+                                                                                     public void leave( Component parent, Completion transitionCallback ) {
+                                                                                       try {
+                                                                                         parent.getBootstrapper( ).stop( );
+                                                                                         if ( parent.getLocalService( ) != null ) {
+                                                                                           parent.getBuilder( ).fireStop( parent.getLocalService( ).getServiceConfiguration( ) );
+                                                                                         }
+                                                                                         transitionCallback.fire( );
+                                                                                       } catch ( Throwable ex ) {
+                                                                                         LOG.error( "Transition failed on " + parent.getName( ) + " due to "
+                                                                                                    + ex.toString( ), ex );
+                                                                                         parent.submitError( ex );
+                                                                                         transitionCallback.fireException( ex );
+                                                                                       }
+                                                                                     }
+                                                                                   };
   
   public ComponentState( Component parent ) {
     this.parent = parent;
@@ -109,94 +190,6 @@ public class ComponentState {
   }
   
   private AtomicMarkedState<Component, State, Transition> buildStateMachine( ) {
-    final TransitionAction<Component> loadTransition = new TransitionAction<Component>( ) {
-      
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        ComponentState.this.details.clear( );
-        try {
-          parent.getBootstrapper( ).load( );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final TransitionAction<Component> startTransition = new TransitionAction<Component>( ) {
-      @Override
-      public void leave( final Component parent, final Completion transitionCallback ) {
-        try {
-          parent.getBootstrapper( ).start( );
-          if ( parent.hasLocalService( ) ) {
-            parent.getBuilder( ).fireStart( parent.getLocalService( ).getServiceConfiguration( ) );
-          }
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final TransitionAction<Component> enableTransition = new TransitionAction<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        try {
-          if ( State.NOTREADY.equals( ComponentState.this.stateMachine.getState( ) ) ) {
-            parent.getBootstrapper( ).check( );
-            if ( parent.hasLocalService( ) ) {
-              parent.getBuilder( ).fireCheck( parent.getLocalService( ).getServiceConfiguration( ) );
-            }
-          }
-          parent.getBootstrapper( ).enable( );
-          if ( parent.hasLocalService( ) ) {
-            parent.getBuilder( ).fireEnable( parent.getLocalService( ).getServiceConfiguration( ) );
-          }
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final TransitionAction<Component> disableTransition = new TransitionAction<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        try {
-          parent.getBootstrapper( ).disable( );
-          parent.getBuilder( ).fireDisable( parent.getLocalService( ).getServiceConfiguration( ) );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
-    final TransitionAction<Component> stopTransition = new TransitionAction<Component>( ) {
-      @Override
-      public void leave( Component parent, Completion transitionCallback ) {
-        try {
-          parent.getBootstrapper( ).stop( );
-          if ( parent.getLocalService( ) != null ) {
-            parent.getBuilder( ).fireStop( parent.getLocalService( ).getServiceConfiguration( ) );
-          }
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( "Transition failed on " + parent.getName( ) + " due to " + ex.toString( ), ex );
-          ComponentState.this.details.add( ex.toString( ) );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    
     final TransitionAction<Component> checkTransition = new TransitionAction<Component>( ) {
       @Override
       public void leave( Component parent, Completion transitionCallback ) {
@@ -261,8 +254,8 @@ public class ComponentState {
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( loadTransition );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( startTransition );
         on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines ).run( enableTransition );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines ).run( disableTransition );
-        on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( stopTransition );
+        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines ).run( DISABLE_TRANSITION );
+        on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( STOP_TRANSITION );
         on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( destroyTransition );
         on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
         on( Transition.DISABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( checkTransition );
@@ -272,8 +265,9 @@ public class ComponentState {
   }
   
   public CheckedListenableFuture<Component> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    if( !this.parent.isAvailableLocally( ) ) {
-      throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + " because it is not available locally." );
+    if ( !this.parent.isAvailableLocally( ) ) {
+      throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( )
+                                       + " because it is not available locally." );
     }
     try {
       return this.stateMachine.startTransition( transition );
@@ -315,8 +309,7 @@ public class ComponentState {
       LOG.error( Exceptions.filterStackTrace( ex ) );
     } catch ( NoSuchElementException ex ) {
       LOG.error( Exceptions.filterStackTrace( ex ) );
-    } catch ( ExistingTransitionException ex ) {
-    }
+    } catch ( ExistingTransitionException ex ) {}
     return Futures.predestinedFuture( this.parent );
   }
   

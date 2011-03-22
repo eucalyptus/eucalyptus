@@ -25,16 +25,6 @@ public class Cluster extends ComponentId {
     return true;
   }
   
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-  
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
-  
   private static ChannelPipelineFactory clusterPipeline;
   private static ChannelPipelineFactory logPipeline;
   

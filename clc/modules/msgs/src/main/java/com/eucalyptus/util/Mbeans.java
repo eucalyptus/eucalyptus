@@ -151,7 +151,7 @@ public class Mbeans {
     }
     String exportString = "jmx.export{ bean( " +
     " target: obj, " +
-    " name: \"${obj.class.package.name}:type=${obj.getClass().getSimpleName()},\"," +
+    " name: ${obj.class.package.name}:\"type=${obj.class.simpleName}\"," +
     " desc: \"${obj.toString()}\"" +
     " ) }";
     for( Class c : Classes.ancestry( targetType ) ) {

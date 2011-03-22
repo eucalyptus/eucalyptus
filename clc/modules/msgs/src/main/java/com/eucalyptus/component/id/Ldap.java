@@ -65,13 +65,9 @@ package com.eucalyptus.component.id;
 
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-public class Ldap extends ComponentId {
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
+public class Ldap extends ComponentId.Unpartioned {
 
   @Override
   public Boolean hasDispatcher( ) {
@@ -79,12 +75,8 @@ public class Ldap extends ComponentId {
   }
 
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
 
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
-  }
 }

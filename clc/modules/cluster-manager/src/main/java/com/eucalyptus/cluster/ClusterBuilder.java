@@ -3,7 +3,6 @@ package com.eucalyptus.cluster;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Property;
@@ -31,7 +29,6 @@ import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DescribeClustersType;
 import com.eucalyptus.config.ModifyClusterAttributeType;
 import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Hmacs;
@@ -40,11 +37,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import com.google.common.collect.Iterables;
 
 @DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
@@ -159,8 +152,8 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to store cluster credentials during registration: " + prelimConfig, ex );
       }
-      ServiceConfigurations.getInstance( ).store( prelimConfig );      
-
+      ServiceConfigurations.getInstance( ).store( prelimConfig );
+      
     } catch ( ServiceRegistrationException ex ) {
       ClusterBuilder.removeKeyDirectory( prelimConfig );
       throw ex;
@@ -284,17 +277,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
     clusterInstance.stop( );
     super.fireStop( config );
-  }
-  
-  /**
-   * @see com.eucalyptus.component.DatabaseServiceBuilder#add(java.net.URI)
-   * @param uri
-   * @return
-   * @throws ServiceRegistrationException
-   */
-  @Override
-  public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return new RemoteConfiguration( this.getComponent( ).getComponentId( ), "cluster", "cluster", uri );
   }
   
   @Override

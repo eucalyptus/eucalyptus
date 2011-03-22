@@ -75,22 +75,25 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Enumeration;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 
 public class Internets {
   private static Logger       LOG     = Logger.getLogger( Internets.class );
   private static final String localId = localhostIdentifier( );
+  private static final String localHost = localhost( );
   
+  public static String localhost( ) {
+    return localHost != null
+      ? localHost
+      : Internets.getAllInetAddresses( ).get( 0 ).getCanonicalHostName( );
+  }
+
   public static String localhostIdentifier( ) {
     return localId != null
       ? localId
@@ -138,6 +141,8 @@ public class Internets {
   }
   
   public static class Inet4AddressComparator implements Comparator<InetAddress>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     @Override
     public int compare( InetAddress o1, InetAddress o2 ) {
       return o1.getHostAddress( ).compareTo( o2.getHostAddress( ) );

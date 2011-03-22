@@ -62,14 +62,19 @@
  */
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -78,6 +83,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.context.ServiceContext;
@@ -108,6 +114,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.SortedMaps;
 import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class Component implements HasName<Component> {
@@ -312,15 +319,37 @@ public class Component implements HasName<Component> {
    * @return Service instance of the service
    * @throws ServiceRegistrationException
    */
-  public void initService( ) throws ServiceRegistrationException {
-    if ( this.enabled.get( ) ) {
-      ServiceConfiguration config = this.getBuilder( ).toConfiguration( this.getComponentId( ).getLocalEndpointUri( ) );
+  public ServiceConfiguration initService( ) throws ServiceRegistrationException {
+    if ( this.isAvailableLocally( ) 
+        && ( this.getComponentId( ).isAlwaysLocal( ) )
+          || ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) ) {
+      URI uri = this.getComponentId( ).getLocalEndpointUri( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ), uri.getPort( ) );
       Service service = new Service( this.getComponentId( ), config );
       this.serviceRegistry.register( service );
+      return config;
     } else {
-      throw new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." );
+      throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
     }
   }
+  
+  /**
+   * Builds a Service instance for this cloudLocal component when Eucalyptus is remote.
+   * 
+   * @return Service instance of the service
+   * @throws ServiceRegistrationException
+   */
+  public ServiceConfiguration initService( InetAddress addr ) throws ServiceRegistrationException {
+    if ( this.getComponentId( ).isCloudLocal( ) && !Bootstrap.isCloudLocal( ) ) {
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ), this.getComponentId( ).getPort( ) );
+      Service service = new Service( this.getComponentId( ), config );
+      this.serviceRegistry.register( service );
+      return config;
+    } else {
+      throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
+    }
+  }
+
   
   /**
    * Builds a Service instance for this component using the provided service
@@ -935,4 +964,9 @@ public class Component implements HasName<Component> {
     } );
   }
   
+  private ConcurrentNavigableMap<String,ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
+  public void submitError( Throwable t ) {
+    ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
+    this.errors.put( e.getUuid( ), e );
+  }
 }

@@ -63,7 +63,6 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 
@@ -72,16 +71,6 @@ public class Storage extends ComponentId {
   @Override
   public Boolean hasDispatcher( ) {
     return true;
-  }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
   }
 
   @Override

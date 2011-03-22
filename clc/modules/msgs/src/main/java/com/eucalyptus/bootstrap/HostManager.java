@@ -189,12 +189,8 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     } else {
       for ( Component c : Components.list( ) ) {
         try {
-          if ( c.getComponentId( ).isCloudLocal( ) ) {
-            URI uri = c.getUri( addr.getHostAddress( ), c.getComponentId( ).getPort( ) );
-            ServiceBuilder builder = c.getBuilder( );
-            ServiceConfiguration config = builder.toConfiguration( uri );
-            c.loadService( config );
-          }
+          ServiceConfiguration config = c.initService( addr );
+          c.loadService( config );
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex, ex );
         }

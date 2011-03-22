@@ -449,6 +449,10 @@ public class Bootstrap {
     return childHost;
   }
   
+  public static Boolean isCloudLocal( ) {
+    return mergeDatabase || !childHost;
+  }
+  
   public static Boolean shouldMergeDatabase( ) {
     return mergeDatabase;
   }
@@ -508,17 +512,13 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services." ) );
-    final Component eucalyptusComp = Components.lookup( "eucalyptus" );
     Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-        if ( ( comp.isAvailableLocally( ) && comp.getComponentId( ).isAlwaysLocal( ) )
-             || ( eucalyptusComp.isLocal( ) && comp.getComponentId( ).isCloudLocal( ) ) ) {
-          try {
-            comp.initService( );
-          } catch ( ServiceRegistrationException ex ) {
-            BootstrapException.throwFatal( ex.getMessage( ), ex );
-          }
+        try {
+          comp.initService( );
+        } catch ( ServiceRegistrationException ex ) {
+          BootstrapException.throwFatal( ex.getMessage( ), ex );
         }
       }
     } );

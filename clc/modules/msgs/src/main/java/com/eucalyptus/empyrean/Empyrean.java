@@ -63,7 +63,10 @@
 
 package com.eucalyptus.empyrean;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.id.Any;
+import com.google.common.collect.Lists;
 
 
 public class Empyrean extends ComponentId {
@@ -81,19 +84,14 @@ public class Empyrean extends ComponentId {
   public Boolean hasDispatcher( ) {
     return true;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
   
   @Override
   public Boolean hasCredentials( ) {
     return true;
+  }
+
+  @Override
+  public List<Class<Any>> serviceDependencies( ) {
+    return Lists.newArrayList( Any.class );
   }
 }

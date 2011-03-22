@@ -5,11 +5,8 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
@@ -19,18 +16,14 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.credential.HmacPrincipal;
-import com.eucalyptus.auth.principal.credential.X509Principal;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -55,13 +48,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
                                             "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
                                             "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
                                             "</mule>\n";
-  protected static final List<Class<? extends ComponentId>> getList( final Class<? extends ComponentId> id ) {
-    List<Class<? extends ComponentId>> hi = new ArrayList<Class<? extends ComponentId>>( ) {{
-      this.add( id );
-    }}; 
-    return hi;
-  }
-
   private final String        name;
   private final String        capitalizedName;
   private final String        entryPoint;
@@ -127,64 +113,78 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public FullName getFullName( ) {
-    return new ComponentFullName( this, this.getPartition( ), this.name );
+    return new ComponentFullName( this, this.tryForPartionName( ), this.name );
   }
-
+  
   @Override
   public String getPartition( ) {
-    return this.isPartitioned( ) ? FullName.NOBODY_ID : this.name;
+    return this.tryForPartionName( );//TODO:GRZE:OMGFIXME
   }
-
-  public boolean isPartitioned( ) {
-    return !this.isCloudLocal( );
+  
+  private final String tryForPartionName( ) {
+    return ( this.isPartitioned( ) )
+      ? Any.class.getSimpleName( ).toLowerCase( )
+      : ( ( Unpartioned ) this ).getPartition( );
   }
-
+  
+  public final boolean isPartitioned( ) {
+    return Unpartioned.class.isAssignableFrom( this.getClass( ) );
+  }
+  
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
-    if( this.isPartitioned( ) ) {
-      return new ComponentFullName( this, config.getPartition( ) != null  ? config.getPartition( ) : config.getName( ), config.getName( ), parts );
+    if ( this.isPartitioned( ) ) {
+      return new ComponentFullName( this, config.getPartition( ) != null
+        ? config.getPartition( )
+        : config.getName( ), config.getName( ), parts );
     } else {
       return new ComponentFullName( this, this.getName( ), config.getName( ), parts );
     }
   }
-
+  
   public FullName makeFullName( String partition, String name, String... parts ) {
-    if( this.isPartitioned( ) ) {
+    if ( this.isPartitioned( ) ) {
       return new ComponentFullName( this, partition, name, parts );
-    } else if( this.isCloudLocal( ) ) {
+    } else if ( this.isCloudLocal( ) ) {
       return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
     } else {
       return new ComponentFullName( this, this.getName( ), name, parts );
     }
   }
   
-  private static final List<Class<? extends ComponentId>> EMPTY = Lists.newArrayList( );
-  public List<Class<? extends ComponentId>> serviceDependencies( ) { 
-    return EMPTY;
+  public <T extends ComponentId> List<Class<T>> serviceDependencies( ) {
+    return Lists.newArrayList( );
   }
-
-  public abstract Boolean isCloudLocal( );
+  
+  public final Boolean isCloudLocal( ) {
+    return this.serviceDependencies( ).contains( Eucalyptus.class );
+  }
   
   public abstract Boolean hasDispatcher( );
   
-  public abstract Boolean isAlwaysLocal( );
+  public final Boolean isAlwaysLocal( ) {
+    return this.serviceDependencies( ).contains( Any.class );
+  }
   
   public Boolean hasCredentials( ) {
     return false;
   }
   
-  private static final ConcurrentMap<String,Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
+  private static final ConcurrentMap<String, Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
+  
   public ChannelPipelineFactory getClientPipeline( ) {
     return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
+  
   private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
+  
   protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
-    if( clientPipelines.containsKey( fqName ) ) {
+    if ( clientPipelines.containsKey( fqName ) ) {
       try {
         return clientPipelines.get( fqName ).newInstance( );
       } catch ( InstantiationException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( IllegalAccessException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else {
       try {
@@ -228,7 +228,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return AnonymousMessage.class;
     }
   }
-
+  
   public Integer getPort( ) {
     return this.port;
   }
@@ -282,7 +282,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return URI.create( uri );
     }
   }
-
+  
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
     String uri;
     try {
@@ -299,7 +299,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return URI.create( uri );
     }
   }
-
+  
   @Override
   public final int compareTo( ComponentId that ) {
     return this.name.compareTo( that.name );
@@ -327,16 +327,32 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return true;
   }
   
-
   public String getExternalUriPattern( ) {
     return this.externalUriPattern;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s:localEndpointName=%s:serviceModel=%s:uriPattern=%s",
                           this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
                           this.hasCredentials( ), defaultClientPipelineClass, this.lookupBaseMessageType( ), this.getLocalEndpointName( ),
                           this.getServiceModelFileName( ), this.getUriPattern( ) );
+  }
+  
+  public static abstract class Unpartioned extends ComponentId {
+    
+    public Unpartioned( ) {
+      super( );
+    }
+    
+    public Unpartioned( String name ) {
+      super( name );
+    }
+    
+    @Override
+    public final String getPartition( ) {
+      return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : this.name( );
+    }
+    
   }
 }

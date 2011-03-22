@@ -6,11 +6,8 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.LocalConfiguration;
-import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Internets;
 
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
@@ -96,18 +93,4 @@ public class ServiceConfigurations {
     }
   }
 
-  public static ServiceConfiguration uriToServiceConfiguration( Component component, URI uri ) {
-    String partition = "bootstrap".equals( component.getName( ) ) ? component.getName( ) : "eucalyptus"; 
-    String name = component.getName( );
-    try {      
-      if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && Internets.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( component.getComponentId( ), partition, name, uri );      
-      } else {
-        return new RemoteConfiguration( component.getComponentId( ), partition, name, uri );      
-      }
-    } catch ( Throwable t ) {
-      return new LocalConfiguration( component.getComponentId( ), partition, name, uri );      
-    }
-  }
-  
 }

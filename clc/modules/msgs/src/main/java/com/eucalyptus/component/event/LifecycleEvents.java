@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,21 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.component.event;
 
-import java.util.List;
-import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.ServiceConfiguration;
 
-public class Arbitrator extends ComponentId.Unpartioned {
-  @Override
-  public List<Class<Any>> serviceDependencies( ) {
-    return Lists.newArrayList( Any.class );
+public class LifecycleEvents {
+  public static LifecycleEvent disable( ServiceConfiguration config ) {
+    return new DisableComponentEvent( config );
   }
-
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
+  
+  public static LifecycleEvent enable( ServiceConfiguration config ) {
+    return new EnableComponentEvent( config );
   }
-
+  
+  public static LifecycleEvent start( ServiceConfiguration config ) {
+    return new StartComponentEvent( config );
+  }
+  
+  public static LifecycleEvent stop( ServiceConfiguration config ) {
+    return new StopComponentEvent( config );
+  }
 }

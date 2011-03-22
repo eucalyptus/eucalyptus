@@ -65,8 +65,9 @@ package com.eucalyptus.component.id;
 
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-public class Database extends ComponentId {
+public class Database extends ComponentId.Unpartioned {
 
   public Database( ) {
     super( "Db" );
@@ -91,16 +92,6 @@ public class Database extends ComponentId {
   public Boolean hasDispatcher( ) {
     return false;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
   
   @Override
   public Boolean hasCredentials( ) {
@@ -108,7 +99,7 @@ public class Database extends ComponentId {
   }
 
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
 }
