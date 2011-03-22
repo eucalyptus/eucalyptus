@@ -267,6 +267,10 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="org.jgroups" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">
     <priority value="INFO" />
     <appender-ref ref="walrus-stats-log" />

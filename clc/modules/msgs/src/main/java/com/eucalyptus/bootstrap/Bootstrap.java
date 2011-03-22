@@ -518,7 +518,7 @@ public class Bootstrap {
         try {
           comp.initService( );
         } catch ( ServiceRegistrationException ex ) {
-          BootstrapException.throwFatal( ex.getMessage( ), ex );
+          LOG.info( ex.getMessage( ) );
         }
       }
     } );
