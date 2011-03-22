@@ -534,7 +534,7 @@ public class Bootstrap {
     if ( component.getStateMachine( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
-          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ) ).info( );
+          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
           component.getStateMachine( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
