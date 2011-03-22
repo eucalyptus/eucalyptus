@@ -89,7 +89,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   Map<String, String> info;
   
   // User's groups
-  @ManyToMany( fetch = FetchType.EAGER, mappedBy="users" ) // not owning side
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<GroupEntity> groups;
   
