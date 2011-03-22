@@ -329,7 +329,7 @@ public class Component implements HasName<Component> {
       this.serviceRegistry.register( service );
       return config;
     } else {
-      throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." ) );
+      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
     }
   }
   
