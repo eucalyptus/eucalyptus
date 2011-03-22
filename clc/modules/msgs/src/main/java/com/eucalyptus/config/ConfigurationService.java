@@ -69,7 +69,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.google.common.collect.Lists;
 
 
-public class ConfigurationService extends ComponentId {
+public class ConfigurationService extends ComponentId.Unpartioned {
 
   public ConfigurationService( ) {
     super( "Configuration" );

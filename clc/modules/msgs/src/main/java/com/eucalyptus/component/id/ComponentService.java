@@ -67,7 +67,7 @@ import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
-public class ComponentService extends ComponentId {
+public class ComponentService extends ComponentId.Unpartioned {
   
   public ComponentService( ) {
     super( "Component" );

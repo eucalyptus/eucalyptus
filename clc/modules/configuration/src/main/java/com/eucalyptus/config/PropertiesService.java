@@ -68,7 +68,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.google.common.collect.Lists;
 
-public class PropertiesService extends ComponentId {
+public class PropertiesService extends ComponentId.Unpartioned {
 
   
   public PropertiesService( ) {

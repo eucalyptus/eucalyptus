@@ -20,6 +20,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -350,8 +351,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
     
     @Override
-    public final String getPartition( ) {
-      return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : this.name( );
+    public String getPartition( ) {
+      return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : ( this.isAlwaysLocal( ) ? Empyrean.INCOGNITO.name() : this.name( ) );
     }
     
   }
