@@ -2061,9 +2061,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    if (macAddrsLen >= maxCount) {
-      strncpy(mac, macAddrs[i], 32);
-    }      
+    //    if (macAddrsLen >= maxCount) {
+    //      strncpy(mac, macAddrs[i], 32);
+    //    }      
 
     sem_mywait(VNET);
     if (nidx == -1) {
