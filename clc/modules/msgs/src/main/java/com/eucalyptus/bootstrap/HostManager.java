@@ -64,11 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.URI;
 import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ChannelClosedException;
@@ -85,7 +81,6 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -97,7 +92,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.google.common.collect.Lists;
 
 public class HostManager implements Receiver, ExtendedMembershipListener, EventListener {
   private static Logger                       LOG         = Logger.getLogger( HostManager.class );
@@ -110,7 +104,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   private HostManager( ) {
     this.membershipChannel = HostManager.buildChannel( );
     this.membershipChannel.setReceiver( this );
-    this.membershipGroupName = Eucalyptus.class.getSimpleName( ) + "-" + Hmacs.generateSystemToken( Eucalyptus.class.getSimpleName( ).getBytes( ) );
+    this.membershipGroupName = SystemIds.membershipGroupName( );//TODO:GRZE:RELEASE make cached
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );

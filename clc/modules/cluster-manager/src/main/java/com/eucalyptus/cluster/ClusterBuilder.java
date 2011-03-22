@@ -15,6 +15,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Property;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
@@ -175,10 +176,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
       PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-cert.pem", nodeX509 );
       
-      String hexSig = Hmacs.generateSystemToken( "vtunpass".getBytes( ) );
       PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cloud-cert.pem", systemX509 );
       out = new FileWriter( keyDir.getAbsolutePath( ) + File.separator + "vtunpass" );
-      out.write( hexSig );
+      out.write( SystemIds.tunnelPassword( ) );
       out.flush( );
       out.close( );
     } catch ( Throwable ex ) {
