@@ -3248,10 +3248,11 @@ int init_config(void) {
       *pubRouter=NULL,
       *pubDomainname=NULL,
       *pubDNS=NULL,
-      *localIp=NULL;
-      //      *cloudIp=NULL;
+      *localIp=NULL,
+      *macPrefix=NULL;
+
     uint32_t *ips, *nms;
-    int initFail=0, len;
+    int initFail=0, len, usednew=0;;
     
     // DHCP Daemon Configuration Params
     daemon = configFileValue("VNET_DHCPDAEMON");
@@ -3278,56 +3279,68 @@ int init_config(void) {
       }
     }
     
-    {
-      int usednew=0;
+    macPrefix = configFileValue("VNET_MACPREFIX");
+    if (!macPrefix) {
+      logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+      macPrefix = strdup("d0:0d");
+      if (!macPrefix) {
+	logprintfl(EUCAFATAL, "init_config(): Out of memory!\n");
+	unlock_exit(1);
+      }
+    } else {
+      unsigned int a=0, b=0;
+      if (sscanf(macPrefix, "%02X:%02X", &a,&b) != 2 || (a > 0xFF || b > 0xFF)) {
+	logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+	macPrefix = strdup("d0:0d");
+      }
+    }
       
-      pubInterface = configFileValue("VNET_PUBINTERFACE");
+    pubInterface = configFileValue("VNET_PUBINTERFACE");
+    if (!pubInterface) {
+      logprintfl(EUCAWARN,"init_config(): VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
+      pubInterface = strdup("eth0");
       if (!pubInterface) {
-	logprintfl(EUCAWARN,"init_config(): VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
-	pubInterface = strdup("eth0");
+	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	unlock_exit(1);
+      }
+    } else {
+      usednew=1;
+    }
+      
+    privInterface = NULL;
+    privInterface = configFileValue("VNET_PRIVINTERFACE");
+    if (!privInterface) {
+      logprintfl(EUCAWARN,"init_config(): VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
+      privInterface = strdup("eth0");
+      if (!privInterface) {
+	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	unlock_exit(1);
+      }
+      usednew = 0;
+    }
+      
+    if (!usednew) {
+      tmpstr = NULL;
+      tmpstr = configFileValue("VNET_INTERFACE");
+      if (tmpstr) {
+	logprintfl(EUCAWARN, "init_config(): VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
+	if (pubInterface) free(pubInterface);
+	pubInterface = strdup(tmpstr);
 	if (!pubInterface) {
 	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
 	  unlock_exit(1);
 	}
-      } else {
-	usednew=1;
-      }
-      
-      privInterface = NULL;
-      privInterface = configFileValue("VNET_PRIVINTERFACE");
-      if (!privInterface) {
-	logprintfl(EUCAWARN,"init_config(): VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
-	privInterface = strdup("eth0");
+	
+	if (privInterface) free(privInterface);
+	privInterface = strdup(tmpstr);
 	if (!privInterface) {
 	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
 	  unlock_exit(1);
 	}
-	usednew = 0;
       }
-      
-      if (!usednew) {
-	tmpstr = NULL;
-	tmpstr = configFileValue("VNET_INTERFACE");
-	if (tmpstr) {
-	  logprintfl(EUCAWARN, "init_config(): VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
-	  if (pubInterface) free(pubInterface);
-	  pubInterface = strdup(tmpstr);
-	  if (!pubInterface) {
-	    logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-
-	  if (privInterface) free(privInterface);
-	  privInterface = strdup(tmpstr);
-	  if (!privInterface) {
-	    logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-	}
-	if (tmpstr) free(tmpstr);
-      }
+      if (tmpstr) free(tmpstr);
     }
-
+    
     if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
       pubSubnet = configFileValue("VNET_SUBNET");
       pubSubnetMask = configFileValue("VNET_NETMASK");
@@ -3363,7 +3376,6 @@ int init_config(void) {
     
     if (initFail) {
       logprintfl(EUCAFATAL, "init_config(): bad network parameters, must fix before system will work\n");
-      //      if (cloudIp) free(cloudIp);
       if (pubSubnet) free(pubSubnet);
       if (pubSubnetMask) free(pubSubnetMask);
       if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3379,14 +3391,14 @@ int init_config(void) {
       if (dhcpuser) free(dhcpuser);
       if (daemon) free(daemon);
       if (pubmode) free(pubmode);
+      if (macPrefix) free(macPrefix);
       sem_mypost(INIT);
       return(1);
     }
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp);
-    //    if (cloudIp) free(cloudIp);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3399,6 +3411,8 @@ int init_config(void) {
     if (daemon) free(daemon);
     if (privInterface) free(privInterface);
     if (pubInterface) free(pubInterface);
+    if (macPrefix) free(macPrefix);
+    if (localIp) free(localIp);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
