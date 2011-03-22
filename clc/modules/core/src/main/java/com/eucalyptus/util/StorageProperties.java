@@ -82,6 +82,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class StorageProperties {
@@ -182,7 +183,7 @@ public class StorageProperties {
 	}
 
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return new EntityWrapper<T>( StorageProperties.DB_NAME );
+		return ( EntityWrapper<T> ) EntityWrapper.get( VolumeInfo.class );
 	}
 
 }

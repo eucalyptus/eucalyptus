@@ -12,7 +12,7 @@ public class DefaultDispatcherFactory extends DispatcherFactory {
 
   @Override
   public void removeChild( Service service ) {
-    ServiceDispatcher.deregister( service.getDispatcher( ).getName( ) );
+    ServiceDispatcher.deregister( service.getServiceConfiguration( ) );
   }
   
   @Override
@@ -23,7 +23,7 @@ public class DefaultDispatcherFactory extends DispatcherFactory {
     } else {
       d = new RemoteDispatcher( parent, service.getName( ), service.getUri( ) );
     }
-    ServiceDispatcher.register( service.getName( ), d );
+    ServiceDispatcher.register( service.getServiceConfiguration( ), d );
     return d;
   }
   

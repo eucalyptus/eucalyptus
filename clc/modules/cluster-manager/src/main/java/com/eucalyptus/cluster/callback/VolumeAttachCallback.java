@@ -124,7 +124,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         try {
           Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
           ServiceConfiguration sc = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
-          Dispatcher dispatcher = ServiceDispatcher.lookup( Components.lookup("storage"), sc.getHostName( ) );
+          Dispatcher dispatcher = ServiceDispatcher.lookup( sc );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
           dispatcher.send( new DetachStorageVolumeType( iqn, volume.getVolumeId( ) ) );

@@ -66,7 +66,6 @@
  */
 package com.eucalyptus.entities;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityManager;
@@ -74,50 +73,24 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
-import org.hibernate.JDBCException;
-import org.hibernate.LazyInitializationException;
-import org.hibernate.MappingException;
-import org.hibernate.NonUniqueObjectException;
-import org.hibernate.PersistentObjectException;
-import org.hibernate.PropertyAccessException;
 import org.hibernate.Query;
-import org.hibernate.QueryException;
-import org.hibernate.QueryTimeoutException;
 import org.hibernate.Session;
-import org.hibernate.SessionException;
-import org.hibernate.StaleStateException;
-import org.hibernate.TransientObjectException;
-import org.hibernate.TypeMismatchException;
-import org.hibernate.UnresolvableObjectException;
-import org.hibernate.WrongClassException;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import org.hibernate.jdbc.TooManyRowsAffectedException;
-import org.hibernate.loader.MultipleBagFetchException;
-import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.TransactionException;
 import com.google.common.base.Join;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import com.google.gwt.user.client.rpc.SerializationException;
 
 public class EntityWrapper<TYPE> {
   
   static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
-  private TxHandle             tx;
+  private final TxHandle             tx;
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
-  
-  public EntityWrapper( ) {
-    this( "eucalyptus_general" );
-  }
-  
+
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
@@ -131,6 +104,11 @@ public class EntityWrapper<TYPE> {
     return get( ( Class<T> ) obj.getClass( ) );
   }
   
+  /**
+   * @see {@link EntityWrapper#get(Class)}
+   * @param persistenceContext
+   */
+  @Deprecated
   @SuppressWarnings( "unchecked" )
   public EntityWrapper( String persistenceContext ) {
     try {

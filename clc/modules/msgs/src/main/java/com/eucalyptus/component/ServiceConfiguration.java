@@ -1,7 +1,6 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 
 public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration> {

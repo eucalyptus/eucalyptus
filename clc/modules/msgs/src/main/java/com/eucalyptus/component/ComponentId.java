@@ -136,7 +136,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean isPartitioned( ) {
     return !this.isCloudLocal( );
   }
-  
+
+  public FullName makeFullName( ServiceConfiguration config, String... parts ) {
+    if( this.isPartitioned( ) ) {
+      return new ComponentFullName( this, config.getPartition( ) != null  ? config.getPartition( ) : config.getName( ), config.getName( ), parts );
+    } else {
+      return new ComponentFullName( this, this.getName( ), config.getName( ), parts );
+    }
+  }
+
   public FullName makeFullName( String partition, String name, String... parts ) {
     if( this.isPartitioned( ) ) {
       return new ComponentFullName( this, partition, name, parts );
@@ -210,10 +218,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } catch ( NoSuchElementException ex ) {
       return AnonymousMessage.class;
     }
-  }
-
-  public FullName getMyFullName( ServiceConfiguration conf ) {
-    return this.makeFullName( conf.getPartition( ), conf.getName( ) );
   }
 
   public Integer getPort( ) {

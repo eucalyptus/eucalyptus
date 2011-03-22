@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copy) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,35 +53,37 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.auth;
 
+package com.eucalyptus.component;
+
+import java.net.InetAddress;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.lang.reflect.Modifier;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.crypto.BaseSecurityProvider;
-import com.eucalyptus.crypto.CertificateProvider;
-import com.eucalyptus.crypto.CryptoProvider;
-import com.eucalyptus.crypto.HmacProvider;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.EventRecord;
+import org.jgroups.Address;
 
-public class Authentication {
-  static String         DB_NAME = "eucalyptus_auth";
-  public static Logger         LOG     = Logger.getLogger( Authentication.class );
-  
-  public static <T> EntityWrapper<T> getEntityWrapper( ) {
-    return new EntityWrapper<T>( Authentication.DB_NAME );
+public class Hosts {
+  private static final ConcurrentMap<Address,Host> hostMap = new ConcurrentHashMap<Address,Host>();
+  public static Host getHostInstance( Address jgroupsId ) {
+    Host h = hostMap.get( jgroupsId );
+    if( h == null ) {
+      throw new NoSuchElementException( "Failed to lookup host for jgroups address: " + jgroupsId );
+    } else {
+      return h;
+    }
   }
-    
+  public static Host getHostInstance( Address jgroupsId, List<InetAddress> addresses ) {
+    Host newHost = new Host( jgroupsId, addresses );
+    Host h = hostMap.putIfAbsent( jgroupsId, newHost );
+    return h != null ? h : newHost;
+  }
+  
 }

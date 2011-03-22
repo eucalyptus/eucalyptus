@@ -80,7 +80,6 @@ import javax.persistence.EntityNotFoundException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.ServiceConfigurations;

@@ -10,6 +10,11 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.instance.*;
 import com.eucalyptus.reporting.storage.*;
 import com.eucalyptus.reporting.queue.*;
@@ -118,6 +123,30 @@ public class ReportingBootstrapper
 				log.info("Used existing instance listener");
 			}
 			instanceReceiver.addEventListener(instanceListener);
+			
+      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
+        
+        @Override
+        public void fireEvent( Event event ) {
+          if ( event instanceof InstanceEvent ) {
+            QueueSender sender = QueueFactory.getInstance( ).getSender( QueueIdentifier.INSTANCE );
+            sender.send( ( com.eucalyptus.reporting.event.Event ) event );
+          }
+        }
+      }
+                      );
+      
+      ListenerRegistry.getInstance( ).register( StorageEvent.class, new EventListener( ) {
+        
+        @Override
+        public void fireEvent( Event event ) {
+          if ( event instanceof StorageEvent ) {
+            QueueSender sender = QueueFactory.getInstance( ).getSender( QueueIdentifier.STORAGE );
+            sender.send( ( com.eucalyptus.reporting.event.Event ) event );
+          }
+        }
+      }
+                      );
 			
 			log.info("ReportingBootstrapper started");
 			return true;

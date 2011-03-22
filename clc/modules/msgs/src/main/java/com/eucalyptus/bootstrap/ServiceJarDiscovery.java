@@ -14,9 +14,10 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
@@ -204,7 +205,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
       Set<String> ctxs = Sets.newHashSet( );
       for( Class candidate : getClassList( libDir ) ) {
-        if ( Ats.from( candidate ).has( Entity.class ) ) {
+        if ( PersistenceContexts.isEntityClass( candidate ) ) {
           if ( Ats.from( candidate ).has( PersistenceContext.class ) ) {
             ctxs.add( Ats.from( candidate ).get( PersistenceContext.class ).name( ) );
           }

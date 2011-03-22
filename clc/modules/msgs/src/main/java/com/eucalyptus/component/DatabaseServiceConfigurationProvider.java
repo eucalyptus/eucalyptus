@@ -18,7 +18,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
    * @throws ServiceRegistrationException
    */
   public <T extends ServiceConfiguration> List<T> list( T type ) throws ServiceRegistrationException {
-    EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
+    EntityWrapper<T> db = EntityWrapper.get( type );
     List<T> existingHosts = null;
     try {
       T searchConfig = ( T ) type.getClass( ).newInstance( );
@@ -32,7 +32,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
   
   @Override
   public <T extends ServiceConfiguration> T lookup( T type ) throws ServiceRegistrationException {
-    EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
+    EntityWrapper<T> db = EntityWrapper.get( type );
     T existingName = null;
     try {
       existingName = db.getUnique( type );
@@ -47,7 +47,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
   
   @Override
   public <T extends ServiceConfiguration> T store( T t ) throws ServiceRegistrationException {
-    EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
+    EntityWrapper<T> db = EntityWrapper.get( t );
     try {
       db.add( t );
       t = db.getUnique( t );
@@ -63,7 +63,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
 
   @Override
   public <T extends ServiceConfiguration> T remove( T t ) throws ServiceRegistrationException {
-    EntityWrapper<T> db = ServiceConfigurations.getEntityWrapper( );
+    EntityWrapper<T> db = EntityWrapper.get( t );
     try {
       T searchConfig = ( T ) t.getClass( ).newInstance( );
       searchConfig.setName( t.getName( ) );

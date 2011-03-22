@@ -111,7 +111,7 @@ public class StorageUtil {
   
   public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
     ServiceConfiguration scConfig = getActiveSc( clusterName ).getServiceConfiguration( );
-    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
+    Dispatcher sc = ServiceDispatcher.lookup( scConfig );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
   }
@@ -138,7 +138,7 @@ public class StorageUtil {
         }
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
+      Dispatcher sc = ServiceDispatcher.lookup( scConfig );
       DescribeStorageVolumesResponseType volState = sc.send( descVols );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
