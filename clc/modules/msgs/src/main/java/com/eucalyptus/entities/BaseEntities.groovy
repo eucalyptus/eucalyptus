@@ -46,7 +46,7 @@ public class AbstractPersistent implements Serializable {
   String id;
   @Version
   @Column(name = "version")
-  Integer version = 0;
+  Integer version;
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "last_update_timestamp")
   Date lastUpdate;

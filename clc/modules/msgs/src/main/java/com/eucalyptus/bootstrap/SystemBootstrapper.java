@@ -121,8 +121,8 @@ public class SystemBootstrapper {
   public boolean init( ) throws Exception {
     try {
       LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.EXTREME;
-      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
+      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.EXTREME;
+      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.TRACE;
       if ( LogLevels.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );
         System.setProperty( "euca.exhaust.level", "TRACE" );
