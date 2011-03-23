@@ -320,8 +320,14 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
-    if ( ( this.isAvailableLocally( ) && this.getComponentId( ).isAlwaysLocal( ) )
-          || ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) ) {
+    if ( ( this.isAvailableLocally( ) && this.getComponentId( ).isAlwaysLocal( ) ) ) {
+      URI uri = this.getComponentId( ).getLocalEndpointUri( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
+                                                                    uri.getPort( ) );
+      Service service = new Service( this.getComponentId( ), config );
+      this.serviceRegistry.register( service );
+      return config;
+    } else if ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
                                                                     uri.getPort( ) );
