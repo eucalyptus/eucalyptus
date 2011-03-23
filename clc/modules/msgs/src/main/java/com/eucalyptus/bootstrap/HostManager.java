@@ -115,6 +115,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
   }
   
   public static View getCurrentView( ) {
@@ -135,7 +136,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
         } else {
           singleton = new HostManager( );
           LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
-          ListenerRegistry.getInstance( ).register( ClockTick.class, singleton );
           return singleton;
         }
       }
@@ -174,7 +174,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
         }
       }
     } else {
-
+      
     }
   }
   
