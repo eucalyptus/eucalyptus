@@ -118,6 +118,7 @@ typedef struct vnetConfig_t {
   char privInterface[32];
   char bridgedev[32];
   char mode[32];
+  char macPrefix[6];
   //  char localIp[32];
   uint32_t localIps[32];
   uint32_t nw, nm, euca_ns, cloudIp;
@@ -136,7 +137,7 @@ typedef struct vnetConfig_t {
 } vnetConfig;
 
 enum {NC, CC, CLC};
-int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp);
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *macPrefix);
 
 int vnetStartNetwork(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netName);
@@ -218,7 +219,7 @@ int maczero(unsigned char in[6]);
 int machexcmp(char *ina, unsigned char inb[6]);
 char *ipdot2macdot(char *ip, char *macprefix);
 
-int instId2mac(char *instId, char *outmac);
+int instId2mac(vnetConfig *vnetconfig, char *instId, char *outmac);
 int zeromac(unsigned char in[6]);
 int maccmp(char *ina, unsigned char inb[6]);
 int getdevinfo(char *dev, uint32_t **outips, uint32_t **outnms, int *len);
