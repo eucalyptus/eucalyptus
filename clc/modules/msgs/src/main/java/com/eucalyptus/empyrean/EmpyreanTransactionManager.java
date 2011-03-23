@@ -46,12 +46,8 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     tm_conf.setAsynchronous2Pc( false );
     tm_conf.setLogPart1Filename( SubDirectory.DB.toString( ) + "/btm1.tx" );
     tm_conf.setLogPart2Filename( SubDirectory.DB.toString( ) + "/btm2.tx" );
-//    tm_conf.setJndiUserTransactionName( "eucalyptusTransactionManager" );
+    tm_conf.setJndiUserTransactionName( "eucalyptusTransactionManager" );
     return TransactionManagerServices.getTransactionManager( );
-  }
-  
-  private String getLocalizedUserTransactionName( ) {
-    return TransactionManagerServices.getConfiguration( ).getJndiUserTransactionName( ).replace( "java:comp/", "" );
   }
   
   public String getUserTransactionName( ) {
@@ -72,7 +68,6 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     InitialContext ic = new InitialContext( );
     Context env = ( Context ) ic.lookup( "java:comp/" );
     LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
-    env.bind( getLocalizedUserTransactionName( ), tm );
     env.bind( getUserTransactionName( ), tm );
   }
   
@@ -81,7 +76,6 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     InitialContext ic = new InitialContext( );
     Context env = ( Context ) ic.lookup( "java:comp/" );
     LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
-    env.unbind( getLocalizedUserTransactionName( ) );
     env.unbind( getUserTransactionName( ) );
   }
 }
