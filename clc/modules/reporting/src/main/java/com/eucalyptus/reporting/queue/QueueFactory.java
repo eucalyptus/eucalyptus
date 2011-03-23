@@ -23,6 +23,7 @@ public class QueueFactory
 		return queueFactory;
 	}
 	
+	//TODO:
 	private static String clientUrl = "failover:(" + QueueBroker.DEFAULT_URL + ")?initialReconnectDelay=10000&maxReconnectAttempts=10";
 
 	private Map<QueueIdentifier,QueueSenderImpl>   senders;
