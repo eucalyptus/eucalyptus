@@ -173,8 +173,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
           break;
         }
       }
-    } else {
-      
     }
   }
   
