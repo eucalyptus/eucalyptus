@@ -272,6 +272,9 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
+  public Boolean hasServiceEnabled( ) {
+    return State.ENABLED.equals( this.getState( ) );
+  }
   public Boolean isRunningLocally( ) {
     return State.ENABLED.equals( this.getState( ) );// && this.serviceRegistry.hasLocalService( );
   }
@@ -346,7 +349,7 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( InetAddress addr ) throws ServiceRegistrationException {
-    if ( this.getComponentId( ).isCloudLocal( ) && !Bootstrap.isCloudLocal( ) ) {
+    if ( !Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                     this.getComponentId( ).getPort( ) );
       Service service = new Service( this.getComponentId( ), config );

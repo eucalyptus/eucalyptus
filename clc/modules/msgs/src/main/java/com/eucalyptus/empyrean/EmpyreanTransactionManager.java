@@ -63,19 +63,19 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     return tm;
   }
   
-  @Override
-  protected void doStart( ) throws Exception {
-    InitialContext ic = new InitialContext( );
-    Context env = ( Context ) ic.lookup( "java:comp/" );
-    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
-    env.bind( getUserTransactionName( ), tm );
-  }
-  
-  @Override
-  protected void doStop( ) throws Exception {
-    InitialContext ic = new InitialContext( );
-    Context env = ( Context ) ic.lookup( "java:comp/" );
-    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
-    env.unbind( getUserTransactionName( ) );
-  }
+//  @Override
+//  protected void doStart( ) throws Exception {
+//    InitialContext ic = new InitialContext( );
+//    Context env = ( Context ) ic.lookup( "java:comp/env" );
+//    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
+//    env.bind( getUserTransactionName( ), tm );
+//  }
+//  
+//  @Override
+//  protected void doStop( ) throws Exception {
+//    InitialContext ic = new InitialContext( );
+//    Context env = ( Context ) ic.lookup( "java:comp/env" );
+//    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
+//    env.unbind( getUserTransactionName( ) );
+//  }
 }

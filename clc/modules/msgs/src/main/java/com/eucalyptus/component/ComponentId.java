@@ -103,17 +103,17 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public String name( ) {
+  public final String name( ) {
     return this.name;
   }
   
   @Override
-  public String getName( ) {
+  public final String getName( ) {
     return this.name;
   }
   
   @Override
-  public FullName getFullName( ) {
+  public final FullName getFullName( ) {
     return new ComponentFullName( this, this.tryForPartionName( ), this.name );
   }
   
@@ -129,7 +129,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final boolean isPartitioned( ) {
-    return Unpartioned.class.isAssignableFrom( this.getClass( ) );
+    return !Unpartioned.class.isAssignableFrom( this.getClass( ) );
   }
   
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
@@ -218,7 +218,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   /**
    * @return the capitalizedName
    */
-  public String getCapitalizedName( ) {
+  public final String getCapitalizedName( ) {
     return this.capitalizedName;
   }
   

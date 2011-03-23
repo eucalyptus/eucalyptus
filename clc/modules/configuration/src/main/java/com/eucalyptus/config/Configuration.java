@@ -111,6 +111,12 @@ public class Configuration {
     return reply;
   }
     
+  public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
+    DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
+    return reply;
+  }
+  
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
   public ModifyComponentAttributeResponseType modify( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     ModifyComponentAttributeResponseType reply = request.getReply( );
@@ -135,12 +141,6 @@ public class Configuration {
         builder.getComponent( ).disableService( conf );
       }
     }
-    return reply;
-  }
-  
-  public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
-    DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
     return reply;
   }
   

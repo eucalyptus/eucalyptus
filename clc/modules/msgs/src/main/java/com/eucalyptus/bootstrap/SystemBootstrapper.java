@@ -66,30 +66,27 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Mbeans;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * Java entry point from eucalyptus-bootstrap
@@ -140,11 +137,8 @@ public class SystemBootstrapper {
           }
         }
       }
-      
 
-      
-            );
-
+      );
       
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
@@ -155,7 +149,7 @@ public class SystemBootstrapper {
       }
             );
       
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on("\n").join( LogLevels.class.getDeclaredFields( ) ) ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
@@ -195,11 +189,8 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    /** ASAP:FIXME:GRZE **/
-    for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
-        Bootstrap.applyTransition( c, Component.Transition.LOADING );
-      }
+    for( Component c : Components.whichCanLoad( ) ) {
+      Bootstrap.applyTransition( c, Component.Transition.LOADING );
     }
     return true;
   }
@@ -220,17 +211,15 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
-        Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            Bootstrap.applyTransition( c, Component.Transition.STARTING );
-            Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
-            Bootstrap.applyTransition( c, Component.Transition.ENABLING );
-          }
-        } );
-      }
+    for ( final Component c : Components.whichCanLoad( ) ) {
+      Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          Bootstrap.applyTransition( c, Component.Transition.STARTING );
+          Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
+          Bootstrap.applyTransition( c, Component.Transition.ENABLING );
+        }
+      } );
     }
     try {
       SystemBootstrapper.printBanner( );
@@ -267,7 +256,7 @@ public class SystemBootstrapper {
 //    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
     String prefix = "\n\t";
     String headerHeader = "\n[8m-----------------[0;10m[1m_________________________________________________________[0;10m\n[8m-----------------[0;10m[1m|";
-    String headerFormat = "  %-54.54s";
+    String headerFormat = "  %-53.53s";
     String headerFooter = "|\n[8m-----------------[0;10m[1m|#######################################################|[0;10m\n";
     String banner = "[8m-----------------[0;10m[1m._______________________________________________________.[0;10m\n"
                     +

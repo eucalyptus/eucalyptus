@@ -540,7 +540,7 @@ public class Bootstrap {
     if ( component.getStateMachine( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
-          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
+          EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
           component.getStateMachine( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
@@ -549,7 +549,7 @@ public class Bootstrap {
           LOG.error( ex );
         }
         try {
-          TimeUnit.MILLISECONDS.sleep( 500 );
+          TimeUnit.MILLISECONDS.sleep( 50 );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
         }
