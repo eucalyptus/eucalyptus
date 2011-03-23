@@ -77,7 +77,6 @@
 	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/btm-1.3.2.jar"/>
 	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.0-BETA.jar"/>
 	<classpathentry kind="lib" path="lib/commons-cli-1.1.jar"/>
@@ -141,7 +140,6 @@
 	<classpathentry kind="lib" path="lib/jetty6-servlet-tester-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-sslengine-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-util-6.1.19.jar"/>
-	<classpathentry kind="lib" path="lib/jgroups.jar"/>
 	<classpathentry kind="lib" path="lib/jsch-20091212.jar"/>
 	<classpathentry kind="lib" path="lib/json-lib-2.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/jug-asl-2.0.0.jar"/>
