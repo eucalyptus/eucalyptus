@@ -425,7 +425,7 @@ public class Bootstrap {
       if ( childHost ) {
         /** initialize whether should merge database **/
         mergeDatabase = ( System.getProperty( "euca.merge.db" ) != null );
-        /** initialize the parent arguments **/        
+        /** initialize the parent arguments **/
         for ( int i = 0; i < parentNum; i++ ) {
           String addr = System.getProperty( "euca.parent." + i );
           try {
@@ -449,7 +449,9 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudLocal( ) {
-    return childHost ? mergeDatabase : true;
+    return childHost
+      ? mergeDatabase
+      : true;
   }
   
   public static Boolean shouldMergeDatabase( ) {
@@ -504,24 +506,25 @@ public class Bootstrap {
     for ( Component c : Components.list( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
-
     
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal=" + Bootstrap.isCloudLocal( )  ) );
+    LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
+                              + Bootstrap.isCloudLocal( ) ) );
     List<Component> components = Components.list( );
-    Iterables.all( components, new Callback.Success<Component>( ) {
-      @Override
-      public void fire( Component comp ) {
-        try {
-          comp.initService( );
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.info( ex.getMessage( ) );
-        }
+    for ( Component comp : components ) {
+//    Iterables.all( components, new Callback.Success<Component>( ) {
+//      @Override
+//      public void fire( Component comp ) {
+      try {
+        comp.initService( );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.info( ex.getMessage( ) );
       }
-    } );
+    }
+//    } );
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
