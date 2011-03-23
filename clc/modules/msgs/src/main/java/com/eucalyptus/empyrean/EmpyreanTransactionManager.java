@@ -46,7 +46,7 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     tm_conf.setAsynchronous2Pc( false );
     tm_conf.setLogPart1Filename( SubDirectory.DB.toString( ) + "/btm1.tx" );
     tm_conf.setLogPart2Filename( SubDirectory.DB.toString( ) + "/btm2.tx" );
-    tm_conf.setJndiUserTransactionName( "eucalyptusTransactionManager" );
+//    tm_conf.setJndiUserTransactionName( "eucalyptusTransactionManager" );
     return TransactionManagerServices.getTransactionManager( );
   }
   
