@@ -73,6 +73,7 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     Context env = ( Context ) ic.lookup( "java:comp/" );
     LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
     env.bind( getLocalizedUserTransactionName( ), tm );
+    env.bind( getUserTransactionName( ), tm );
   }
   
   @Override
@@ -81,5 +82,6 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     Context env = ( Context ) ic.lookup( "java:comp/" );
     LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
     env.unbind( getLocalizedUserTransactionName( ) );
+    env.unbind( getUserTransactionName( ) );
   }
 }
