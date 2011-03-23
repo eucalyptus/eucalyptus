@@ -35,7 +35,7 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
   }
   
   public TransactionManager getTransactionManager( ) throws Exception {
-    return ( TransactionManager ) getContext( ).lookup( "java:comp/UserTransaction" );
+    return ( TransactionManager ) getContext( ).lookup( this.getUserTransactionName( ) );
   }
   
   private static TransactionManager configureTm( ) {
