@@ -102,6 +102,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
