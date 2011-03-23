@@ -102,6 +102,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   public static HostManager                   singleton;
   
   private HostManager( ) {
+    ListenerRegistry.getInstance( ).register( ClockTick.class, new HostStateMonitor( ) );
     this.membershipChannel = HostManager.buildChannel( );
     this.membershipChannel.setReceiver( this );
     this.membershipGroupName = SystemIds.membershipGroupName( );//TODO:GRZE:RELEASE make cached
