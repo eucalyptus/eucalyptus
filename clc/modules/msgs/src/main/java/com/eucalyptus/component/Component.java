@@ -897,6 +897,15 @@ public class Component implements HasName<Component> {
       }
       throw new NoSuchElementException( "No service found matching name: " + name + " for component: " + Component.this.getName( ) );
     }
+
+    /**
+     * TODO: DOCUMENT Component.java
+     * @param config
+     * @return
+     */
+    public boolean hasService( ServiceConfiguration config ) {
+      return this.services.containsKey( config.getFullName( ) );
+    }
   }
   
   /**
@@ -978,5 +987,14 @@ public class Component implements HasName<Component> {
   public void submitError( Throwable t ) {
     ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
     this.errors.put( e.getUuid( ), e );
+  }
+
+  /**
+   * TODO: DOCUMENT Component.java
+   * @param ephemeralConfig
+   * @return
+   */
+  public boolean hasService( ServiceConfiguration config ) {
+    return this.serviceRegistry.hasService( config );
   }
 }
