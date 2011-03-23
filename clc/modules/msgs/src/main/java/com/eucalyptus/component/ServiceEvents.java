@@ -80,7 +80,7 @@ public class ServiceEvents {
     
   }
   
-  public static ServiceEvent createError( ServiceConfiguration configuration, Throwable exception ) {
+  public static ServiceEvent createError( ServiceConfiguration configuration, Throwable exception ) {//TODO:GRZE:OMGFIXME
     return createError( configuration, exception.getMessage( ), exception );
   }
   
