@@ -62,7 +62,7 @@
 	<classpathentry kind="lib" path="lib/bcel-5.2.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov.jar"/>
 	<classpathentry kind="lib" path="lib/bsf-2.4.0.jar"/>
-	<classpathentry kind="lib" path="lib/btm-2.1.0.jar"/>
+	<classpathentry kind="lib" path="lib/btm-2.1.0.jar" sourcepath="/bzr/third-party/btm-2.1.0/src"/>
 	<classpathentry kind="lib" path="lib/cglib-2.1.3.jar"/>
 	<classpathentry kind="lib" path="lib/com.noelios.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/com.noelios.restlet.ext.servlet-1.1.5.jar"/>

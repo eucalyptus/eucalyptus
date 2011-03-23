@@ -7,6 +7,8 @@ import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
+import org.mortbay.naming.InitialContextFactory;
+import org.mortbay.naming.NamingUtil;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.system.SubDirectory;
 import bitronix.tm.BitronixTransactionManager;
@@ -15,9 +17,9 @@ import bitronix.tm.TransactionManagerServices;
 import bitronix.tm.jndi.BitronixContext;
 
 public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
-
-  private static Logger  LOG = Logger.getLogger( EmpyreanTransactionManager.class );
-  private static Context ctx;
+  
+  private static Logger             LOG = Logger.getLogger( EmpyreanTransactionManager.class );
+  private static Context            ctx;
   private static TransactionManager tm;
   
   private static Context getContext( ) {
@@ -35,7 +37,7 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
   }
   
   public TransactionManager getTransactionManager( ) throws Exception {
-    return ( TransactionManager ) getContext( ).lookup( this.getUserTransactionName( ) );
+    return tm;
   }
   
   private static TransactionManager configureTm( ) {
@@ -48,6 +50,10 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     return TransactionManagerServices.getTransactionManager( );
   }
   
+  private String getLocalizedUserTransactionName( ) {
+    return TransactionManagerServices.getConfiguration( ).getJndiUserTransactionName( ).replace( "java:comp/", "" );
+  }
+  
   public String getUserTransactionName( ) {
     return TransactionManagerServices.getConfiguration( ).getJndiUserTransactionName( );
   }
@@ -58,11 +64,22 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
   
   @Override
   public TransactionManager getTransactionManager( Properties arg0 ) throws HibernateException {
-    try {
-      return getTransactionManager( );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      return TransactionManagerServices.getTransactionManager( );
-    }
+    return tm;
+  }
+  
+  @Override
+  protected void doStart( ) throws Exception {
+    InitialContext ic = new InitialContext( );
+    Context env = ( Context ) ic.lookup( "java:comp/" );
+    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
+    env.bind( getLocalizedUserTransactionName( ), tm );
+  }
+  
+  @Override
+  protected void doStop( ) throws Exception {
+    InitialContext ic = new InitialContext( );
+    Context env = ( Context ) ic.lookup( "java:comp/" );
+    LOG.debug( "Unbinding " + this.getUserTransactionName( ) );
+    env.unbind( getLocalizedUserTransactionName( ) );
   }
 }
