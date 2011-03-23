@@ -511,7 +511,8 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal=" + Bootstrap.isCloudLocal( )  ) );
-    Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
+    List<Component> components = Components.list( );
+    Iterables.all( components, new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
         try {
