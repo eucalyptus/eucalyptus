@@ -133,18 +133,9 @@ public class EntityWrapper<TYPE> {
   
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    Object id = null;
-    try {
-      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
-    } catch ( Exception ex ) {
-    }
-    if( id != null ) {
-      return ( List<TYPE> ) Lists.newArrayList( this.getEntityManager( ).find( example.getClass( ), id ) );
-    } else {
-      Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-      List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
-      return Lists.newArrayList( Sets.newHashSet( resultList ) );
-    }
+    Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
   public TYPE lookupAndClose( TYPE example ) throws NoSuchElementException {
@@ -161,21 +152,26 @@ public class EntityWrapper<TYPE> {
   
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
     if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
-    List<TYPE> res = this.query( example );
-    if ( res.size( ) != 1 ) {
-      String msg = null;
-      try {
-        msg = LogUtil.dumpObject( example );
-      } catch ( Exception e ) {
-        msg = example.toString( );
-      }
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.fail( ), Long.toString( this.tx.splitOperation( ) ),
-                                     this.tx.getTxUuid( ) ) );
-      throw new EucalyptusCloudException( "Error locating information for " + msg );
+    Object id = null;
+    try {
+      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+    } catch ( Exception ex ) {
     }
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
-                                   this.tx.getTxUuid( ) ) );
+    if( id != null ) {
+      return ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+    } else {
+      List<TYPE> res = this.query( example );
+      if ( res.size( ) != 1 ) {
+        String msg = null;
+        try {
+          msg = LogUtil.dumpObject( example );
+        } catch ( Exception e ) {
+          msg = example.toString( );
+        }
+        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + msg );
+      }
     return res.get( 0 );
+    }
   }
   
   
