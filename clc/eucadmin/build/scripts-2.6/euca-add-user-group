@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys
-from euca_admin.groups import Group
+from eucadmin.groups import Group
 
 def main():
   c = Group().cli_add()

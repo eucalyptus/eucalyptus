@@ -229,11 +229,6 @@ public abstract class Bootstrapper {
             }
           }
         }
-        for ( ComponentId c : dependsRemote ) {
-          if ( !c.isCloudLocal( ) ) {
-            BootstrapException.throwFatal( "DependsRemote specifies a component which is not cloud-local: " + this.getClass( ).getSimpleName( ) );
-          }
-        }
       }
       return dependsRemote;
     }

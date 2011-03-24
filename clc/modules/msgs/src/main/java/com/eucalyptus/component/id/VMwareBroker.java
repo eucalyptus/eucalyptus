@@ -74,16 +74,6 @@ public class VMwareBroker extends ComponentId {
   }
 
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
-
-  @Override
   public String getServiceModelFileName( ) {
     return "vmware-broker-model.xml";
   }

@@ -63,9 +63,12 @@
 
 package com.eucalyptus.config;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Lists;
 
-public class PropertiesService extends ComponentId {
+public class PropertiesService extends ComponentId.Unpartioned {
 
   
   public PropertiesService( ) {
@@ -80,18 +83,13 @@ public class PropertiesService extends ComponentId {
 
 
   @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
-  
-  @Override
   public Boolean hasDispatcher( ) {
     return true;
   }
-  
+
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
   
 }

@@ -75,7 +75,6 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -83,7 +82,6 @@ import com.google.common.collect.Sets;
 
 public class Configuration {
   public static Logger        LOG                 = Logger.getLogger( Configuration.class );
-  public static String DB_NAME             = "eucalyptus_config";
   static String        CLUSTER_KEY_FSTRING = "cc-%s";
   static String        NODE_KEY_FSTRING    = "nc-%s";
   
@@ -113,6 +111,12 @@ public class Configuration {
     return reply;
   }
     
+  public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
+    DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
+    return reply;
+  }
+  
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
   public ModifyComponentAttributeResponseType modify( ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     ModifyComponentAttributeResponseType reply = request.getReply( );
@@ -137,12 +141,6 @@ public class Configuration {
         builder.getComponent( ).disableService( conf );
       }
     }
-    return reply;
-  }
-  
-  public DescribeNodesResponseType listComponents( DescribeNodesType request ) throws EucalyptusCloudException {
-    DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
     return reply;
   }
   
