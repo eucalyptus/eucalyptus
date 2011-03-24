@@ -505,7 +505,6 @@ public class Component implements HasName<Component> {
             @Override
             public void run( ) {
               try {
-                DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
                 Component.this.stateMachine.transition( State.STOPPED );
                 Component.this.serviceRegistry.deregister( config );
                 future.set( Component.this );
@@ -521,7 +520,6 @@ public class Component implements HasName<Component> {
         }
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) || State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
-          DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
           return Component.this.stateMachine.transition( State.STOPPED );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
