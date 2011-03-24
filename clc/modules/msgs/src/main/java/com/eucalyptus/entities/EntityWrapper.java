@@ -158,17 +158,16 @@ public class EntityWrapper<TYPE> {
     } catch ( Exception ex ) {
     }
     if( id != null ) {
-      return ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+      TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+      if( res == null ) {
+        throw new EucalyptusCloudException( "Get unique failed (returning 0 results for " + LogUtil.dumpObject( example ) );
+      } else {
+        return res;
+      }
     } else {
       List<TYPE> res = this.query( example );
       if ( res.size( ) != 1 ) {
-        String msg = null;
-        try {
-          msg = LogUtil.dumpObject( example );
-        } catch ( Exception e ) {
-          msg = example.toString( );
-        }
-        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + msg );
+        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + LogUtil.dumpObject( example ) );
       }
     return res.get( 0 );
     }
