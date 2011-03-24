@@ -121,8 +121,6 @@ public class InternalWsSecHandler extends WsSecHandler {
           throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
         }
       }
-      // YE TODO: will there be a problem, e.g. the system admin is not ready?
-      //Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Accounts.lookupSystemAdmin( ) );
       Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.SYSTEM_USER );
     }
   }
