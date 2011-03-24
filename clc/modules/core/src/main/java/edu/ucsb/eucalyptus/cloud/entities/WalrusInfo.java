@@ -201,7 +201,7 @@ public class WalrusInfo {
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
-		} catch(EucalyptusCloudException ex) {
+		} catch(Exception ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_USER, 
