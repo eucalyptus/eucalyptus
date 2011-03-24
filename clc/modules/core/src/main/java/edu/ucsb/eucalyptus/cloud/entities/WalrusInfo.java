@@ -197,7 +197,7 @@ public class WalrusInfo {
 	}
 
 	public static WalrusInfo getWalrusInfo() {
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>(WalrusProperties.DB_NAME);
+		EntityWrapper<WalrusInfo> db = EntityWrapper.get(WalrusInfo.class);
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
