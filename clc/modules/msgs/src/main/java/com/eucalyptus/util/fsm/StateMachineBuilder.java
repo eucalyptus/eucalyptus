@@ -204,7 +204,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
 //        ? transNames.get( t )
 //        : t.name( ) + ":NONE" ) );
       for ( Transition<P, S, T> tr : transNames.get( t ) ) {
-        String trKey = String.format( "%s.%s->%s.%s", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ) );
+        String trKey = String.format( "%s.%s->%s.%s (err=%s.%s)", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ), tr.getErrorState( ), tr.getErrorStateMark( ) );
         if ( alltransitions.get( trKey ) != null ) {
           LOG.error( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );
           throw new IllegalStateException( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );
