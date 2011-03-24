@@ -65,17 +65,12 @@ package com.eucalyptus.component;
 import java.net.URI;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.config.LocalConfiguration;
-import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
 public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> extends AbstractServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
-  protected abstract T newInstance( );
-  
-  protected abstract T newInstance( String partition, String name, String host, Integer port );
-  
+    
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
     return ServiceConfigurations.getInstance( ).list( this.newInstance( ) );
@@ -147,11 +142,6 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( partition, name, host, port );
     return ( T ) ServiceConfigurations.getInstance( ).store( config );
-  }
-
-  @Override
-  public ServiceConfiguration toConfiguration( URI uri ) throws ServiceRegistrationException {
-    return ServiceConfigurations.uriToServiceConfiguration( this.getComponent( ), uri );
   }
 
   @Override

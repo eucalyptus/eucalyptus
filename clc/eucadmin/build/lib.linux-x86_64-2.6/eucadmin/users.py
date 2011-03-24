@@ -29,11 +29,11 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import boto, sys, euca_admin
-from euca_admin.generic import StringList
+import boto, sys, eucadmin
+from eucadmin.generic import StringList
 from boto.exception import EC2ResponseError
-from euca_admin.generic import BooleanResponse
-from euca_admin import EucaAdmin
+from eucadmin.generic import BooleanResponse
+from eucadmin import EucaAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Accounts'

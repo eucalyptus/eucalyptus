@@ -222,7 +222,6 @@ public class Bootstrap {
           ? "load()"
           : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
-        LOG.debug( Joiner.on( " " ).join( this.name( ) + " skiptstrappers: ", this.bootstrappers ) );
       }
     }
     
@@ -426,7 +425,7 @@ public class Bootstrap {
       if ( childHost ) {
         /** initialize whether should merge database **/
         mergeDatabase = ( System.getProperty( "euca.merge.db" ) != null );
-        /** initialize the parent arguments **/        
+        /** initialize the parent arguments **/
         for ( int i = 0; i < parentNum; i++ ) {
           String addr = System.getProperty( "euca.parent." + i );
           try {
@@ -447,6 +446,12 @@ public class Bootstrap {
   
   public static Boolean isChild( ) {
     return childHost;
+  }
+  
+  public static Boolean isCloudLocal( ) {
+    return childHost
+      ? mergeDatabase
+      : true;
   }
   
   public static Boolean shouldMergeDatabase( ) {
@@ -501,26 +506,26 @@ public class Bootstrap {
     for ( Component c : Components.list( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
-
     
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services." ) );
-    final Component eucalyptusComp = Components.lookup( "eucalyptus" );
-    Iterables.all( Components.list( ), new Callback.Success<Component>( ) {
+    LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
+                              + Bootstrap.isCloudLocal( ) ) );
+    List<Component> components = Components.list( );
+//    for ( Component comp : components ) {
+    Iterables.all( components, new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-        if ( ( comp.isAvailableLocally( ) && comp.getComponentId( ).isAlwaysLocal( ) )
-             || ( eucalyptusComp.isLocal( ) && comp.getComponentId( ).isCloudLocal( ) ) ) {
-          try {
-            comp.initService( );
-          } catch ( ServiceRegistrationException ex ) {
-            BootstrapException.throwFatal( ex.getMessage( ), ex );
-          }
-        }
+      try {
+        comp.initService( );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.info( ex.getMessage( ) );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
       }
+    }
     } );
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
@@ -535,7 +540,7 @@ public class Bootstrap {
     if ( component.getStateMachine( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
-          EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ) ).info( );
+          EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
           component.getStateMachine( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
@@ -544,7 +549,7 @@ public class Bootstrap {
           LOG.error( ex );
         }
         try {
-          TimeUnit.MILLISECONDS.sleep( 500 );
+          TimeUnit.MILLISECONDS.sleep( 50 );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
         }

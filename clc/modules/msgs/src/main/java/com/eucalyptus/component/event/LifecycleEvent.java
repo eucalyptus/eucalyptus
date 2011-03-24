@@ -5,30 +5,28 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.Event;
 
 public class LifecycleEvent implements Event {
-  private ServiceConfiguration configuration;
-  private ComponentId            identity;
-  private boolean                local;
-  public LifecycleEvent( ServiceConfiguration configuration, ComponentId compId, boolean local ) {
+  private static final long serialVersionUID = 1L;
+  private final ServiceConfiguration configuration;
+  
+  public LifecycleEvent( ServiceConfiguration configuration ) {
     this.configuration = configuration;
-    this.identity = compId;
-    this.local = local;
   }
-
+  
   public ServiceConfiguration getConfiguration( ) {
-    return configuration;
+    return this.configuration;
   }
   
   public ComponentId getIdentity( ) {
-    return this.identity;
+    return this.configuration.getComponentId( );
   }
-
+  
   public boolean isLocal( ) {
-    return local;
+    return this.configuration.isLocal( );
   }
   
   @Override
   public String toString( ) {
-    return String.format( "LifecycleEvent [componentId=%s, configuration=%s, local=%s]", identity, configuration, local );
+    return String.format( "%s:%s", this.getClass( ).getSimpleName( ), configuration );
   }
-
+  
 }

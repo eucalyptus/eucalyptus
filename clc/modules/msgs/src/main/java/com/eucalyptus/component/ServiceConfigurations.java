@@ -1,16 +1,15 @@
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.LocalConfiguration;
-import com.eucalyptus.config.RemoteConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Internets;
 
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
@@ -18,6 +17,11 @@ public class ServiceConfigurations {
   
   public static ServiceConfigurationProvider getInstance( ) {
     return singleton;
+  }
+  
+  public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
+    ComponentId compId = component.getComponentId( );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getCanonicalHostName( ), compId.makeRemoteUri( host.getCanonicalHostName( ), compId.getPort( ) ) );
   }
   
   public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {
@@ -96,18 +100,4 @@ public class ServiceConfigurations {
     }
   }
 
-  public static ServiceConfiguration uriToServiceConfiguration( Component component, URI uri ) {
-    String partition = "bootstrap".equals( component.getName( ) ) ? component.getName( ) : "eucalyptus"; 
-    String name = component.getName( );
-    try {      
-      if( uri.getScheme( ).matches( ".*vm.*" ) || ( uri.getHost( ) != null && Internets.testLocal( uri.getHost( ) ) ) ) {
-        return new LocalConfiguration( component.getComponentId( ), partition, name, uri );      
-      } else {
-        return new RemoteConfiguration( component.getComponentId( ), partition, name, uri );      
-      }
-    } catch ( Throwable t ) {
-      return new LocalConfiguration( component.getComponentId( ), partition, name, uri );      
-    }
-  }
-  
 }

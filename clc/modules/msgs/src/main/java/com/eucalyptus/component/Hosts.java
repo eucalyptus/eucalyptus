@@ -69,19 +69,27 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
 public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
+
+  public static <T> List<T> collect( Function<Host,? extends T> function ) {
+    return Lists.transform( Lists.newArrayList( hostMap.values( ) ), function );
+  }
   
   public static Host getHostByAddress( InetAddress addr ) {
     for ( Host h : hostMap.values( ) ) {
@@ -123,8 +131,25 @@ public class Hosts {
         entry = hostMap.get( updatedHost.getGroupsId( ) );
         entry.update( currentView.getViewId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ) );
       } else {
-        entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ) );
-        Mbeans.register( entry );
+        Component empyrean = Components.lookup( Empyrean.class );
+        ComponentId empyreanId = empyrean.getComponentId( );
+        for( InetAddress addr : updatedHost.getHostAddresses( ) ) {
+          ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
+          if( !empyrean.hasService( ephemeralConfig ) ) {
+            try {
+              empyrean.loadService( ephemeralConfig ).get();
+              ServiceEndpoint endpoint = empyrean.lookupService( ephemeralConfig ).getEndpoint( );
+              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), endpoint );
+              Mbeans.register( entry );
+            } catch ( ServiceRegistrationException ex ) {
+              LOG.error( ex , ex );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex , ex );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        }
         hostMap.put( entry.getGroupsId( ), entry );
       }
       /** determine hosts to remove in this view **/

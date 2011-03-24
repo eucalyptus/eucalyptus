@@ -1,58 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
     <classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
-    <classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/test/java"/>
     <classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
-    <classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/test/java"/>
     <classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
-    <classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/test/java"/>
     <classpathentry kind="src" path="modules/cluster-manager/conf/scripts"/>
     <classpathentry kind="src" output="modules/component/build" path="modules/component/src/main/java"/>
-    <classpathentry kind="src" output="modules/component/build" path="modules/component/src/test/java"/>
     <classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/main/java"/>
-    <classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/test/java"/>
     <classpathentry kind="src" path="modules/configuration/conf/scripts"/>
     <classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
     <classpathentry kind="src" output="modules/core/build" path="modules/core/src/test/java"/>
     <classpathentry kind="src" path="modules/core/conf/scripts"/>
     <classpathentry kind="src" output="modules/database/build" path="modules/database/src/main/java"/>
-    <classpathentry kind="src" output="modules/database/build" path="modules/database/src/test/java"/>
-    <classpathentry kind="src" path="modules/database/conf/scripts"/>
     <classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/main/java"/>
-    <classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/test/java"/>
     <classpathentry kind="src" output="modules/euare/build" path="modules/euare/src/main/java"/>
-    <classpathentry kind="src" output="modules/euare/build" path="modules/euare/src/test/java"/>
     <classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/main/java"/>
-    <classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/test/java"/>
-    <classpathentry kind="src" output="modules/hsqldb/build" path="modules/hsqldb/src/test/java"/>
     <classpathentry kind="src" output="modules/ldap/build" path="modules/ldap/src/main/java"/>
-    <classpathentry kind="src" output="modules/ldap/build" path="modules/ldap/src/test/java"/>
     <classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
-    <classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/test/java"/>
-    <classpathentry kind="src" path="modules/msgs/conf/scripts"/>
+    <classpathentry kind="src" path="modules/msgs/conf/jmx"/>
     <classpathentry kind="src" output="modules/mysql/build" path="modules/mysql/src/main/java"/>
-    <classpathentry kind="src" output="modules/mysql/build" path="modules/mysql/src/test/java"/>
     <classpathentry kind="src" path="modules/mysql/conf/scripts"/>
     <classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/main/java"/>
-    <classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/test/java"/>
     <classpathentry kind="src" output="modules/reporting/build" path="modules/reporting/src/main/java"/>
     <classpathentry kind="src" output="modules/reporting/build" path="modules/reporting/src/test/java"/>
     <classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
-    <classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/test/java"/>
     <classpathentry kind="src" output="modules/storage-controller/build" path="modules/storage-controller/src/main/java"/>
-    <classpathentry kind="src" output="modules/storage-controller/build" path="modules/storage-controller/src/test/java"/>
     <classpathentry kind="src" output="modules/storage-san/build" path="modules/storage-san/src/main/java"/>
-    <classpathentry kind="src" output="modules/storage-san/build" path="modules/storage-san/src/test/java"/>
     <classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/main/java"/>
     <classpathentry kind="src" output="modules/vmware-broker/build" path="modules/vmware-broker/src/test/java"/>
     <classpathentry kind="src" path="modules/vmware-broker/conf/scripts"/>
     <classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
-    <classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/test/java"/>
     <classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
-    <classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/test/java"/>
     <classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
     <classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
-    <classpathentry kind="src" output="modules/www/build" path="modules/www/src/test/java"/>
+    <classpathentry kind="src" path="modules/www/conf/reports"/>
+    <classpathentry kind="src" path="modules/www/conf/www"/>
     <classpathentry kind="con" path="GROOVY_SUPPORT"/>
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>

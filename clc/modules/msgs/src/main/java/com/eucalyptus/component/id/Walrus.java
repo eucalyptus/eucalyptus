@@ -66,7 +66,7 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.component.ComponentId;
 
 
-public class Walrus extends ComponentId {
+public class Walrus extends ComponentId.Unpartioned {
 
   @Override
   public String getLocalEndpointName( ) {
@@ -79,22 +79,8 @@ public class Walrus extends ComponentId {
   }
 
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
-
-  @Override
   public Boolean hasCredentials( ) {
     return true;
   }
 
-  @Override
-  public boolean isPartitioned( ) {
-    return false;
-  }
 }

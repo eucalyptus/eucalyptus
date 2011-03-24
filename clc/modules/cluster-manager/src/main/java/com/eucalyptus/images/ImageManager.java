@@ -245,8 +245,6 @@ public class ImageManager {
     String kernelId = ImageUtil.extractKernelId( inputSource, xpath );
     String ramdiskId = ImageUtil.extractRamdiskId( inputSource, xpath );
     Image.Type imageType = Image.Type.machine;
-    Image.Platform platform = Image.Platform.linux;
-    String newImageId = null;
     String signature = null;
     try {
       signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );

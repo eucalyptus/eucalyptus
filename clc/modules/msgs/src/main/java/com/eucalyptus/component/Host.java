@@ -83,9 +83,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Boolean                    hasDatabase;
   private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime  = 0l;
+  private ServiceEndpoint            endpoint;
   
-  public Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses ) {
+  public Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses, ServiceEndpoint endpoint ) {
     this.groupsId = jgroupsId;
+    this.endpoint = endpoint;
     this.update( viewId, hasDb, hostAddresses );
   }
   
@@ -168,6 +170,14 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   @Override
   public String toString( ) {
     return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:hasDatabase=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase );
+  }
+
+  public ServiceEndpoint getEndpoint( ) {
+    return this.endpoint;
+  }
+
+  public void setEndpoint( ServiceEndpoint endpoint ) {
+    this.endpoint = endpoint;
   }
   
 }

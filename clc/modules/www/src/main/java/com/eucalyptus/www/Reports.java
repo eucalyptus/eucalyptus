@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Components;
@@ -482,7 +483,7 @@ public class Reports extends HttpServlet {
     final boolean jdbc = !( new File( SubDirectory.REPORTS.toString( ) + File.separator + reportCache.getName( ) + ".groovy" ).exists( ) );
     if ( jdbc ) {
       String url = String.format( "jdbc:%s_%s", Components.lookup( Database.class ).getUri( ).toString( ), "records" );
-      Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", Hmacs.generateSystemSignature( ) );
+      Connection jdbcConnection = DriverManager.getConnection( url, "eucalyptus", SystemIds.databasePassword( ) );
       jasperPrint = JasperFillManager.fillReport( reportCache.getJasperReport( ), new HashMap() {{
         put( "EUCA_NOT_BEFORE", new Long( Param.start.get( req ) ) );
         put( "EUCA_NOT_AFTER", new Long( Param.end.get( req ) ) );
