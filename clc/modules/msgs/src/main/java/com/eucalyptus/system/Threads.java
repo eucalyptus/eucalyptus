@@ -457,6 +457,6 @@ public class Threads {
   }
 
   public static StackTraceElement currentStack( int frameOffset ) {
-    return Thread.currentThread( ).getStackTrace( ).length > frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : null;
+    return Thread.currentThread( ).getStackTrace( ).length <= frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : Thread.currentThread( ).getStackTrace( )[ frameOffset ];
   }
 }
