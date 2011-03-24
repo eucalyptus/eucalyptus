@@ -139,6 +139,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    * @see com.eucalyptus.util.fsm.State#commit()
    */
   private void commit( ) {
+    LOG.debug("Transition commit(): " + this.currentTransition.get( ));
     if ( this.currentTransition.get( ) == null ) {
       Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
@@ -157,6 +158,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   }
   
   private void error( ) {
+    LOG.debug("Transition error(): " + this.currentTransition.get( ));
     if ( this.currentTransition.get( ) == null ) {
       Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
@@ -178,6 +180,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   }
   
   private void rollback( ) {
+    LOG.debug("Transition debug(): " + this.currentTransition.get( ));
     if ( this.currentTransition.get( ) == null ) {
       if ( this.state.isMarked( ) ) {
         this.state.set( this.state.getReference( ), false );
