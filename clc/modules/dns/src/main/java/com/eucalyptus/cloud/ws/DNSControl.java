@@ -85,10 +85,6 @@ public class DNSControl {
 
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
-	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return new EntityWrapper<T>( DNSProperties.DB_NAME );
-	}
-
 	private static void initializeUDP() throws Exception {
 		try {
 			UDPListener udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);

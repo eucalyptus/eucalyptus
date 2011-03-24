@@ -193,7 +193,7 @@ StorageInfo {
 	}
 
 	public static StorageInfo getStorageInfo() {
-		EntityWrapper<StorageInfo> storageDb = new EntityWrapper<StorageInfo>(StorageProperties.DB_NAME);
+		EntityWrapper<StorageInfo> storageDb = EntityWrapper.get(StorageInfo.class);
 		StorageInfo conf = null;
 		try {
 			conf = storageDb.getUnique(new StorageInfo(StorageProperties.NAME));

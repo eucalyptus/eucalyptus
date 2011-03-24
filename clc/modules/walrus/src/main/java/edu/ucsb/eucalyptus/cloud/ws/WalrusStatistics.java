@@ -126,7 +126,7 @@ public class WalrusStatistics {
 	}
 
 	private void getStateInfo() {
-		EntityWrapper<WalrusStatsInfo> db = new EntityWrapper<WalrusStatsInfo>("eucalyptus_walrus");
+		EntityWrapper<WalrusStatsInfo> db = EntityWrapper.get(WalrusStatsInfo.class);
 		try {
 			WalrusStatsInfo walrusStats = db.getUnique(new WalrusStatsInfo(WalrusProperties.NAME));
 			numberOfBuckets = walrusStats.getNumberOfBuckets();
@@ -141,7 +141,7 @@ public class WalrusStatistics {
 	}
 	
 	private void updateStateInfo() {
-		EntityWrapper<WalrusStatsInfo> db = new EntityWrapper<WalrusStatsInfo>("eucalyptus_walrus");
+		EntityWrapper<WalrusStatsInfo> db = EntityWrapper.get(WalrusStatsInfo.class);
 		try {
 			WalrusStatsInfo walrusStats = db.getUnique(new WalrusStatsInfo(WalrusProperties.NAME));
 			walrusStats.setNumberOfBuckets(numberOfBuckets);

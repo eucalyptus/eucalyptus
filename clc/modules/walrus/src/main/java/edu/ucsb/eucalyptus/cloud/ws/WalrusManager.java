@@ -237,7 +237,7 @@ public class WalrusManager {
 					+ WalrusInfo.getWalrusInfo().getStorageDir());
 			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo();
 		List<BucketInfo> bucketInfos = db.query(bucketInfo);
 		for (BucketInfo bucket : bucketInfos) {
@@ -260,7 +260,7 @@ public class WalrusManager {
 			throw new AccessDeniedException("no such account");
 		}
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo searchBucket = new BucketInfo();
 		searchBucket.setOwnerId(account.getId());
 		searchBucket.setHidden(false);
@@ -326,7 +326,7 @@ public class WalrusManager {
 		if(!checkBucketName(bucketName))
 			throw new InvalidBucketNameException(bucketName);
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 
 		if (WalrusProperties.shouldEnforceUsageLimits
 				&& !Contexts.lookup().hasAdministrativePrivileges()) {
@@ -465,7 +465,7 @@ public class WalrusManager {
 		String bucketName = request.getBucket();
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo searchBucket = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(searchBucket);
 
@@ -578,7 +578,7 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		String ownerId = null;
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -719,7 +719,7 @@ public class WalrusManager {
 		String randomKey = request.getRandomKey();
 		WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -852,7 +852,7 @@ public class WalrusManager {
 									lastModified = new Date();
 									ObjectInfo searchObject = new ObjectInfo(bucketName, objectKey);
 									searchObject.setVersionId(versionId);
-									EntityWrapper<ObjectInfo> dbObject = WalrusControl.getEntityWrapper();
+									EntityWrapper<ObjectInfo> dbObject = EntityWrapper.get(ObjectInfo.class);
 									List<ObjectInfo> objectInfos = dbObject.query(new ObjectInfo(bucketName, objectKey));
 									for(ObjectInfo objInfo : objectInfos) {
 										objInfo.setLast(false);
@@ -1094,7 +1094,7 @@ public class WalrusManager {
 			accessControlList = new AccessControlListType();
 		}
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1260,7 +1260,7 @@ public class WalrusManager {
 			accessControlList = new AccessControlListType();
 		}
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1316,7 +1316,7 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfos);
 
@@ -1457,7 +1457,7 @@ public class WalrusManager {
 
 		String delimiter = request.getDelimiter();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		bucketInfo.setHidden(false);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -1608,7 +1608,7 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		String ownerId = null;
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 		BucketLogData logData;
@@ -1697,7 +1697,7 @@ public class WalrusManager {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1750,7 +1750,7 @@ public class WalrusManager {
 		AccessControlListType accessControlList = accessControlPolicy
 		.getAccessControlList();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1799,7 +1799,7 @@ public class WalrusManager {
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1891,7 +1891,7 @@ public class WalrusManager {
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -1987,7 +1987,7 @@ public class WalrusManager {
 		if (getMetaData == null)
 			getMetaData = false;
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -2034,8 +2034,7 @@ public class WalrusManager {
 										throw new EucalyptusCloudException(
 										"Torrents disabled");
 									}
-									EntityWrapper<TorrentInfo> dbTorrent = WalrusControl
-									.getEntityWrapper();
+									EntityWrapper<TorrentInfo> dbTorrent = EntityWrapper.get(TorrentInfo.class);
 									TorrentInfo torrentInfo = new TorrentInfo(
 											bucketName, objectKey);
 									TorrentInfo foundTorrentInfo;
@@ -2241,7 +2240,7 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		Status status = new Status();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -2400,7 +2399,7 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -2457,7 +2456,7 @@ public class WalrusManager {
 
 		if (metadataDirective == null)
 			metadataDirective = "COPY";
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(sourceBucket);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
@@ -2702,7 +2701,7 @@ public class WalrusManager {
 		.getReply();
 		String bucket = request.getBucket();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo, targetBucketInfo;
 		try {
 			bucketInfo = db.getUnique(new BucketInfo(bucket));
@@ -2750,7 +2749,7 @@ public class WalrusManager {
 		.getReply();
 		String bucket = request.getBucket();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		try {
 			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
 			if (bucketInfo.getLoggingEnabled()) {
@@ -2810,7 +2809,7 @@ public class WalrusManager {
 		String bucket = request.getBucket();
 		Context ctx = Contexts.lookup();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		try {
 			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
 			if (ctx.hasAdministrativePrivileges() ||
@@ -2844,7 +2843,7 @@ public class WalrusManager {
 		.getReply();
 		String bucket = request.getBucket();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo;
 		try {
 			bucketInfo = db.getUnique(new BucketInfo(bucket));
@@ -2895,7 +2894,7 @@ public class WalrusManager {
 
 		String delimiter = request.getDelimiter();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		bucketInfo.setHidden(false);
 		List<BucketInfo> bucketList = db.query(bucketInfo);
@@ -3078,7 +3077,7 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 
-		EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.query(bucketInfos);
 

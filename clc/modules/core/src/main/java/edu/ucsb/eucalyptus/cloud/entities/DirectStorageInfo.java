@@ -194,7 +194,7 @@ DirectStorageInfo {
 	}
 
 	public static DirectStorageInfo getStorageInfo() {
-		EntityWrapper<DirectStorageInfo> storageDb = new EntityWrapper<DirectStorageInfo>(StorageProperties.DB_NAME);
+		EntityWrapper<DirectStorageInfo> storageDb = EntityWrapper.get(DirectStorageInfo.class);
 		DirectStorageInfo conf = null;
 		try {
 			conf = storageDb.getUnique(new DirectStorageInfo(StorageProperties.NAME));

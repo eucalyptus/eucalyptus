@@ -126,7 +126,7 @@ public class DRBDInfo {
 	}
 
 	public static DRBDInfo getDRBDInfo() {
-		EntityWrapper<DRBDInfo> db = new EntityWrapper<DRBDInfo>(WalrusProperties.DB_NAME);
+		EntityWrapper<DRBDInfo> db = EntityWrapper.get(DRBDInfo.class);
 		DRBDInfo drbdInfo;
 		try {
 			drbdInfo = db.getUnique(new DRBDInfo());

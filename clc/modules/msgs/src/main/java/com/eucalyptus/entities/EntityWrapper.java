@@ -102,7 +102,7 @@ public class EntityWrapper<TYPE> {
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
-        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ) );
+        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ), true );
       }
     }
     throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
@@ -113,12 +113,13 @@ public class EntityWrapper<TYPE> {
   }
   
   /**
+   * Private for a reason.
    * @see {@link EntityWrapper#get(Class)}
    * @param persistenceContext
    */
   @Deprecated
   @SuppressWarnings( "unchecked" )
-  public EntityWrapper( String persistenceContext ) {
+  private EntityWrapper( String persistenceContext, boolean ignored ) {
     try {
       if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
