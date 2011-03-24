@@ -182,4 +182,15 @@ public class Exceptions {
     LOG.trace( message, filtered );
     return t;
   }
+
+  public static <T extends Throwable> T error( T t ) {
+    return error( t.getMessage( ), t );
+  }
+  
+  public static <T extends Throwable> T error( String message, T t ) {
+    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.error( message, filtered );
+    return t;
+  }
 }
