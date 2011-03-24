@@ -99,8 +99,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -116,8 +116,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -139,8 +139,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -154,8 +154,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -171,8 +171,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -186,8 +186,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            parent.submitError( ex );
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };
@@ -206,7 +206,6 @@ public class ComponentState {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ),
                                                                                                        ex );
-                                                                                            parent.submitError( ex );
                                                                                             if ( State.ENABLED.equals( parent.getState( ) ) ) {
                                                                                               try {
                                                                                                 parent.getBootstrapper( ).disable( );
@@ -218,6 +217,7 @@ public class ComponentState {
                                                                                               }
                                                                                             }
                                                                                             transitionCallback.fireException( ex );
+                                                                                            parent.submitError( ex );
                                                                                           }
                                                                                         }
                                                                                       };

@@ -86,6 +86,7 @@ import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -983,6 +984,7 @@ public class Component implements HasName<Component> {
   private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
   
   public void submitError( Throwable t ) {
+    ServiceConfiguration config = this.hasLocalService( ) ? this.getLocalService( ).getServiceConfiguration( ) : ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
     ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
     this.errors.put( e.getUuid( ), e );
   }
