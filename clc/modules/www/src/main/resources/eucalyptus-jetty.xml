@@ -126,6 +126,11 @@
     </New>
   </Set>
   <Call name="addLifeCycle">
+  <Arg>
+    <New class="com.eucalyptus.empyrean.EmpyreanTransactionManager"/>
+  </Arg>
+  </Call>
+  <Call name="addLifeCycle">
     <Arg>
       <New class="org.mortbay.jetty.deployer.ContextDeployer">
         <Set name="contexts">

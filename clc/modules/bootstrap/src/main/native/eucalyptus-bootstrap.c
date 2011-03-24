@@ -251,40 +251,43 @@ static int __write_pid(char *pidpath) {
 
 static int wait_child(euca_opts *args, int pid) {
 	time_t timer = 0;
-	int rc = 0, status, i;
+	int rc = 0, status;
 	fprintf(stderr, "Waiting for process to respond to signal.");
-	while (rc <= 0 && timer < 60) {
-		for (i = 0; i < 10; i++) {
-			usleep(1000000), fprintf(stderr, "."), fflush(stderr);
-			if ((rc = waitpid(pid, &status, WNOHANG)) == -1) {
-				__debug("Error waiting for child: pid=%d waitpid=%d status=%d",
-						pid, rc, status);
-				return errno != ECHILD;
-			} else if (rc == pid) {
-				if (WIFEXITED(status)) {
-					__debug(
-							"command terminated with exit status pid=%d waitpid=%d status=%d",
-							pid, rc, WEXITSTATUS(status));
-					return WEXITSTATUS(status);
-				} else if (WIFSIGNALED(status)) {
-					__debug(
-							"command terminated by signal pid=%d waitpid=%d status=%d",
-							pid, rc, WTERMSIG(status));
-					return WTERMSIG(status);
-				} else {
-					__debug("command terminated pid=%d waitpid=%d status=%d",
-							pid, rc, status);
-					return status;
-				}
+	while (rc <= 0 && timer < 5) {
+		usleep(1000000), fprintf(stderr, "."), fflush(stderr);
+		if ((rc = waitpid(pid, &status, WNOHANG)) == -1) {
+			__debug("Error waiting for child: pid=%d waitpid=%d status=%d",
+					pid, rc, status);
+			return errno != ECHILD;
+		} else if (rc == pid) {
+			if (WIFEXITED(status)) {
+				__debug(
+						"command terminated with exit status pid=%d waitpid=%d status=%d",
+						pid, rc, WEXITSTATUS(status));
+				return WEXITSTATUS(status);
+			} else if (WIFSIGNALED(status)) {
+				__debug(
+						"command terminated by signal pid=%d waitpid=%d status=%d",
+						pid, rc, WTERMSIG(status));
+				return WTERMSIG(status);
 			} else {
-				timer++;
-				continue;
+				__debug("command terminated pid=%d waitpid=%d status=%d",
+						pid, rc, status);
+				return status;
 			}
+		} else {
+			timer++;
+			continue;
 		}
 	}
-	__error("Failed to signal child process pid=%d waitpid=%d status=%d", pid,
-			rc, status);
-	return 1;
+	if( rc == 0 && status == 0 ) {
+		fprintf(stderr,"\n");
+		return 0;
+	} else {
+		__error("Failed to signal child process pid=%d waitpid=%d status=%d", pid,
+				rc, status);
+		return 1;
+	}
 }
 
 static int stop_child(euca_opts *args) {

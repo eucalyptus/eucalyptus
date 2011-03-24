@@ -109,7 +109,7 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   public final ServiceId getServiceId( ) {
     return new ServiceId( ) {
       {
-        this.setUuid( serviceConfiguration.getId( ) );
+        this.setUuid( serviceConfiguration.getFullName( ).toString( ) );
         this.setPartition( serviceConfiguration.getPartition( ) );
         this.setName( serviceConfiguration.getName( ) );
         this.setType( serviceConfiguration.getComponentId( ).getName( ) );

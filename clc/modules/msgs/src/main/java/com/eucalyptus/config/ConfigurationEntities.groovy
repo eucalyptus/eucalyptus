@@ -102,6 +102,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
@@ -161,7 +162,7 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
   
   public Boolean isLocal() {
     try {
-      return Internets.testLocal( this.getHostName( ) );
+      return this.port == -1 ? true : Internets.testLocal( this.getHostName( ) );
     } catch ( Exception e ) {
       return false;
     }
@@ -205,26 +206,6 @@ public abstract class ComponentConfiguration extends AbstractPersistent implemen
     return true;
   }
 }
-/**
- * @deprecated do not even think of using this.
- */
-@Deprecated
-public class BogoConfig extends ComponentConfiguration {
-  ComponentId c;
-  public BogoConfig( ComponentId c, String name, String hostName, Integer port, String servicePath ) {
-    super( null /* ASAP: FIXME: GRZE */, name, hostName, port, servicePath );
-    this.c = c;
-  }
-  @Override
-  public ComponentId getComponentId( ) {
-    return c;
-  }
-  
-  @Override
-  public Boolean isLocal( ) {
-    return true;
-  }
-}
 public class EphemeralConfiguration extends ComponentConfiguration {
   URI uri;
   ComponentId c;
@@ -239,22 +220,6 @@ public class EphemeralConfiguration extends ComponentConfiguration {
   }
   public String getUri() {
     return this.uri.toASCIIString( );
-  }
-}
-public class LocalConfiguration extends EphemeralConfiguration {
-  public LocalConfiguration( ComponentId c, String partition, String name, URI uri ) {
-    super( c, partition, name, uri );
-  }
-  public Boolean isLocal() {
-    return true;
-  }
-}
-public class RemoteConfiguration extends EphemeralConfiguration {
-  public RemoteConfiguration( ComponentId c, String partition, String name, URI uri ) {
-    super( c, partition, name, uri );
-  }
-  public Boolean isLocal() {
-    return false;
   }
 }
 

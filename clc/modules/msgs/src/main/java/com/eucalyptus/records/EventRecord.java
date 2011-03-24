@@ -10,6 +10,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.util.FullName;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
@@ -19,7 +20,7 @@ public class EventRecord extends EucalyptusMessage {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    UserFullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
+    FullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
       userFn = ctx.getUserFullName( );

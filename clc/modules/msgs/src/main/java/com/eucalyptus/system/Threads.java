@@ -124,9 +124,9 @@ public class Threads {
   private static ThreadPool lookup( String threadGroupName ) {
     String groupName = PREFIX + threadGroupName;
     if ( execServices.containsKey( groupName ) ) {
-      LOG.debug( "LOOKUP thread threadpool named: " + groupName );
       return execServices.get( groupName );
     } else {
+      LOG.debug( "CREATE thread threadpool named: " + groupName );
       ThreadPool f = new ThreadPool( groupName );
       if ( execServices.putIfAbsent( f.getName( ), f ) != null ) {
         LOG.warn( "SHUTDOWN:" + f.getName( ) + " Freeing duplicate thread pool..." );
@@ -280,17 +280,17 @@ public class Threads {
     }
     
     public <T> Future<T> submit( Callable<T> task ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
       return this.pool.submit( task );
     }
     
     public <T> Future<T> submit( Runnable task, T result ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
       return this.pool.submit( task, result );
     }
     
     public Future<?> submit( Runnable task ) {
-      LOG.debug( "SUBMIT new thread named: " + task.getClass( ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
       return this.pool.submit( task );
     }
     
@@ -454,5 +454,9 @@ public class Threads {
         }
       }
     };
+  }
+
+  public static StackTraceElement currentStack( int frameOffset ) {
+    return Thread.currentThread( ).getStackTrace( ).length > frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : null;
   }
 }

@@ -65,16 +65,12 @@ package com.eucalyptus.component.id;
 
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-public class Arbitrator extends ComponentId {
+public class Arbitrator extends ComponentId.Unpartioned {
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Any.LIST;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
+  public List<Class<Any>> serviceDependencies( ) {
+    return Lists.newArrayList( Any.class );
   }
 
   @Override
@@ -82,9 +78,4 @@ public class Arbitrator extends ComponentId {
     return false;
   }
 
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-  
 }

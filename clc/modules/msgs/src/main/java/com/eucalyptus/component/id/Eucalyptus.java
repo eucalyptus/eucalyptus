@@ -65,15 +65,11 @@ package com.eucalyptus.component.id;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-public class Eucalyptus extends ComponentId {
+public class Eucalyptus extends ComponentId.Unpartioned {
   public static final Eucalyptus INCOGNITO = new Eucalyptus( );//NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-  @SuppressWarnings( "unchecked" )
-  public static final List<Class<? extends ComponentId>> LIST = ComponentId.getList( Eucalyptus.class );
   
   @Override
   public String getLocalEndpointName( ) {
@@ -86,23 +82,13 @@ public class Eucalyptus extends ComponentId {
   }
 
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
-
-  @Override
   public Boolean hasCredentials( ) {
     return true;
   }
-  
+
   @Override
-  public boolean isPartitioned( ) {
-    return false;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
   
 }

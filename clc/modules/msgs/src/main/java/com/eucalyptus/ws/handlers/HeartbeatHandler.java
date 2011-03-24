@@ -93,22 +93,15 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.event.StartComponentEvent;
-import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.BogoConfig;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.RemoteConfiguration;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.event.EventFailedException;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ComponentType;
 import edu.ucsb.eucalyptus.msgs.HeartbeatComponentType;
@@ -139,7 +132,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.loadService( c.getBuilder( ).toConfiguration( c.getUri( hostName, c.getComponentId( ).getPort( ) ) ) );
+    c.loadService( c.getBuilder( ).lookupByName( c.getName( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -161,7 +154,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       try {
         final Component comp = safeLookupComponent( component.getComponent( ) );
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
-        ServiceConfiguration config = new BogoConfig( comp.getComponentId( ), component.getName( ), uri.getHost( ), 8773, uri.getPath( ) );
+        ServiceConfiguration config = comp.getBuilder( ).lookupByName( comp.getName( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
         comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );
@@ -316,14 +309,6 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       c = Components.lookup( componentName );
     }
     return c;
-  }
-  
-  private void fireStopComponent( RemoteConfiguration remoteConfiguration ) throws EventFailedException {
-    ListenerRegistry.getInstance( ).fireEvent( StopComponentEvent.getLocal( remoteConfiguration ) );
-  }
-  
-  private void fireStartComponent( ComponentConfiguration config ) throws EventFailedException {
-    ListenerRegistry.getInstance( ).fireEvent( StartComponentEvent.getLocal( config ) );
   }
   
   @Override
