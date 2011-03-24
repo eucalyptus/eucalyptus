@@ -18,12 +18,11 @@ import bitronix.tm.TransactionManagerServices;
 import bitronix.tm.jndi.BitronixContext;
 
 public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
-  public static final String JNDI_NAME = "eucalyptusTransactionManager";
+//  public static final String JNDI_NAME = "eucalyptusTransactionManager";
   private static Logger             LOG = Logger.getLogger( EmpyreanTransactionManager.class );
   private static Context            ctx = getContext( );
   private static TransactionManager tm;
 
-  static TransactionManager getTm( ) { return tm; }
   static Context getContext( ) {
     if ( ctx != null ) {
       return ctx;
@@ -52,7 +51,7 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     tm_conf.setAsynchronous2Pc( false );
     tm_conf.setLogPart1Filename( SubDirectory.DB.toString( ) + "/btm1.tx" );
     tm_conf.setLogPart2Filename( SubDirectory.DB.toString( ) + "/btm2.tx" );
-    tm_conf.setJndiUserTransactionName( JNDI_NAME );
+//    tm_conf.setJndiUserTransactionName( JNDI_NAME );
     LOG.debug( "Setting up transaction manager: " + tm_conf.getJndiUserTransactionName( ) );
     return new BitronixContext( );
   }
