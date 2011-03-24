@@ -179,7 +179,7 @@ public class PersistenceErrorFilter {
   static RecoverablePersistenceException exceptionCaught( Throwable e ) {
     if( e instanceof RuntimeException ) {
       Class<? extends Throwable> type = e.getClass( );
-      for ( Class<? extends Throwable> t = type; type.getSuperclass( ) != null && type.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
+      for ( Class<? extends Throwable> t = type; t.getSuperclass( ) != null && t.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
         for( ErrorCategory category : ErrorCategory.values( ) ) {
           if( errorCategorization.containsEntry( category, t ) ) {
             throw category.handleException( ( RuntimeException ) e );
