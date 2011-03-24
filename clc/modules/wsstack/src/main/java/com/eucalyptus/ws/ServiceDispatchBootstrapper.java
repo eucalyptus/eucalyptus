@@ -117,7 +117,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         if ( euca.isLocal( ) && euca.getComponentId( ).hasDispatcher( ) ) {
           try {
-            comp.loadService( s );
+            comp.loadService( s ).get( );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
             failed = true;
