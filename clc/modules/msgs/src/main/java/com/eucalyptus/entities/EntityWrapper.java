@@ -139,7 +139,7 @@ public class EntityWrapper<TYPE> {
     } catch ( Exception ex ) {
     }
     if( id != null ) {
-      return ( List<TYPE> ) Lists.newArrayList( this.getEntityManager( ).find( example.getClass( ), example ) );
+      return ( List<TYPE> ) Lists.newArrayList( this.getEntityManager( ).find( example.getClass( ), id ) );
     } else {
       Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
       List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
