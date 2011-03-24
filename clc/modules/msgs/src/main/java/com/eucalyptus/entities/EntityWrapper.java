@@ -90,7 +90,15 @@ public class EntityWrapper<TYPE> {
   static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
   private final TxHandle             tx;
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
-
+  private static Class determineEntityClass( Class type ) {
+    for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
+        return c;
+      }
+    }
+    return type;
+  }
+  
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
@@ -125,12 +133,18 @@ public class EntityWrapper<TYPE> {
   
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.begin( ), this.tx.getTxUuid( ) ) );
-    Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
-                                   this.tx.getTxUuid( ) ) );
-    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+    Object id = null;
+    try {
+      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+    } catch ( Exception ex ) {
+    }
+    if( id != null ) {
+      return ( List<TYPE> ) Lists.newArrayList( this.getEntityManager( ).find( example.getClass( ), example ) );
+    } else {
+      Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+      List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
+      return Lists.newArrayList( Sets.newHashSet( resultList ) );
+    }
   }
   
   public TYPE lookupAndClose( TYPE example ) throws NoSuchElementException {
