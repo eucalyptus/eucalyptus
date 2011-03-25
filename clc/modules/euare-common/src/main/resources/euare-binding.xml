@@ -653,7 +653,10 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
   <mapping name="ListAccountsResult" class="com.eucalyptus.auth.euare.ListAccountsResultType">
-    <collection name="Accounts" field="accounts" usage="required">
+    <structure name="Accounts" field="accounts" usage="required" type="com.eucalyptus.auth.euare.AccountListTypeType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.AccountListTypeType" abstract="true">
+    <collection field="memberList">
       <structure name="member" type="com.eucalyptus.auth.euare.AccountType"/>
     </collection>
   </mapping>

@@ -173,7 +173,7 @@ public class EuareService {
     if ( request.getNamePattern( ) != null ) {
       pattern = Pattern.compile( PatternUtils.toJavaPattern( request.getNamePattern( ) ) );
     }
-    ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( );
+    ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
       for ( Account account : Accounts.listAllAccounts( ) ) {
         if ( pattern == null || pattern.matcher( account.getName( ) ).matches( ) ) {

@@ -729,6 +729,10 @@ public class ListAccountsResponseType extends EuareMessage {
   public ListAccountsResponseType() {  }
 }
 public class ListAccountsResultType extends EucalyptusData {
-  ArrayList<AccountType> accounts = new ArrayList<AccountType>();
+  AccountListTypeType accounts = new AccountListTypeType( );
   public ListAccountsResultType() {   }
+}
+public class AccountListTypeType extends EucalyptusData {
+  public AccountListTypeType() {  }
+  ArrayList<AccountType> memberList = new ArrayList<AccountType>();
 }
