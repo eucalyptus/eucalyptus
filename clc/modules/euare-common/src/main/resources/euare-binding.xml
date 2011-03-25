@@ -645,7 +645,6 @@
   </mapping>
   <mapping name="ListAccounts" class="com.eucalyptus.auth.euare.ListAccountsType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <value name="NamePattern" field="namePattern" usage="optional"/>
   </mapping>
   <mapping name="ListAccountsResponse" class="com.eucalyptus.auth.euare.ListAccountsResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>

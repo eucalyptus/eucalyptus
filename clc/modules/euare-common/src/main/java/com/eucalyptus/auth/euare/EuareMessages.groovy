@@ -720,7 +720,6 @@ public class DeleteAccountResponseType extends EuareMessage {
 }
 
 public class ListAccountsType extends EuareMessage {
-  String namePattern;
   public ListAccountsType() {  }
 }
 public class ListAccountsResponseType extends EuareMessage {

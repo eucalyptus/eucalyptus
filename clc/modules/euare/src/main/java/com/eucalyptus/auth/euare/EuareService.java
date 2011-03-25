@@ -169,19 +169,13 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to list accounts by " + requestUser.getName( ) );
     }
-    Pattern pattern = null;
-    if ( request.getNamePattern( ) != null ) {
-      pattern = Pattern.compile( PatternUtils.toJavaPattern( request.getNamePattern( ) ) );
-    }
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
       for ( Account account : Accounts.listAllAccounts( ) ) {
-        if ( pattern == null || pattern.matcher( account.getName( ) ).matches( ) ) {
-          AccountType at = new AccountType( );
-          at.setAccountName( account.getName( ) );
-          at.setAccountId( account.getId( ) );
-          accounts.add( at );
-        }
+        AccountType at = new AccountType( );
+        at.setAccountName( account.getName( ) );
+        at.setAccountId( account.getId( ) );
+        accounts.add( at );
       }
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
