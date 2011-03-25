@@ -145,6 +145,7 @@ public class EntityWrapper<TYPE> {
     return ret;
   }  
   
+  /*
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
     if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
     List<TYPE> res = this.query( example );
@@ -163,7 +164,29 @@ public class EntityWrapper<TYPE> {
                                    this.tx.getTxUuid( ) ) );
     return res.get( 0 );
   }
-  
+  */
+  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
+    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join( EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
+    Object id = null;
+    try {
+      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+    } catch ( Exception ex ) {
+    }
+    if( id != null ) {
+      TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+      if( res == null ) {
+        throw new EucalyptusCloudException( "Get unique failed (returning 0 results for " + LogUtil.dumpObject( example ) );
+      } else {
+        return res;
+      }
+    } else {
+      List<TYPE> res = this.query( example );
+      if ( res.size( ) != 1 ) {
+        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + LogUtil.dumpObject( example ) );
+      }
+      return res.get( 0 );
+    }
+  }
   
   
   /**
