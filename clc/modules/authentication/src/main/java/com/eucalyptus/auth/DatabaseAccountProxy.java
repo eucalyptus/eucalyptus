@@ -140,8 +140,8 @@ public class DatabaseAccountProxy implements Account {
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       AccountEntity account = db.getUnique( new AccountEntity( this.delegate.getName( ) ) );
-      db.recast( GroupEntity.class ).add( newGroup );
-      db.recast( UserEntity.class ).add( newUser );
+      newGroup = db.recast( GroupEntity.class ).merge( newGroup );
+      newUser = db.recast( UserEntity.class ).merge( newUser );
       newGroup.setAccount( account );
       newGroup.getUsers( ).add( newUser );
       newUser.getGroups( ).add( newGroup );

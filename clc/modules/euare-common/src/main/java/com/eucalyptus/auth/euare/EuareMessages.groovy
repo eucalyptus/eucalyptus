@@ -687,3 +687,51 @@ public class ListUsersType extends EuareMessage {
   BigInteger maxItems;
   public ListUsersType() {  }
 }
+
+/**
+ * Eucalyptus extended messages for account management
+ */
+public class CreateAccountType extends EuareMessage {
+  String accountName;
+  public CreateUserType() {  }
+}
+public class CreateAccountResponseType extends EuareMessage {
+  CreateAccountResultType createAccountResult = new CreateAccountResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateAccountResponseType() {  }
+}
+public class CreateAccountResultType extends EucalyptusData {
+  AccountType account = new AccountType( );
+  public CreateAccountResultType() {  }
+}
+public class AccountType extends EuareMessage {
+  String accountName;
+  String accountId;
+  public AccountType() {  }
+}
+
+public class DeleteAccountType extends EuareMessage {
+  String accountName;
+  public DeleteAccountType() {  }
+}
+public class DeleteAccountResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteAccountResponseType() {  }
+}
+
+public class ListAccountsType extends EuareMessage {
+  public ListAccountsType() {  }
+}
+public class ListAccountsResponseType extends EuareMessage {
+  ListAccountsResultType listAccountsResult = new ListAccountsResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountsResponseType() {  }
+}
+public class ListAccountsResultType extends EucalyptusData {
+  AccountListTypeType accounts = new AccountListTypeType( );
+  public ListAccountsResultType() {   }
+}
+public class AccountListTypeType extends EucalyptusData {
+  public AccountListTypeType() {  }
+  ArrayList<AccountType> memberList = new ArrayList<AccountType>();
+}
