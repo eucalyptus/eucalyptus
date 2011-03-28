@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = ${LIBS} -lcurl -lssl -lcrypto
+STORAGE_LIBS = -lcurl -lssl -lcrypto
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o diskutil.o
 VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
