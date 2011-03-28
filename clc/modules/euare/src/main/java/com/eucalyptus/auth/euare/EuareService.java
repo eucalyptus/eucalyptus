@@ -202,7 +202,7 @@ public class EuareService {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( group ), account, action, requestUser ) ) {
           if ( group.getPath( ).startsWith( path ) ) {
             GroupType g = new GroupType( );
-            fillGroupResult( g, group, account.getId( ) );
+            fillGroupResult( g, group, account );
             groups.add( g );
           }
         }
@@ -628,7 +628,7 @@ public class EuareService {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
           if ( user.getPath( ).startsWith( path ) ) {
             UserType u = new UserType( );
-            fillUserResult( u, user, account.getId( ) );
+            fillUserResult( u, user, account );
             users.add( u );
           }
         }
@@ -726,7 +726,7 @@ public class EuareService {
     try {
       User newUser = account.addUser( request.getUserName( ), sanitizePath( request.getPath( ) ), true, true, null );
       UserType u = reply.getCreateUserResult( ).getUser( );
-      fillUserResult( u, newUser, account.getId( ) );
+      fillUserResult( u, newUser, account );
     } catch ( Exception e ) {
       if ( e instanceof AuthException && AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " already exists." );
@@ -903,7 +903,7 @@ public class EuareService {
         // TODO(Ye Wen, 01/16/2011): do we need to check permission here?
         if ( !group.isUserGroup( ) ) {
           GroupType g = new GroupType( );
-          fillGroupResult( g, group, account.getId( ) );
+          fillGroupResult( g, group, account );
           groups.add( g );
         }
       }
@@ -929,10 +929,7 @@ public class EuareService {
     try {
       Group newGroup = account.addGroup( request.getGroupName( ), sanitizePath( request.getPath( ) ) );
       GroupType g = reply.getCreateGroupResult( ).getGroup( );
-      g.setGroupName( newGroup.getName( ) );
-      g.setPath( newGroup.getPath( ) );
-      g.setGroupId( newGroup.getId( ) );
-      g.setArn( ( new EuareResourceName( account.getId( ), PolicySpec.IAM_RESOURCE_GROUP, newGroup.getPath( ), newGroup.getName( ) ) ).toString( ) );
+      fillGroupResult( g, newGroup, account );
     } catch ( Exception e ) {
       if ( e instanceof AuthException && AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group " + request.getGroupName( ) + " already exists." );
@@ -1201,7 +1198,7 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
     }
     UserType u = reply.getGetUserResult( ).getUser( );
-    fillUserResult( u, userFound, account.getId( ) );
+    fillUserResult( u, userFound, account );
     return reply;
   }
 
@@ -1313,12 +1310,12 @@ public class EuareService {
     // TODO(Ye Wen, 01/26/2011): Consider pagination
     reply.getGetGroupResult( ).setIsTruncated( false );
     GroupType g = reply.getGetGroupResult( ).getGroup( );
-    fillGroupResult( g, groupFound, account.getId( ) );
+    fillGroupResult( g, groupFound, account );
     ArrayList<UserType> users = reply.getGetGroupResult( ).getUsers( ).getMemberList( );
     try {
       for ( User user : groupFound.getUsers( ) ) {
         UserType u = new UserType( );
-        fillUserResult( u, user, account.getId( ) );
+        fillUserResult( u, user, account );
         users.add( u );
       }
     } catch ( Exception e ) {
@@ -1375,18 +1372,18 @@ public class EuareService {
     }
   }
   
-  private void fillUserResult( UserType u, User userFound, String accountId ) {
+  private void fillUserResult( UserType u, User userFound, Account account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getId( ) );
     u.setPath( userFound.getPath( ) );
-    u.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
   }
   
-  private void fillGroupResult( GroupType g, Group groupFound, String accountId ) {
+  private void fillGroupResult( GroupType g, Group groupFound, Account account ) {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName( ) );
     g.setGroupId( groupFound.getId( ) );
-    g.setArn( ( new EuareResourceName( accountId, PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath( ), groupFound.getName( ) ) ).toString( ) );
+    g.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath( ), groupFound.getName( ) ) ).toString( ) );
   }
   
   private String sanitizePath( String path ) {
