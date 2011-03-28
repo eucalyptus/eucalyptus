@@ -105,6 +105,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -1130,15 +1131,18 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
+    if ( userFound.getPassword( ) != null ) {
+      throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + requestUser.getName( ) + " already has a login profile" );
+    }
+    if ( request.getPassword( ) == null ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty password", "Empty password" );
+    }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to create login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
-    if ( userFound.getPassword( ) != null ) {
-      throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + requestUser.getName( ) + " already has a login profile" );
-    }
     try {
-      userFound.createPassword( );
+      userFound.setPassword( Crypto.generateHashedPassword( request.getPassword( ) ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
