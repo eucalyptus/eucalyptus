@@ -74,8 +74,7 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
     sb.append( "Condition(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "type=" ).append( this.getType( ) ).append( ", " );
-    sb.append( "key=" ).append( this.getKey( ) ).append( ", " );
-    sb.append( "values=" ).append( this.getValues( ) );
+    sb.append( "key=" ).append( this.getKey( ) );
     sb.append( ")" );
     return sb.toString( );
   }
