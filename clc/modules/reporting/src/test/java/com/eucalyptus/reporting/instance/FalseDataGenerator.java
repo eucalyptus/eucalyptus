@@ -135,9 +135,9 @@ public class FalseDataGenerator
 		try {
 			removeFalseData();
 			printFalseData();
-			Thread.sleep(100000);
+			Thread.sleep(10000);
 			generateFalseData();
-			Thread.sleep(100000);
+			Thread.sleep(10000);
 			printFalseData();
 			removeFalseData();
 		} catch (InterruptedException iex) {
