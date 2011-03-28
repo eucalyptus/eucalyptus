@@ -249,14 +249,16 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = ctx.getAccount( );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
+    User userFound = requestUser;
+    if ( request.getUserName( ) != null ) {
+      try {
+        userFound = account.lookupUserByName( request.getUserName( ) );
+      } catch ( Exception e ) {
+        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+        } else {
+          throw new EucalyptusCloudException( e );
+        }
       }
     }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
@@ -814,14 +816,16 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = ctx.getAccount( );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
+    User userFound = requestUser;
+    if ( request.getUserName( ) != null ) {
+      try {
+        userFound = account.lookupUserByName( request.getUserName( ) );
+      } catch ( Exception e ) {
+        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+        } else {
+          throw new EucalyptusCloudException( e );
+        }
       }
     }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
