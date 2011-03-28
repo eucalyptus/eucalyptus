@@ -135,7 +135,20 @@ public class StorageEventPoller
 
 	protected long getTimestampMs()
 	{
-		return System.currentTimeMillis();
+		return (this.testTimestampMs==null)
+			? System.currentTimeMillis()
+			: this.testTimestampMs.longValue(); 
+	}
+	
+	private Long testTimestampMs = null;
+	
+	/**
+	 * Used only for testing. Sets the poller into test mode and overrides
+	 * the actual timestamp with a false one.
+	 */
+	public void setTestTimestampMs(long testTimestampMs)
+	{
+		this.testTimestampMs = new Long(testTimestampMs);
 	}
 
 	private class UsageDataKey
