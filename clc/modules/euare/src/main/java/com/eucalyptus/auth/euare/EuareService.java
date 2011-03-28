@@ -190,13 +190,17 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = ctx.getAccount( );
+    String path = "/";
+    if ( request.getPathPrefix( ) != null && !"".equals(request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
     // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
       for ( Group group : account.getGroups( ) ) {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( group ), account, action, requestUser ) ) {
-          if ( request.getPathPrefix( ) != null && group.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
+          if ( group.getPath( ).startsWith( path ) ) {
             GroupType g = new GroupType( );
             fillGroupResult( g, group, account.getId( ) );
             groups.add( g );
@@ -611,6 +615,10 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = ctx.getAccount( );
+    String path = "/";
+    if ( request.getPathPrefix( ) != null && !"".equals(request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
     // TODO(Ye Wen, 01/16/2011): support pagination
     ListUsersResultType result = reply.getListUsersResult( );
     result.setIsTruncated( false );
@@ -618,7 +626,7 @@ public class EuareService {
     try {
       for ( User user : account.getUsers( ) ) {
         if ( Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
-          if ( request.getPathPrefix( ) != null && user.getPath( ).startsWith( request.getPathPrefix( ) ) ) {
+          if ( user.getPath( ).startsWith( path ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account.getId( ) );
             users.add( u );
