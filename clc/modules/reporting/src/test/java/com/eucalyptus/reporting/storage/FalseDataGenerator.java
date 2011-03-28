@@ -24,19 +24,17 @@ public class FalseDataGenerator
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
-		QueueFactory queueFactory = QueueFactory.getInstance();
-		QueueSender queueSender = queueFactory.getSender(QueueIdentifier.STORAGE);
-		QueueReceiver queueReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
-		TestStorageEventPoller storagePoller = new TestStorageEventPoller(queueReceiver);
-
 		reportingBootstrapper = new ReportingBootstrapper();
-		reportingBootstrapper.setOverriddenStorageEventPoller(storagePoller);
 		reportingBootstrapper.start();
+		StorageEventPoller storagePoller = reportingBootstrapper.getOverriddenStorageEventPoller();
 
+		QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.STORAGE);
+		
+		
 		for (int i = 0; i < SNAPSHOTS_PER_USER; i++) {
 			
 			long timestampMs = (i * TIME_USAGE_APART) + START_TIME;
-			storagePoller.setTimestampMs(timestampMs);
+			storagePoller.setTestTimestampMs(timestampMs);
 
 			for (int j = 0; j < NUM_USERS; j++) {
 				String userId = String.format("user-%d", j);
@@ -60,29 +58,6 @@ public class FalseDataGenerator
 
 	}
 	
-	private static class TestStorageEventPoller
-		extends StorageEventPoller
-	{
-		private long timestampMs;
-		
-		public TestStorageEventPoller(QueueReceiver receiver)
-		{
-			super(receiver);
-		}
-
-		@Override
-		protected long getTimestampMs()
-		{
-			return this.timestampMs;
-		}
-		
-		void setTimestampMs(long timestampMs)
-		{
-			this.timestampMs = timestampMs;
-		}
-
-	}
-	
 	public static void removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
@@ -102,15 +77,15 @@ public class FalseDataGenerator
 		}
 
 	}
-	
+
 	public static void runTest()
 	{
 		try {
 			removeFalseData();
 			printFalseData();
-			Thread.sleep(100000);
+			Thread.sleep(10000);
 			generateFalseData();
-			Thread.sleep(100000);
+			Thread.sleep(10000);
 			printFalseData();
 			removeFalseData();
 		} catch (InterruptedException iex) {
@@ -183,7 +158,7 @@ public class FalseDataGenerator
 		}
 
 	}
-	
+
 	public static void main(String[] args)
 		throws Exception
 	{
