@@ -28,12 +28,12 @@ public class ReportingBootstrapper
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
 	private static long POLLER_DELAY_MS = 10000l;
-	
+
 	private StorageEventPoller storagePoller;
 	private InstanceEventListener instanceListener;
 	private QueueFactory queueFactory;
 	private Timer timer;
-	
+
 
 	public ReportingBootstrapper()
 	{
@@ -75,33 +75,28 @@ public class ReportingBootstrapper
 		}
 	}
 
-	
-	
+
+
 	@Override
 	public boolean start()
 	{
 		try {
-			
+
 
 			/* Start queue broker
 			 */
 			QueueBroker.getInstance().startup();
 			log.info("Queue broker started");
-			
+
 			queueFactory = QueueFactory.getInstance();
 			queueFactory.startup();
-			
+
 			/* Start storage receiver and storage queue poller thread
 			 */
-			final StorageEventPoller poller;
-			if (this.storagePoller == null) {
-				QueueReceiver storageReceiver =
-					queueFactory.getReceiver(QueueIdentifier.STORAGE);
-				poller = new StorageEventPoller(storageReceiver);
-				this.storagePoller = poller;
-			} else {
-				poller = this.storagePoller;
-			}
+			QueueReceiver storageReceiver =
+				queueFactory.getReceiver(QueueIdentifier.STORAGE);
+			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+			this.storagePoller = poller;
 			timer = new Timer(true);
 			timer.schedule(new TimerTask() {
 				@Override
@@ -111,7 +106,7 @@ public class ReportingBootstrapper
 				}
 			}, 0, POLLER_DELAY_MS);
 			log.info("Storage queue poller started");
-			
+
 			/* Start instance receiver and instance listener
 			 */
 			QueueReceiver instanceReceiver =
@@ -123,9 +118,9 @@ public class ReportingBootstrapper
 				log.info("Used existing instance listener");
 			}
 			instanceReceiver.addEventListener(instanceListener);
-			
+
       ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
-        
+
         @Override
         public void fireEvent( Event event ) {
           if ( event instanceof InstanceEvent ) {
@@ -186,10 +181,10 @@ public class ReportingBootstrapper
 		}
 	}
 
-	
+
 	/* Following methods are used by the testing framework only
 	 */
-	
+
 	/**
 	 * This method is used by the testing framework only. It inserts its own
 	 * event listener which extends the normal one but makes up fake
@@ -202,14 +197,11 @@ public class ReportingBootstrapper
 	}
 
 	/**
-	 * This method is used by the testing framework only. It inserts its own
-	 * storage poller which extends the normal one but makes up fake
-	 * timestamps. 
+	 * This method is used by the testing framework only. 
 	 */
-	public void setOverriddenStorageEventPoller(
-			StorageEventPoller overriddenPoller)
+	public StorageEventPoller getOverriddenStorageEventPoller()
 	{
-		this.storagePoller = overriddenPoller;
+		return this.storagePoller;
 	}
-	
+
 }
