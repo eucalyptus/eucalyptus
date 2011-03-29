@@ -492,6 +492,14 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key) {
       done++;
     }
   }
+  if (tmpstr && strlen(tmpstr)) {
+    char *tmpptr;
+    tmpptr = tmpstr + (strlen(tmpstr)-1);
+    while(*tmpptr == ' ') {
+      *tmpptr = '\0';
+      tmpptr = tmpstr + (strlen(tmpstr)-1);
+    }
+  }
   return(tmpstr);
 }
 
