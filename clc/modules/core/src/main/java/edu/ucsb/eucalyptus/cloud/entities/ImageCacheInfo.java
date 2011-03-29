@@ -79,7 +79,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "ImageCache" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ImageCacheInfo extends AbstractPersistent {
+public class ImageCacheInfo extends AbstractPersistent implements Comparable<ImageCacheInfo> {
     @Column( name = "bucket_name" )
     private String bucketName;
 
@@ -154,8 +154,7 @@ public class ImageCacheInfo extends AbstractPersistent {
         this.useCount = useCount;
     }
 
-    public int compareTo(Object o) {
-        ImageCacheInfo info = (ImageCacheInfo) o;
+    public int compareTo(ImageCacheInfo info) {
         if(info.getUseCount().equals(useCount))
             return 0 ;
         if(info.getUseCount() < useCount)
