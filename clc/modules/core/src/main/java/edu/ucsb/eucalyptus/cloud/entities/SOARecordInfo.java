@@ -73,16 +73,13 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "SOARecords" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SOARecordInfo {
-    @Id
-    @GeneratedValue
-    @Column( name = "soarecord_id" )
-    private Long id = -1l;
+public class SOARecordInfo extends AbstractPersistent {
     @Column( name = "name" )
     private String name;
     @Column( name = "zone")

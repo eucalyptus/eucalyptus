@@ -71,17 +71,13 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.StorageProperties;
 
 import javax.persistence.*;
 
 @MappedSuperclass
-public class LVMVolumeInfo implements Serializable {
-	@Id
-	@GeneratedValue(generator = "system-uuid")
-	@GenericGenerator(name="system-uuid", strategy = "uuid")
-	@Column( name = "id" )
-	String id;
+public class LVMVolumeInfo extends AbstractPersistent {
 	@Column(name = "volume_name")
 	protected String volumeId;
 	@Column(name = "sc_name")
