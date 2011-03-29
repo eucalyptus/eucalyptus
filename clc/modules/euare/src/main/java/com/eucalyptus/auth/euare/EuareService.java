@@ -538,9 +538,6 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to delete login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
-    if ( userFound.getPassword( ) != null ) {
-      throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + requestUser.getName( ) + " already has a login profile" );
-    }
     try {
       userFound.setPassword( null );
     } catch ( Exception e ) {
@@ -1132,7 +1129,7 @@ public class EuareService {
       }
     }
     if ( userFound.getPassword( ) != null ) {
-      throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + requestUser.getName( ) + " already has a login profile" );
+      throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + userFound.getName( ) + " already has a login profile" );
     }
     if ( request.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty password", "Empty password" );
