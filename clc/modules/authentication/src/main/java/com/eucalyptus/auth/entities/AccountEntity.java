@@ -58,10 +58,10 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "Account[" );
+    sb.append( "Account(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) );
-    sb.append( "]" );
+    sb.append( ")" );
     return sb.toString( );
   }
   
