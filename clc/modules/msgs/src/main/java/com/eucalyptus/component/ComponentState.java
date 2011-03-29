@@ -99,7 +99,8 @@ public class ComponentState {
                                                                                           } catch ( Throwable ex ) {
                                                                                             LOG.error( "Transition failed on " + parent.getName( ) + " due to "
                                                                                                        + ex.toString( ), ex );
-                                                                                            transitionCallback.fireException( ex );
+//                                                                                            transitionCallback.fireException( ex );
+                                                                                            transitionCallback.fire( );
                                                                                             parent.submitError( ex );
                                                                                           }
                                                                                         }
