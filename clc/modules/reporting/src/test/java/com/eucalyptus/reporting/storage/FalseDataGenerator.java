@@ -56,6 +56,14 @@ public class FalseDataGenerator
 			}
 		}
 
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		reportingBootstrapper.stop();
+
 	}
 	
 	public static void removeFalseData()
@@ -80,17 +88,11 @@ public class FalseDataGenerator
 
 	public static void runTest()
 	{
-		try {
-			removeFalseData();
-			printFalseData();
-			Thread.sleep(10000);
-			generateFalseData();
-			Thread.sleep(10000);
-			printFalseData();
-			removeFalseData();
-		} catch (InterruptedException iex) {
-			throw new RuntimeException(iex);
-		}
+		removeFalseData();
+		printFalseData();
+		generateFalseData();
+		printFalseData();
+		removeFalseData();
 	}
 
 	private static GroupByCriterion getCriterion(String name)
