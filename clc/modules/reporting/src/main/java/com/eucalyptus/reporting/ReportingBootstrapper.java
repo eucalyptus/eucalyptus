@@ -32,6 +32,7 @@ public class ReportingBootstrapper
 	private StorageEventPoller storagePoller;
 	private InstanceEventListener instanceListener;
 	private QueueFactory queueFactory;
+	private QueueBroker queueBroker;
 	private Timer timer;
 
 
@@ -85,7 +86,8 @@ public class ReportingBootstrapper
 
 			/* Start queue broker
 			 */
-			QueueBroker.getInstance().startup();
+			queueBroker = QueueBroker.getInstance();
+			queueBroker.startup();
 			log.info("Queue broker started");
 
 			queueFactory = QueueFactory.getInstance();
@@ -169,11 +171,12 @@ public class ReportingBootstrapper
 	public boolean stop()
 	{
 		try {
-			log.info("ReportingBootstrapper stopped");
 			instanceListener.flush();
 			timer.cancel();
 			storagePoller.writeEvents();
 			queueFactory.shutdown();
+			queueBroker.shutdown();
+			log.info("ReportingBootstrapper stopped");
 			return true;
 		} catch (Exception ex) {
 			log.error("ReportingBootstrapper failed to stop", ex);
