@@ -371,7 +371,7 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this.getComponentId( ), config );
     this.serviceRegistry.register( service );
-    if ( service.isLocal( ) ) {
+//    if ( service.isLocal( ) ) {
       if ( State.INITIALIZED.equals( this.getState( ) ) ) {
         try {
           return this.stateMachine.transition( Transition.LOADING );
@@ -383,21 +383,21 @@ public class Component implements HasName<Component> {
       } else {
         return Futures.predestinedFuture( this );
       }
-    } else {
-      return Futures.predestinedFuture( this );
+//    } else {
+//      return Futures.predestinedFuture( this );
       //TODO:GRZE:ASAP handle loadService
-    }
+//    }
   }
   
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
-    if ( config.isLocal( ) ) {
-      try {
-        this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
-      } catch ( NoSuchElementException ex1 ) {
-        this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
-      }
-      this.stateMachine.setGoal( State.ENABLED );
+    try {
+      this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
+    } catch ( NoSuchElementException ex1 ) {
+      this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
+    }
+    if( config.isLocal( ) ) {
+      this.stateMachine.setGoal( this.serviceRegistry.getServices( ).isEmpty( ) ? State.ENABLED : State.DISABLED );
       if ( this.inState( State.LOADED ) ) {
         final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
         try {
