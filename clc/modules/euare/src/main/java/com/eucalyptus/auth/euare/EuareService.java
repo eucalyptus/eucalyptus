@@ -464,14 +464,15 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
+    if ( request.getPassword( ) == null ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty password", "Empty password" );
+    }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to update login profile of " + request.getUserName( ) + "by " + requestUser.getName( ) );
     }
     try {
-      if ( request.getPassword( ) != null ) {
-        userFound.setPassword( request.getPassword( ) );
-      }
+      userFound.setPassword( Crypto.generateHashedPassword( request.getPassword( ) ) );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
