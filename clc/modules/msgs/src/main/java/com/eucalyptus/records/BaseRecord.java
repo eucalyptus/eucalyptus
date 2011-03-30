@@ -25,6 +25,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
 @Entity @javax.persistence.Entity
@@ -34,14 +35,9 @@ import com.google.common.collect.Lists;
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )
-public class BaseRecord implements Serializable, Record {
+public class BaseRecord extends AbstractPersistent implements Serializable, Record {
   @Transient
   private static Logger       LOG    = Logger.getLogger( BaseRecord.class );
-  @Id
-  @GeneratedValue( generator = "system-uuid" )
-  @GenericGenerator( name = "system-uuid", strategy = "uuid" )
-  @Column( name = "record_id" )
-  String                      id;
   @Column( name = "record_timestamp" )
   private Date                timestamp;
   @Column( name = "record_type" )
@@ -216,15 +212,6 @@ public class BaseRecord implements Serializable, Record {
     }
     return ret.replaceAll( "::*", ":" ).replaceAll( NEXT, NEXT + this.leadIn( ) );
   }
-  
-  public String getId( ) {
-    return this.id;
-  }
-  
-  public void setId( String id ) {
-    this.id = id;
-  }
-  
   
   public Date getTimestamp( ) {
     return this.timestamp;

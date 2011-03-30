@@ -7,6 +7,7 @@ import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.entities.AbstractPersistent;
 
 /**
  * <p>InstanceUsageSnapshot is a record of cumulative instance resource usage
@@ -19,13 +20,8 @@ import org.hibernate.annotations.Entity;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
-class InstanceUsageSnapshot
+class InstanceUsageSnapshot extends AbstractPersistent 
 {
-	//Hibernate can override final fields
-	@Id
-	@GeneratedValue(strategy=GenerationType.TABLE)
-	@Column(name="id", nullable=false)
-	protected final Long id;
 	@Column(name="uuid", nullable=false)
 	protected final String uuid;
 	@Column(name="timestamp_ms", nullable=false)
@@ -39,7 +35,6 @@ class InstanceUsageSnapshot
 	protected InstanceUsageSnapshot()
 	{
 		//hibernate will override these thru reflection despite finality
-		this.id = null;
 		this.uuid = null;
 		this.timestampMs = null;
 		this.networkIoMegs = null;
@@ -51,7 +46,6 @@ class InstanceUsageSnapshot
 	{
 		if (timestampMs == null)
 			throw new IllegalArgumentException("timestampMs can't be null");
-		this.id = null;
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
 		this.networkIoMegs = networkIoMegs;
@@ -84,8 +78,4 @@ class InstanceUsageSnapshot
 		return diskIoMegs;
 	}
 
-	Long getId()
-	{
-		return id;
-	}
 }

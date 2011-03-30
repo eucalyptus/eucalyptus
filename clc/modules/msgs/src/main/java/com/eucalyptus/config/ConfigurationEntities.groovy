@@ -325,12 +325,7 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class System implements Serializable {
-  @Id
-  @GeneratedValue(generator = "system-uuid")
-  @GenericGenerator(name="system-uuid", strategy = "uuid")
-  @Column( name = "config_system_id" )
-  String id
+public class System extends AbstractPersistent implements Serializable {
   @Column( name = "config_system_default_kernel" )
   String defaultKernel
   @Column( name = "config_system_default_ramdisk" )
