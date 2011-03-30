@@ -85,10 +85,6 @@ public class DNSControl {
 
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
-	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return new EntityWrapper<T>( DNSProperties.DB_NAME );
-	}
-
 	private static void initializeUDP() throws Exception {
 		try {
 			UDPListener udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
@@ -111,7 +107,7 @@ public class DNSControl {
 
 	public static void populateRecords() {
 		DNSProperties.update();
-		EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<ZoneInfo> db = EntityWrapper.get(ZoneInfo.class);
 		try {
 			ZoneInfo zInfo = new ZoneInfo();
 			List<ZoneInfo> zoneInfos = db.query(zInfo);
@@ -161,7 +157,7 @@ public class DNSControl {
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String address = request.getAddress();
 		long ttl = request.getTtl();
-		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<ARecordInfo> db = EntityWrapper.get(ARecordInfo.class);
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
 		aRecordInfo.setAddress(address);
@@ -208,7 +204,7 @@ public class DNSControl {
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String address = request.getAddress();
-		EntityWrapper<ARecordInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<ARecordInfo> db = EntityWrapper.get(ARecordInfo.class);
 		ARecordInfo aRecordInfo = new ARecordInfo();
 		aRecordInfo.setName(name);
 		aRecordInfo.setZone(zone);
@@ -243,7 +239,7 @@ public class DNSControl {
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String alias = request.getAlias() + DNSProperties.DOMAIN + ".";
 		long ttl = request.getTtl();
-		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<CNAMERecordInfo> db = EntityWrapper.get(CNAMERecordInfo.class);
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
 		cnameRecordInfo.setAlias(alias);
@@ -291,7 +287,7 @@ public class DNSControl {
 		String zone = request.getZone()  + DNSProperties.DOMAIN + ".";
 		String name = request.getName()  + DNSProperties.DOMAIN + ".";
 		String alias = request.getAlias() + DNSProperties.DOMAIN + ".";
-		EntityWrapper<CNAMERecordInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<CNAMERecordInfo> db = EntityWrapper.get(CNAMERecordInfo.class);
 		CNAMERecordInfo cnameRecordInfo = new CNAMERecordInfo();
 		cnameRecordInfo.setName(name);
 		cnameRecordInfo.setZone(zone);
@@ -315,7 +311,7 @@ public class DNSControl {
 		if(!Contexts.lookup().hasAdministrativePrivileges()) {
 			throw new AccessDeniedException(name);
 		}
-		EntityWrapper<ZoneInfo> db = DNSControl.getEntityWrapper();
+		EntityWrapper<ZoneInfo> db = EntityWrapper.get(ZoneInfo.class);
 		ZoneInfo zoneInfo = new ZoneInfo(name);
 		try {
 			ZoneInfo foundZoneInfo = db.getUnique(zoneInfo);

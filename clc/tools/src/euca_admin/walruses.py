@@ -74,7 +74,8 @@ class Walrus():
   def register(self, host, name='walrus', port=8773, partition=None):
     if host == None:
       self.euca.handle_error("Missing hostname")
-    params = {'Name':'walrus',
+    params = {'Partition':'walrus',
+              'Name':name,
               'Host':host,
               'Port':port}
     if partition:

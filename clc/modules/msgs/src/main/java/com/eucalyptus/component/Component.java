@@ -86,6 +86,7 @@ import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -370,7 +371,7 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this.getComponentId( ), config );
     this.serviceRegistry.register( service );
-    if ( service.isLocal( ) ) {
+//    if ( service.isLocal( ) ) {
       if ( State.INITIALIZED.equals( this.getState( ) ) ) {
         try {
           return this.stateMachine.transition( Transition.LOADING );
@@ -382,21 +383,21 @@ public class Component implements HasName<Component> {
       } else {
         return Futures.predestinedFuture( this );
       }
-    } else {
-      return Futures.predestinedFuture( this );
+//    } else {
+//      return Futures.predestinedFuture( this );
       //TODO:GRZE:ASAP handle loadService
-    }
+//    }
   }
   
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
-    if ( config.isLocal( ) ) {
-      try {
-        this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
-      } catch ( NoSuchElementException ex1 ) {
-        this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
-      }
-      this.stateMachine.setGoal( State.ENABLED );
+    try {
+      this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
+    } catch ( NoSuchElementException ex1 ) {
+      this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
+    }
+    if( config.isLocal( ) ) {
+      this.stateMachine.setGoal( this.serviceRegistry.getServices( ).isEmpty( ) ? State.ENABLED : State.DISABLED );
       if ( this.inState( State.LOADED ) ) {
         final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
         try {
@@ -505,7 +506,6 @@ public class Component implements HasName<Component> {
             @Override
             public void run( ) {
               try {
-                DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
                 Component.this.stateMachine.transition( State.STOPPED );
                 Component.this.serviceRegistry.deregister( config );
                 future.set( Component.this );
@@ -521,7 +521,6 @@ public class Component implements HasName<Component> {
         }
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) || State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
-          DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
           return Component.this.stateMachine.transition( State.STOPPED );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
@@ -985,6 +984,7 @@ public class Component implements HasName<Component> {
   private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
   
   public void submitError( Throwable t ) {
+    ServiceConfiguration config = this.hasLocalService( ) ? this.getLocalService( ).getServiceConfiguration( ) : ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
     ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
     this.errors.put( e.getUuid( ), e );
   }

@@ -82,6 +82,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
@@ -93,12 +94,7 @@ import edu.ucsb.eucalyptus.msgs.MetaDataEntry;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ObjectInfo implements Comparable {
-    @Id
-    @GeneratedValue
-    @Column( name = "object_id" )
-    private Long id = -1l;
-
+public class ObjectInfo extends AbstractPersistent implements Comparable { 
     @Column( name = "owner_id" )
     private String ownerId;
 

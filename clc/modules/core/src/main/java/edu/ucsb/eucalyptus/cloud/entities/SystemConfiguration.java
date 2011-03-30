@@ -86,6 +86,7 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ForwardImages;
@@ -100,12 +101,8 @@ import com.eucalyptus.util.StorageProperties;
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "config", description = "Basic system configuration." )
-public class SystemConfiguration {
+public class SystemConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
-  @Id
-  @GeneratedValue
-  @Column( name = "system_info_id" )
-  private Long    id = -1l;
   @ConfigurableField( description = "Hostname of the cloud controller." )
   @Column( name = "system_info_cloud_host" )
   private String  cloudHost;
@@ -148,10 +145,6 @@ public class SystemConfiguration {
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
     this.cloudHost = cloudHost;
-  }
-  
-  public Long getId( ) {
-    return id;
   }
   
   public String getDefaultKernel( ) {

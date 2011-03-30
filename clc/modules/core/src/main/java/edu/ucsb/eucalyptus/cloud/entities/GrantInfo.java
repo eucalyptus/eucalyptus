@@ -78,6 +78,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.entities.AbstractPersistent;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
@@ -86,11 +87,7 @@ import edu.ucsb.eucalyptus.msgs.Grantee;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class GrantInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "grant_id" )
-	private Long id = -1l;
+public class GrantInfo extends AbstractPersistent {
 	@Column(name="user_id")
 	private String userId; // Actually refer to the owner account ID
 	@Column(name="grantGroup")
@@ -108,11 +105,6 @@ public class GrantInfo {
 
 	public GrantInfo(){
 		canRead = canWrite = canReadACP = canWriteACP = false;
-	}
-
-	public Long getId()
-	{
-		return this.id;
 	}
 
 	public boolean canRead() {

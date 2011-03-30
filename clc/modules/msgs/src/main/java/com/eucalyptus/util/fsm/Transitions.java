@@ -10,7 +10,7 @@ public class Transitions {
   private static Logger                        LOG  = Logger.getLogger( Transitions.class );
                                                     
   public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionAction<P> action, TransitionListener<P>... listeners ) {
-    TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState );
+    TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState, errorState );
     return new Transition<P, S, T>( rule, action, listeners );
   }
   

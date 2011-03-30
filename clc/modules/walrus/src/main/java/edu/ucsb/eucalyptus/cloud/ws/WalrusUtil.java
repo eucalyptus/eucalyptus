@@ -9,7 +9,7 @@ import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 public class WalrusUtil {
 
   public static long countBucketByAccount( String accountId ) throws AuthException {
-    EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+    EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
     BucketInfo searchBucket = new BucketInfo();
     searchBucket.setOwnerId(accountId);
     try {
@@ -23,7 +23,7 @@ public class WalrusUtil {
   }
   
   public static long countBucketByUser( String userId ) throws AuthException {
-    EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+    EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
     BucketInfo searchBucket = new BucketInfo();
     searchBucket.setUserId(userId);
     try {
@@ -37,7 +37,7 @@ public class WalrusUtil {
   }
   
   public static long countBucketObjectNumber(String bucketName) throws AuthException {
-    EntityWrapper<ObjectInfo> db = WalrusControl.getEntityWrapper().recast(ObjectInfo.class);
+    EntityWrapper<ObjectInfo> db = EntityWrapper.get(ObjectInfo.class);
     ObjectInfo searchObjectInfo = new ObjectInfo();
     searchObjectInfo.setBucketName(bucketName);
     searchObjectInfo.setDeleted(false);
@@ -53,7 +53,7 @@ public class WalrusUtil {
   }
   
   public static long countBucketSize(String bucketName) throws AuthException {
-    EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+    EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
     BucketInfo searchBucket = new BucketInfo(bucketName);
     try {
       long size = 0;
@@ -70,7 +70,7 @@ public class WalrusUtil {
   }
   
   public static long countTotalObjectSizeByAccount(String accountId) throws AuthException {
-    EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+    EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
     BucketInfo searchBucket = new BucketInfo();
     searchBucket.setOwnerId(accountId);
     try {
@@ -88,7 +88,7 @@ public class WalrusUtil {
   }
   
   public static long countTotalObjectSizeByUser(String userId) throws AuthException {
-    EntityWrapper<BucketInfo> db = WalrusControl.getEntityWrapper();
+    EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
     BucketInfo searchBucket = new BucketInfo();
     searchBucket.setUserId(userId);
     try {

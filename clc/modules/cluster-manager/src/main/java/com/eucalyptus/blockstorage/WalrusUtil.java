@@ -73,6 +73,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
@@ -125,7 +126,8 @@ public class WalrusUtil {
     GetObjectResponseType reply = null;
     try {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-      User user = Accounts.lookupUserById( userName.getUniqueId( ) );
+//TODO:GRZE:WTF.      
+//      User user = Accounts.lookupUserById( userName.getNamespace( ) );
 //      msg.setUserId( user.getName( ) );
       msg.regarding( );
       msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );

@@ -6,15 +6,15 @@ import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
-public class InstanceAttributes
+public class InstanceAttributes extends AbstractPersistent
 	implements Serializable
 {
-	@Id
 	@Column(name="uuid")
 	private String uuid;
 	@Column(name="instance_id", nullable=false)

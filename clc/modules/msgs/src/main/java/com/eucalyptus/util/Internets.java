@@ -86,8 +86,15 @@ import com.google.common.collect.Lists;
 public class Internets {
   private static Logger       LOG     = Logger.getLogger( Internets.class );
   private static final String localId = localhostIdentifier( );
+  private static final InetAddress localHostAddr = localhostAddress( );
   private static final String localHost = localhost( );
   
+  public static InetAddress localhostAddress( ) {
+    return localHostAddr != null
+      ? localHostAddr
+      : Internets.getAllInetAddresses( ).get( 0 );
+  }
+
   public static String localhost( ) {
     return localHost != null
       ? localHost

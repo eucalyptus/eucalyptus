@@ -80,6 +80,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
@@ -112,25 +113,27 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     LOG.trace( "Touching class: " + ServiceDispatcher.class );
     boolean failed = false;
     Component euca = Components.lookup( Eucalyptus.class );
-    for ( Component comp : Components.list( ) ) {
+    for ( final Component comp : Components.list( ) ) {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-      for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         if ( euca.isLocal( ) && euca.getComponentId( ).hasDispatcher( ) ) {
-          try {
-            comp.loadService( s );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
-            failed = true;
-          } catch ( Throwable ex ) {
-            Exceptions.trace( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
-          }
+          Threads.lookup( Empyrean.class, ServiceDispatchBootstrapper.class ).submit( new Runnable( ) {
+            
+            @Override
+            public void run( ) {
+              try {
+                comp.loadService( s ).get( );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex, ex );//TODO:GRZE: report error
+              } catch ( Throwable ex ) {
+                Exceptions.trace( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
+              }
+              
+            }
+          } );
         }
       }
     }
-    if ( failed ) {
-      Exceptions.trace( "Failures occurred while attempting to load component services.  See the log files for more information." );
-    }
-    
     return true;
   }
   
@@ -141,11 +144,17 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       EventRecord.here( ServiceVerifyBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         if ( euca.isLocal( ) && euca.getComponentId( ).hasDispatcher( ) ) {
-          try {
-            comp.enableTransition( s ).get( );
-          } catch ( Throwable ex ) {
-            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );
-          }
+          Threads.lookup( Empyrean.class, ServiceDispatchBootstrapper.class ).submit( new Runnable( ) {
+            
+            @Override
+            public void run( ) {
+              try {
+                comp.enableTransition( s ).get( );
+              } catch ( Throwable ex ) {
+                Exceptions.trace( "start()/enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+              }
+            }
+          } );
         }
       }
     }
