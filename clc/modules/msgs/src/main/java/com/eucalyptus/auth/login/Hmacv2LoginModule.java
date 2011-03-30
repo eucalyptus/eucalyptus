@@ -95,6 +95,7 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     }
     String subject = prefix + sb.toString( );
     LOG.trace( "VERSION2: " + subject );
+    LOG.trace( ">>>>>>>> URLCodec(hello hello)=" + codec.encode( "hello hello", "UTF-8" ) );
     return subject;
   }
 
