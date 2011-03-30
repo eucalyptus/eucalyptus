@@ -88,14 +88,14 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     sortedKeys.addAll( parameters.keySet( ) );
     String firstKey = sortedKeys.pollFirst( );
     if( firstKey != null ) { 
-      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( " ", "%20" ).replaceAll( "\\+", " " ), "UTF-8" ) );
+      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ), "UTF-8" ) );
     } 
     while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( " ", "%20" ).replaceAll( "\\+", " " ), "UTF-8" ) );
+      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ), "UTF-8" ) );
     }
     String subject = prefix + sb.toString( );
     LOG.trace( "VERSION2: " + subject );
-    LOG.trace( ">>>>>>>> URLCodec(hello hello)=" + codec.encode( "hello hello", "UTF-8" ) );
+    LOG.trace( ">>>>>>>> URLCodec(hello+hello)=" + codec.encode( "hello+hello", "UTF-8" ) );
     return subject;
   }
 
