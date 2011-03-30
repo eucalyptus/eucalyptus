@@ -108,7 +108,7 @@ public class FalseDataGenerator
 
 	private static final long CORRECT_DISK_USAGE = 990000l;
 	private static final long CORRECT_NET_USAGE  = 495000l;
-	private static final long CORRECT_INSTANCE_USAGE = 2500l;
+	private static final long CORRECT_INSTANCE_USAGE = 5000l;
 	private static final double ERROR_FACTOR = 0.1;
 	private static final double INSTANCE_ERROR_FACTOR = 0.2;
 	
@@ -155,26 +155,29 @@ public class FalseDataGenerator
 		for (String key: testResults.keySet()) {
 			TestResult testResult = testResults.get(key);
 			
+			/* Calculate data to verify and to print in chart
+			 */
+			long totalUsageSecs = testResult.m1SmallTimeSecs
+					+ testResult.c1MediumTimeSecs + testResult.m1LargeTimeSecs
+					+ testResult.m1XLargeTimeSecs + testResult.c1XLargeTimeSecs;
+			double diskError = ((double)testResult.totalDiskUsage / (double)CORRECT_DISK_USAGE);
+			double netError = ((double)testResult.totalNetUsage / (double)CORRECT_NET_USAGE);
+			boolean diskWithin = isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR);
+			boolean netWithin = isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR);
+			double totalError = ((double)totalUsageSecs / (double)CORRECT_INSTANCE_USAGE);
+			boolean totalWithin = isWithinError(totalUsageSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR);
+			
 			/* One big fat printf which prints all the test results in a single big ass chart
 			 */
 			System.out.printf(" %8s:(disk:%d,net:%d) error:(disk:%5.3f,net:%5.3f) isWithin:(disk:%s,net:%s)"
-					+ " instance:(m1s:%d,c1m:%d,m1l:%d,m1xl:%d,c1xl:%d) isWithin:(%s,%s,%s,%s,%s)\n",
+					+ " instance:(m1s:%d,c1m:%d,m1l:%d,m1xl:%d,c1xl:%d) totalError:%5.3f isWithin:%s\n",
 					key, testResult.totalDiskUsage,	testResult.totalNetUsage,
-					((double)testResult.totalDiskUsage / (double)CORRECT_DISK_USAGE),
-					((double)testResult.totalNetUsage / (double)CORRECT_NET_USAGE),
-					isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR),
-					isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR),
-					testResult.m1SmallTimeSecs, testResult.c1MediumTimeSecs, testResult.m1LargeTimeSecs,
+					diskError, netError, diskWithin, netWithin,	testResult.m1SmallTimeSecs,
+					testResult.c1MediumTimeSecs, testResult.m1LargeTimeSecs,
 					testResult.m1XLargeTimeSecs, testResult.c1XLargeTimeSecs,
-					isWithinError(testResult.m1SmallTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
-					isWithinError(testResult.c1MediumTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
-					isWithinError(testResult.m1LargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
-					isWithinError(testResult.m1XLargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
-					isWithinError(testResult.c1XLargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR)
-					);
+					totalError, totalWithin);
 
-			if (!isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR)
-				 || !isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR))
+			if (!diskWithin || !netWithin || !totalWithin)
 			{
 				throw new RuntimeException("Incorrect result for user:" + key);
 			}
