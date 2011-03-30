@@ -129,20 +129,22 @@ public class AddressManager {
     User requestUser = ctx.getUser( );
     String action = PolicySpec.requestToAction( request );
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
+      //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      try {
-        if ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) {
-          reply.getAddressesSet( ).add( isAdmin
-            ? address.getAdminDescription( )
-            : address.getDescription( ) );
-        }
+      if ( !FakePrincipals.NOBODY_USER_ERN.getUserName( ).equals( address.getOwnerAccountId( ) ) ) {
+        try {
         addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
-      } catch ( AuthException e ) {
-        if ( isAdmin ) {
-          reply.getAddressesSet( ).add( isAdmin
+        } catch ( AuthException e ) {}
+      }
+      if ( addrAccount != null
+           && ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
+        reply.getAddressesSet( ).add( isAdmin
             ? address.getAdminDescription( )
             : address.getDescription( ) );
-        }
+      } else if ( isAdmin ) {
+        reply.getAddressesSet( ).add( isAdmin
+                                      ? address.getAdminDescription( )
+                                      : address.getDescription( ) );
       }
     }
     if ( isAdmin ) {
