@@ -131,12 +131,18 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       Account addrAccount = null;
       try {
+        if ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) {
+          reply.getAddressesSet( ).add( isAdmin
+            ? address.getAdminDescription( )
+            : address.getDescription( ) );
+        }
         addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
       } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( e );
-      }
-      if ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) {
-        reply.getAddressesSet( ).add( isAdmin ? address.getAdminDescription( ) : address.getDescription( ) );
+        if ( isAdmin ) {
+          reply.getAddressesSet( ).add( isAdmin
+            ? address.getAdminDescription( )
+            : address.getDescription( ) );
+        }
       }
     }
     if ( isAdmin ) {
@@ -156,16 +162,18 @@ public class AddressManager {
     final VmInstance vm = VmInstances.restrictedLookup( request, request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
-    final boolean oldAddrSystem = oldAddr != null ? oldAddr.isSystemOwned( ) : false;
+    final boolean oldAddrSystem = oldAddr != null
+      ? oldAddr.isSystemOwned( )
+      : false;
     reply.set_return( true );
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
-        Callbacks.newRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+        Callbacks.newRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
           public void fire( BaseMessage response ) {
             vm.updatePublicAddress( address.getName( ) );
           }
-        }).dispatch( address.getCluster( ) );
+        } ).dispatch( address.getCluster( ) );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
