@@ -108,7 +108,9 @@ public class FalseDataGenerator
 
 	private static final long CORRECT_DISK_USAGE = 990000l;
 	private static final long CORRECT_NET_USAGE  = 495000l;
+	private static final long CORRECT_INSTANCE_USAGE = 2500l;
 	private static final double ERROR_FACTOR = 0.1;
+	private static final double INSTANCE_ERROR_FACTOR = 0.2;
 	
 	
 	public static void testFalseData()
@@ -121,6 +123,10 @@ public class FalseDataGenerator
 			System.out.println(key + summary.get(key));
 		}
 
+		
+		/* Divide the entire test period into 10 intervals and verify that each
+		 * of the ten intervals has the correct usage within some error margin.
+		 */
 		Map<String, TestResult> testResults = new HashMap<String, TestResult>();
 		long sliceMs = (MAX_MS - START_TIME) / 10;
 		for (long l=START_TIME; l < MAX_MS; l+=sliceMs) {
@@ -135,18 +141,37 @@ public class FalseDataGenerator
 				TestResult testResult = testResults.get(key);
 				testResult.totalDiskUsage += ius.getDiskIoMegs();
 				testResult.totalNetUsage  += ius.getNetworkIoMegs();
+				testResult.m1SmallTimeSecs += ius.getM1SmallTimeSecs();
+				testResult.c1MediumTimeSecs += ius.getC1MediumTimeSecs();
+				testResult.m1LargeTimeSecs += ius.getM1LargeTimeSecs();
+				testResult.m1XLargeTimeSecs += ius.getM1XLargeTimeSecs();
+				testResult.c1XLargeTimeSecs += ius.getC1XLargeTimeSecs();
 			}
 		}
 		
+		/* Verify that the sum of the usage during the ten intervals is correct.
+		 */
 		System.out.println("Totals:");
 		for (String key: testResults.keySet()) {
 			TestResult testResult = testResults.get(key);
-			System.out.printf(" %s:(disk:%d,net:%d) error:(disk:%5.3f,net:%5.3f) isWithin:(disk:%s,net:%s)\n",
+			
+			/* One big fat printf which prints all the test results in a single big ass chart
+			 */
+			System.out.printf(" %8s:(disk:%d,net:%d) error:(disk:%5.3f,net:%5.3f) isWithin:(disk:%s,net:%s)"
+					+ " instance:(m1s:%d,c1m:%d,m1l:%d,m1xl:%d,c1xl:%d) isWithin:(%s,%s,%s,%s,%s)\n",
 					key, testResult.totalDiskUsage,	testResult.totalNetUsage,
 					((double)testResult.totalDiskUsage / (double)CORRECT_DISK_USAGE),
 					((double)testResult.totalNetUsage / (double)CORRECT_NET_USAGE),
 					isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR),
-					isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR));
+					isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR),
+					testResult.m1SmallTimeSecs, testResult.c1MediumTimeSecs, testResult.m1LargeTimeSecs,
+					testResult.m1XLargeTimeSecs, testResult.c1XLargeTimeSecs,
+					isWithinError(testResult.m1SmallTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
+					isWithinError(testResult.c1MediumTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
+					isWithinError(testResult.m1LargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
+					isWithinError(testResult.m1XLargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR),
+					isWithinError(testResult.c1XLargeTimeSecs, CORRECT_INSTANCE_USAGE, INSTANCE_ERROR_FACTOR)
+					);
 
 			if (!isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR)
 				 || !isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR))
@@ -155,6 +180,7 @@ public class FalseDataGenerator
 			}
 			
 		}
+		
 		System.out.println("Test passed");
 	}
 
@@ -169,6 +195,11 @@ public class FalseDataGenerator
 		TestResult() { }
 		long totalDiskUsage = 0l;
 		long totalNetUsage = 0l;
+		long m1SmallTimeSecs = 0l;
+		long c1MediumTimeSecs = 0l;
+		long m1LargeTimeSecs = 0l;
+		long m1XLargeTimeSecs = 0l;
+		long c1XLargeTimeSecs = 0l;
 	}
 	
 	public static void removeFalseData()
