@@ -2,14 +2,9 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
-import com.eucalyptus.reporting.ReportingBootstrapper;
-import com.eucalyptus.reporting.GroupByCriterion;
-import com.eucalyptus.reporting.Period;
-import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.reporting.queue.QueueBroker;
-import com.eucalyptus.reporting.queue.QueueFactory;
-import com.eucalyptus.reporting.queue.QueueSender;
+import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.upgrade.TestDescription;
 
@@ -32,10 +27,10 @@ import com.eucalyptus.upgrade.TestDescription;
 @TestDescription("Generates false reporting data")
 public class FalseDataGenerator
 {
-	private static final int NUM_USAGE = 32;
-	private static final int NUM_INSTANCE = 16;
-	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final int TIME_USAGE_APART = 100000; //ms
+	private static final int NUM_USAGE    = 256;
+	private static final int NUM_INSTANCE = 64;
+	private static final long START_TIME  = 1104566400000l; //Jan 1, 2005 12:00AM
+	private static final int TIME_USAGE_APART = 10000; //ms
 	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART) + START_TIME;
 
 	private static final int NUM_USER       = 32;
@@ -111,6 +106,71 @@ public class FalseDataGenerator
 
 	}
 
+	private static final long CORRECT_DISK_USAGE = 990000l;
+	private static final long CORRECT_NET_USAGE  = 495000l;
+	private static final double ERROR_FACTOR = 0.1;
+	
+	
+	public static void testFalseData()
+	{
+		System.out.println(" ----> TESTING FALSE DATA");
+		
+		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
+		Map<String, InstanceUsageSummary> summary = usageLog.scanSummarize(new Period(START_TIME, MAX_MS), GroupByCriterion.USER);
+		for (String key: summary.keySet()) {
+			System.out.println(key + summary.get(key));
+		}
+
+		Map<String, TestResult> testResults = new HashMap<String, TestResult>();
+		long sliceMs = (MAX_MS - START_TIME) / 10;
+		for (long l=START_TIME; l < MAX_MS; l+=sliceMs) {
+			System.out.printf(" Period:%d-%d\n", l, l+sliceMs-1);
+			summary = usageLog.scanSummarize(new Period(l, l+sliceMs-1), GroupByCriterion.USER);
+			for (String key: summary.keySet()) {
+				InstanceUsageSummary ius = summary.get(key);
+				System.out.println("  " + key + ius);
+				if (!testResults.containsKey(key)) {
+					testResults.put(key, new TestResult());
+				}
+				TestResult testResult = testResults.get(key);
+				testResult.totalDiskUsage += ius.getDiskIoMegs();
+				testResult.totalNetUsage  += ius.getNetworkIoMegs();
+			}
+		}
+		
+		System.out.println("Totals:");
+		for (String key: testResults.keySet()) {
+			TestResult testResult = testResults.get(key);
+			System.out.printf(" %s:(disk:%d,net:%d) error:(disk:%5.3f,net:%5.3f) isWithin:(disk:%s,net:%s)\n",
+					key, testResult.totalDiskUsage,	testResult.totalNetUsage,
+					((double)testResult.totalDiskUsage / (double)CORRECT_DISK_USAGE),
+					((double)testResult.totalNetUsage / (double)CORRECT_NET_USAGE),
+					isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR),
+					isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR));
+
+			if (!isWithinError(testResult.totalDiskUsage, CORRECT_DISK_USAGE, ERROR_FACTOR)
+				 || !isWithinError(testResult.totalNetUsage, CORRECT_NET_USAGE, ERROR_FACTOR))
+			{
+				throw new RuntimeException("Incorrect result for user:" + key);
+			}
+			
+		}
+		System.out.println("Test passed");
+	}
+
+	private static boolean isWithinError(long val, long correctVal, double errorPercent)
+	{
+		return ((double)correctVal * (1-(double)errorPercent)) < val
+				&& val < ((double)correctVal * (1+(double)errorPercent));
+	}
+
+	private static class TestResult
+	{
+		TestResult() { }
+		long totalDiskUsage = 0l;
+		long totalNetUsage = 0l;
+	}
+	
 	public static void removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
@@ -144,6 +204,7 @@ public class FalseDataGenerator
 		printFalseData();
 		generateFalseData();
 		printFalseData();
+		testFalseData();
 		removeFalseData();
 	}
 	
@@ -231,6 +292,7 @@ public class FalseDataGenerator
 	{
 		String methodName = args[0];
 		Object[] methodArgsArray = new Object[args.length - 1];
+		@SuppressWarnings("rawtypes")
 		Class[] paramTypes = new Class[args.length - 1];
 		System.out.println("Executing " + methodName);
 		for (int i = 1; i < args.length; i++) {
