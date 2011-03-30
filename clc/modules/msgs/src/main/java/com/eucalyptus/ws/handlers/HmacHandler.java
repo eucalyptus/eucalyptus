@@ -105,7 +105,6 @@ public class HmacHandler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       }
-      LOG.debug( "HTTP request parameters: " + parameters );
       // :: note we remove the sig :://
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
       String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );

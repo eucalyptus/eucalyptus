@@ -36,13 +36,17 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
     String computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort, credentials.getSignatureMethod( ) );
+    LOG.debug( "=========>" + "incoming sig=" + sig );
+    LOG.debug( "=========>" + "sig=" + computedSig + ", sigWithPort=" + computedSigWithPort );
     if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
       sig = URLDecoder.decode( sig ).replaceAll("=","");
       computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
       computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+      LOG.debug( "=========>" + "sig=" + computedSig + ", sigWithPort=" + computedSigWithPort );
       if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
         computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+        LOG.debug( "=========>" + "sig=" + computedSig + ", sigWithPort=" + computedSigWithPort );
         if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
           return false;
         }
