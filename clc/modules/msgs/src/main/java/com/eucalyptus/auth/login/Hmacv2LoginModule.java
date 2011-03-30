@@ -45,16 +45,16 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
       sig = URLDecoder.decode( sig ).replaceAll("=","");
       computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
       computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
-      LOG.debug( "=========>" + "incoming: canonicalString=" + canonicalString );
-      LOG.debug( "=========>" + "incoming: canonicalStringWithPort=" + canonicalStringWithPort );
+      LOG.debug( "=========>" + "incoming: canonicalString=" + canonicalString.replaceAll("\\+","%2B") );
+      LOG.debug( "=========>" + "incoming: canonicalStringWithPort=" + canonicalStringWithPort.replaceAll("\\+","%2B") );
       LOG.debug( "=========>" + "incoming: sig=" + sig );
       LOG.debug( "=========>" + "computed: computedSig=" + computedSig );
       LOG.debug( "=========>" + "computed: computedSigWithPort=" + computedSigWithPort );
       if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
         computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
-        LOG.debug( "=========>" + "incoming: canonicalString=" + canonicalString );
-        LOG.debug( "=========>" + "incoming: canonicalStringWithPort=" + canonicalStringWithPort );
+        LOG.debug( "=========>" + "incoming: canonicalString=" + canonicalString.replaceAll("\\+","%20") );
+        LOG.debug( "=========>" + "incoming: canonicalStringWithPort=" + canonicalStringWithPort.replaceAll("\\+","%20") );
         LOG.debug( "=========>" + "incoming: sig=" + sig );
         LOG.debug( "=========>" + "computed: computedSig=" + computedSig );
         LOG.debug( "=========>" + "computed: computedSigWithPort=" + computedSigWithPort );
