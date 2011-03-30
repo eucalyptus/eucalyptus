@@ -178,7 +178,7 @@ public class SnapshotManager {
     CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), newId );
     CreateStorageSnapshotResponseType scReply = null;
     try {
-      scReply = StorageUtil.send( sc.getServiceConfiguration().getName(), scRequest );
+      scReply = sc.getDispatcher( ).send( scRequest );
       snap.setCluster( sc.getServiceConfiguration().getName( ) );
       snap.setMappedState( scReply.getStatus( ) );
     } catch ( EucalyptusCloudException e ) {
@@ -217,7 +217,15 @@ public class SnapshotManager {
       }
       db.delete( snap );
 //      db.getSession( ).flush( );
-      DeleteStorageSnapshotResponseType scReply = StorageUtil.send( snap.getCluster( ), new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+      Service sc = null;
+      try {
+        sc = StorageUtil.getActiveSc( snap.getCluster( ) );
+      } catch ( NoSuchElementException e ) {
+        throw new EucalyptusCloudException( "Failed to find the storage controller information for volume: "
+                                            + snap.getDisplayName( ) + " at " + snap.getCluster( ), e );
+      }
+
+      DeleteStorageSnapshotResponseType scReply = sc.getDispatcher( ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
@@ -252,8 +260,8 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
-            ServiceConfiguration sc = StorageUtil.getActiveSc( v.getCluster( ) ).getServiceConfiguration( );
-            DescribeStorageSnapshotsResponseType snapshotInfo = StorageUtil.send( sc.getName( ), scRequest );
+            Service sc = StorageUtil.getActiveSc( v.getCluster( ) );
+            DescribeStorageSnapshotsResponseType snapshotInfo = sc.getDispatcher( ).send( scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               v.setMappedState( storageSnapshot.getStatus( ) );
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

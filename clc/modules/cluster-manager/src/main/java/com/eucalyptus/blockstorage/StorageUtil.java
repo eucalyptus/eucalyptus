@@ -107,8 +107,7 @@ public class StorageUtil {
     return sc;
   }
   
-  public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
-    ServiceConfiguration scConfig = getActiveSc( clusterName ).getServiceConfiguration( );
+  public static <TYPE> TYPE send( ServiceConfiguration scConfig, BaseMessage message ) throws EucalyptusCloudException {
     Dispatcher sc = ServiceDispatcher.lookup( scConfig );
     TYPE reply = (TYPE) sc.send( message );
     return reply;
