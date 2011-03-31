@@ -36,9 +36,8 @@
             </wsp:Policy>
           </sp:Layout>
 
-	  <!-- <sp:IncludeTimestamp/> -->
+	  <sp:IncludeTimestamp/> 
           <sp:OnlySignEntireHeadersAndBody/>
-	  <!-- <sp:EncryptSignature/> -->
         </wsp:Policy>
       </sp:AsymmetricBinding>
 
@@ -50,6 +49,7 @@
       </sp:Wss10>
 
       <sp:SignedParts xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+	<sp:Body/>
         <sp:Header Namespace="http://www.w3.org/2005/08/addressing"/>
       </sp:SignedParts>
 
