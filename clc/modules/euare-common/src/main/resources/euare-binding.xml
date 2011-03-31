@@ -670,6 +670,6 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
   <mapping name="CreateSigningCertificateResult" class="com.eucalyptus.auth.euare.CreateSigningCertificateResultType">
-    <structure field="certificate" usage="required" map-as="com.eucalyptus.auth.euare.SigningCertificateType"/>
+    <structure name="Certificate" field="certificate" usage="required" map-as="com.eucalyptus.auth.euare.SigningCertificateType"/>
   </mapping>
 </binding>
