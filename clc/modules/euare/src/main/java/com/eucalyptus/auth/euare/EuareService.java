@@ -1364,6 +1364,29 @@ public class EuareService {
     return reply;
   }
 
+  public CreateSigningCertificateResponseType createSigningCertificate(CreateSigningCertificateType request) throws EucalyptusCloudException {
+    CreateSigningCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
+    User userFound = null;
+    try {
+      userFound = account.lookupUserByName( request.getUserName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    }
+  }
+  
   private static String getUserFullName( User user ) {
     if ( "/".equals( user.getPath( ) ) ) {
       return "/" + user.getName( );
