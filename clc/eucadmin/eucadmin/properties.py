@@ -32,7 +32,7 @@
 import boto,sys,eucadmin,re,os
 from boto.exception import EC2ResponseError
 from eucadmin.generic import BooleanResponse
-from eucadmin import EucaAdmin
+from eucadmin import EucAdmin
 from optparse import OptionParser
 from string import split
 import pdb
@@ -48,7 +48,7 @@ class Property():
     self.property_value = property_value
     self.property_description = property_description
     self.property_old_value = property_old_value
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
 
           
   def __repr__(self):

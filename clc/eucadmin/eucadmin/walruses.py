@@ -102,14 +102,13 @@ class Walrus():
       self.register(options.host,name=args[0],
                     port=options.port, partition=options.partition)
 
-  def register(self, host, name='walrus', port=8773, partition=None):
+  def register(self, host, name='walrus', port=8773, partition='walrus'):
     if host == None:
       self.euca.handle_error("Missing hostname")
-    params = {'Name':'walrus',
-              'Host':host,
-              'Port':port}
-    if partition:
-      params['Partition'] = partition
+    params = {'Partition' : partition,
+              'Name' : name,
+              'Host' : host,
+              'Port' : port}
     try:
       reply = self.euca.connection.get_object('RegisterWalrus',
                                               params,
