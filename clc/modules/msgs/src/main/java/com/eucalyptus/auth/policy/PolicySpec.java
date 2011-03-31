@@ -90,6 +90,8 @@ public class PolicySpec {
   public static final String IAM_UPDATEUSER = "updateuser";
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
+  // Eucalyptus extension
+  public static final String IAM_CREATESIGNINGCERTIFICATE = "createsigningcertificate";
 
   public static final Set<String> IAM_ACTIONS = Sets.newHashSet( );
   

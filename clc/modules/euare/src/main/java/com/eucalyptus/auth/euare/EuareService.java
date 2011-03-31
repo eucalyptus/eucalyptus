@@ -1,5 +1,9 @@
 package com.eucalyptus.auth.euare;
 
+import java.security.KeyPair;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -105,6 +109,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -1364,6 +1369,49 @@ public class EuareService {
     return reply;
   }
 
+  public CreateSigningCertificateResponseType createSigningCertificate(CreateSigningCertificateType request) throws EucalyptusCloudException {
+    CreateSigningCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
+    User userFound = null;
+    try {
+      userFound = account.lookupUserByName( request.getUserName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    }
+    try {
+      KeyPair keyPair = Certs.generateKeyPair( );
+      X509Certificate x509 = Certs.generateCertificate( keyPair, userFound.getName( ) );
+      x509.checkValidity( );
+      Certificate cert = userFound.addCertificate( x509 );
+      SigningCertificateType result = reply.getCreateSigningCertificateResult( ).getCertificate( );
+      result.setUserName( userFound.getName( ) );
+      result.setCertificateId( cert.getId( ) );
+      result.setCertificateBody( X509CertHelper.certificateToPem( x509 ) );
+      result.setPrivateKey( X509CertHelper.privateKeyToPem( keyPair.getPrivate( ) ) );
+      result.setStatus( "Active" );
+      result.setUploadDate( cert.getCreateDate( ) );
+    } catch ( CertificateNotYetValidException e ) {
+      throw new EucalyptusCloudException( e );
+    } catch ( CertificateExpiredException e ) {
+      throw new EucalyptusCloudException( e );
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
   private static String getUserFullName( User user ) {
     if ( "/".equals( user.getPath( ) ) ) {
       return "/" + user.getName( );

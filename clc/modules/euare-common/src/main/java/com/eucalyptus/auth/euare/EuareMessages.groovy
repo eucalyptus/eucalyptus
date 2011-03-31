@@ -509,6 +509,7 @@ public class SigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
   String certificateBody;
+  String privateKey;
   String status;
   Date uploadDate;
   public SigningCertificateType() {  }
@@ -734,4 +735,18 @@ public class ListAccountsResultType extends EucalyptusData {
 public class AccountListTypeType extends EucalyptusData {
   public AccountListTypeType() {  }
   ArrayList<AccountType> memberList = new ArrayList<AccountType>();
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATESIGNINGCERTIFICATE )
+public class CreateSigningCertificateType extends EuareMessage {
+  String userName;
+  public CreateSigningCertificateType() {  }
+}
+public class CreateSigningCertificateResponseType extends EuareMessage {
+  CreateSigningCertificateResultType createSigningCertificateResult = new CreateSigningCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateSigningCertificateResponseType() {  }
+}
+public class CreateSigningCertificateResultType extends EucalyptusData {
+  SigningCertificateType certificate = new SigningCertificateType( );
+  public CreateSigningCertificateResultType() {  }
 }
