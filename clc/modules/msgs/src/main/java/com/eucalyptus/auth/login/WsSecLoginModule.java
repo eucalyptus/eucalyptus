@@ -28,7 +28,11 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
     try {
       final Element secNode = WSSecurity.getSecurityElement( wrappedCredentials.getLoginData( ) );
       final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
-      SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
+      // this enqueues an empty string
+      //SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
+      String sigValue = new String(sig.getSignatureValue());
+      SecurityContext.enqueueSignature( sigValue );
+      
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
       try {
         final User user = Accounts.lookupUserByCertificate( cert );
@@ -43,7 +47,8 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
             throw e;
           }
         } catch ( Exception ex ) {
-          throw e;
+        	// TODO: GRZE should it be "throw ex" instead?
+        	throw e;
         }
       }
     } finally {
