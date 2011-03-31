@@ -24,9 +24,10 @@ public class Exceptions {
     return LogLevels.DEBUG ? string( ex ) : ex.getMessage( ); 
   }
   public static <T extends Throwable> String string( T ex ) {
+    Throwable t = ( ex == null ? new RuntimeException() : ex );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
-    ex.printStackTrace( p );
+    t.printStackTrace( p );
     p.flush( );
     p.close( );
     return os.toString( );
