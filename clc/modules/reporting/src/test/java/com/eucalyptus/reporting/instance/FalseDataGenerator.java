@@ -27,16 +27,16 @@ import com.eucalyptus.upgrade.TestDescription;
 @TestDescription("Generates false reporting data")
 public class FalseDataGenerator
 {
-	private static final int NUM_USAGE    = 256;
-	private static final int NUM_INSTANCE = 64;
+	private static final int NUM_USAGE    = 512;
+	private static final int NUM_INSTANCE = 16;
 	private static final long START_TIME  = 1104566400000l; //Jan 1, 2005 12:00AM
 	private static final int TIME_USAGE_APART = 10000; //ms
 	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART) + START_TIME;
 
-	private static final int NUM_USER       = 32;
-	private static final int NUM_ACCOUNT    = 16;
-	private static final int NUM_CLUSTER    = 4;
-	private static final int NUM_AVAIL_ZONE = 2;
+	private static final int NUM_USER       = 8;
+	private static final int NUM_ACCOUNT    = 4;
+	private static final int NUM_CLUSTER    = 2;
+	private static final int NUM_AVAIL_ZONE = 1;
 	
 	private static ReportingBootstrapper reportingBootstrapper = null;
 
@@ -106,24 +106,90 @@ public class FalseDataGenerator
 
 	}
 
-	private static final long CORRECT_DISK_USAGE = 990000l;
-	private static final long CORRECT_NET_USAGE  = 495000l;
-	private static final long CORRECT_INSTANCE_USAGE = 5000l;
-	private static final double ERROR_FACTOR = 0.1;
+	private static final long CORRECT_DISK_USAGE = 1010000l;
+	private static final long CORRECT_NET_USAGE  = 506000l;
+	private static final long CORRECT_INSTANCE_USAGE = 4150l;
+	private static final double ERROR_FACTOR = 0.2;
 	private static final double INSTANCE_ERROR_FACTOR = 0.2;
 	
+	private static final long RANGE = MAX_MS - START_TIME;
+	private static final long DISTANCE =  RANGE / 5;
+
+	public static void testRanges()
+	{
+		System.out.printf("----> Range:%d Distance:%d\n", RANGE, DISTANCE);
+		
+		for (int i=0; i<100; i++) {
+
+		}
+	}
 	
+	private static final int NUM_TESTS = 16;
+
 	public static void testFalseData()
 	{
 		System.out.println(" ----> TESTING FALSE DATA");
-		
+
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		Map<String, InstanceUsageSummary> summary = usageLog.scanSummarize(new Period(START_TIME, MAX_MS), GroupByCriterion.USER);
 		for (String key: summary.keySet()) {
 			System.out.println(key + summary.get(key));
 		}
 
-		
+		final Random rand = new Random();
+		for (int i=0; i<NUM_TESTS; i++) {
+
+			/* Calculate a random range of starting and ending times, of at
+			 * least a certain duration and within the range of generated false
+			 * data.
+			 */
+			final long lowerBound = rand.nextInt((int)(RANGE - DISTANCE)) + START_TIME;
+			final long upperBound = rand.nextInt((int)(MAX_MS - (lowerBound + DISTANCE))) + lowerBound + DISTANCE;
+			final double fraction =  ((double)upperBound - (double)lowerBound) / ((double)MAX_MS - (double)START_TIME);
+			final double adjustedCorrectDisk = (double)CORRECT_DISK_USAGE*fraction;
+			final double adjustedCorrectNet  = (double)CORRECT_NET_USAGE*fraction;
+			final double adjustedCorrectTime = (double)CORRECT_INSTANCE_USAGE*fraction;
+			final double adjustedError = ERROR_FACTOR * (1.0 + (1.0-fraction));
+			final double adjustedInstanceError = INSTANCE_ERROR_FACTOR * (1.0 + (1.0-fraction));
+
+			System.out.printf("#:%3d correct:(%d,%d,%d) fraction:%3.3f adjusted:(%3.3f , %3.3f , %3.3f)"
+					   + " adjustedError:(%3.3f , %3.3f)\n",
+					i, CORRECT_DISK_USAGE, CORRECT_NET_USAGE, CORRECT_INSTANCE_USAGE,
+					fraction, adjustedCorrectDisk, adjustedCorrectNet, adjustedCorrectTime,
+					adjustedError, adjustedInstanceError);
+
+			summary = usageLog.scanSummarize(new Period(lowerBound, upperBound), GroupByCriterion.USER);
+			for (String userId: summary.keySet()) {
+				InstanceUsageSummary ius = summary.get(userId);
+				long totalUsageSecs = ius.getM1SmallTimeSecs()
+						+ ius.getC1MediumTimeSecs() + ius.getM1LargeTimeSecs()
+						+ ius.getM1XLargeTimeSecs() + ius.getC1XLargeTimeSecs();
+
+				final double diskError = (double)ius.getDiskIoMegs() / adjustedCorrectDisk;
+				final double netError = (double)ius.getNetworkIoMegs() / adjustedCorrectNet;;
+				final double usageError = ((double)totalUsageSecs / adjustedCorrectTime);
+				final boolean diskWithin = isWithinError(ius.getDiskIoMegs(), adjustedCorrectDisk, adjustedError);
+				final boolean netWithin = isWithinError(ius.getNetworkIoMegs(), adjustedCorrectNet, adjustedError);
+				final boolean usageWithin = isWithinError(totalUsageSecs, adjustedCorrectTime, adjustedInstanceError);
+
+				System.out.printf(" %8s:(%d/%3.3f , %d/%3.3f , %d/%3.3f) " +
+						  "error:(%3.3f,%3.3f,%3.3f) isWithin:(%s,%s,%s)\n",
+						userId, ius.getDiskIoMegs(), adjustedCorrectDisk,
+						ius.getNetworkIoMegs(), adjustedCorrectNet, totalUsageSecs,
+						adjustedCorrectTime, diskError, netError, usageError,
+						diskWithin, netWithin, usageWithin);
+
+				if (!diskWithin || !netWithin || !usageWithin)
+				{
+					throw new RuntimeException("Incorrect result for user:" + userId);
+				}
+
+			}
+
+		}
+
+
+
 		/* Divide the entire test period into 10 intervals and verify that each
 		 * of the ten intervals has the correct usage within some error margin.
 		 */
@@ -149,13 +215,14 @@ public class FalseDataGenerator
 			}
 		}
 		
-		/* Verify that the sum of the usage during the ten intervals is correct.
+		/* Verify that the sum of the usage during the ten intervals adds up to
+		 * roughly the total for the entire interval.
 		 */
 		System.out.println("Totals:");
 		for (String key: testResults.keySet()) {
 			TestResult testResult = testResults.get(key);
 			
-			/* Calculate data to verify and to print in chart
+			/* Calculate data, to verify and to print in chart
 			 */
 			long totalUsageSecs = testResult.m1SmallTimeSecs
 					+ testResult.c1MediumTimeSecs + testResult.m1LargeTimeSecs
@@ -189,8 +256,13 @@ public class FalseDataGenerator
 
 	private static boolean isWithinError(long val, long correctVal, double errorPercent)
 	{
-		return ((double)correctVal * (1-(double)errorPercent)) < val
-				&& val < ((double)correctVal * (1+(double)errorPercent));
+		return isWithinError((double)val, (double)correctVal, errorPercent);
+	}
+
+	private static boolean isWithinError(double val, double correctVal, double errorPercent)
+	{
+		return correctVal * (1-errorPercent) < val
+				&& val < correctVal * (1+errorPercent);
 	}
 
 	private static class TestResult
