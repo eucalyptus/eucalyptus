@@ -672,4 +672,38 @@
   <mapping name="CreateSigningCertificateResult" class="com.eucalyptus.auth.euare.CreateSigningCertificateResultType">
     <structure name="Certificate" field="certificate" usage="required" map-as="com.eucalyptus.auth.euare.SigningCertificateType"/>
   </mapping>
+  <mapping name="GetUserInfo" class="com.eucalyptus.auth.euare.GetUserInfoType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="UserName" field="userName" usage="optional"/>
+    <value name="InfoKey" field="infoKey" usage="optional"/>
+  </mapping>
+  <mapping name="GetUserInfoResponse" class="com.eucalyptus.auth.euare.GetUserInfoResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getUserInfoResult" usage="required" map-as="com.eucalyptus.auth.euare.GetUserInfoResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetUserInfoResult" class="com.eucalyptus.auth.euare.GetUserInfoResultType">
+    <structure name="Infos" field="infos" usage="required" type="com.eucalyptus.auth.euare.UserInfoListTypeType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.UserInfoListTypeType" abstract="true">
+    <collection field="memberList">
+      <structure name="member" type="com.eucalyptus.auth.euare.UserInfoType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.UserInfoType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="Key" field="key" usage="required"/>
+    <value name="Value" field="value" usage="required"/>
+  </mapping>
+  <mapping name="UpdateUserInfo" class="com.eucalyptus.auth.euare.UpdateUserInfoType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="UserName" field="userName" usage="optional"/>
+    <value name="InfoKey" field="infoKey" usage="required"/>
+    <value name="InfoValue" field="infoValue" usage="required"/>
+  </mapping>
+  <mapping name="UpdateUserInfoResponse" class="com.eucalyptus.auth.euare.UpdateUserInfoResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  
 </binding>

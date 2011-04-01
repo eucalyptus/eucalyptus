@@ -750,3 +750,38 @@ public class CreateSigningCertificateResultType extends EucalyptusData {
   SigningCertificateType certificate = new SigningCertificateType( );
   public CreateSigningCertificateResultType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERINFO )
+public class GetUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  public GetUserInfoType() {  }
+}
+public class GetUserInfoResponseType extends EuareMessage {
+  GetUserInfoResultType getUserInfoResult = new GetUserInfoResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetUserInfoResponseType() {  }
+}
+public class GetUserInfoResultType extends EucalyptusData {
+  UserInfoListTypeType infos = new UserInfoListTypeType( );
+  public GetUserInfoResultType() {  }
+}
+public class UserInfoListTypeType extends EucalyptusData {
+  ArrayList<UserInfoType> memberList = new ArrayList<UserInfoType>();
+  public UserInfoListTypeType() {  }
+}
+public class UserInfoType extends EuareMessage  {
+  String key;
+  String value;
+  public UserInfoType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSERINFO )
+public class UpdateUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  String infoValue;
+  public UpdateUserInfoType() {  }
+}
+public class UpdateUserInfoResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public UpdateUserInfoResponseType() {  }
+}
