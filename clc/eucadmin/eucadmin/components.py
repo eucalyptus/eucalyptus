@@ -33,7 +33,7 @@ import boto,sys,eucadmin,re
 from boto.exception import EC2ResponseError
 from eucadmin.generic import BooleanResponse
 from eucadmin.generic import StringList
-from eucadmin import EucaAdmin
+from eucadmin import EucAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Configuration'
@@ -46,7 +46,7 @@ class Component():
     self.port = port
     self.partition = partition
     self.state = state
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
     self.verbose = False
           
   def __repr__(self):
@@ -171,7 +171,7 @@ class Service():
     self.service_state = service_state
     self.service_detail = StringList()
     self.service_id = ServiceStatus()
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
     self.verbose = False
 
   def __repr__(self):

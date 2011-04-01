@@ -45,7 +45,7 @@ class Cluster():
         self.port = port
         self.partition = partition
         self.state = state
-        self.euca = EucaAdmin()
+        self.euca = EucAdmin()
         self.parser = None
           
     def __repr__(self):
