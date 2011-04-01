@@ -215,7 +215,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 			Binding binding;
 
-			if(!(msg instanceof EucalyptusErrorMessageType)||!(msg instanceof ExceptionResponseType)) {
+			if(!(msg instanceof EucalyptusErrorMessageType)&&!(msg instanceof ExceptionResponseType)) {
 				binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( super.getNamespace( ) ) );
 				if(putQueue != null) {
 					putQueue = null;

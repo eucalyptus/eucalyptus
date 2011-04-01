@@ -173,6 +173,7 @@ public class Configuration {
           Service s = Components.lookup( conf.getComponentId( ) ).lookupService( conf );
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
         } catch ( NoSuchElementException ex ) {
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), Component.State.NOTREADY.toString( ), "unknown" ) );
           LOG.error( ex, ex );
         }
       }

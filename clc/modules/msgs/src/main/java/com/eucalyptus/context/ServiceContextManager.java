@@ -101,7 +101,7 @@ import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 
 public class ServiceContextManager {
   private static Logger                                       LOG                            = Logger.getLogger( ServiceContextManager.class );
-  private static Logger                                       CONFIG_LOG                     = Logger.getLogger( "com.eucalyptus.context.Configs" );
+  private static Logger                                       CONFIG_LOG                     = Logger.getLogger( "Configs" );
   
   private static final VelocityEngine                         ve                             = new VelocityEngine( );
   static {

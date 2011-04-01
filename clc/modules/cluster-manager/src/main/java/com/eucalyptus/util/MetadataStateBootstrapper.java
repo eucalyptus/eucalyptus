@@ -115,7 +115,7 @@ public class MetadataStateBootstrapper extends Bootstrapper {
   }
 
   private static void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = new EntityWrapper<VmType>( "eucalyptus_general" );
+    EntityWrapper<VmType> db = EntityWrapper.get(VmType.class);
     try {
       if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
         db.add( new VmType( "m1.small", 1, 2, 128 ) );

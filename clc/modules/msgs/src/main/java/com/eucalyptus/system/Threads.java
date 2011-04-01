@@ -280,17 +280,17 @@ public class Threads {
     }
     
     public <T> Future<T> submit( Callable<T> task ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
       return this.pool.submit( task );
     }
     
     public <T> Future<T> submit( Runnable task, T result ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
       return this.pool.submit( task, result );
     }
     
     public Future<?> submit( Runnable task ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 1 ) );
+      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
       return this.pool.submit( task );
     }
     
@@ -457,6 +457,6 @@ public class Threads {
   }
 
   public static StackTraceElement currentStack( int frameOffset ) {
-    return Thread.currentThread( ).getStackTrace( ).length > frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : null;
+    return Thread.currentThread( ).getStackTrace( ).length <= frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : Thread.currentThread( ).getStackTrace( )[ frameOffset ];
   }
 }

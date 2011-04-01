@@ -101,18 +101,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
-    sb.append( "userGroup=" ).append( this.isUserGroup( ) ).append( ", " );
-    sb.append( "account=" ).append( this.getAccount( ).getName( ) ).append( ", " );
-    sb.append( "users=[");
-    for ( UserEntity u : this.getUsers( ) ) {
-      sb.append( u.getName( ) ).append( ' ' );
-    }
-    sb.append( ']' );
-    sb.append( "policies=[\n");
-    for ( PolicyEntity p : this.getPolicies( ) ) {
-      sb.append( p.getText( ) ).append( '\n' );
-    }
-    sb.append( ']' );
+    sb.append( "userGroup=" ).append( this.isUserGroup( ) );
     sb.append( ")" );
     return sb.toString( );
   }

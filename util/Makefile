@@ -15,7 +15,7 @@ euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
 
 test: test.c ipc.o misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
 .c.o: $@
 	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $<

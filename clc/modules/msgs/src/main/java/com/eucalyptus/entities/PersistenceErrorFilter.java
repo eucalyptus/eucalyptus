@@ -94,6 +94,7 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.system.LogLevels;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -159,7 +160,7 @@ public class PersistenceErrorFilter {
   
   private static Multimap<ErrorCategory, Class<? extends Exception>> buildErrorMap( ) {
     Multimap<ErrorCategory, Class<? extends Exception>> map = ArrayListMultimap.create();
-    map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
+    map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( ConstraintViolationException.class, NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
     map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class, PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class, EntityExistsException.class ) );
     map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class ) );
     map.get( ErrorCategory.BUG ).addAll( Lists.newArrayList( LazyInitializationException.class, InstantiationException.class, MappingException.class,
@@ -179,7 +180,7 @@ public class PersistenceErrorFilter {
   static RecoverablePersistenceException exceptionCaught( Throwable e ) {
     if( e instanceof RuntimeException ) {
       Class<? extends Throwable> type = e.getClass( );
-      for ( Class<? extends Throwable> t = type; type.getSuperclass( ) != null && type.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
+      for ( Class<? extends Throwable> t = type; t.getSuperclass( ) != null && t.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
         for( ErrorCategory category : ErrorCategory.values( ) ) {
           if( errorCategorization.containsEntry( category, t ) ) {
             throw category.handleException( ( RuntimeException ) e );

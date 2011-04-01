@@ -80,6 +80,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
@@ -91,12 +92,7 @@ import edu.ucsb.eucalyptus.util.UserManagement;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class BucketInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "bucket_id" )
-	private Long id = -1l;
-
+public class BucketInfo extends AbstractPersistent {
 	// Hold the real owner ID. At this point, it is the account ID.
 	@Column( name = "owner_id" )
 	private String ownerId;

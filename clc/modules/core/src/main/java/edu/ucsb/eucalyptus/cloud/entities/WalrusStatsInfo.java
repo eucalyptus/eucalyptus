@@ -68,16 +68,13 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_stats_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class WalrusStatsInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "walrus_stats_info_id" )
-	private Long id = -1l;
+public class WalrusStatsInfo extends AbstractPersistent {
 	@Column(name = "walrus_name")
 	private String name;
 	@Column( name = "number_buckets" )
@@ -97,10 +94,6 @@ public class WalrusStatsInfo {
 		this.name = name;
 		this.numberOfBuckets = numberOfBuckets;
 		this.totalSpaceUsed = totalSpaceUsed;
-	}
-
-	public Long getId() {
-		return id;
 	}
 
 	public String getName() {

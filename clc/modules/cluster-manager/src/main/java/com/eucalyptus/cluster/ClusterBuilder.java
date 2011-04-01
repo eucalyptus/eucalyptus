@@ -258,15 +258,17 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
-    try {
-      ServiceConfigurations.getPartitionConfigurations( StorageControllerConfiguration.class, partition );
-      throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      return true;
-    } catch ( NoSuchElementException ex ) {
-      return true;
-    }
+    return super.checkRemove( partition, name );
+//NOTE: we no longer enforce this ordering check becuase of possible need for partial recovery where SC remains registered and CC needs to be re-registered
+//    try {
+//      ServiceConfigurations.getPartitionConfigurations( StorageControllerConfiguration.class, partition );
+//      throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
+//    } catch ( PersistenceException ex ) {
+//      LOG.error( ex, ex );
+//      return true;
+//    } catch ( NoSuchElementException ex ) {
+//      return true;
+//    }
   }
   
   @Override
@@ -334,6 +336,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+    //TODO:GRZE: check pending error queue here
     super.fireCheck( config );
   }
   

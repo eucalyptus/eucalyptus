@@ -106,17 +106,22 @@ public class HostStateMonitor implements EventListener<Event> {
       Hosts.collect( new Function<Host, Request>( ) {
         @Override
         public Request apply( final Host target ) {
-          if( target.getEndpoint( ) != null ) { 
-            final Request req = Callbacks.newRequest( new ServiceCallback( target ) );
-            Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
-              
-              @Override
-              public void run( ) {
-                req.dispatch( target.getEndpoint( ) );
-              }
-            } );
-            return req;
-          } else {
+          try {
+            if( target.getEndpoint( ) != null ) { 
+              final Request req = Callbacks.newRequest( new ServiceCallback( target ) );
+              Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
+                
+                @Override
+                public void run( ) {
+                  req.dispatch( target.getEndpoint( ) );
+                }
+              } );
+              return req;
+            } else {
+              return null;
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
             return null;
           }
         }

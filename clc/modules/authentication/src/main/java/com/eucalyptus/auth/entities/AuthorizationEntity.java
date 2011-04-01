@@ -97,9 +97,7 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
     sb.append( "effect=" ).append( this.effect ).append( ", " );
     sb.append( "type=" ).append( this.type ).append( ", " );
     sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
-    sb.append( "actions=" ).append( this.getActions( ) ).append( ", " );
-    sb.append( "notResource=" ).append( this.isNotResource( ) ).append( ", " );
-    sb.append( "resources=" ).append( this.getResources( ) );
+    sb.append( "notResource=" ).append( this.isNotResource( ) );
     sb.append( ")" );
     return sb.toString( );
   }

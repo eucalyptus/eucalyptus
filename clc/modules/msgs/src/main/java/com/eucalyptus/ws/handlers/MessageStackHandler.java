@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.IOException;
+import javax.security.auth.login.LoginException;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -73,9 +74,11 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.ws.WebServicesException;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
   private final Logger LOG = Logger.getLogger( this.getClass() );
@@ -96,9 +99,9 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       }
       channelHandlerContext.sendDownstream( channelEvent );
     } catch ( Throwable e ) {
-      LOG.debug( e, e );
-      Channels.fireExceptionCaught( channelHandlerContext.getChannel( ), e );
-    }
+      LOG.error( e, e );
+      throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
+    } 
   }
 
   public abstract void outgoingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
@@ -127,9 +130,12 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       try {
         this.incomingMessage( channelHandlerContext, msgEvent );
         channelHandlerContext.sendUpstream( channelEvent );
+      } catch ( LoginException e ) {
+        LOG.error( e, e );
+        throw new WebServicesException( e.getMessage( ), HttpResponseStatus.FORBIDDEN );
       } catch ( Throwable e ) {
         LOG.error( e, e );
-        Channels.fireExceptionCaught( channelHandlerContext, e );
+        throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
       } 
     } else {
       channelHandlerContext.sendUpstream( channelEvent );

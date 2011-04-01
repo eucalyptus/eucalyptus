@@ -3,6 +3,7 @@ package com.eucalyptus.empyrean;
 import java.util.Properties;
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import org.apache.log4j.Logger;
@@ -17,19 +18,23 @@ import bitronix.tm.TransactionManagerServices;
 import bitronix.tm.jndi.BitronixContext;
 
 public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
-  
+//  public static final String JNDI_NAME = "eucalyptusTransactionManager";
   private static Logger             LOG = Logger.getLogger( EmpyreanTransactionManager.class );
-  private static Context            ctx;
+  private static Context            ctx = getContext( );
   private static TransactionManager tm;
-  
-  private static Context getContext( ) {
+
+  static Context getContext( ) {
     if ( ctx != null ) {
       return ctx;
     } else {
       synchronized ( EmpyreanTransactionManager.class ) {
         if ( ctx == null ) {
-          tm = configureTm( );
-          ctx = new BitronixContext( );
+          ctx = configureTm( );
+          try {
+            tm = ( TransactionManager ) ctx.lookup( TransactionManagerServices.getConfiguration( ).getJndiUserTransactionName( ) );
+          } catch ( NamingException ex ) {
+            LOG.error( ex , ex );
+          }
         }
         return ctx;
       }
@@ -40,14 +45,15 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     return tm;
   }
   
-  private static TransactionManager configureTm( ) {
+  private static BitronixContext configureTm( ) {
     Configuration tm_conf = TransactionManagerServices.getConfiguration( );
     tm_conf.setServerId( SystemIds.createCloudUniqueName( "transaction-manager" ) );
     tm_conf.setAsynchronous2Pc( false );
     tm_conf.setLogPart1Filename( SubDirectory.DB.toString( ) + "/btm1.tx" );
     tm_conf.setLogPart2Filename( SubDirectory.DB.toString( ) + "/btm2.tx" );
-    tm_conf.setJndiUserTransactionName( "eucalyptusTransactionManager" );
-    return TransactionManagerServices.getTransactionManager( );
+//    tm_conf.setJndiUserTransactionName( JNDI_NAME );
+    LOG.debug( "Setting up transaction manager: " + tm_conf.getJndiUserTransactionName( ) );
+    return new BitronixContext( );
   }
   
   public String getUserTransactionName( ) {

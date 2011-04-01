@@ -73,17 +73,13 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "ImageCache" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ImageCacheInfo implements Comparable {
-    @Id
-    @GeneratedValue
-    @Column( name = "image_cache_id" )
-    private Long id = -1l;
-
+public class ImageCacheInfo extends AbstractPersistent implements Comparable<ImageCacheInfo> {
     @Column( name = "bucket_name" )
     private String bucketName;
 
@@ -158,8 +154,7 @@ public class ImageCacheInfo implements Comparable {
         this.useCount = useCount;
     }
 
-    public int compareTo(Object o) {
-        ImageCacheInfo info = (ImageCacheInfo) o;
+    public int compareTo(ImageCacheInfo info) {
         if(info.getUseCount().equals(useCount))
             return 0 ;
         if(info.getUseCount() < useCount)

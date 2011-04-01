@@ -72,16 +72,12 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.entities.AbstractPersistent;
 
 import javax.persistence.*;
 
 @MappedSuperclass
-public class LVMMetaInfo implements Serializable {
-	@Id
-	@GeneratedValue(generator = "system-uuid")
-	@GenericGenerator(name="system-uuid", strategy = "uuid")
-	@Column( name = "id" )
-	String id;
+public class LVMMetaInfo extends AbstractPersistent implements Serializable {
 
 	public LVMMetaInfo() {
 		super();

@@ -90,11 +90,19 @@ public class EntityWrapper<TYPE> {
   static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
   private final TxHandle             tx;
   private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
-
+  private static Class determineEntityClass( Class type ) {
+    for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
+      if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
+        return c;
+      }
+    }
+    return type;
+  }
+  
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
       if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
-        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ) );
+        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ), true );
       }
     }
     throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
@@ -105,12 +113,13 @@ public class EntityWrapper<TYPE> {
   }
   
   /**
+   * Private for a reason.
    * @see {@link EntityWrapper#get(Class)}
    * @param persistenceContext
    */
   @Deprecated
   @SuppressWarnings( "unchecked" )
-  public EntityWrapper( String persistenceContext ) {
+  private EntityWrapper( String persistenceContext, boolean ignored ) {
     try {
       if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
@@ -125,11 +134,8 @@ public class EntityWrapper<TYPE> {
   
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.begin( ), this.tx.getTxUuid( ) ) );
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setCacheable( true ).add( qbe ).list( );
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
-                                   this.tx.getTxUuid( ) ) );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
@@ -147,21 +153,25 @@ public class EntityWrapper<TYPE> {
   
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
     if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
-    List<TYPE> res = this.query( example );
-    if ( res.size( ) != 1 ) {
-      String msg = null;
-      try {
-        msg = LogUtil.dumpObject( example );
-      } catch ( Exception e ) {
-        msg = example.toString( );
-      }
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.fail( ), Long.toString( this.tx.splitOperation( ) ),
-                                     this.tx.getTxUuid( ) ) );
-      throw new EucalyptusCloudException( "Error locating information for " + msg );
+    Object id = null;
+    try {
+      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+    } catch ( Exception ex ) {
     }
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.QUERY.end( ), Long.toString( this.tx.splitOperation( ) ),
-                                   this.tx.getTxUuid( ) ) );
+    if( id != null ) {
+      TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+      if( res == null ) {
+        throw new EucalyptusCloudException( "Get unique failed (returning 0 results for " + LogUtil.dumpObject( example ) );
+      } else {
+        return res;
+      }
+    } else {
+      List<TYPE> res = this.query( example );
+      if ( res.size( ) != 1 ) {
+        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + LogUtil.dumpObject( example ) );
+      }
     return res.get( 0 );
+    }
   }
   
   
