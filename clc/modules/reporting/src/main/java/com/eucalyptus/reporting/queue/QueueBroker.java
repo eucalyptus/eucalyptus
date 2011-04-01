@@ -89,13 +89,14 @@ public class QueueBroker
 				brokerService.addNetworkConnector(remoteBrokerUrl);
 			}
 			brokerService.setUseJmx(false);
-			brokerThread = new JmsBrokerThread(brokerService);
-			brokerThread.start();
-			Thread.sleep(1000); // give the broker a moment to startup; TODO:
-								// fix this
-			if (brokerThread.getStartException() != null) {
-				throw brokerThread.getStartException();
-			}
+			brokerService.start();
+//			brokerThread = new JmsBrokerThread(brokerService);
+//			brokerThread.start();
+//			Thread.sleep(1000); // give the broker a moment to startup; TODO:
+//								// fix this
+//			if (brokerThread.getStartException() != null) {
+//				throw brokerThread.getStartException();
+//			}
 		} catch (Exception ex) {
 			throw new QueueRuntimeException(ex);
 		}
