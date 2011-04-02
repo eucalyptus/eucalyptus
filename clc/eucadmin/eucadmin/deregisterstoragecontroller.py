@@ -28,38 +28,45 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
-import re
+import eucadmin
 
-__version__ = '1.0a'
+class DeregisterStorageController(AWSQueryRequest):
+  
+    ServicePath = '/services/Configuration'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'Deregister storage controller'
+    Params = [Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the storage controller')]
+    Args = [Param(name='Name',
+                  long_name='name',
+                  ptype='string',
+                  optional=False,
+                  doc='The storage controller name')]
 
-class EucAdmin(AWSQueryService):
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        return self.connection
+      
+    def cli_formatter(self, data):
+        data = data['euca:DeregisterStorageControllerResponseType']
+        data = data['euca:DeregisterComponentResponseType']
+        data = data['euca:ConfigurationMessage']
+        print 'RESPONSE %s' % data['euca:return']
 
-    Name = 'eucadmin'
-    Description = 'Eucalyptus Administration Services'
-    APIVersion = 'eucalyptus'
-    Authentication = 'sign-v2'
-    Path = '/services/Configuration'
-    Port = 8773
-    Provider = 'aws'
-    EnvURL = 'EC2_URL'
+def main(**args):
+    req = DeregisterStorageController(**args)
+    return req.send()
 
-    def handle_error(self, ex):
-        s = ""
-        if not hasattr(ex,"errors"):
-            s = 'ERROR %s' % (ex)
-        else:
-            if ex.errors.__len__() != 0:
-                for i in ex.errors:
-                    s = '%sERROR %s %s %s: %s\n' % (s, ex.status,
-                                                    ex.reason,
-                                                    i[0], i[1])
-            else:
-                s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-            while s.count("\n") != 3:
-                s = re.sub(".*Exception.*\n", ": ", s)
-        print s.replace("\n","")
-        sys.exit(1)
 
+def main_cli():
+    req = DeregisterStorageController()
+    req.do_cli()
+    
