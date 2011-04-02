@@ -30,6 +30,7 @@
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 import optparse
+import inspect
 
 class EucaConf(object):
 
@@ -108,6 +109,10 @@ class EucaConf(object):
                                type='int', dest='nc_port',
                                metavar='<port>',
                                help='set NC port', default=8443)
+        self.parser.add_option('--partition', action='store',
+                               type='string', dest='partition',
+                               metavar='<partition_name>',
+                               help='specify the partition for reg/dereg/etc operations'),
         self.parser.add_option('--instances', action='store',
                                type='string', dest='instance_path',
                                metavar='<path>',
@@ -152,9 +157,16 @@ class EucaConf(object):
                                choices=['nc', 'cc', 'cloud', 'sc', 'walrus'],
                                dest='check_what', metavar='<service>',
                                help='pre-flight checks')
-        options, args = self.parser.parse_args()
-        if len(args) > 1:
-            parser.error('unknown arguments')
+        self.options, self.args = self.parser.parse_args()
+
+    def main(self):
+        for name, method in inspect.getmembers(self):
+            if name.startswith('do_') and inspect.ismethod(method):
+                method()
+
+    def do_register_nodes(self):
+        print "look at me, I'm registering nodes!"
 
 if __name__ == "__main__":
     ec = EucaConf()
+    ec.main()

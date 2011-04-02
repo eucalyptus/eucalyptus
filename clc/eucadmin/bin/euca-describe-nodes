@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+import eucadmin.describenodes
+
+if __name__ == "__main__":
+  eucadmin.describenodes.main_cli()
