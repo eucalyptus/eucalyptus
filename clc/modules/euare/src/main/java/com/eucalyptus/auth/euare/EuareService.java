@@ -1212,8 +1212,11 @@ public class EuareService {
         }
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    // Allow to look at myself.
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+      }
     }
     UserType u = reply.getGetUserResult( ).getUser( );
     fillUserResult( u, userFound, account );
