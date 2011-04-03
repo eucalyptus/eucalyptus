@@ -163,13 +163,13 @@ public class X509Download extends HttpServlet {
     try {
       for ( AccessKey k : u.getKeys( ) ) {
         if ( k.isActive( ) ) {
-          userAccessKey = k.getId( );
+          userAccessKey = k.getAccessKey( );
           userSecretKey = k.getKey( );
         }
       }
       if ( userAccessKey == null ) {
         AccessKey k = u.addKey( Hmacs.generateSecretKey( u.getName( ) ) );
-        userAccessKey = k.getId( );
+        userAccessKey = k.getAccessKey( );
         userSecretKey = k.getKey( );
       }
       keyPair = Certs.generateKeyPair( );

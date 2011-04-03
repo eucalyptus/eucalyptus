@@ -10,11 +10,23 @@ import com.eucalyptus.auth.AuthException;
  * 
  * @author wenye
  *
+ * FIXME:YE: We are missing the standard 12-digit amazon (not AWS) account identifier. We must be
+ * able to support the amazon 12-digit account IDs for existing users and future service
+ * integrations. I put some notes in Accounts.
+ * 
+ * @see {@link com.eucalyptus.auth.Accounts} 
  */
+//public Number getAccountId( );
 public interface Account extends HasId, BasePrincipal, Serializable {
-  
   public static final String NOBODY_ACCOUNT = "nobody";
-  public static final String SYSTEM_ACCOUNT = "eucalyptus";//NOTE: for now this has to be the name as it is has to be the same as Eucalyptus.name()
+  /**
+   * <h2>NOTE:GRZE:</h2> there will <b>always</b> be an account named <tt>eucalyptus</tt>. The name is used
+   * in a variety of ways as an input and identifier during system bootstrap. That is, not local
+   * host bootstrap. So, this is before any other identifier information is created. To support any
+   * simplifications to install, let alone unattended installs, this value MUST be hardcoded -- it
+   * is the account which all system services use to bootstrap, including initial configuration.
+   */
+  public static final String SYSTEM_ACCOUNT = "eucalyptus";
 
   public void setName( String name ) throws AuthException;
   

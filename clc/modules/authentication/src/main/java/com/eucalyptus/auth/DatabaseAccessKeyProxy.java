@@ -48,16 +48,16 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   }
   
   @Override
-  public String getKey( ) {
-    return this.delegate.getKey( );
+  public String getSecretKey( ) {
+    return this.delegate.getSecretKey( );
   }
   
-  @Override
-  public void setKey( final String key ) throws AuthException {
+//  @Override
+  public void setSecretKey( final String key ) throws AuthException {
     try {
       Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
-          t.setKey( key );
+          t.setSecretKey( key );
         }
       } );
     } catch ( TransactionException e ) {
@@ -99,6 +99,11 @@ public class DatabaseAccessKeyProxy implements AccessKey {
       throw new AuthException( e );
     }
     return results.get( 0 );
+  }
+
+  @Override
+  public String getAccessKey( ) {
+    return this.delegate.getAccessKey( );
   }
   
 }

@@ -32,7 +32,10 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   @Column( name = "auth_access_key_active" )
   Boolean active;
   
-  // The key
+  // The Access Key ID
+  @Column( name = "auth_access_key_query_id" )
+  String accessKey;
+  // The SECRET key
   @Column( name = "auth_access_key_key" )
   String key;
   
@@ -65,7 +68,8 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     
     AccessKeyEntity that = ( AccessKeyEntity ) o;    
-    if ( !this.getKey( ).equals( that.getKey( ) ) ) return false;
+    if ( !this.getAccessKey( ).equals( that.getAccessKey( ) ) ) return false;//NOTE: prefer for equality check to not rely on sensitive data -- e.g., secret key.
+    if ( !this.getSecretKey( ).equals( that.getSecretKey( ) ) ) return false;
     
     return true;
   }
@@ -76,16 +80,24 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     sb.append( "Key(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "active=" ).append( this.isActive( ) ).append( ", " );
-    sb.append( "key=" ).append( this.getKey( ) );
+    sb.append( "key=" ).append( this.getSecretKey( ) );
     sb.append( ")" );
     return sb.toString( );
   }
+
+  public String getAccessKey( ) {
+    return this.accessKey;
+  }
   
-  public String getKey( ) {
+  public void setAccess( String accessKey ) {
+    this.accessKey = accessKey;
+  }
+
+  public String getSecretKey( ) {
     return this.key;
   }
   
-  public void setKey( String key ) {
+  public void setSecretKey( String key ) {
     this.key = key;
   }
   

@@ -153,7 +153,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
           .createCriteria( "keys" ).setCacheable( true ).add( 
-              Restrictions.and( Restrictions.idEq( keyId ), Restrictions.eq( "active", true ) ) )
+              Restrictions.and( Restrictions.eq( "accessKey", keyId ), Restrictions.eq( "active", true ) ) )
           .list( );
       if ( users.size( ) != 1 ) {
         throw new AuthException( "Found " + users.size( ) + " user(s)" );
