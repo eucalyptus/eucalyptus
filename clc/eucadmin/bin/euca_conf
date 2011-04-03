@@ -31,6 +31,7 @@
 
 import optparse
 import inspect
+import boto.utils
 
 class EucaConf(object):
 
@@ -164,12 +165,30 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
 
-    def do_list_nodes(self):
-        if self.options.list_nodes:
-            import eucadmin.describenodes
-            req = eucadmin.describenodes.DescribeNodes()
+    def _do_list(self, attr_name, module_name, class_name):
+        if getattr(self.options, attr_name):
+            cls = boto.utils.find_class(module_name, class_name)
+            req = cls()
             data = req.main()
             req.cli_formatter(data)
+
+    def do_list_nodes(self):
+        self._do_list('list_nodes', 'eucadmin.describenodes', 'DescribeNodes')
+
+    def do_list_walruses(self):
+        self._do_list('list_walruses',
+                      'eucadmin.describewalruses',
+                      'DescribeWalruses')
+
+    def do_list_clusters(self):
+        self._do_list('list_clusters',
+                      'eucadmin.describeclusters',
+                      'DescribeClusters')
+
+    def do_list_sc(self):
+        self._do_list('list_scs',
+                      'eucadmin.describestoragecontrollers',
+                      'DescribeStorageControllers')
 
 if __name__ == "__main__":
     ec = EucaConf()
