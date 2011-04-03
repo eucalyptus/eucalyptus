@@ -394,6 +394,10 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
+    // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
+    if ( userFound.isAccountAdmin( ) ){
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
+    }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to put user policy for " + request.getUserName( ) + " by " + requestUser.getName( ) );
@@ -1414,13 +1418,13 @@ public class EuareService {
       throw new EucalyptusCloudException( e );
     } catch ( CertificateExpiredException e ) {
       throw new EucalyptusCloudException( e );
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
     return reply;
   }
   
-  public GetUserInfoResponseType getUser(GetUserInfoType request) throws EucalyptusCloudException {
+  public GetUserInfoResponseType getUserInfo(GetUserInfoType request) throws EucalyptusCloudException {
     GetUserInfoResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     String action = PolicySpec.requestToAction( request );
@@ -1461,7 +1465,7 @@ public class EuareService {
           infos.add( ui );
         }
       }
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -1500,7 +1504,113 @@ public class EuareService {
         infoMap.remove( request.getInfoKey( ) );
         userFound.setInfo( infoMap );
       }
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public PutAccountPolicyResponseType putAccountPolicy(PutAccountPolicyType request) throws EucalyptusCloudException {
+    PutAccountPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      admin.addPolicy( request.getPolicyName( ), request.getPolicyDocument( ) );
+    } catch ( PolicyParseException e ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public ListAccountPoliciesResponseType listAccountPolicies(ListAccountPoliciesType request) throws EucalyptusCloudException {
+    ListAccountPoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    // TODO(Ye Wen, 04/02/2011): support pagination
+    ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
+    result.setIsTruncated( false );
+    ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      for ( Policy p : admin.getPolicies( ) ) {
+        policies.add( p.getName( ) );
+      }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public GetAccountPolicyResponseType getAccountPolicy(GetAccountPolicyType request) throws EucalyptusCloudException {
+    GetAccountPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      Policy policy = null;
+      for ( Policy p : admin.getPolicies( ) ) {
+        if ( p.getName( ).equals( request.getPolicyName( ) ) ) {
+          policy = p;
+          break;
+        }
+      }
+      if ( policy != null ) {
+        GetAccountPolicyResultType result = reply.getGetAccountPolicyResult( );
+        result.setAccountName( request.getAccountName( ) );
+        result.setPolicyName( request.getPolicyName( ) );
+        result.setPolicyDocument( policy.getText( ) );
+      } else {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
+      }
+    } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
     return reply;

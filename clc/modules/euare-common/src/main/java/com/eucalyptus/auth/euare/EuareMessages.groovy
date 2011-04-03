@@ -785,3 +785,46 @@ public class UpdateUserInfoResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateUserInfoResponseType() {  }
 }
+public class PutAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public PutAccountPolicyType() {  }
+}
+public class PutAccountPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public PutAccountPolicyResponseType() {  }
+}
+public class ListAccountPoliciesType extends EuareMessage {
+  String accountName;
+  String marker;
+  BigInteger maxItems;
+  public ListAccountPoliciesType() {  }
+}
+public class ListAccountPoliciesResponseType extends EuareMessage {
+  ListAccountPoliciesResultType listAccountPoliciesResult = new ListAccountPoliciesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountPoliciesResponseType() {  }
+}
+public class ListAccountPoliciesResultType extends EucalyptusData {
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType( );
+  Boolean isTruncated;
+  String marker;
+  public ListAccountPoliciesResultType() {  }
+}
+public class GetAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  public GetAccountPolicyType() {  }
+}
+public class GetAccountPolicyResponseType extends EuareMessage {
+  GetAccountPolicyResultType getAccountPolicyResult = new GetAccountPolicyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetAccountPolicyResponseType() {  }
+}
+public class GetAccountPolicyResultType extends EucalyptusData {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public GetAccountPolicyResultType() {  }
+}
