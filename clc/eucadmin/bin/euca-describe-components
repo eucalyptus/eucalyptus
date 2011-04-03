@@ -2,4 +2,5 @@
 import eucadmin.describecomponents
 
 if __name__ == "__main__":
-  eucadmin.describecomponents.main_cli()
+    r = eucadmin.describecomponents.DescribeComponents()
+    r.main_cli()

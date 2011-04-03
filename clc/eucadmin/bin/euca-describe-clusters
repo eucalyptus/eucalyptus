@@ -2,4 +2,5 @@
 import eucadmin.describeclusters
 
 if __name__ == "__main__":
-  eucadmin.describeclusters.main_cli()
+    r = eucadmin.describeclusters.DescribeClusters()
+    r.main_cli()

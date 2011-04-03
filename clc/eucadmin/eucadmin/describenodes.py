@@ -50,19 +50,15 @@ class DescribeNodes(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        data = data['euca:DescribeNodesResponseType']
-        nodes = data['euca:registered']
+        nodes = getattr(data, 'euca:registered')
         fmt = 'NODE\t%s\t%s'
         for n in nodes:
             print fmt % (n.get('euca:name', None),
                          n.get('euca:clusterName', None))
 
-def main(**args):
-    req = DescribeNodes(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DescribeNodes()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

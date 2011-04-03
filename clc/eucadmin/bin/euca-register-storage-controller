@@ -2,4 +2,5 @@
 import eucadmin.registerstoragecontroller
 
 if __name__ == "__main__":
-  eucadmin.registerstoragecontroller.main_cli()
+    r = eucadmin.registerstoragecontroller.RegisterStorageController()
+    r.main_cli()

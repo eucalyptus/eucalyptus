@@ -48,7 +48,7 @@ class RegisterCluster(AWSQueryRequest):
                     long_name='port',
                     ptype='integer',
                     default=8774,
-                    optional=True,
+                    optional=False,
                     doc='Port for the cluster'),
               Param(name='Partition',
                     short_name='P',
@@ -74,12 +74,9 @@ class RegisterCluster(AWSQueryRequest):
         data = data['euca:ConfigurationMessage']
         print 'RESPONSE %s' % data['euca:return']
 
-def main(**args):
-    req = RegisterCluster(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = RegisterCluster()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

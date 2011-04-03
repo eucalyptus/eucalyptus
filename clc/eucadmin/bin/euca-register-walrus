@@ -2,4 +2,5 @@
 import eucadmin.registerwalrus
 
 if __name__ == "__main__":
-  eucadmin.registerwalrus.main_cli()
+    r = eucadmin.registerwalrus.RegisterWalrus()
+    r.main_cli()

@@ -47,7 +47,7 @@ class RegisterStorageController(AWSQueryRequest):
                     short_name='p',
                     long_name='port',
                     ptype='integer',
-                    default=8774,
+                    default=8773,
                     optional=True,
                     doc='Port for the storage controller'),
               Param(name='Partition',
@@ -74,12 +74,9 @@ class RegisterStorageController(AWSQueryRequest):
         data = data['euca:ConfigurationMessage']
         print 'RESPONSE %s' % data['euca:return']
 
-def main(**args):
-    req = RegisterStorageController(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = RegisterStorageController()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

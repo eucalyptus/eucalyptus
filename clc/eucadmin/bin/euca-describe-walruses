@@ -2,4 +2,5 @@
 import eucadmin.describewalruses
 
 if __name__ == "__main__":
-  eucadmin.describewalruses.main_cli()
+    r = eucadmin.describewalruses.DescribeWalruses()
+    r.main_cli()

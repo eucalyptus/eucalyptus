@@ -2,5 +2,6 @@
 import eucadmin.describeproperties
 
 if __name__ == "__main__":
-  eucadmin.describeproperties.main_cli()
+    r = eucadmin.describeproperties.DescribeProperties()
+    r.main_cli()
  

@@ -2,4 +2,5 @@
 import eucadmin.deregistercluster
 
 if __name__ == "__main__":
-  eucadmin.deregistercluster.main_cli()
+    r = eucadmin.deregistercluster.DeregisterStorageController()
+    r.main_cli()

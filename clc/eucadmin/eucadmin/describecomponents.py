@@ -50,7 +50,7 @@ class DescribeComponents(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        components = data['euca:DescribeComponentsResponseType']['euca:registered']
+        components = getattr(data, 'euca:registered')
         fmt = 'COMPONENT\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
         for c in components:
             if c.get('euca:hostName', None) != 'detail':
@@ -60,12 +60,9 @@ class DescribeComponents(AWSQueryRequest):
                              c.get('euca:state', None),
                              c.get('euca:detail', None))
 
-def main(**args):
-    req = DescribeComponents(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DescribeComponents()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

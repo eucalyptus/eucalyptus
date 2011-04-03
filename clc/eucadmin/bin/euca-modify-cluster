@@ -2,4 +2,5 @@
 import eucadmin.modifyclusterattribute
 
 if __name__ == "__main__":
-  eucadmin.modifyclusterattribute.main_cli()
+    r = eucadmin.modifyclusterattribute.ModifyClusterAttribute()
+    r.main_cli()

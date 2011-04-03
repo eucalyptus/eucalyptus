@@ -50,15 +50,12 @@ class DescribeProperties(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        props = data['euca:DescribePropertiesResponseType']['euca:properties']
+        props = getattr(data, 'euca:properties')
         for prop in props:
             print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
 
-def main(**args):
-    req = DescribeProperties(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DescribeProperties()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()

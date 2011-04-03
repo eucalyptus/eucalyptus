@@ -93,8 +93,8 @@ class EucaConf(object):
                                dest='list_clusters', default=False,
                                help='list registered CCs')
         self.parser.add_option('--list-nodes', action='store_true',
-                               dest='list_nodes', default=False,
-                               help='list registered NCs')
+                              dest='list_nodes', default=False,
+                              help='list registered NCs')
         self.parser.add_option('--list-scs', action='store_true',
                                dest='list_scs', default=False,
                                help='list registered SCs')
@@ -164,8 +164,12 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
 
-    def do_register_nodes(self):
-        print "look at me, I'm registering nodes!"
+    def do_list_nodes(self):
+        if self.options.list_nodes:
+            import eucadmin.describenodes
+            req = eucadmin.describenodes.DescribeNodes()
+            data = req.main()
+            req.cli_formatter(data)
 
 if __name__ == "__main__":
     ec = EucaConf()

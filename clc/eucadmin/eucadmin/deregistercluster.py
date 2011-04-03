@@ -61,12 +61,9 @@ class DeregisterCluster(AWSQueryRequest):
         data = data['euca:ConfigurationMessage']
         print 'RESPONSE %s' % data['euca:return']
 
-def main(**args):
-    req = DeregisterCluster(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DeregisterCluster()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

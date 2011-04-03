@@ -61,12 +61,9 @@ class DeregisterWalrus(AWSQueryRequest):
         data = data['euca:ConfigurationMessage']
         print 'RESPONSE %s' % data['euca:return']
 
-def main(**args):
-    req = DeregisterWalrus(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DeregisterWalrus()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

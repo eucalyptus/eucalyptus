@@ -2,4 +2,5 @@
 import eucadmin.registercluster
 
 if __name__ == "__main__":
-  eucadmin.registercluster.main_cli()
+    r = eucadmin.registercluster.RegisterCluster()
+    r.main_cli()

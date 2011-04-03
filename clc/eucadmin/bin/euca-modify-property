@@ -2,6 +2,7 @@
 import eucadmin.modifypropertyvalue
 
 if __name__ == "__main__":
-  eucadmin.modifypropertyvalue.main_cli()
+    r = eucadmin.modifypropertyvalue.ModifyPropertyValue()
+    r.main_cli()
  
  

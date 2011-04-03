@@ -32,17 +32,39 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
-class DescribeStorageControllers(AWSQueryRequest):
+def encode_prop(param, dict, value):
+    t = value.split('=')
+    if len(t) != 2:
+        print "Options must be of the form KEY=VALUE: %s" % value
+        sys.exit(1)
+    dict['Attribute'] = t[0]
+    dict['Value'] = t[1]
+    
+class ModifyWalrusAttribute(AWSQueryRequest):
   
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Describe storage controllers'
-
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
+    Description = 'Modify walrus attribute'
+    
+    Params = [Param(name='property',
+                    short_name='p',
+                    long_name='property',
+                    ptype='string',
+                    optional=False,
+                    encoder=encode_prop,
+                    doc='Modify attribute (KEY=VALUE)'),
+              Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the walrus.')]
+    Args = [Param(name='Name',
+                  long_name='name',
+                  ptype='string',
+                  optional=False,
+                  doc='The walrus name')]
+          
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
@@ -50,17 +72,10 @@ class DescribeStorageControllers(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        data = getattr(data, 'euca:registered')
-        for sc in data:
-            print 'STORAGE\t%s\t%s\t%s\t%s\t%s' % (sc['euca:partition'],
-                                                   sc['euca:name'],
-                                                   sc['euca:hostName'],
-                                                   sc['euca:state'],
-                                                   sc['euca:detail'])
-
+        print data
+        
     def main(self, **args):
         return self.send(**args)
 
-    def main_cli(self):
+    def main_cli():
         self.do_cli()
-    

@@ -74,11 +74,8 @@ class ModifyClusterAttribute(AWSQueryRequest):
     def cli_formatter(self, data):
         print data
         
-def main(**args):
-    req = ModifyClusterAttribute(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = ModifyClusterAttribute()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()

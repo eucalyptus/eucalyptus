@@ -50,9 +50,7 @@ class DescribeWalruses(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        data = data['euca:DescribeWalrusesResponseType']
-        data = data['euca:DescribeComponentsResponseType']
-        walruses = data['euca:registered']
+        walruses = getattr(data, 'euca:registered')
         fmt = 'WALRUS\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
         for w in walruses:
             if w.get('euca:hostName', None) != 'detail':
@@ -62,12 +60,9 @@ class DescribeWalruses(AWSQueryRequest):
                              w.get('euca:state', None),
                              w.get('euca:detail', None))
 
-def main(**args):
-    req = DescribeWalruses(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DescribeWalruses()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

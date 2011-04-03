@@ -2,4 +2,5 @@
 import eucadmin.modifystoragecontroller
 
 if __name__ == "__main__":
-  eucadmin.modifystoragecontroller.main_cli()
+    r = eucadmin.modifystoragecontroller.ModifyStorageControllerAttribute()
+    r.main_cli()

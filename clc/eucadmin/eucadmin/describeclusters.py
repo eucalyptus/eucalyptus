@@ -50,22 +50,17 @@ class DescribeClusters(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        data = data['euca:DescribeClustersResponseType']
-        data = data['euca:DescribeComponentsResponseType']
-        data = data['euca:registered']
-        for cluster in data:
+        clusters = getattr(data, 'euca:registered')
+        for cluster in clusters:
             print 'CLUSTER\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
                                                    cluster['euca:name'],
                                                    cluster['euca:hostName'],
                                                    cluster['euca:state'],
                                                    cluster['euca:detail'])
 
-def main(**args):
-    req = DescribeClusters(**args)
-    return req.send()
+    def main(self, **args):
+        return self.send(**args)
 
-
-def main_cli():
-    req = DescribeClusters()
-    req.do_cli()
+    def main_cli(self):
+        self.do_cli()
     

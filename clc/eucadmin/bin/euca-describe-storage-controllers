@@ -2,4 +2,5 @@
 import eucadmin.describestoragecontrollers
 
 if __name__ == "__main__":
-  eucadmin.describestoragecontrollers.main_cli()
+    r = eucadmin.describestoragecontrollers.DescribeStorageControllers()
+    r.main_cli()

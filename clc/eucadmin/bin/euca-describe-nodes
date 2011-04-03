@@ -2,4 +2,5 @@
 import eucadmin.describenodes
 
 if __name__ == "__main__":
-  eucadmin.describenodes.main_cli()
+    r = eucadmin.describenodes.DescribeNodes()
+    r.main_cli()
