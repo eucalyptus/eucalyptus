@@ -68,25 +68,25 @@ class EucaConf(object):
                                type='string', dest='reg_clusters', nargs=3,
                                metavar='<partition> <clustername> <host>',
                                help='add new cluster to EUCALYPTUS')
-        self.parser.add_option('--deregister-cluster', action='append',
-                               type='string', dest='dereg_clusters', nargs=2,
+        self.parser.add_option('--deregister-cluster', nargs=2,
+                               type='string', dest='dereg_clusters',
                                metavar='<partition> <clustername>',
                                help='remove cluster from EUCALYPTUS')
-        self.parser.add_option('--register-walrus', action='append',
+        self.parser.add_option('--register-walrus', nargs=3,
                                type='string', dest='reg_walruses',
-                               metavar='<host>',
+                               metavar='<partition> <clustername> <host>',
                                help='add new walrus to EUCALYPTUS')
-        self.parser.add_option('--deregister-walrus', action='append',
+        self.parser.add_option('--deregister-walrus', nargs=2,
                                type='string', dest='dereg_walruses',
-                               metavar='<host>',
+                               metavar='<partition> <host>',
                                help='remove walrus from EUCALYPTUS')
-        self.parser.add_option('--register-sc', action='append',
-                               type='string', dest='scs',
-                               metavar='<clustername> <host>',
+        self.parser.add_option('--register-sc', nargs=3,
+                               type='string', dest='reg_scs',
+                               metavar='<partition> <clustername> <host>',
                                help='add new storage controller to EUCALYPTUS')
-        self.parser.add_option('--deregister-sc', action='append',
-                               type='string', dest='scs',
-                               metavar='<clustername> <host>',
+        self.parser.add_option('--deregister-sc', nargs=2,
+                               type='string', dest='dereg_scs',
+                               metavar='<partition> <host>',
                                help='remove storage controller from EUCALYPTUS')
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
@@ -107,10 +107,14 @@ class EucaConf(object):
                                type='int', dest='cc_port',
                                metavar='<port>',
                                help='set CC port', default=8773)
+        self.parser.add_option('--sc-port', action='store',
+                               type='int', dest='sc_port',
+                               metavar='<port>',
+                               help='set CC port', default=8773)
         self.parser.add_option('--walrus-port', action='store',
                                type='int', dest='walrus_port',
                                metavar='<port>',
-                               help='set Walrus port', default=8773)
+                               help='set Walrus port', default=8774)
         self.parser.add_option('--nc-port', action='store',
                                type='int', dest='nc_port',
                                metavar='<port>',
@@ -217,6 +221,18 @@ class EucaConf(object):
                           'RegisterCluster',
                           'cc_port')
             
+    def do_register_walrus(self):
+        self._do_register('reg_walruses',
+                          'eucadmin.registerwalrus',
+                          'RegisterWalrus',
+                          'walrus_port')
+            
+    def do_register_cluster(self):
+        self._do_register('reg_scs',
+                          'eucadmin.registerstoragecontroller',
+                          'RegisterStorageController',
+                          'sc_port')
+            
     def _do_deregister(self, option_name, module_name, class_name):
         args = getattr(self.options, option_name)
         if args:
@@ -224,7 +240,7 @@ class EucaConf(object):
             cluster_name = args[1]
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main(partition=partition, name=name)
+            data = req.main(partition=partition, name=cluster_name)
             req.cli_formatter(data)
             
     def do_deregister_cluster(self):
