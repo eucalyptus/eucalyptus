@@ -36,6 +36,7 @@ import boto.utils
 class EucaConf(object):
 
     def __init__(self):
+        self.debug = 0
         self.parser = optparse.OptionParser()
         self.parser.add_option('-d', action='store', type='string',
                                metavar='<dir>',
@@ -63,20 +64,20 @@ class EucaConf(object):
                                type='string', dest='nodes',
                                metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
-        self.parser.add_option('--register-cluster', action='append',
-                               type='string', dest='clusters',
-                               metavar='<clustername> <host>',
+        self.parser.add_option('--register-cluster', action='store',
+                               type='string', dest='reg_clusters', nargs=3,
+                               metavar='<partition> <clustername> <host>',
                                help='add new cluster to EUCALYPTUS')
         self.parser.add_option('--deregister-cluster', action='append',
-                               type='string', dest='clusters',
-                               metavar='<clustername> <host>',
+                               type='string', dest='dereg_clusters', nargs=2,
+                               metavar='<partition> <clustername>',
                                help='remove cluster from EUCALYPTUS')
         self.parser.add_option('--register-walrus', action='append',
-                               type='string', dest='walruses',
+                               type='string', dest='reg_walruses',
                                metavar='<host>',
                                help='add new walrus to EUCALYPTUS')
         self.parser.add_option('--deregister-walrus', action='append',
-                               type='string', dest='walruses',
+                               type='string', dest='dereg_walruses',
                                metavar='<host>',
                                help='remove walrus from EUCALYPTUS')
         self.parser.add_option('--register-sc', action='append',
@@ -106,14 +107,14 @@ class EucaConf(object):
                                type='int', dest='cc_port',
                                metavar='<port>',
                                help='set CC port', default=8773)
+        self.parser.add_option('--walrus-port', action='store',
+                               type='int', dest='walrus_port',
+                               metavar='<port>',
+                               help='set Walrus port', default=8773)
         self.parser.add_option('--nc-port', action='store',
                                type='int', dest='nc_port',
                                metavar='<port>',
                                help='set NC port', default=8443)
-        self.parser.add_option('--partition', action='store',
-                               type='string', dest='partition',
-                               metavar='<partition_name>',
-                               help='specify the partition for reg/dereg/etc operations'),
         self.parser.add_option('--instances', action='store',
                                type='string', dest='instance_path',
                                metavar='<path>',
@@ -158,22 +159,29 @@ class EucaConf(object):
                                choices=['nc', 'cc', 'cloud', 'sc', 'walrus'],
                                dest='check_what', metavar='<service>',
                                help='pre-flight checks')
+        self.parser.add_option('--debug', action='store_true',
+                               default=False, help='Enable debug output')
         self.options, self.args = self.parser.parse_args()
 
     def main(self):
+        if self.options.debug:
+            self.debug = 2
         for name, method in inspect.getmembers(self):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
+                
 
-    def _do_list(self, attr_name, module_name, class_name):
-        if getattr(self.options, attr_name):
+    def _do_list(self, option_name, module_name, class_name):
+        if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
-            req = cls()
+            req = cls(debug=self.debug)
             data = req.main()
             req.cli_formatter(data)
 
     def do_list_nodes(self):
-        self._do_list('list_nodes', 'eucadmin.describenodes', 'DescribeNodes')
+        self._do_list('list_nodes',
+                      'eucadmin.describenodes',
+                      'DescribeNodes')
 
     def do_list_walruses(self):
         self._do_list('list_walruses',
@@ -189,6 +197,45 @@ class EucaConf(object):
         self._do_list('list_scs',
                       'eucadmin.describestoragecontrollers',
                       'DescribeStorageControllers')
+
+    def _do_register(self, option_name, module_name, class_name, port_option):
+        args = getattr(self.options, option_name)
+        if args:
+            partition = args[0]
+            cluster_name = args[1]
+            host = args[2]
+            port = getattr(self.options, port_option)
+            cls = boto.utils.find_class(module_name, class_name)
+            req = cls(debug=self.debug)
+            data = req.main(partition=partition, name=name,
+                            port=port, host=host)
+            req.cli_formatter(data)
+            
+    def do_register_cluster(self):
+        self._do_register('reg_clusters',
+                          'eucadmin.registercluster',
+                          'RegisterCluster',
+                          'cc_port')
+            
+    def _do_deregister(self, option_name, module_name, class_name):
+        args = getattr(self.options, option_name)
+        if args:
+            partition = args[0]
+            cluster_name = args[1]
+            cls = boto.utils.find_class(module_name, class_name)
+            req = cls(debug=self.debug)
+            data = req.main(partition=partition, name=name)
+            req.cli_formatter(data)
+            
+    def do_deregister_cluster(self):
+        self._do_deregister('dereg_clusters',
+                            'eucadmin.deregistercluster',
+                            'DeregisterCluster')
+
+    def do_deregister_walrus(self):
+        self._do_deregister('dereg_walruses',
+                            'eucadmin.deregisterwalrus',
+                            'DeregisterWalrus')
 
 if __name__ == "__main__":
     ec = EucaConf()

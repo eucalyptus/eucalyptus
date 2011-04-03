@@ -56,10 +56,8 @@ class DeregisterWalrus(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        data = data['euca:DeregisterWalrusResponseType']
-        data = data['euca:DeregisterComponentResponseType']
-        data = data['euca:ConfigurationMessage']
-        print 'RESPONSE %s' % data['euca:return']
+        response = getattr(data, 'euca:_return')
+        print 'RESPONSE %s' % response
 
     def main(self, **args):
         return self.send(**args)
