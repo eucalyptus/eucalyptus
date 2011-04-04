@@ -32,39 +32,57 @@ import os
 import shutil
 import eucadmin.command
 
-class ConfigFile(object):
+class ConfigFile(dict):
 
     ChangeCmd = r"""sed -i "s<^[[:blank:]#]*\(%s\).*<\1=\"%s\"<" %s"""
     CommentCmd = r"""sed -i "s<^[[:blank:]]*\($%s.*\)<#\1<" %s"""
     UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\($%s.*\)<\1<" %s"""
 
     def __init__(self, filepath, test=False):
+        dict.__init__(self)
+        self.test = test
+        self._save_to_file = False
         self.path = os.path.expanduser(filepath)
         self.path = os.path.expandvars(self.path)
         if not os.access(self.path, os.F_OK):
-            raise IOError('The file (%s) does not exist', self.path)
+            raise IOError('The file (%s) does not exist' % self.path)
         if not os.access(self.path, os.W_OK):
             raise IOError("You don't have write access to %s" % self.path)
         self.need_backup = True
-        self.test = test
+        self._read_config_data()
+        self._save_to_file = True
 
-    def backup(self):
+    def __setitem__(self, key, value):
+        if self._save_to_file:
+            self._backup()
+            cmd_str =  self.ChangeCmd % (key, value, self.path)
+            cmd = eucadmin.command.Command(cmd_str, self.test)
+        dict.__setitem__(self, key, value)
+
+    def _read_config_data(self):
+        fp = open(self.path)
+        for line in fp.readlines():
+            if not line.startswith('#'):
+                t = line.split('=')
+                if len(t) == 2:
+                    self[t[0]] = t[1].strip('"\n ')
+        fp.close()
+        
+    def _backup(self):
         if self.need_backup:
             shutil.copyfile(self.path, self.path+'.bak')
             self.need_backup = False
-
-    def change_value(self, var_name, new_value):
-        self.backup()
-        cmd_str =  self.ChangeCmd % (var_name, new_value, self.path)
-        cmd = eucadmin.command.Command(cmd_str, self.test)
 
     def comment(self, pattern):
         self.backup()
         cmd_str = self.CommentCmd % (pattern, self.path)
         cmd = eucadmin.command.Command(cmd_str, self.test)
+        if pattern in self:
+            del self[pattern]
 
     def uncomment(self, pattern):
         self.backup()
         cmd_str = self.UncommentCmd % (pattern, self.path)
         cmd = eucadmin.command.Command(cmd_str, self.test)
+        self['pattern'] = ''
         
