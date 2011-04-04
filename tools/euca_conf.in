@@ -398,8 +398,7 @@ print_user_info() {
 		a.auth_account_name='${1}'
 		and g.auth_group_name='_${2}'
 		and k.auth_access_key_active=1;
-	"
-	| mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
+	"	| mysql -u eucalyptus -P 8777 --protocol=TCP --password=${DB_PASS} eucalyptus_auth | tail -n1
 }
 
 print_token() {
