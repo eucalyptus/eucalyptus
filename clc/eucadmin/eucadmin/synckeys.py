@@ -138,9 +138,9 @@ class SyncKeys(object):
             self.sync_local()
             return True
         else:
-            if self.sync_rsync():
+            if self.use_rysync and self.sync_rsync():
                 return True
-            if self.sync_scp():
+            if self.use_scp and self.sync_scp():
                 return True
             return False
             
