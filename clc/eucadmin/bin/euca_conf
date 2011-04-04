@@ -42,6 +42,8 @@ class EucaConf(object):
                                metavar='<dir>',
                                dest='euca_dir',
                                help='point EUCALYPTUS to <dir>')
+        self.parser.add_option('--heartbeat', action='store', type='string',
+                               help='get heartbeat data for <host>')
         self.parser.add_option('--no-rsync', action='store_true',
                                dest='no_rsync', help="don't use rsync",
                                default=False)
@@ -180,7 +182,12 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
                 
-
+    def do_heartbeat(self):
+        if self.options.heartbeat:
+            cls = boto.utils.find_class('eucadmin.heartbeat', 'Heartbeat')
+            req = cls(self.options.heartbeat)
+            req.cli_formatter()
+            
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
