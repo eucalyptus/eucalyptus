@@ -123,7 +123,7 @@ public interface User extends HasId, BasePrincipal, Serializable {
   
   public List<AccessKey> getKeys( ) throws AuthException;
   public AccessKey getKey( String keyId ) throws AuthException;
-  public AccessKey addKey( String key ) throws AuthException;
+//  public AccessKey addKey( String key ) throws AuthException;
   public void removeKey( String keyId ) throws AuthException;
   public AccessKey createKey( ) throws AuthException;
   

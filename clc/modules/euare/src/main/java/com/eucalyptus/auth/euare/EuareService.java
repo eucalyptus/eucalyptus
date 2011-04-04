@@ -1184,7 +1184,7 @@ public class EuareService {
       AccessKeyType keyResult = reply.getCreateAccessKeyResult( ).getAccessKey( );
       keyResult.setAccessKeyId( key.getId( ) );
       keyResult.setCreateDate( key.getCreateDate( ) );
-      keyResult.setSecretAccessKey( key.getKey( ) );
+      keyResult.setSecretAccessKey( key.getSecretKey( ) );
       keyResult.setStatus( key.isActive( ) ? "Active" : "Inactive" );
       keyResult.setUserName( userFound.getName( ) );
     } catch ( Exception e ) {

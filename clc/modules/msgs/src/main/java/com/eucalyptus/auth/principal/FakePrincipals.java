@@ -343,11 +343,6 @@ public class FakePrincipals {
                                                  }
                                                  
                                                  @Override
-                                                 public AccessKey addKey( String key ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
                                                  public AccessKey createKey( ) throws AuthException {
                                                    return null;
                                                  }
@@ -583,11 +578,6 @@ public class FakePrincipals {
                                                  
                                                  @Override
                                                  public AccessKey getKey( String keyId ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey addKey( String key ) throws AuthException {
                                                    return null;
                                                  }
                                                  

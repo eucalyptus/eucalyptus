@@ -338,24 +338,6 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public AccessKey addKey( String key ) throws AuthException {
-    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithId( this.delegate.getId( ) ) );
-      AccessKeyEntity keyEntity = new AccessKeyEntity( key );
-      keyEntity.setActive( true );
-      db.recast( AccessKeyEntity.class ).add( keyEntity );
-      keyEntity.setUser( user );
-      db.commit( );
-      return new DatabaseAccessKeyProxy( keyEntity );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      Debugging.logError( LOG, e, "Failed to get add key " + key );
-      throw new AuthException( e );
-    }
-  }
-
-  @Override
   public void removeKey( final String keyId ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
@@ -373,7 +355,19 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public AccessKey createKey( ) throws AuthException {
-    return this.addKey( Hmacs.generateSecretKey( this.delegate.getName( ) ) );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    try {
+      UserEntity user = db.getUnique( UserEntity.newInstanceWithId( this.delegate.getId( ) ) );
+      AccessKeyEntity keyEntity = new AccessKeyEntity( user );
+      keyEntity.setActive( true );
+      db.recast( AccessKeyEntity.class ).add( keyEntity );
+      db.commit( );
+      return new DatabaseAccessKeyProxy( keyEntity );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to get create new access key: " + e.getMessage( ) );
+      throw new AuthException( e );
+    }
   }
   
   @Override

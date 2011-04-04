@@ -7,10 +7,13 @@ import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -51,11 +54,18 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   public AccessKeyEntity( ) {
   }
   
-  public AccessKeyEntity( String key ) {
-    this.key = key;
-    this.createDate = new Date( );
+  public AccessKeyEntity( UserEntity user ) {
+    this.user = user;
+    this.key = Hmacs.generateSecretKey( user.getName( ) );
   }
 
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.accessKey == null && this.key != null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
+      this.accessKey = Crypto.getHmacProvider( ).generateQueryId( this.key );//NOTE: here we use the key 
+    }
+  }
+  
   public static AccessKeyEntity newInstanceWithId( final String id ) {
     AccessKeyEntity k = new AccessKeyEntity( );
     k.setId( id );
