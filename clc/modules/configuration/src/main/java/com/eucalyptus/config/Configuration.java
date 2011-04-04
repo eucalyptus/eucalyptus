@@ -77,6 +77,7 @@ import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Sets;
 
@@ -89,9 +90,13 @@ public class Configuration {
     Component component = Components.oneWhichHandles( request.getClass( ) );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     String name = request.getName( );
+    Assertions.assertNotNull( name, "Name must not be null: " + request );
     String partition = request.getPartition( );
+    Assertions.assertNotNull( partition, "Partition must not be null: " + request );
     String hostName = request.getHost( );
+    Assertions.assertNotNull( hostName, "Hostname must not be null: " + request );
     Integer port = request.getPort( );
+    Assertions.assertNotNull( port, "Port must not be null: " + request );
     try {
       reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
     } catch ( Throwable ex ) {

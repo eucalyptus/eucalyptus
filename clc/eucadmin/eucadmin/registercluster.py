@@ -67,7 +67,7 @@ class RegisterCluster(AWSQueryRequest):
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
+            self.connection = self.ServiceClass()
         return self.connection
       
     def cli_formatter(self, data):
