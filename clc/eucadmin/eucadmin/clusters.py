@@ -100,7 +100,7 @@ class Cluster():
             self.euca.handle_error(ex)
 
     def get_register_parser(self):
-        self.parser = OptionParser("usage: %prog [options]",
+        self.parser = OptionParser("usage: %prog [options] CLUSTERNAME",
                                    version="Eucalyptus %prog VERSION")
         self.parser.add_option("-H","--host",dest="host",
                                help="Hostname of the cluster.")
@@ -119,14 +119,13 @@ class Cluster():
     def cli_register(self):
         (options,args) = self.get_register_parser()
         self.register(args[0], options.host,
-                      options.port, options.partition)
+                      options.port, options.partition, options.port)
 
-    def register(self, name, host, port=8773, partition=None):
-        params = {'Name':name,
+    def register(self, partition, name, host, port=8774):
+        params = {'Partition':partition,
+                  'Name':name,
                   'Host':host,
                   'Port':port}
-        if partition:
-            params['Partition'] = partition
         try:
             reply = self.euca.connection.get_object('RegisterCluster',
                                                   params,

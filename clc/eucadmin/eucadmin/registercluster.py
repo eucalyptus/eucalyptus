@@ -37,7 +37,14 @@ class RegisterCluster(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Register clusters'
-    Params = [Param(name='Host',
+    Params = [
+              Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=False,
+                    doc='Partition for the cluster'),
+              Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
@@ -49,13 +56,8 @@ class RegisterCluster(AWSQueryRequest):
                     ptype='integer',
                     default=8774,
                     optional=False,
-                    doc='Port for the cluster'),
-              Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=True,
-                    doc='Partition for the cluster')]
+                    doc='Port for the cluster')
+              ]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
