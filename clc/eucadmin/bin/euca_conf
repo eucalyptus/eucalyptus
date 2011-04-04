@@ -32,11 +32,14 @@
 import optparse
 import inspect
 import boto.utils
+import eucadmin.configfile
 
 class EucaConf(object):
 
-    def __init__(self):
+    def __init__(self, filepath='/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf'):
         self.debug = 0
+        self.config = None
+        self.specified_options = {}
         self.parser = optparse.OptionParser()
         self.parser.add_option('-d', action='store', type='string',
                                metavar='<dir>',
@@ -111,45 +114,50 @@ class EucaConf(object):
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
                                help='used only with --register-* to skip syncing keys')
-        self.parser.add_option('--cc-port', action='store',
-                               type='int', dest='cc_port',
-                               metavar='<port>',
+        self.parser.add_option('--cc-port', action='callback', type='int', 
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'CC_PORT'},
                                help='set CC port', default=8773)
-        self.parser.add_option('--sc-port', action='store',
-                               type='int', dest='sc_port',
-                               metavar='<port>',
-                               help='set CC port', default=8773)
-        self.parser.add_option('--walrus-port', action='store',
-                               type='int', dest='walrus_port',
-                               metavar='<port>',
+        self.parser.add_option('--sc-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'SC_PORT'},
+                               help='set SC port')
+        self.parser.add_option('--walrus-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'WALRUS_PORT'},
                                help='set Walrus port', default=8774)
-        self.parser.add_option('--nc-port', action='store',
-                               type='int', dest='nc_port',
-                               metavar='<port>',
+        self.parser.add_option('--nc-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'NC_PORT'},
                                help='set NC port', default=8443)
-        self.parser.add_option('--instances', action='store',
-                               type='string', dest='instance_path',
+        self.parser.add_option('--instances', action='callback',
+                               type='string', callback=self.option_callback,
                                metavar='<path>',
+                               callback_kwargs={'optname' : 'INSTANCE'},
                                help='set the INSTANCE path')
-        self.parser.add_option('--hypervisor', action='store',
-                               type='string', dest='hypervisor',
-                               metavar='<kvm|xen>',
+        self.parser.add_option('--hypervisor', action='callback',
+                               type='choice', callback=self.option_callback,
+                               metavar='<kvm|xen>', choices=['kvm', 'xen'],
+                               callback_kwargs={'optname' : 'HYPERVISOR'},
                                help='set hypervisor to use')
-        self.parser.add_option('--user', action='store',
-                               type='string', dest='euca_user',
+        self.parser.add_option('--user', action='callback',
+                               type='string', callback=self.option_callback,
                                metavar='<euca_user>',
+                               callback_kwargs={'optname' : 'EUCA_USER'},
                                help='set the user to use')
-        self.parser.add_option('--dhcpd', action='store',
-                               type='string', dest='dhcpd_prog',
+        self.parser.add_option('--dhcpd', action='callback',
+                               type='string', callback=self.option_callback,
                                metavar='<dhcpd>',
+                               callback_kwargs={'optname' : 'DHCPD'},
                                help='set the dhcpd binary to <name>')
-        self.parser.add_option('--dhcp_user', action='store',
-                               type='string', dest='dhcp_user',
+        self.parser.add_option('--dhcp_user', action='callback',
+                               type='string', callback=self.option_callback,
                                metavar='<user>',
+                               callback_kwargs={'optname' : 'DHCPC_USER'},
                                help='set the username to run dhcpd as')
         self.parser.add_option('--name', action='store',
                                type='string', dest='var_name',
-                               help='returns tthe value or <name>')
+                               help='returns the value or <name>')
         self.parser.add_option('--import-conf', action='store',
                                type='string', dest='import_conf_file',
                                help='import variables from another eucalyptus.conf')
@@ -174,8 +182,23 @@ class EucaConf(object):
         self.parser.add_option('--debug', action='store_true',
                                default=False, help='Enable debug output')
         self.options, self.args = self.parser.parse_args()
+        if len(self.args) > 0:
+            filepath = self.args[0]
+        try:
+            self.config = eucadmin.configfile.ConfigFile(filepath)
+        except IOError:
+            print 'Unable to find config file: %s' % filepath
+
+    def option_callback(self, option, opt_str, value, parser, optname=None):
+        self.specified_options[optname] = value
+
+    def update_config_file(self):
+        if self.config:
+            for key, value in self.specified_options.items():
+                self.config.change_value(key, self.specified_options[key])
 
     def main(self):
+        self.update_config_file()
         if self.options.debug:
             self.debug = 2
         for name, method in inspect.getmembers(self):
