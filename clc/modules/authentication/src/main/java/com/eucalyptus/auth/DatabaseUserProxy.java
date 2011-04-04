@@ -72,11 +72,6 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public BigInteger getNumber( ) {
-    return new BigInteger( this.delegate.getId( ), 16 );
-  }
-
-  @Override
   public void setName( String name ) throws AuthException {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {

@@ -94,6 +94,11 @@ public class FakePrincipals {
                                                  }
                                                  
                                                  @Override
+                                                 public Long getAccountNumber( ) {
+                                                   return NOBODY_ACCOUNT_ID;
+                                                 }
+
+                                                 @Override
                                                  public String getName( ) {
                                                    return NOBODY_ACCOUNT;
                                                  }
@@ -158,6 +163,11 @@ public class FakePrincipals {
                                                    return SYSTEM_ID;
                                                  }
                                                  
+                                                 @Override
+                                                 public Long getAccountNumber( ) {
+                                                   return SYSTEM_ACCOUNT_ID;
+                                                 }
+
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.SYSTEM_ACCOUNT;
@@ -280,11 +290,6 @@ public class FakePrincipals {
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public BigInteger getNumber( ) {
-                                                   return BigInteger.ZERO;
                                                  }
                                                  
                                                  @Override
@@ -519,11 +524,6 @@ public class FakePrincipals {
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.NOBODY_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public BigInteger getNumber( ) {
-                                                   return BigInteger.ONE;
                                                  }
                                                  
                                                  @Override

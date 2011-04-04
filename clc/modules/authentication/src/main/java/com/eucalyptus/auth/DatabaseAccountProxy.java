@@ -52,6 +52,11 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
+  public Long getAccountNumber( ) {
+    return this.delegate.getAccountNumber( );
+  }
+
+  @Override
   public void setName( final String name ) throws AuthException {
     try {
       Transactions.one( AccountEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<AccountEntity>( ) {

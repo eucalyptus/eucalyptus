@@ -4,6 +4,7 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
@@ -29,6 +30,9 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   // Account name, it is unique.
   @Column( name = "auth_account_name", unique = true )
   String name;
+
+  @Column( name = "auth_account_number", unique = true )
+  Long accountNumber;
   
   public AccountEntity( ) {
   }
@@ -36,6 +40,11 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   public AccountEntity( String name ) {
     this( );
     this.name = name;
+  }
+
+  @PrePersist
+  public void generateOnCommit() {
+    this.accountNumber = ( long ) ( Math.pow( 10, 12 ) * Math.random( ) );
   }
 
   public static AccountEntity newInstanceWithId( final String id ) {
@@ -71,6 +80,14 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
 
   public void setName( String name ) {
     this.name = name;
+  }
+
+  public Long getAccountNumber( ) {
+    return this.accountNumber;
+  }
+
+  public void setAccountNumber( Long accountNumber ) {
+    this.accountNumber = accountNumber;
   }
 
 }

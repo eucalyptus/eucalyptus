@@ -88,8 +88,6 @@ public interface User extends HasId, BasePrincipal, Serializable {
     CONFIRMED,
   }
   
-  public BigInteger getNumber( );
-  
   public void setName( String name ) throws AuthException;
   
   public String getPath( );
