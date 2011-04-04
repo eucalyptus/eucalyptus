@@ -1,11 +1,6 @@
 #!/usr/bin/env python
-import sys
-from eucadmin.components import Component
-
-def main():
-  c = Component().cli_describe()
-  sys.exit()
+import eucadmin.describecomponents
 
 if __name__ == "__main__":
-  main()
- 
+    r = eucadmin.describecomponents.DescribeComponents()
+    r.main_cli()

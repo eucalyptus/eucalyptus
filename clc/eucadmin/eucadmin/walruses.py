@@ -32,7 +32,7 @@
 import boto,sys,eucadmin,re
 from boto.exception import EC2ResponseError
 from eucadmin.generic import BooleanResponse
-from eucadmin import EucaAdmin
+from eucadmin import EucAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Configuration'
@@ -45,7 +45,7 @@ class Walrus():
     self.port = port
     self.partition = partition
     self.state = state
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
       return 'WALRUS\t%s\t%s\t%s\t%s\t%s' % (self.partition, self.walrus_name, 

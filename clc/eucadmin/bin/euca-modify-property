@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-import getopt, sys, os, boto
-from boto.ec2.regioninfo import RegionInfo
-from eucadmin.properties import Property
-
-def main():
-  c = Property().cli_modify()
-  sys.exit()
+import eucadmin.modifypropertyvalue
 
 if __name__ == "__main__":
-  main()
+    r = eucadmin.modifypropertyvalue.ModifyPropertyValue()
+    r.main_cli()
+ 
  
