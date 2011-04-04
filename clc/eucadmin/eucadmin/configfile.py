@@ -34,11 +34,11 @@ import eucadmin.command
 
 class ConfigFile(object):
 
-    ChangeCmd = """sed -i "s<^[[:blank:]#]*\(%s\).*<\\1=\\"%s\\"<" %s"""
-    CommentCmd = """sed -i "s<^[[:blank:]]*\($%s.*\)<#\\1<" %s"""
-    UncommentCmd = """sed -i "s<^[#[:blank:]]*\($%s.*\)<\\1<" %s"""
+    ChangeCmd = r"""sed -i "s<^[[:blank:]#]*\(%s\).*<\1=\"%s\"<" %s"""
+    CommentCmd = r"""sed -i "s<^[[:blank:]]*\($%s.*\)<#\1<" %s"""
+    UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\($%s.*\)<\1<" %s"""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, test=False):
         self.path = os.path.expanduser(filepath)
         self.path = os.path.expandvars(self.path)
         if not os.access(self.path, os.F_OK):
@@ -46,6 +46,7 @@ class ConfigFile(object):
         if not os.access(self.path, os.W_OK):
             raise IOError("You don't have write access to %s" % self.path)
         self.need_backup = True
+        self.test = test
 
     def backup(self):
         if self.need_backup:
@@ -55,15 +56,15 @@ class ConfigFile(object):
     def change_value(self, var_name, new_value):
         self.backup()
         cmd_str =  self.ChangeCmd % (var_name, new_value, self.path)
-        cmd = eucadmin.command.Command(cmd_str)
+        cmd = eucadmin.command.Command(cmd_str, self.test)
 
     def comment(self, pattern):
         self.backup()
         cmd_str = self.CommentCmd % (pattern, self.path)
-        cmd = eucadmin.command.Command(cmd_str)
+        cmd = eucadmin.command.Command(cmd_str, self.test)
 
     def uncomment(self, pattern):
         self.backup()
         cmd_str = self.UncommentCmd % (pattern, self.path)
-        cmd = eucadmin.command.Command(cmd_str)
+        cmd = eucadmin.command.Command(cmd_str, self.test)
         
