@@ -22,6 +22,9 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
+/**
+ *
+ */
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_access_key" )
@@ -66,13 +69,16 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     }
   }
   
-  public static AccessKeyEntity newInstanceWithId( final String id ) {
-    AccessKeyEntity k = new AccessKeyEntity( );
-    k.setId( id );
-    return k;
-  }
+  /**
+   * NOTE: should not be needed, replaced by {@link #newInstanceWithAccessKeyId()}
+   */
+//  public static AccessKeyEntity newInstanceWithId( final String id ) {
+//    AccessKeyEntity k = new AccessKeyEntity( );
+//    k.setId( id );
+//    return k;
+//  }
 
-  public static AccessKeyEntity newWithAccessKeyId( final String accessKeyId ) {
+  public static AccessKeyEntity newInstanceWithAccessKeyId( final String accessKeyId ) {
     AccessKeyEntity k = new AccessKeyEntity( );
     k.accessKey = accessKeyId;
     return k;

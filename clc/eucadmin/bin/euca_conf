@@ -42,6 +42,8 @@ class EucaConf(object):
                                metavar='<dir>',
                                dest='euca_dir',
                                help='point EUCALYPTUS to <dir>')
+        self.parser.add_option('--heartbeat', action='store', type='string',
+                               help='get heartbeat data for <host>')
         self.parser.add_option('--no-rsync', action='store_true',
                                dest='no_rsync', help="don't use rsync",
                                default=False)
@@ -97,6 +99,12 @@ class EucaConf(object):
         self.parser.add_option('--list-nodes', action='store_true',
                               dest='list_nodes', default=False,
                               help='list registered NCs')
+        self.parser.add_option('--list-components', action='store_true',
+                              dest='list_components', default=False,
+                              help='list components')
+        self.parser.add_option('--list-services', action='store_true',
+                              dest='list_services', default=False,
+                              help='list services')
         self.parser.add_option('--list-scs', action='store_true',
                                dest='list_scs', default=False,
                                help='list registered SCs')
@@ -174,7 +182,12 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
                 
-
+    def do_heartbeat(self):
+        if self.options.heartbeat:
+            cls = boto.utils.find_class('eucadmin.heartbeat', 'Heartbeat')
+            req = cls(self.options.heartbeat)
+            req.cli_formatter()
+            
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
@@ -201,6 +214,16 @@ class EucaConf(object):
         self._do_list('list_scs',
                       'eucadmin.describestoragecontrollers',
                       'DescribeStorageControllers')
+
+    def do_list_components(self):
+        self._do_list('list_components',
+                      'eucadmin.describecomponents',
+                      'DescribeComponents')
+
+    def do_list_services(self):
+        self._do_list('list_services',
+                      'eucadmin.describeservices',
+                      'DescribeServices')
 
     def _do_register(self, option_name, module_name, class_name, port_option):
         args = getattr(self.options, option_name)

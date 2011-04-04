@@ -32,38 +32,17 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
-class RegisterCluster(AWSQueryRequest):
+class DescribeServices(AWSQueryRequest):
   
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Register clusters'
-    Params = [
-              Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=False,
-                    doc='Partition for the cluster'),
-              Param(name='Host',
-                    short_name='H',
-                    long_name='host',
-                    ptype='string',
-                    optional=False,
-                    doc='Hostname of the cluster'),
-              Param(name='Port',
-                    short_name='p',
-                    long_name='port',
-                    ptype='integer',
-                    default=8774,
-                    optional=True,
-                    doc='Port for the cluster')
-              ]
-    Args = [Param(name='Name',
-                  long_name='name',
-                  ptype='string',
-                  optional=False,
-                  doc='The cluster name')]
+    Description = 'Get services'
 
+    def __init__(self, **args):
+        AWSQueryRequest.__init__(self, **args)
+        self.list_markers = ['euca:serviceStatuses']
+        self.item_markers = ['euca:item']
+  
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
@@ -71,8 +50,16 @@ class RegisterCluster(AWSQueryRequest):
         return self.connection
       
     def cli_formatter(self, data):
-        response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
+        services = getattr(data, 'euca:serviceStatuses')
+        fmt = 'SERVICE%-15.15s\t%s.%s\t%s\t%s\t%s'
+        for s in services:
+            service_id = s['euca:serviceId']
+            print fmt % (service_id['euca:type'],
+                         service_id['euca:partition'],
+                         service_id['euca:name'],
+                         s['euca:localState'],
+                         s['euca:localEpoch'],
+                         service_id['euca:uri'])
 
     def main(self, **args):
         return self.send(**args)

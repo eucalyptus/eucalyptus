@@ -32,37 +32,22 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
-class RegisterCluster(AWSQueryRequest):
+class DeregisterVMwareBroker(AWSQueryRequest):
   
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Register clusters'
-    Params = [
-              Param(name='Partition',
+    Description = 'Deregister VMware broker'
+    Params = [Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
-                    optional=False,
-                    doc='Partition for the cluster'),
-              Param(name='Host',
-                    short_name='H',
-                    long_name='host',
-                    ptype='string',
-                    optional=False,
-                    doc='Hostname of the cluster'),
-              Param(name='Port',
-                    short_name='p',
-                    long_name='port',
-                    ptype='integer',
-                    default=8774,
                     optional=True,
-                    doc='Port for the cluster')
-              ]
+                    doc='Partition for the VMware broker')]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The cluster name')]
+                  doc='The VMWare broker name')]
 
     def get_connection(self, **args):
         if self.connection is None:

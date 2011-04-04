@@ -112,11 +112,11 @@ import com.eucalyptus.entities.AbstractPersistent;
 
 @MappedSuperclass
 public abstract class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
-  @Column( name = "config_component_partition" )
+  @Column( name = "config_component_partition", nullable=false )
   String partition;
-  @Column( name = "config_component_name" )
+  @Column( name = "config_component_name", unique=true, nullable=false )
   String name;
-  @Column( name = "config_component_hostname" )
+  @Column( name = "config_component_hostname", nullable=false )
   String hostName;
   @Column( name = "config_component_port" )
   Integer port;

@@ -322,7 +322,7 @@ public class DatabaseUserProxy implements User {
   public AccessKey getKey( final String keyId ) throws AuthException {
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
     try {
-      AccessKeyEntity key = db.getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
+      AccessKeyEntity key = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
     } catch ( Throwable e ) {
@@ -337,7 +337,7 @@ public class DatabaseUserProxy implements User {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
       UserEntity user = db.getUnique( UserEntity.newInstanceWithId( this.delegate.getId( ) ) );
-      AccessKeyEntity keyEntity = db.recast(AccessKeyEntity.class).getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
+      AccessKeyEntity keyEntity = db.recast(AccessKeyEntity.class).getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       user.getKeys( ).remove( keyEntity );
       db.recast( AccessKeyEntity.class ).delete( keyEntity );
       db.commit( );

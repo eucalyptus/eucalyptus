@@ -416,7 +416,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
     try {
-      AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
+      AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Throwable e ) {
