@@ -72,6 +72,12 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     return k;
   }
 
+  public static AccessKeyEntity newWithAccessKeyId( final String accessKeyId ) {
+    AccessKeyEntity k = new AccessKeyEntity( );
+    k.accessKey = accessKeyId;
+    return k;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
