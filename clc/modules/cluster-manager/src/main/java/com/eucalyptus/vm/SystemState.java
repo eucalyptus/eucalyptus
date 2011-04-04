@@ -413,7 +413,7 @@ public class SystemState {
     return vmNum;
   }
 
-  public static long countByUser( String userId ) throws AuthException {
+  public static Long countByUser( String userId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {
