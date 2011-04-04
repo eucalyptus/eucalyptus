@@ -32,13 +32,8 @@ import os
 import sys
 import socket
 import shutil
-
+from boto.utils import mklist
 import command
-
-def mklist(v):
-    if not isinstance(v, (list, tuple)):
-        v = [v]
-    return v
 
 SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
