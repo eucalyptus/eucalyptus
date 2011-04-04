@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.registerarbitrator
+
+if __name__ == "__main__":
+    r = eucadmin.registerarbitrators.RegisterArbitrator()
+    r.main_cli()
