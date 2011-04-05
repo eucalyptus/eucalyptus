@@ -164,7 +164,7 @@
 
     <mapping name="RevokeSecurityGroupIngress" class="edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="userId" field="groupUserId"/>
+        <value name="userId" field="groupUserId" usage="optional"/>
         <value name="groupName" field="groupName"/>
         <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
             <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.IpPermissionType"/>
