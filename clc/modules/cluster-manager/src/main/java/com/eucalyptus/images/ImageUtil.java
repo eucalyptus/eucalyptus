@@ -381,7 +381,7 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    if ( Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
+    if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
       return false;
     }
     try {

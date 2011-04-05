@@ -54,7 +54,7 @@ public class KeyPairManager {
     if ( keypair == null ) {
       throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
     }
     vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey(), keypair.getFingerPrint() ) );
@@ -67,7 +67,7 @@ public class KeyPairManager {
     Context ctx = Contexts.lookup();
     for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( ctx.getUserFullName( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
-        if ( Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+        if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
           reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
         }
       }
@@ -86,7 +86,7 @@ public class KeyPairManager {
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }
       reply.set_return( true );
@@ -101,10 +101,10 @@ public class KeyPairManager {
     com.eucalyptus.context.Context ctx = Contexts.lookup();
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
       }
     }

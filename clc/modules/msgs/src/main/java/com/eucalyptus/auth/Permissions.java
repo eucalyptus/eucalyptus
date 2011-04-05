@@ -21,12 +21,12 @@ public class Permissions {
       policyEngine = engine;
     }
   }
-  public static boolean isAuthorized( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+  public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
     Context context = null;
     try {
       context = Contexts.lookup( );
       context.getContracts( ).putAll(
-          policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser ) );
+          policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, action, requestUser ) );
       return true;
     } catch ( IllegalContextAccessException e ) {
       LOG.debug( "Exception trying to identify the current request context requesting resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
@@ -38,9 +38,9 @@ public class Permissions {
     return false;
   }
   
-  public static boolean canAllocate( String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
+  public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
     try {
-      policyEngine.evaluateQuota( resourceType, resourceName, action, requestUser, quantity );
+      policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, action, requestUser, quantity );
       return true;
     } catch ( AuthException e ) {
       LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser.getName( ), e );

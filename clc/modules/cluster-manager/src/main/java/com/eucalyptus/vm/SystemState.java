@@ -370,7 +370,7 @@ public class SystemState {
         throw new EucalyptusCloudException( e );
       }
       if ( ( !isAdmin && 
-             !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
+             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
           || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
         continue;
       }
