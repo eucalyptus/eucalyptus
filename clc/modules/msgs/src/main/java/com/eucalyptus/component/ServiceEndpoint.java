@@ -111,7 +111,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
       LOG.error( e, e );
-      System.exit( -1 );
+      throw new ServiceTransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
