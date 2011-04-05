@@ -44,6 +44,7 @@ class Command(object):
     """
 
     def __init__(self, command, test=False):
+        self.test = test
         self.exit_code = 0
         self.error = None
         self._stdout_fp = StringIO.StringIO()

@@ -44,7 +44,11 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
         computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
-          return false;
+          computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+          computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+          if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+            return false;
+          }
         }
       }
     }

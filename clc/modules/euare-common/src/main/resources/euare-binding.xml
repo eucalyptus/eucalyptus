@@ -705,5 +705,45 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  
+  <mapping name="PutAccountPolicy" class="com.eucalyptus.auth.euare.PutAccountPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyDocument" field="policyDocument" usage="required"/>
+  </mapping>
+  <mapping name="PutAccountPolicyResponse" class="com.eucalyptus.auth.euare.PutAccountPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountPolicies" class="com.eucalyptus.auth.euare.ListAccountPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListAccountPoliciesResponse" class="com.eucalyptus.auth.euare.ListAccountPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="listAccountPoliciesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccountPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountPoliciesResult" class="com.eucalyptus.auth.euare.ListAccountPoliciesResultType">
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.auth.euare.PolicyNameListTypeType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="GetAccountPolicy" class="com.eucalyptus.auth.euare.GetAccountPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="GetAccountPolicyResponse" class="com.eucalyptus.auth.euare.GetAccountPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getAccountPolicyResult" usage="required" map-as="com.eucalyptus.auth.euare.GetAccountPolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetAccountPolicyResult" class="com.eucalyptus.auth.euare.GetAccountPolicyResultType">
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyDocument" field="policyDocument" usage="required"/>
+  </mapping>
 </binding>
