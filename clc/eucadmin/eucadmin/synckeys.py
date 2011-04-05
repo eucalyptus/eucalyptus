@@ -32,13 +32,8 @@ import os
 import sys
 import socket
 import shutil
-
+from boto.utils import mklist
 import command
-
-def mklist(v):
-    if not isinstance(v, (list, tuple)):
-        v = [v]
-    return v
 
 SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
@@ -56,7 +51,7 @@ class SyncKeys(object):
         self.use_scp = use_scp
         self.use_smb = use_smb
         self.files = []
-        self.is_remote = True
+        self.is_local = self.check_local()
 
     def error(self, msg):
         print 'Error: %s' % msg
@@ -77,13 +72,13 @@ class SyncKeys(object):
         if not_found:
             self.warning("Can't find %s in %s" % (not_found, self.src_dirs))
 
-    def check_remote(self):
+    def check_local(self):
         if remote_host == '127.0.0.1':
-            self.is_remote = False
+            self.is_remote = True
         elif remote_host == 'localhost':
-            self.is_remote = False
+            self.is_remote = True
         elif remote_host == socket.gethostname():
-            self.is_remote = False
+            self.is_remote = True
 
     def sync_local(self):
         for fn in self.files:
@@ -91,7 +86,7 @@ class SyncKeys(object):
                 self.error('cannot find cluster credentials')
             else:
                 try:
-                    shutil.copystat(fn, self.dst_dir)
+                    shutil.copy2(fn, self.dst_dir)
                 except:
                     self.error('cannot copy %s to %s' % (fn, self.dst_dir))
 
@@ -137,3 +132,16 @@ class SyncKeys(object):
         else:
             print 'failed.'
             return False
+
+    def sync(self):
+        if self.local:
+            self.sync_local()
+            return True
+        else:
+            if self.use_rysync and self.sync_rsync():
+                return True
+            if self.use_scp and self.sync_scp():
+                return True
+            return False
+            
+        

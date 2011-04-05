@@ -1,7 +1,12 @@
 package com.eucalyptus.auth.euare;
 
+import java.security.KeyPair;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -105,6 +110,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -124,6 +130,10 @@ public class EuareService {
     }
     try {
       Account newAccount = Accounts.addAccount( request.getAccountName( ) );
+      User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
+      admin.createToken( );
+      admin.createConfirmationCode( );
+      admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getId( ) );
@@ -383,6 +393,10 @@ public class EuareService {
       } else {
         throw new EucalyptusCloudException( e );
       }
+    }
+    // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
+    if ( userFound.isAccountAdmin( ) ){
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
     if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
@@ -1202,8 +1216,11 @@ public class EuareService {
         }
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    // Allow to look at myself.
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+      }
     }
     UserType u = reply.getGetUserResult( ).getUser( );
     fillUserResult( u, userFound, account );
@@ -1364,6 +1381,241 @@ public class EuareService {
     return reply;
   }
 
+  public CreateSigningCertificateResponseType createSigningCertificate(CreateSigningCertificateType request) throws EucalyptusCloudException {
+    CreateSigningCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
+    User userFound = null;
+    try {
+      userFound = account.lookupUserByName( request.getUserName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    }
+    try {
+      KeyPair keyPair = Certs.generateKeyPair( );
+      X509Certificate x509 = Certs.generateCertificate( keyPair, userFound.getName( ) );
+      x509.checkValidity( );
+      Certificate cert = userFound.addCertificate( x509 );
+      SigningCertificateType result = reply.getCreateSigningCertificateResult( ).getCertificate( );
+      result.setUserName( userFound.getName( ) );
+      result.setCertificateId( cert.getId( ) );
+      result.setCertificateBody( X509CertHelper.certificateToPem( x509 ) );
+      result.setPrivateKey( X509CertHelper.privateKeyToPem( keyPair.getPrivate( ) ) );
+      result.setStatus( "Active" );
+      result.setUploadDate( cert.getCreateDate( ) );
+    } catch ( CertificateNotYetValidException e ) {
+      throw new EucalyptusCloudException( e );
+    } catch ( CertificateExpiredException e ) {
+      throw new EucalyptusCloudException( e );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public GetUserInfoResponseType getUserInfo(GetUserInfoType request) throws EucalyptusCloudException {
+    GetUserInfoResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
+    User userFound = requestUser;
+    if ( request.getUserName( ) != null ) {
+      try {
+        userFound = account.lookupUserByName( request.getUserName( ) );
+      } catch ( Exception e ) {
+        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+        } else {
+          throw new EucalyptusCloudException( e );
+        }
+      }
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    }
+    try {
+      ArrayList<UserInfoType> infos = reply.getGetUserInfoResult( ).getInfos( ).getMemberList( );
+      Map<String, String> infoMap = userFound.getInfo( );
+      if ( request.getInfoKey( ) != null ) {
+        String value = infoMap.get( request.getInfoKey( ) );
+        if ( value != null ) {
+          UserInfoType ui = new UserInfoType( );
+          ui.setKey( request.getInfoKey( ) );
+          ui.setValue( value );
+          infos.add( ui );
+        }
+      } else {
+        for ( Map.Entry<String, String> entry : infoMap.entrySet( ) ) {
+          UserInfoType ui = new UserInfoType();
+          ui.setKey( entry.getKey( ) );
+          ui.setValue( entry.getValue( ) );
+          infos.add( ui );
+        }
+      }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public UpdateUserInfoResponseType updateUserInfo(UpdateUserInfoType request) throws EucalyptusCloudException {
+    UpdateUserInfoResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = ctx.getAccount( );
+    User userFound = requestUser;
+    if ( request.getUserName( ) != null ) {
+      try {
+        userFound = account.lookupUserByName( request.getUserName( ) );
+      } catch ( Exception e ) {
+        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
+        } else {
+          throw new EucalyptusCloudException( e );
+        }
+      }
+    }
+    if ( request.getInfoKey( ) == null ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty key name", "Empty key name" );
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    }
+    try {
+      if ( request.getInfoValue( ) != null ) {
+        userFound.setInfo( request.getInfoKey( ), request.getInfoValue( ) );
+      } else {
+        Map<String, String> infoMap = userFound.getInfo( );
+        infoMap.remove( request.getInfoKey( ) );
+        userFound.setInfo( infoMap );
+      }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public PutAccountPolicyResponseType putAccountPolicy(PutAccountPolicyType request) throws EucalyptusCloudException {
+    PutAccountPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      admin.addPolicy( request.getPolicyName( ), request.getPolicyDocument( ) );
+    } catch ( PolicyParseException e ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public ListAccountPoliciesResponseType listAccountPolicies(ListAccountPoliciesType request) throws EucalyptusCloudException {
+    ListAccountPoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    // TODO(Ye Wen, 04/02/2011): support pagination
+    ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
+    result.setIsTruncated( false );
+    ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      for ( Policy p : admin.getPolicies( ) ) {
+        policies.add( p.getName( ) );
+      }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
+  public GetAccountPolicyResponseType getAccountPolicy(GetAccountPolicyType request) throws EucalyptusCloudException {
+    GetAccountPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account accountFound = null;
+    try {
+      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
+      } else {
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+    }
+    try {
+      User admin = accountFound.lookupUserByName( User.ACCOUNT_ADMIN );
+      Policy policy = null;
+      for ( Policy p : admin.getPolicies( ) ) {
+        if ( p.getName( ).equals( request.getPolicyName( ) ) ) {
+          policy = p;
+          break;
+        }
+      }
+      if ( policy != null ) {
+        GetAccountPolicyResultType result = reply.getGetAccountPolicyResult( );
+        result.setAccountName( request.getAccountName( ) );
+        result.setPolicyName( request.getPolicyName( ) );
+        result.setPolicyDocument( policy.getText( ) );
+      } else {
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
+      }
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+  
   private static String getUserFullName( User user ) {
     if ( "/".equals( user.getPath( ) ) ) {
       return "/" + user.getName( );

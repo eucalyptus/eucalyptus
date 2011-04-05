@@ -28,38 +28,34 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
-import re
+import eucadmin
 
-__version__ = '1.0a'
+class DescribeProperties(AWSQueryRequest):
 
-class EucAdmin(AWSQueryService):
+    ServicePath = '/services/Properties'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'Get properties'
 
-    Name = 'eucadmin'
-    Description = 'Eucalyptus Administration Services'
-    APIVersion = 'eucalyptus'
-    Authentication = 'sign-v2'
-    Path = '/services/Configuration'
-    Port = 8773
-    Provider = 'aws'
-    EnvURL = 'EC2_URL'
+    def __init__(self, **args):
+        AWSQueryRequest.__init__(self, **args)
+        self.list_markers = ['euca:properties']
+        self.item_markers = ['euca:item']
+  
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        return self.connection
+      
+    def cli_formatter(self, data):
+        props = getattr(data, 'euca:properties')
+        for prop in props:
+            print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
 
-    def handle_error(self, ex):
-        s = ""
-        if not hasattr(ex,"errors"):
-            s = 'ERROR %s' % (ex)
-        else:
-            if ex.errors.__len__() != 0:
-                for i in ex.errors:
-                    s = '%sERROR %s %s %s: %s\n' % (s, ex.status,
-                                                    ex.reason,
-                                                    i[0], i[1])
-            else:
-                s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-            while s.count("\n") != 3:
-                s = re.sub(".*Exception.*\n", ": ", s)
-        print s.replace("\n","")
-        sys.exit(1)
+    def main(self, **args):
+        return self.send(**args)
 
+    def main_cli(self):
+        self.do_cli()

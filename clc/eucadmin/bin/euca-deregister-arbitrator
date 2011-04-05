@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.deregisterarbitrator
+
+if __name__ == "__main__":
+    r = eucadmin.deregisterarbitrators.DeregisterArbitrator()
+    r.main_cli()
