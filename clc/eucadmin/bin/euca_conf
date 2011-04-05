@@ -62,11 +62,11 @@ class EucaConf(object):
                                metavar='<zipfile>',
                                help='download credentials to <zipfile>')
         self.parser.add_option('--cred-account', action='store',
-                               type='string', dest='cred-account',
+                               type='string', dest='cred_account',
                                metavar='<accountname>', default='eucalyptus',
                                help="set get-credentials account")
         self.parser.add_option('--cred-user', action='store',
-                               type='string', dest='cred-user',
+                               type='string', dest='cred_user',
                                metavar='<accountname>', default='admin',
                                help="set get-credentials user")
         self.parser.add_option('--register-nodes', action='append',
@@ -218,6 +218,7 @@ class EucaConf(object):
                                         'GetCredentials')
             obj = cls(self.config, self.options.get_credentials,
                       self.options.cred_account, self.options.cred_user)
+            obj.main()
                 
     def do_heartbeat(self):
         if self.options.heartbeat:
