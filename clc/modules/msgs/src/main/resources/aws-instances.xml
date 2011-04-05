@@ -150,7 +150,7 @@
     <value name="additionalInfo" field="additionalInfo" usage="optional" />
     <!--2006-10-01 -->
     <structure name="userData" usage="optional">
-      <value name="data" field="userData" />
+      <value name="data" field="userData" usage="optional"/>
       <value name="version" field="version" usage="optional" />
       <value name="encoding" field="encoding" usage="optional" />
     </structure>
