@@ -97,8 +97,8 @@
     <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
         <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="device" field="device" usage="required"/>
+        <value name="instanceId" field="instanceId" usage="optional"/>
+        <value name="device" field="device" usage="optional"/>
     </mapping>
     <mapping name="DescribeVolumes" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
