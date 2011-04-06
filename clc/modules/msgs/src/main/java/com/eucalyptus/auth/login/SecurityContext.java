@@ -30,12 +30,6 @@ public class SecurityContext extends Configuration {
   
   public static void enqueueSignature( String signature ) throws AuthenticationException {
     if( !SecurityContext.replayQueue.add( signature ) ) {
-    	// TODO: GRZE what kind of exception should be thrown here so that
-    	// it was propagated back to the user
-    	// For example, if euca2ools are used and a command is issued within
-    	// the same second, it will result in the same signature and will
-    	// be considered a replay. With the currently thrown exception, euca2ools
-    	// don't see any response and hang on the user side.
     	LOG.info("Replay detected for " + signature);
     	throw new AuthenticationException( "Message replay detected.  Same signature was used within the last 5 minutes");
     }
