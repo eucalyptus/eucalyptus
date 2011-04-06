@@ -27,6 +27,7 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.collect.Lists;
@@ -64,7 +65,7 @@ public class BaseMessage {
   
   public String getCorrelationId( ) {
     if ( this.correlationId == null ) {
-      LOG.error( "Creating UUID for message which did not have it set correctly: " + this.getClass( ) );
+      Logger.getLogger( "EXHAUST" ).error( Exceptions.filterStackTrace( new RuntimeException( "Creating UUID for message which did not have it set correctly: " + this.getClass( ) ) ) );
       return ( this.correlationId = UUID.randomUUID( ).toString( ) );
     } else {
       return this.correlationId;
