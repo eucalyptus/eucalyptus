@@ -218,7 +218,7 @@ public class BaseMessage {
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
-      reply.setCorrelationId( this.getCorrelationId( ) );
+      reply.correlationId = this.correlationId;
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( this.correlationId, e );
