@@ -28,38 +28,54 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
-import re
+import eucadmin
 
-__version__ = '1.0a'
-
-class EucAdmin(AWSQueryService):
-
-    Name = 'eucadmin'
-    Description = 'Eucalyptus Administration Services'
-    APIVersion = 'eucalyptus'
-    Authentication = 'sign-v2'
-    Path = '/services/Configuration'
-    Port = 8773
-    Provider = 'aws'
-    EnvURL = 'EC2_URL'
-
-    def handle_error(self, ex):
-        s = ""
-        if not hasattr(ex,"errors"):
-            s = 'ERROR %s' % (ex)
-        else:
-            if ex.errors.__len__() != 0:
-                for i in ex.errors:
-                    s = '%sERROR %s %s %s: %s\n' % (s, ex.status,
-                                                    ex.reason,
-                                                    i[0], i[1])
-            else:
-                s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-            while s.count("\n") != 3:
-                s = re.sub(".*Exception.*\n", ": ", s)
-        print s.replace("\n","")
+def encode_prop(param, dict, value):
+    t = value.split('=')
+    if len(t) != 2:
+        print "Options must be of the form KEY=VALUE: %s" % value
         sys.exit(1)
+    dict['Attribute'] = t[0]
+    dict['Value'] = t[1]
+    
+class ModifyStorageControllerAttribute(AWSQueryRequest):
+  
+    ServicePath = '/services/Properties'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'Modify storage controller attribute'
+    
+    Params = [Param(name='property',
+                    short_name='p',
+                    long_name='property',
+                    ptype='string',
+                    optional=False,
+                    encoder=encode_prop,
+                    doc='Modify attribute (KEY=VALUE)'),
+              Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the cluster.')]
+    Args = [Param(name='Name',
+                  long_name='name',
+                  ptype='string',
+                  optional=False,
+                  doc='The storage controller name')]
+          
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        return self.connection
+      
+    def cli_formatter(self, data):
+        print data
+        
+    def main(self, **args):
+        return self.send(**args)
 
+    def main_cli(self):
+        self.do_cli()

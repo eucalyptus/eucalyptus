@@ -509,6 +509,7 @@ public class SigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
   String certificateBody;
+  String privateKey;
   String status;
   Date uploadDate;
   public SigningCertificateType() {  }
@@ -734,4 +735,96 @@ public class ListAccountsResultType extends EucalyptusData {
 public class AccountListTypeType extends EucalyptusData {
   public AccountListTypeType() {  }
   ArrayList<AccountType> memberList = new ArrayList<AccountType>();
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATESIGNINGCERTIFICATE )
+public class CreateSigningCertificateType extends EuareMessage {
+  String userName;
+  public CreateSigningCertificateType() {  }
+}
+public class CreateSigningCertificateResponseType extends EuareMessage {
+  CreateSigningCertificateResultType createSigningCertificateResult = new CreateSigningCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateSigningCertificateResponseType() {  }
+}
+public class CreateSigningCertificateResultType extends EucalyptusData {
+  SigningCertificateType certificate = new SigningCertificateType( );
+  public CreateSigningCertificateResultType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERINFO )
+public class GetUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  public GetUserInfoType() {  }
+}
+public class GetUserInfoResponseType extends EuareMessage {
+  GetUserInfoResultType getUserInfoResult = new GetUserInfoResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetUserInfoResponseType() {  }
+}
+public class GetUserInfoResultType extends EucalyptusData {
+  UserInfoListTypeType infos = new UserInfoListTypeType( );
+  public GetUserInfoResultType() {  }
+}
+public class UserInfoListTypeType extends EucalyptusData {
+  ArrayList<UserInfoType> memberList = new ArrayList<UserInfoType>();
+  public UserInfoListTypeType() {  }
+}
+public class UserInfoType extends EuareMessage  {
+  String key;
+  String value;
+  public UserInfoType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSERINFO )
+public class UpdateUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  String infoValue;
+  public UpdateUserInfoType() {  }
+}
+public class UpdateUserInfoResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public UpdateUserInfoResponseType() {  }
+}
+public class PutAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public PutAccountPolicyType() {  }
+}
+public class PutAccountPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public PutAccountPolicyResponseType() {  }
+}
+public class ListAccountPoliciesType extends EuareMessage {
+  String accountName;
+  String marker;
+  BigInteger maxItems;
+  public ListAccountPoliciesType() {  }
+}
+public class ListAccountPoliciesResponseType extends EuareMessage {
+  ListAccountPoliciesResultType listAccountPoliciesResult = new ListAccountPoliciesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountPoliciesResponseType() {  }
+}
+public class ListAccountPoliciesResultType extends EucalyptusData {
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType( );
+  Boolean isTruncated;
+  String marker;
+  public ListAccountPoliciesResultType() {  }
+}
+public class GetAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  public GetAccountPolicyType() {  }
+}
+public class GetAccountPolicyResponseType extends EuareMessage {
+  GetAccountPolicyResultType getAccountPolicyResult = new GetAccountPolicyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetAccountPolicyResponseType() {  }
+}
+public class GetAccountPolicyResultType extends EucalyptusData {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public GetAccountPolicyResultType() {  }
 }

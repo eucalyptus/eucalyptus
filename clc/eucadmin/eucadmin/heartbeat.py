@@ -33,7 +33,7 @@ import urlparse
 
 class Heartbeat(object):
 
-    def __init__(self, host, port=8773,
+    def __init__(self, host, service=None, port=8773,
                  path='services/Heartbeat',
                  is_secure=False):
         self.host = host
@@ -72,3 +72,10 @@ class Heartbeat(object):
             for pair in pairs[1:]:
                 t = pair.split('=')
                 d[t[0]] = self._get_value(t[1])
+
+    def cli_formatter(self):
+        for key in self.data:
+            val = self.data[key]
+            print '%s:\tlocal=%s\tinitialize=%s\tenabled=%s' % (key, val['local'],
+                                                                val['initialized'],
+                                                                val['enabled'])

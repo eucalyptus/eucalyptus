@@ -33,7 +33,7 @@ import boto, sys, eucadmin
 from eucadmin.generic import StringList
 from boto.exception import EC2ResponseError
 from eucadmin.generic import BooleanResponse
-from eucadmin import EucaAdmin
+from eucadmin import EucAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Accounts'
@@ -55,7 +55,7 @@ class User():
     self.user_groups = StringList()
     self.user_revoked = StringList()
     self.user_list = self.user_groups
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
     r = 'USER\t\t%s\t%s%s\t%s' % (self.user_userName, self.user_email, '\tADMIN' if self.user_admin == 'true' else ' ', 'ENABLED' if self.user_enabled == 'true' else 'DISABLED')
