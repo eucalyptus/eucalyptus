@@ -156,7 +156,6 @@ public class ImageManager {
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = request.getReply( );
-    ImageUtil.cleanDeregistered( );
     final Context ctx = Contexts.lookup( );
     final Account requestAccount = ctx.getAccount( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
@@ -208,6 +207,7 @@ public class ImageManager {
     } );
     List<ImageDetails> imageDetailsList = Lists.transform( images, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
+    ImageUtil.cleanDeregistered( );
     return reply;
   }
   
