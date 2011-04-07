@@ -360,7 +360,7 @@ int verify_node(axiom_node_t *signed_node, const axutil_env_t *env, axis2_msg_ct
     signed_elems[1] = 1;
 
     /* Regardless of the location of the Timestamp, verify the one that is signed */
-    if(AXIS2_FAILURE == rampart_timestamp_token_validate(env, msg_ctx, signed_node, 0)) {
+    if(AXIS2_FAILURE == rampart_timestamp_token_validate(env, msg_ctx, signed_node, 20)) {
        oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for Timestamp with ID = %s", ref);
       return 1;
     }

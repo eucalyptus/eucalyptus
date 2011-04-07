@@ -60,6 +60,7 @@
 	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:Certificate>
 	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-KEY</rampc:PrivateKey>
 	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
+	<rampc:ClockSkewBuffer>20</rampc:ClockSkewBuffer>
       </rampc:RampartConfig>
     </wsp:All>
   </wsp:ExactlyOne>
