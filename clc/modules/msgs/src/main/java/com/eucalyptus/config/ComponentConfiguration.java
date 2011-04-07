@@ -80,15 +80,15 @@ import com.eucalyptus.util.Internets;
 @MappedSuperclass
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Column( name = "config_component_partition", nullable=false )
-  String partition;
+  private String partition;
   @Column( name = "config_component_name", unique=true, nullable=false )
-  String name;
+  private String name;
   @Column( name = "config_component_hostname", nullable=false )
-  String hostName;
+  private String hostName;
   @Column( name = "config_component_port" )
-  Integer port;
+  private Integer port;
   @Column( name = "config_component_service_path" )
-  String servicePath;
+  private String servicePath;
   
   public ComponentConfiguration( ) {
     

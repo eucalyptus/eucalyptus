@@ -85,7 +85,6 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
