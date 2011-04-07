@@ -74,46 +74,106 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Components {
-  private static Logger                            LOG                  = Logger
+  private static Logger                           LOG                  = Logger
                                                                                                                                       .getLogger( Components.class );
-  private static ConcurrentMap<Class, Map>         componentInformation = new ConcurrentHashMap<Class, Map>( ) {
-                                                                          {
-                                                                            put( Service.class, new ConcurrentHashMap<String, Service>( ) );
-                                                                            put( Component.class, new ConcurrentHashMap<String, Component>( ) );
-                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
-                                                                          }
-                                                                        };
+  private static ConcurrentMap<Class, Map>        componentInformation = new ConcurrentHashMap<Class, Map>( ) {
+                                                                         {
+                                                                           put( Service.class, new ConcurrentHashMap<String, Service>( ) );
+                                                                           put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                           put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
+                                                                         }
+                                                                       };
   
-  public static List<Component> listEnabled( ) {
-    List<Component> components = Lists.newArrayList( );
-    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
-      for ( Component comp : Components.list( ) ) {
-        if ( comp.getComponentId( ).isCloudLocal( ) ) {
-          components.add( comp );
-        }
-      }
-    }
-    for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) ) {
-        if ( !comp.getComponentId( ).isCloudLocal( ) ) {
-          components.add( comp );
-        }
-      }
-    }
-    return components;
+  private static Function<Component, ComponentId> TO_ID                = new Function<Component, ComponentId>( ) {
+                                                                         
+                                                                         @Override
+                                                                         public ComponentId apply( Component input ) {
+                                                                           return input.getComponentId( );
+                                                                         }
+                                                                       };
+  
+  public static List<ComponentId> toIds( List<Component> components ) {
+    return Lists.transform( components, TO_ID );
   }
-
+  
+  private static Predicate<Component> BOOTSTRAP_LOCALS = new Predicate<Component>( ) {
+                                                         
+                                                         @Override
+                                                         public boolean apply( Component c ) {
+                                                           boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
+                                                           boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
+                                                           EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO,
+                                                                                               c.getName( ), "cloud-local", cloudLocal, "always-local",
+                                                                                               alwaysLocal ).debug( );
+                                                           return cloudLocal || alwaysLocal;
+                                                         }
+                                                       };
+  
+  /**
+   * Components which are staticly determined as ones to load. This determination is made
+   * independent of access to the database; i.e. only the command line flags and presence/absence of
+   * files determines this list.
+   * 
+   * @return
+   */
+  public static List<Component> whichCanLoad( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), BOOTSTRAP_LOCALS ) );
+  }
+  
+  private static Predicate<Component> ARE_ENABLED_LOCAL = new Predicate<Component>( ) {
+                                                          
+                                                          @Override
+                                                          public boolean apply( Component c ) {
+                                                            boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
+                                                            boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
+                                                            boolean runningLocal = c.hasServiceEnabled( );
+                                                            EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ),
+                                                                                "cloud-local",
+                                                                                cloudLocal, "always-local", alwaysLocal, "running-locally", runningLocal ).debug( );
+                                                            return cloudLocal || alwaysLocal || runningLocal;
+                                                          }
+                                                        };
+  
+  /**
+   * Component has a service instance which is present locally, independent of the service's state.
+   * 
+   * @return
+   */
+  public static List<Component> whichAreLocal( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED_LOCAL ) );
+  }
+  
+  private static Predicate<Component> ARE_ENABLED = new Predicate<Component>( ) {
+                                                    
+                                                    @Override
+                                                    public boolean apply( Component c ) {
+                                                      return c.hasServiceEnabled( );
+                                                    }
+                                                  };
+  
+  /**
+   * Component has a service instance which is present locally and the service is ENABLED.
+   * 
+   * @return
+   */
+  public static List<Component> whichAreEnabled( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED ) );
+  }
+  
   @SuppressWarnings( "unchecked" )
   public static List<Component> list( ) {
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
@@ -137,7 +197,7 @@ public class Components {
   
   static void dumpState( ) {
     for ( Class c : componentInformation.keySet( ) ) {
-      for ( Entry<String, ComponentInformation> e : (Set<Entry<String, ComponentInformation>>)componentInformation.get( c ).entrySet( ) ) {
+      for ( Entry<String, ComponentInformation> e : ( Set<Entry<String, ComponentInformation>> ) componentInformation.get( c ).entrySet( ) ) {
         LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTRY_DUMP, c.getSimpleName( ), e.getKey( ), e.getValue( ).getClass( )
                                                                                                                           .getCanonicalName( ) ) );
       }
@@ -205,11 +265,11 @@ public class Components {
   public static <T extends ComponentId> Component lookup( Class<T> componentId ) throws NoSuchElementException {
     return Components.lookup( ComponentIds.lookup( componentId ) );
   }
-
+  
   public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
     return Components.lookup( Component.class, componentId.getName( ) );
   }
-
+  
   public static boolean contains( String componentName ) {
     return Components.contains( Component.class, componentName );
   }
@@ -217,9 +277,10 @@ public class Components {
   public static Component create( ComponentId id ) throws ServiceRegistrationException {
     Component c = new Component( id );
     register( c );
+    Mbeans.register( c );
     return c;
   }
-
+  
   private final static Function<Component, String> componentToString = componentToString( );
   
   public static Function<Component, String> componentToString( ) {
@@ -252,7 +313,7 @@ public class Components {
               buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
               buf.append( "|-> Service config:   "
                           + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
-            //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
+              //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
             }
             return buf.toString( );
           }
@@ -321,57 +382,14 @@ public class Components {
     }
   }
   
-  private final static Callback.Success<Component> configurationPrinter = configurationPrinter( );
-  
-  public static Callback.Success<Component> configurationPrinter( ) {
-    if ( configurationPrinter != null ) {
-      return configurationPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Component>( ) {
-          @Override
-          public void fire( Component comp ) {
-            LOG.info( configurationToString.apply( comp ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private final static Function<Component, String>    configurationToString = configurationToString( );
-  private static final Function<Bootstrapper, String> bootstrapperToString  = new Function<Bootstrapper, String>( ) {
-                                                                              @Override
-                                                                              public String apply( Bootstrapper b ) {
-                                                                                return b.getClass( ).getName( )
+  private static final Function<Bootstrapper, String> bootstrapperToString = new Function<Bootstrapper, String>( ) {
+                                                                             @Override
+                                                                             public String apply( Bootstrapper b ) {
+                                                                               return b.getClass( ).getName( )
                                                                                        + " provides=" + b.getProvides( )
                                                                                        + " deplocal=" + b.getDependsLocal( )
                                                                                        + " depremote=" + b.getDependsRemote( );
-                                                                              }
-                                                                            };
+                                                                             }
+                                                                           };
   
-  public static Function<Component, String> configurationToString( ) {
-    if ( configurationToString != null ) {
-      return configurationToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Component, String>( ) {
-          
-          @Override
-          public String apply( Component comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
-                                       comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getComponentId( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getComponentId( ).name( ) ) ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
-                                       comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
-                                       Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
-            return buf.toString( );
-          }
-        };
-        
-      }
-    }
-  }
 }

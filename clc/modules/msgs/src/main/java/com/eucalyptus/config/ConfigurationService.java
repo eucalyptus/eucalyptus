@@ -63,10 +63,13 @@
 
 package com.eucalyptus.config;
 
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Lists;
 
 
-public class ConfigurationService extends ComponentId {
+public class ConfigurationService extends ComponentId.Unpartioned {
 
   public ConfigurationService( ) {
     super( "Configuration" );
@@ -83,13 +86,8 @@ public class ConfigurationService extends ComponentId {
   }
 
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
 
 }

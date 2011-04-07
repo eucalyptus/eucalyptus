@@ -77,7 +77,7 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-@ChannelPipelineCoverage("one")
+@ChannelPipelineCoverage("all")
 public class AddressingHandler extends MessageStackHandler {
   
   private static Logger     LOG                              = Logger.getLogger( AddressingHandler.class );

@@ -298,6 +298,12 @@ int instIpSync(ccInstance *inst, void *in) {
   }
   snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
 
+  // privateIp cases
+  if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
+     // sync em
+     snprintf(inst->ccnet.privateIp, 24, "%s", inst->ncnet.privateIp);
+  }
+
   return(ret);
 }
 
@@ -310,7 +316,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     return(0);
   }
 
-  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s privateMac=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac);
 
   if (inst->ccnet.vlan >= 0) {
     // activate network

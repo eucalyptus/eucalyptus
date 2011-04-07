@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.modifyclusterattribute
+
+if __name__ == "__main__":
+    r = eucadmin.modifyclusterattribute.ModifyClusterAttribute()
+    r.main_cli()

@@ -153,7 +153,11 @@
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
   -->
-  <category name="com.eucalyptus.context.ServiceContextManager" additivity="true">
+  <category name="Configs" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.util.fsm.StateMachineBuilder" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
@@ -174,10 +178,6 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="com.eucalyptus.ws.handlers.HmacV2Handler" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
@@ -260,6 +260,10 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.mortbay" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jgroups" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>

@@ -66,29 +66,27 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NetworkUtil;
 import com.google.common.base.Functions;
-import com.google.common.base.Join;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * Java entry point from eucalyptus-bootstrap
@@ -120,8 +118,8 @@ public class SystemBootstrapper {
   public boolean init( ) throws Exception {
     try {
       LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.EXTREME;
-      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || LogLevels.TRACE;
+      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.EXTREME;
+      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.TRACE;
       if ( LogLevels.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );
         System.setProperty( "euca.exhaust.level", "TRACE" );
@@ -131,6 +129,7 @@ public class SystemBootstrapper {
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
       }
+      
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -138,7 +137,9 @@ public class SystemBootstrapper {
           }
         }
       }
-            );
+
+      );
+      
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
@@ -147,15 +148,8 @@ public class SystemBootstrapper {
         }
       }
             );
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Join.join( "\n", LogLevels.class.getDeclaredFields( ) ) ) );
-      try {
-        Logger.getLogger( "com.eucalyptus.entities.EntityWrapper" ).fatal( "Starting up" );
-        Logger.getLogger( "edu.ucsb.eucalyptus.cloud.cluster" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.handlers.MessageStackHandler" ).fatal( "Starting up" );
-        Logger.getLogger( "com.eucalyptus.ws.server.FilteredPipeline" ).fatal( "Starting up" );
-      } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-      }
+      
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
       System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
@@ -195,11 +189,8 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    /** ASAP:FIXME:GRZE **/
-    for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
-        Bootstrap.applyTransition( c, Component.Transition.LOADING );
-      }
+    for( Component c : Components.whichCanLoad( ) ) {
+      Bootstrap.applyTransition( c, Component.Transition.LOADING );
     }
     return true;
   }
@@ -220,17 +211,15 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    for ( final Component c : Components.list( ) ) {
-      if ( ( Components.lookup( Eucalyptus.class ).isLocal( ) && c.getComponentId( ).isCloudLocal( ) || ( c.getComponentId( ).isAlwaysLocal( ) ) ) ) {
-        Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            Bootstrap.applyTransition( c, Component.Transition.STARTING );
-            Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
-            Bootstrap.applyTransition( c, Component.Transition.ENABLING );
-          }
-        } );
-      }
+    for ( final Component c : Components.whichCanLoad( ) ) {
+      Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          Bootstrap.applyTransition( c, Component.Transition.STARTING );
+          Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
+          Bootstrap.applyTransition( c, Component.Transition.ENABLING );
+        }
+      } );
     }
     try {
       SystemBootstrapper.printBanner( );
@@ -267,8 +256,8 @@ public class SystemBootstrapper {
 //    String prefix = "\n[8m-----------------------------------------------------[0;10m[1m";
     String prefix = "\n\t";
     String headerHeader = "\n[8m-----------------[0;10m[1m_________________________________________________________[0;10m\n[8m-----------------[0;10m[1m|";
-    String headerFormat = "  %-54.54s";
-    String headerFooter = "|[0;10m\n[8m-----------------[0;10m[1m|#######################################################|[0;10m\n";
+    String headerFormat = "  %-53.53s";
+    String headerFooter = "|\n[8m-----------------[0;10m[1m|#######################################################|[0;10m\n";
     String banner = "[8m-----------------[0;10m[1m._______________________________________________________.[0;10m\n"
                     +
                     "[8m-----------------[0;10m[1m|#######################################################|[0;10m\n"
@@ -370,15 +359,15 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
         for ( Service s : c.lookupServices( ) ) {
-          if ( s.isLocal( ) ) {
+          if ( s.getServiceConfiguration( ).isLocal( ) ) {
             banner += prefix + c.getName( ) + SEP + s.toString( );
           }
         }
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
-    for ( NetworkInterface iface : NetworkUtil.getNetworkInterfaces( ) ) {
-      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.TO_STRING );
+    for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
+      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
         banner += prefix + iface.getDisplayName( ) + SEP + addr;
       }

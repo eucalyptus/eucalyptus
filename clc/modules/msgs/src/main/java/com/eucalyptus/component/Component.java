@@ -62,22 +62,31 @@
  */
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.component.ServiceEvents.ServiceEvent;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -93,7 +102,7 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -101,10 +110,12 @@ import com.eucalyptus.util.concurrent.GenericFuture;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.SortedMaps;
 import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class Component implements HasName<Component> {
@@ -127,11 +138,16 @@ public class Component implements HasName<Component> {
   Component( ComponentId componentId ) throws ServiceRegistrationException {
     this.identity = componentId;
     this.serviceRegistry = new ServiceRegistry( );
-    /** remove **/
-    if ( System.getProperty( "euca.disable." + this.identity.name( ) ) == null ) {
-      this.enabled.set( true );
-      if ( System.getProperty( "euca.remote." + this.identity.name( ) ) == null ) {
-        this.local.set( true );
+    /** TODO:GRZE:URGENTLY REMOVE ME KKTHX **/
+    if ( this.identity.isCloudLocal( ) && Bootstrap.isChild( ) && !Bootstrap.shouldMergeDatabase( ) ) {
+      this.enabled.set( false );
+      this.local.set( false );
+    } else {
+      if ( System.getProperty( "euca.disable." + this.identity.name( ) ) == null ) {
+        this.enabled.set( true );
+        if ( System.getProperty( "euca.remote." + this.identity.name( ) ) == null ) {
+          this.local.set( true );
+        }
       }
     }
     this.bootstrapper = new ComponentBootstrapper( this );
@@ -158,7 +174,6 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getServices( );
   }
   
-
   /**
    * @return the identity
    */
@@ -190,14 +205,6 @@ public class Component implements HasName<Component> {
    */
   public String getName( ) {
     return this.identity.name( );
-  }
-  
-  public String getRegistryKey( String hostName ) {
-    if ( NetworkUtil.testLocal( hostName ) ) {
-      return this.getName( ) + "@localhost";
-    } else {
-      return this.getName( ) + "@" + hostName;
-    }
   }
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
@@ -266,6 +273,9 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
+  public Boolean hasServiceEnabled( ) {
+    return State.ENABLED.equals( this.getState( ) );
+  }
   public Boolean isRunningLocally( ) {
     return State.ENABLED.equals( this.getState( ) );// && this.serviceRegistry.hasLocalService( );
   }
@@ -286,7 +296,7 @@ public class Component implements HasName<Component> {
   public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
     return this.serviceRegistry.lookup( config );
   }
-
+  
   /**
    * @param fullName
    * @return
@@ -301,7 +311,7 @@ public class Component implements HasName<Component> {
   public Service lookupService( String name ) {
     return this.serviceRegistry.getService( name );
   }
-
+  
   public NavigableSet<Service> lookupServices( String partition ) {
     return this.serviceRegistry.lookupPartition( partition );
   }
@@ -313,13 +323,41 @@ public class Component implements HasName<Component> {
    * @return Service instance of the service
    * @throws ServiceRegistrationException
    */
-  public void initService( ) throws ServiceRegistrationException {
-    if ( this.enabled.get( ) ) {
-      ServiceConfiguration config = this.getBuilder( ).toConfiguration( this.getComponentId( ).getLocalEndpointUri( ) );
+  public ServiceConfiguration initService( ) throws ServiceRegistrationException {
+    if ( ( this.isAvailableLocally( ) && this.getComponentId( ).isAlwaysLocal( ) ) ) {
+      URI uri = this.getComponentId( ).getLocalEndpointUri( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
+                                                                    uri.getPort( ) );
       Service service = new Service( this.getComponentId( ), config );
       this.serviceRegistry.register( service );
+      return config;
+    } else if ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
+      URI uri = this.getComponentId( ).getLocalEndpointUri( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
+                                                                    uri.getPort( ) );
+      Service service = new Service( this.getComponentId( ), config );
+      this.serviceRegistry.register( service );
+      return config;
     } else {
-      throw new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." );
+      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
+    }
+  }
+  
+  /**
+   * Builds a Service instance for this cloudLocal component when Eucalyptus is remote.
+   * 
+   * @return Service instance of the service
+   * @throws ServiceRegistrationException
+   */
+  public ServiceConfiguration initService( InetAddress addr ) throws ServiceRegistrationException {
+    if ( !Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
+                                                                    this.getComponentId( ).getPort( ) );
+      Service service = new Service( this.getComponentId( ), config );
+      this.serviceRegistry.register( service );
+      return config;
+    } else {
+      throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
     }
   }
   
@@ -333,7 +371,7 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = new Service( this.getComponentId( ), config );
     this.serviceRegistry.register( service );
-    if ( service.isLocal( ) ) {
+//    if ( service.isLocal( ) ) {
       if ( State.INITIALIZED.equals( this.getState( ) ) ) {
         try {
           return this.stateMachine.transition( Transition.LOADING );
@@ -345,21 +383,21 @@ public class Component implements HasName<Component> {
       } else {
         return Futures.predestinedFuture( this );
       }
-    } else {
-      return Futures.predestinedFuture( this );
+//    } else {
+//      return Futures.predestinedFuture( this );
       //TODO:GRZE:ASAP handle loadService
-    }
+//    }
   }
   
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
-    if ( config.isLocal( ) ) {
-      try {
-        this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
-      } catch ( NoSuchElementException ex1 ) {
-        this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
-      }
-      this.stateMachine.setGoal( State.ENABLED );
+    try {
+      this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
+    } catch ( NoSuchElementException ex1 ) {
+      this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
+    }
+    if( config.isLocal( ) ) {
+      this.stateMachine.setGoal( this.serviceRegistry.getServices( ).isEmpty( ) ? State.ENABLED : State.DISABLED );
       if ( this.inState( State.LOADED ) ) {
         final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
         try {
@@ -448,7 +486,7 @@ public class Component implements HasName<Component> {
       try {
         CheckedListenableFuture<Component> ret = this.stateMachine.transition( State.DISABLED );
         ServiceContextManager.restart( );
-        return ret;        
+        return ret;
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -468,7 +506,6 @@ public class Component implements HasName<Component> {
             @Override
             public void run( ) {
               try {
-                DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
                 Component.this.stateMachine.transition( State.STOPPED );
                 Component.this.serviceRegistry.deregister( config );
                 future.set( Component.this );
@@ -484,7 +521,6 @@ public class Component implements HasName<Component> {
         }
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) || State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
         try {
-          DispatcherFactory.remove( Component.this.serviceRegistry.lookup( config ) );
           return Component.this.stateMachine.transition( State.STOPPED );
         } catch ( Throwable ex ) {
           throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
@@ -689,7 +725,7 @@ public class Component implements HasName<Component> {
   
   class ServiceRegistry {
     private final AtomicReference<Service> localService = new AtomicReference( null );
-    private final Map<FullName, Service>   services     = Maps.newConcurrentHashMap( );
+    private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return ( this.localService.get( ) == null );
@@ -724,7 +760,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
                 getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
@@ -737,7 +773,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
                 getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
@@ -765,7 +801,7 @@ public class Component implements HasName<Component> {
       Service ret = this.services.remove( fullName );
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
-      } else if( ret.getServiceConfiguration( ).isLocal( ) ) {
+      } else if ( ret.getServiceConfiguration( ).isLocal( ) ) {
         this.localService.compareAndSet( ret, null );
       }
       return ret;
@@ -860,19 +896,24 @@ public class Component implements HasName<Component> {
       }
       throw new NoSuchElementException( "No service found matching name: " + name + " for component: " + Component.this.getName( ) );
     }
-  }
-  
 
-  
-  
+    /**
+     * TODO: DOCUMENT Component.java
+     * @param config
+     * @return
+     */
+    public boolean hasService( ServiceConfiguration config ) {
+      return this.services.containsKey( config.getFullName( ) );
+    }
+  }
   
   /**
    * @see java.lang.Object#toString()
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s name=%s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
-                          this.getName( ), this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ) );
+    return String.format( "Component %s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
+                          this.enabled, this.local, this.stateMachine.getGoal( ), this.getState( ), this.getBuilder( ).getClass( ).getSimpleName( ) );
   }
   
   /**
@@ -925,9 +966,35 @@ public class Component implements HasName<Component> {
     }
     return true;
   }
-
+  
   public NavigableSet<Service> getServices( ) {
     return this.lookupServices( );
   }
+  
+  public Iterable<Service> enabledServices( ) {
+    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<Service>( ) {
+      
+      @Override
+      public boolean apply( Service arg0 ) {
+        return Component.State.ENABLED.equals( arg0.getState( ) );
+      }
+    } );
+  }
+  
+  private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
+  
+  public void submitError( Throwable t ) {
+    ServiceConfiguration config = this.hasLocalService( ) ? this.getLocalService( ).getServiceConfiguration( ) : ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
+    ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
+    this.errors.put( e.getUuid( ), e );
+  }
 
+  /**
+   * TODO: DOCUMENT Component.java
+   * @param ephemeralConfig
+   * @return
+   */
+  public boolean hasService( ServiceConfiguration config ) {
+    return this.serviceRegistry.hasService( config );
+  }
 }

@@ -86,15 +86,15 @@ public class MembershipConfiguration {
   private static Integer       oobThreadPoolKeepAliveTime = 5000;
   
   public static ThreadPool getThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class );
+    return Threads.lookup( Empyrean.class, HostManager.class );
   }
   
   public static ThreadPool getNormalThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class, "normal-pool" );
+    return Threads.lookup( Empyrean.class, HostManager.class, "normal-pool" );
   }
   
   public static ThreadPool getOOBThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class, "oob-pool" );
+    return Threads.lookup( Empyrean.class, HostManager.class, "oob-pool" );
   }
   
   public static String getMulticastAddress( ) {

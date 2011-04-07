@@ -73,6 +73,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
@@ -91,7 +92,6 @@ import com.eucalyptus.images.NoSuchImageException;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.ws.client.RemoteDispatcher;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
@@ -107,26 +107,18 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
-  public static void checkValid( ImageInfo imgInfo ) {
-//    String[] parts = imgInfo.getImageLocation( ).split( "/" );
-//    CheckImageType check = new CheckImageType( ).regarding( );
-//    check.setBucket( parts[0] );
-//    check.setKey( parts[1] );
-//    RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( check );
-  }
-  
   public static void triggerCaching( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
-    CacheImageType cache = new CacheImageType( ).regarding( );
+    CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
-    RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
+    ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
   }
   
   public static void invalidate( ImageInfo imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
     try {
-      RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
+      ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
   }
   
@@ -134,12 +126,13 @@ public class WalrusUtil {
     GetObjectResponseType reply = null;
     try {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-      User user = Accounts.lookupUserById( userName.getUniqueId( ) );
+//TODO:GRZE:WTF.      
+//      User user = Accounts.lookupUserById( userName.getNamespace( ) );
 //      msg.setUserId( user.getName( ) );
       msg.regarding( );
       msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
       
-      reply = ( GetObjectResponseType ) RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
+      reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
@@ -158,7 +151,7 @@ public class WalrusUtil {
     GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( ).regarding( request );
     if ( getBukkitInfo != null ) {
       getBukkitInfo.setBucket( imagePathParts[0] );
-      GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) RemoteDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( getBukkitInfo );
+      GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( getBukkitInfo );
       return reply;
     }
     return null;

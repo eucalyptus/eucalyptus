@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.describeservices
+
+if __name__ == "__main__":
+    r = eucadmin.describeservices.DescribeServices()
+    r.main_cli()

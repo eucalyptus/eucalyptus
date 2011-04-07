@@ -3,12 +3,10 @@ package com.eucalyptus.reporting.instance;
 import com.eucalyptus.reporting.Period;
 
 /**
- * <p>UsageSummary is a summary of all resource usage for some entity over a
- * single time period. An entity can be a user, a group, an account, an
- * availability zone, a cluster, and so on. UsageSummary includes instance
- * types, instance running times, and resource usage. UsageSummary includes
- * everything in a single bean which is necessary to generate a jasper
- * report of instance usage.
+ * <p>InstanceUsageSummary is a summary of all resource usage for some entity
+ * over a time period. It includes summations of the instance types,
+ * numbers, running times, resource usage, etc, for a given user,
+ * account or other entity.
  * 
  * @author tom.werges
  */

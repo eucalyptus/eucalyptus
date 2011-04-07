@@ -82,28 +82,27 @@ import java.util.concurrent.TimeUnit;
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 @DependsLocal( Eucalyptus.class )
 @ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
-public class HttpServerBootstrapper extends Bootstrapper {  
+public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
-  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class, displayName="euca.https.port" )
+  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class, displayName = "euca.https.port" )
   public static Integer HTTPS_PORT = 8443;
-  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class, displayName="euca.http.port" )
+  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class, displayName = "euca.http.port" )
   public static Integer HTTP_PORT  = 8080;
   private static Server jettyServer;
-  private static Thread serverThread;
   @ConfigurableField( initial = "", description = "Http Proxy Host" )
-  public static String httpProxyHost;
+  public static String  httpProxyHost;
   @ConfigurableField( initial = "", description = "Http Proxy Port" )
-  public static String httpProxyPort;
- 
+  public static String  httpProxyPort;
+  
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
-	if(System.getProperty("http.proxyHost") != null) {
-		httpProxyHost = System.getProperty("http.proxyHost");
-	}
-	if(System.getProperty("http.proxyPort") != null) {
-		httpProxyPort = System.getProperty("http.proxyPort");
-	} 
-	jettyServer = new org.mortbay.jetty.Server( );
+    if ( System.getProperty( "http.proxyHost" ) != null ) {
+      httpProxyHost = System.getProperty( "http.proxyHost" );
+    }
+    if ( System.getProperty( "http.proxyPort" ) != null ) {
+      httpProxyPort = System.getProperty( "http.proxyPort" );
+    }
+    jettyServer = new org.mortbay.jetty.Server( );
     System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
@@ -112,7 +111,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   }
   
   private static void startJettyServer( ) {
-    serverThread = Threads.newThread( new Runnable( ) {
+    Threads.lookup( HttpService.class, HttpServerBootstrapper.class ).submit( new Runnable( ) {
       @Override
       public void run( ) {
         try {
@@ -121,8 +120,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
           LOG.debug( e, e );
         }
       }
-    }, "jetty" );
-    serverThread.start( );
+    } );
   }
   
   @Override
@@ -137,7 +135,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
     startJettyServer( );
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
    */
@@ -145,7 +143,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean enable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
@@ -153,13 +151,13 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean stop( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
   public void destroy( ) throws Exception {}
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
@@ -167,7 +165,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   public boolean disable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */
@@ -177,11 +175,12 @@ public class HttpServerBootstrapper extends Bootstrapper {
   }
   
   public static class PortChangeListener implements PropertyChangeListener {
-   /**
-    * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty, java.lang.Object)
-    */
-   @Override
-   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    /**
+     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+     *      java.lang.Object)
+     */
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
       if ( jettyServer == null ) {
         return;
@@ -209,5 +208,5 @@ public class HttpServerBootstrapper extends Bootstrapper {
       }
     }
   }
-
+  
 }

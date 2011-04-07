@@ -3,34 +3,20 @@ package com.eucalyptus.upgrade;
 import edu.emory.mathcs.backport.java.util.Collections;
 import groovy.sql.Sql;
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.Security;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DispatcherFactory;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -160,7 +146,6 @@ public class StandalonePersistence {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
     SystemCredentialProvider.initializeCredentials( );
-    DispatcherFactory.setFactory( ( DispatcherFactory ) ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.ws.client.DefaultDispatcherFactory" ).newInstance( ) );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
@@ -191,8 +176,8 @@ public class StandalonePersistence {
     newLibDir = getAndCheckLibDirectory( eucaHome );
   }
   
-  public static void setupConfigurations( ) {
-    ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
+  static void setupConfigurations( ) {
+	ServiceJarDiscovery.doSingleDiscovery( new ComponentDiscovery( ) );
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {

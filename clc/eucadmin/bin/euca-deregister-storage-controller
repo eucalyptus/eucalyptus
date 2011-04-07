@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.deregisterstoragecontroller
+
+if __name__ == "__main__":
+    r = eucadmin.deregisterstoragecontroller.DeregisterStorageController()
+    r.main_cli()

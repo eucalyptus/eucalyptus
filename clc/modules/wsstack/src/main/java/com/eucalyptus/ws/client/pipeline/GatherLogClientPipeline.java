@@ -63,11 +63,15 @@
 
 package com.eucalyptus.ws.client.pipeline;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -80,15 +84,16 @@ public final class GatherLogClientPipeline implements ChannelPipelineFactory {
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-//    ChannelUtil.addPipelineMonitors( pipeline, 60 );
-    pipeline.addLast( "decoder", new NioHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", new HttpChunkAggregator( 1024*1024*20 ) );
-    pipeline.addLast( "encoder", new NioHttpRequestEncoder( ) );
-    pipeline.addLast( "serializer", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "addressing", new AddressingHandler( "EucalyptusGL#" ) );
-    pipeline.addLast( "soap", new SoapHandler( ) );
-    pipeline.addLast( "binding",
-                      new BindingHandler( BindingManager.getBinding( "eucalyptus_ucsb_edu" ) ) );
+    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 120 ).entrySet( ) ) { // TODO:GRZE: configurable
+      pipeline.addLast( e.getKey( ), e.getValue( ) );
+    }
+    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( 1024 * 1024 * 20 ) ); // TODO:GRZE: configurable
+    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
+    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
+    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusGL#" ) );
+    pipeline.addLast( "soap", Handlers.soapHandler( ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
     return pipeline;
   }
 }

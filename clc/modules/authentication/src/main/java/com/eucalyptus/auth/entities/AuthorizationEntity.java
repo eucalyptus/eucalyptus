@@ -5,7 +5,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -26,7 +26,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -97,9 +97,7 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
     sb.append( "effect=" ).append( this.effect ).append( ", " );
     sb.append( "type=" ).append( this.type ).append( ", " );
     sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
-    sb.append( "actions=" ).append( this.getActions( ) ).append( ", " );
-    sb.append( "notResource=" ).append( this.isNotResource( ) ).append( ", " );
-    sb.append( "resources=" ).append( this.getResources( ) );
+    sb.append( "notResource=" ).append( this.isNotResource( ) );
     sb.append( ")" );
     return sb.toString( );
   }

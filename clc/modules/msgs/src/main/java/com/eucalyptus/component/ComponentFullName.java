@@ -68,7 +68,6 @@ import java.util.List;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public class ComponentFullName implements FullName {
@@ -95,7 +94,7 @@ public class ComponentFullName implements FullName {
     }
     temp.add( name );
     temp.addAll( Arrays.asList( pathPartsArray ) );
-    this.authority = new StringBuilder( ).append( PREFIX ).append( SEP ).append( VENDOR ).append( SEP ).append( partition ).append( SEP ).append( FullName.SYSTEM_ID ).append( SEP ).toString( );
+    this.authority = new StringBuilder( ).append( PREFIX ).append( SEP ).append( VENDOR ).append( SEP ).append( partition ).append( SEP ).append( this.componentId.getName( ) ).append( SEP ).toString( );
     StringBuilder rId = new StringBuilder( );
     for ( String pathPart : pathPartsArray ) {
       rId.append( SEP_PATH.substring( 0, rId.length( ) == 0 ? 0 : 1 ) ).append( pathPart );
@@ -116,7 +115,7 @@ public class ComponentFullName implements FullName {
   
   @Override
   public final String getNamespace( ) {
-    return FullName.SYSTEM_ID;
+    return this.componentId.getName( );
   }
   
   @Override

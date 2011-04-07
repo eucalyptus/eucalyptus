@@ -1,3 +1,4 @@
+clc/modules/bootstrap/arguments.ggo
 clc/target
 clc/bin
 clc/deps

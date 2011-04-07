@@ -1,0 +1,11 @@
+#!/usr/bin/python
+import sys
+from eucadmin.properties import Property
+
+def main():
+  c = Property().cli_describe()
+  sys.exit()
+
+if __name__ == "__main__":
+  main()
+ 

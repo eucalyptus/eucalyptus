@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.modifystoragecontroller
+
+if __name__ == "__main__":
+    r = eucadmin.modifystoragecontroller.ModifyStorageControllerAttribute()
+    r.main_cli()

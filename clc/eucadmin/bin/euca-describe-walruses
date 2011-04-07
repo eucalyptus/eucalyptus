@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.describewalruses
+
+if __name__ == "__main__":
+    r = eucadmin.describewalruses.DescribeWalruses()
+    r.main_cli()

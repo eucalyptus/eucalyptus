@@ -234,8 +234,7 @@ public class TestHarness
 	@SuppressWarnings("unchecked")
 	private static Multimap<Class, Method> getTestMethods() throws Exception
 	{
-		final Multimap<Class, Method> testMethods = Multimaps
-				.newArrayListMultimap();
+		final Multimap<Class, Method> testMethods =  ArrayListMultimap.create( );
 		List<Class> classList = Lists.newArrayList();
 		for (File f : new File(System.getProperty("euca.home")
 				+ "/usr/share/eucalyptus").listFiles()) {
@@ -245,8 +244,7 @@ public class TestHarness
 				try {
 					JarFile jar = new JarFile(f);
 					Enumeration<JarEntry> jarList = jar.entries();
-					while (jarList.hasMoreElements()) {
-						JarEntry j = jarList.nextElement();
+					for( JarEntry j : Collections.list( jar.entries() ) ) {
 						if (j.getName().matches(".*\\.class.{0,1}")) {
 							String classGuess = j.getName()
 									.replaceAll("/", ".")

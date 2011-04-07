@@ -65,7 +65,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -80,7 +80,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -112,11 +112,11 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     super.setCreationTime( new Date( ) );
   }
   
-  private Volume( final UserFullName userFullName, String displayName ) {
+  public Volume( final UserFullName userFullName, String displayName ) {
     super( userFullName, displayName );
   }
   
-  private Volume( final String accountId, String displayName ) {
+  public Volume( final String accountId, String displayName ) {
     this.setOwnerAccountId( accountId );
     this.setDisplayName( displayName );
   }

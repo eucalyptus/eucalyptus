@@ -24,9 +24,10 @@ public class Exceptions {
     return LogLevels.DEBUG ? string( ex ) : ex.getMessage( ); 
   }
   public static <T extends Throwable> String string( T ex ) {
+    Throwable t = ( ex == null ? new RuntimeException() : ex );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
-    ex.printStackTrace( p );
+    t.printStackTrace( p );
     p.flush( );
     p.close( );
     return os.toString( );
@@ -151,6 +152,22 @@ public class Exceptions {
       : ex );
     return false;
   }
+
+  public static RuntimeException debug( String message ) {
+    return debug( new RuntimeException( message ) );
+  }
+  
+  public static <T extends Throwable> T debug( T t ) {
+    return debug( t.getMessage( ), t );
+  }
+  
+  public static <T extends Throwable> T debug( String message, T t ) {
+    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.debug( message, filtered );
+    return t;
+  }
+
   
   public static RuntimeException trace( String message ) {
     return trace( new RuntimeException( message ) );
@@ -164,6 +181,17 @@ public class Exceptions {
     Throwable filtered = new RuntimeException( t.getMessage( ) );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
     LOG.trace( message, filtered );
+    return t;
+  }
+
+  public static <T extends Throwable> T error( T t ) {
+    return error( t.getMessage( ), t );
+  }
+  
+  public static <T extends Throwable> T error( String message, T t ) {
+    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.error( message, filtered );
     return t;
   }
 }

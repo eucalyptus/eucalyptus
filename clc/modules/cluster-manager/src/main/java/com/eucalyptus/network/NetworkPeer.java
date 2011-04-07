@@ -66,56 +66,53 @@ package com.eucalyptus.network;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule_peer_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkPeer {  
-  @Id
-  @GeneratedValue
-  @Column( name = "network_rule_peer_network_id" )
-  Long id = -1l;
+public class NetworkPeer extends AbstractPersistent {
   @Column( name = "network_rule_peer_network_user_query_key" )
   String otherAccountId;
   @Column( name = "network_rule_peer_network_user_group" )
   String groupName;
-  public NetworkPeer() {
-  }
+  
+  public NetworkPeer( ) {}
+  
   public NetworkPeer( final String userQueryKey, final String groupName ) {
     this.otherAccountId = userQueryKey;
     this.groupName = groupName;
   }
-  public Long getId( ) {
-    return this.id;
-  }
-  public void setId( Long id ) {
-    this.id = id;
-  }
+  
   public String getUserQueryKey( ) {
     return this.otherAccountId;
   }
+  
   public void setUserQueryKey( String userQueryKey ) {
     this.otherAccountId = userQueryKey;
   }
+  
   public String getGroupName( ) {
     return this.groupName;
   }
+  
   public void setGroupName( String groupName ) {
     this.groupName = groupName;
   }
+  
   public boolean equals( final Object o ) {
-    if ( this == o  ) return true;
-    if ( o == null || !getClass().equals(o.getClass()) ) return false;
-      
+    if ( this == o ) return true;
+    if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
+    
     NetworkPeer that = ( NetworkPeer ) o;
     
     if ( !groupName.equals( that.groupName ) ) return false;
@@ -124,21 +121,21 @@ public class NetworkPeer {
     return true;
   }
   
-  public int hashCode() {
+  public int hashCode( ) {
     int result;
-    result = otherAccountId.hashCode();
-    result = 31 * result + groupName.hashCode();
+    result = otherAccountId.hashCode( );
+    result = 31 * result + groupName.hashCode( );
     return result;
   }
   
-  public List<NetworkRule> getAsNetworkRules() {
-    List<NetworkRule> ruleList = new ArrayList<NetworkRule>();
-    ruleList.add( new NetworkRule( "tcp", 0, 65535, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
-    ruleList.add( new NetworkRule( "udp", 0, 65535, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
-    ruleList.add( new NetworkRule( "icmp", -1, -1, new NetworkPeer( this.getUserQueryKey(), this.getGroupName() ) ) );
+  public List<NetworkRule> getAsNetworkRules( ) {
+    List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );
+    ruleList.add( new NetworkRule( "tcp", 0, 65535, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
+    ruleList.add( new NetworkRule( "udp", 0, 65535, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
+    ruleList.add( new NetworkRule( "icmp", -1, -1, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
     return ruleList;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s", this.otherAccountId, this.groupName );

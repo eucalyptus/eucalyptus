@@ -1,0 +1,11 @@
+#!/usr/bin/python
+import sys
+from eucadmin.storagecontrollers import StorageController
+
+def main():
+  c = StorageController().cli_modify()
+  sys.exit()
+
+if __name__ == "__main__":
+    main()
+ 

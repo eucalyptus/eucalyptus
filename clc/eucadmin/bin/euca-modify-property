@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+import eucadmin.modifypropertyvalue
+
+if __name__ == "__main__":
+    r = eucadmin.modifypropertyvalue.ModifyPropertyValue()
+    r.main_cli()
+ 
+ 

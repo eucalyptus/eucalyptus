@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.registercluster
+
+if __name__ == "__main__":
+    r = eucadmin.registercluster.RegisterCluster()
+    r.main_cli()

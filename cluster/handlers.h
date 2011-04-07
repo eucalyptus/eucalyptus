@@ -79,6 +79,94 @@ enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
 enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY};
 
+typedef struct configEntry_t {
+  char *key;
+  char *defaultValue;
+} configEntry;
+
+static configEntry configKeysRestart[] = {
+  {"DISABLE_TUNNELING", "N"},
+  {"ENABLE_WS_SECURITY", "Y"},
+  {"EUCALYPTUS", "/"},
+  {"NC_FANOUT", "1"},
+  {"NC_PORT", "8775"},
+  {"NC_SERVICE", "axis2/services/EucalyptusNC"},
+  {"SCHEDPOLICY", "ROUNDROBIN"},
+  {"VNET_ADDRSPERNET", NULL},
+  {"VNET_BRIDGE", NULL},
+  {"VNET_BROADCAST", NULL},
+  {"VNET_CLOUDIP", "localhost"},
+  {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
+  {"VNET_DHCPUSER", "dhcpd"},
+  {"VNET_DNS", NULL},
+  {"VNET_LOCALIP", NULL},
+  {"VNET_MACMAP", NULL},
+  {"VNET_MODE", "SYSTEM"},
+  {"VNET_NETMASK", NULL},
+  {"VNET_PRIVINTERFACE", "eth0"},
+  {"VNET_PUBINTERFACE", "eth0"},
+  {"VNET_PUBLICIPS", NULL},
+  {"VNET_ROUTER", NULL},
+  {"VNET_SUBNET", NULL},
+  {"VNET_MACPREFIX", "d0:0d"},
+  {"POWER_IDLETHRESH", "300"},
+  {"POWER_WAKETHRESH", "300"},
+  {"CC_IMAGE_PROXY", NULL},
+  {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
+  {"CC_IMAGE_PROXY_PATH", "/var/lib/eucalyptus/dynserv/"},
+  {"LOGLEVEL", "DEBUG"},
+  {NULL, NULL}
+};
+static configEntry configKeysNoRestart[] = {
+  {"NODES", NULL},
+  {"NC_POLLING_FREQUENCY", "6"},
+  {"CLC_POLLING_FREQUENCY", "6"},
+  {NULL, NULL}
+};
+
+/*
+static char *configKeysRestart[] = {
+  "DISABLE_TUNNELING",
+  "ENABLE_WS_SECURITY",
+  "EUCALYPTUS",
+  "NC_FANOUT",
+  "NC_PORT",
+  "NC_SERVICE",
+  "SCHEDPOLICY",
+  "VNET_ADDRSPERNET",
+  "VNET_BRIDGE",
+  "VNET_BROADCAST",
+  "VNET_CLOUDIP",
+  "VNET_DHCPDAEMON",
+  "VNET_DHCPUSER",
+  "VNET_DNS",
+  "VNET_LOCALIP",
+  "VNET_MACMAP",
+  "VNET_MODE",
+  "VNET_NETMASK",
+  "VNET_PRIVINTERFACE",
+  "VNET_PUBINTERFACE",
+  "VNET_PUBLICIPS",
+  "VNET_ROUTER",
+  "VNET_SUBNET",
+  "POWER_IDLETHRESH",
+  "POWER_WAKETHRESH",
+  "CC_IMAGE_PROXY",
+  "CC_IMAGE_PROXY_CACHE_SIZE",
+  "CC_IMAGE_PROXY_PATH",
+  "LOGLEVEL",
+  NULL
+};
+static char *configKeysNoRestart[] = {
+  "NODES",
+  "NC_POLLING_FREQUENCY",
+  "CLC_POLLING_FREQUENCY",
+  NULL
+};
+*/
+static char *configValuesRestart[256], *configValuesNoRestart[256];
+static int configRestartLen=0, configNoRestartLen=0;
+
 typedef struct instance_t {
   char instanceId[16];
   char reservationId[16];
@@ -274,6 +362,9 @@ int ccIsEnabled(void);
 int ccIsDisabled(void);
 int ccChangeState(int newstate);
 int ccGetStateString(char *outstr, int n);
+
+int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
+char *configFileValue(char *key);
 
 void *monitor_thread(void *);
 

@@ -76,14 +76,14 @@ public class ComponentIds {
   private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
   private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
   
-  public static List<ComponentId> listLocallyRynning( ) {
+  public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
     List<ComponentId> components = Lists.newArrayList( );
     for ( Component comp : Components.list( ) ) {
       if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
         components.add( comp.getComponentId( ) );
       } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
         components.add( comp.getComponentId( ) );
-      } else if ( comp.isRunningLocally( ) ) {
+      } else if ( comp.hasServiceEnabled( ) ) {
         components.add( comp.getComponentId( ) );
       }
     }

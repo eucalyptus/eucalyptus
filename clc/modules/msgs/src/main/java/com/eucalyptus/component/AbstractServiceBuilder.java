@@ -5,6 +5,8 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.event.DisableComponentEvent;
 import com.eucalyptus.component.event.EnableComponentEvent;
+import com.eucalyptus.component.event.LifecycleEvent;
+import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.component.event.StartComponentEvent;
 import com.eucalyptus.component.event.StopComponentEvent;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -15,10 +17,13 @@ import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.NetworkUtil;
+import com.eucalyptus.util.Internets;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
+  public abstract T newInstance( String partition, String name, String host, Integer port );
+  protected abstract T newInstance( );
+
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
@@ -50,14 +55,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       LOG.error( ex , ex );
     }
 
-    StartComponentEvent e = null;
-    if ( config.isLocal( ) ) {
-      e = StartComponentEvent.getLocal( config );
-    } else {
-      e = StartComponentEvent.getRemote( config );
-    }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), LifecycleEvents.start( config ) );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
@@ -67,14 +66,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).debug( );
-    StopComponentEvent e = null;
-    if ( NetworkUtil.testLocal( config.getHostName( ) ) ) {
-      e = StopComponentEvent.getLocal( config );
-    } else {
-      e = StopComponentEvent.getRemote( config );
-    }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), LifecycleEvents.stop( config ) );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
@@ -103,14 +96,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
-    EnableComponentEvent e = null;
-    if ( config.isLocal( ) ) {
-      e = EnableComponentEvent.getLocal( config );
-    } else {
-      e = EnableComponentEvent.getRemote( config );
-    }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), LifecycleEvents.enable( config ) );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );
@@ -125,14 +112,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
-    DisableComponentEvent e = null;
-    if ( config.isLocal( ) ) {
-      e = DisableComponentEvent.getLocal( config );
-    } else {
-      e = DisableComponentEvent.getRemote( config );
-    }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), e );
+      ListenerRegistry.getInstance( ).fireEvent( config.getComponentId( ).getClass( ), LifecycleEvents.disable( config ) );
     } catch ( EventFailedException e1 ) {
       LOG.error( e1, e1 );
       throw new ServiceRegistrationException( e1.getMessage( ), e1 );

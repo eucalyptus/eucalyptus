@@ -10,6 +10,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.util.FullName;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
@@ -19,13 +20,13 @@ public class EventRecord extends EucalyptusMessage {
     EucalyptusMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    UserFullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
+    FullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
       userFn = ctx.getUserFullName( );
     } catch ( Exception ex ) {
     }
-    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "nobody" : userFn.toString( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "" : userFn.toString( ), msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
@@ -57,8 +58,8 @@ public class EventRecord extends EucalyptusMessage {
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   private static EucalyptusMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
-    hi.setCorrelationId( FakePrincipals.NOBODY_ID );
-    hi.setUserId( FakePrincipals.NOBODY_USER_ERN.getUserName( ) );
+    hi.setCorrelationId( "" );
+    hi.setUserId( "" );
     return hi;
   }
   private static EucalyptusMessage tryForMessage( ) {

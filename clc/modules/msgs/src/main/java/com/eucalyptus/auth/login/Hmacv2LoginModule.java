@@ -44,7 +44,11 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
         computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%20"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
         if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
-          return false;
+          computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+          computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
+          if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
+            return false;
+          }
         }
       }
     }
@@ -73,10 +77,10 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     sortedKeys.addAll( parameters.keySet( ) );
     String firstKey = sortedKeys.pollFirst( );
     if( firstKey != null ) { 
-      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ), "UTF-8" ) );
+      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
     } 
     while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ).replaceAll( "\\+", " " ), "UTF-8" ) );
+      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
     }
     String subject = prefix + sb.toString( );
     LOG.trace( "VERSION2: " + subject );

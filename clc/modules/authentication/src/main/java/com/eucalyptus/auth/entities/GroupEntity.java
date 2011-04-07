@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -101,18 +101,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
-    sb.append( "userGroup=" ).append( this.isUserGroup( ) ).append( ", " );
-    sb.append( "account=" ).append( this.getAccount( ).getName( ) ).append( ", " );
-    sb.append( "users=[");
-    for ( UserEntity u : this.getUsers( ) ) {
-      sb.append( u.getName( ) ).append( ' ' );
-    }
-    sb.append( ']' );
-    sb.append( "policies=[\n");
-    for ( PolicyEntity p : this.getPolicies( ) ) {
-      sb.append( p.getText( ) ).append( '\n' );
-    }
-    sb.append( ']' );
+    sb.append( "userGroup=" ).append( this.isUserGroup( ) );
     sb.append( ")" );
     return sb.toString( );
   }

@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.registerwalrus
+
+if __name__ == "__main__":
+    r = eucadmin.registerwalrus.RegisterWalrus()
+    r.main_cli()

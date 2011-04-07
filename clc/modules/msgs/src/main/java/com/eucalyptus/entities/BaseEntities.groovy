@@ -1,11 +1,13 @@
 package com.eucalyptus.entities;
 
+import java.io.Serializable;
+import java.util.Date;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import javax.persistence.Table;
 import javax.persistence.Id;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -26,6 +28,8 @@ import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.GenerationTime;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -44,10 +48,15 @@ public class AbstractPersistent implements Serializable {
   String id;
   @Version
   @Column(name = "version")
-  Integer version = 0;
-  @Temporal(TemporalType.TIMESTAMP)
+  Integer version;
+  @Temporal(TemporalType.DATE)
+  @Column(name = "creation_timestamp")
+  @Generated(GenerationTime.INSERT)
+  Date creationTimestamp;
+  @Temporal(TemporalType.DATE)
   @Column(name = "last_update_timestamp")
-  Date lastUpdate;
+  @Generated(GenerationTime.ALWAYS)
+  Date lastUpdateTimestamp;
   
   public AbstractPersistent( ) {
     super( );

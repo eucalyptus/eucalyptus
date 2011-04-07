@@ -3,7 +3,7 @@ package com.eucalyptus.auth.entities;
 import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -20,7 +20,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_cert" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

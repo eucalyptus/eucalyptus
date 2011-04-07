@@ -72,6 +72,9 @@
 
 	<!--================================== BUILD TARGET ==================================-->
   <property name="builder.suffix" value="gwt" />
+    <target name="do-build-gwt">
+        <antcall target="build-gwt"/>
+    </target>
   <target name="build-gwt">
   	<echo message="gwtDebug=${gwtDebug}"/>
     <antcall target="compile-src" />

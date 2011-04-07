@@ -69,31 +69,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 
 public class StorageUtil {
@@ -109,21 +107,14 @@ public class StorageUtil {
     return sc;
   }
   
-  public static <TYPE> TYPE send( String clusterName, BaseMessage message ) throws EucalyptusCloudException {
-    ServiceConfiguration scConfig = getActiveSc( clusterName ).getServiceConfiguration( );
-    Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
-    TYPE reply = (TYPE) sc.send( message );
-    return reply;
-  }
-  
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( Dispatcher sc : ServiceDispatcher.lookupMany( Components.lookup("storage") ) ) {
-      sc.dispatch( message );
+    for( Service service : Components.lookup(Storage.class).enabledServices( ) ) {
+      service.getDispatcher( ).dispatch( message );
     }
   }
 
   public static ArrayList<edu.ucsb.eucalyptus.msgs.Volume> getVolumeReply( Map<String, AttachedVolume> attachedVolumes, List<Volume> volumes ) throws EucalyptusCloudException {
-    Multimap<String,Volume> clusterVolumeMap = Multimaps.newHashMultimap( );
+    Multimap<String,Volume> clusterVolumeMap = HashMultimap.create( );
     Map<String,StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
     for( Volume v : volumes ) {
       clusterVolumeMap.put( v.getCluster( ), v );
@@ -138,7 +129,7 @@ public class StorageUtil {
         }
       } );
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      Dispatcher sc = ServiceDispatcher.lookup( Components.lookup("storage"), scConfig.getHostName( ) );
+      Dispatcher sc = ServiceDispatcher.lookup( scConfig );
       DescribeStorageVolumesResponseType volState = sc.send( descVols );    
       for ( StorageVolume vol : volState.getVolumeSet( ) ) {
         idStorageVolumeMap.put( vol.getVolumeId( ), vol );
@@ -180,5 +171,83 @@ public class StorageUtil {
     }
     return reply;
   }
+  public static long countVolumeByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
 
+  public static long countVolumeByUser( String userId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
+  
+  public static long countSnapshotByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    try {
+      List<Snapshot> vols = db.query( new Snapshot( accountId, null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search snapshot info", e );
+    }
+  }
+  
+  public static long countSnapshotByUser( String userId ) throws AuthException {
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    try {
+      List<Snapshot> vols = db.query( new Snapshot( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      db.commit( );
+      return vols.size( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search snapshot info", e );
+    }
+  }
+
+  public static long countVolumeSizeByAccount( String accountId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
+      long size = 0;
+      for ( Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.commit( );
+      return size;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
+
+  public static long countVolumeSizeByUser( String userId ) throws AuthException {
+    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+    try {
+      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      long size = 0;
+      for ( Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.commit( );
+      return size;
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new AuthException( "Failed to search volume info", e );
+    }
+  }
 }

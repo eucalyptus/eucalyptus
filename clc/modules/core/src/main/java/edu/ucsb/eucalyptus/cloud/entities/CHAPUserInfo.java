@@ -63,21 +63,22 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
-import javax.persistence.*;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "CHAPUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class CHAPUserInfo {
-    @Id
-    @GeneratedValue
-    @Column( name = "chap_user_info" )
-    private Long id = -1l;
-
+public class CHAPUserInfo extends AbstractPersistent {
     private String user;
     @Lob
     private String encryptedPassword;

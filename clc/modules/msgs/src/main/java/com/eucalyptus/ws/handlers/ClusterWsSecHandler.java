@@ -74,7 +74,7 @@ public class ClusterWsSecHandler extends WsSecHandler {
   private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
 
   public ClusterWsSecHandler( ) {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( ) ) );
+    super( new CredentialProxy( Eucalyptus.class ) );
   }
 
   @Override

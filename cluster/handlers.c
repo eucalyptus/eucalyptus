@@ -1281,11 +1281,6 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   op_start = time(NULL);
   logprintfl(EUCAINFO,"refresh_resources(): called\n");
 
-  rc = update_config();
-  if (rc) {
-    logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
-  }
-  
   // critical NC call section
   sem_mywait(RESCACHE);
   memcpy(resourceCacheStage, resourceCache, sizeof(ccResourceCache));
@@ -2066,9 +2061,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    if (macAddrsLen >= maxCount) {
-      strncpy(mac, macAddrs[i], 32);
-    }      
+    //    if (macAddrsLen >= maxCount) {
+    //      strncpy(mac, macAddrs[i], 32);
+    //    }      
 
     sem_mywait(VNET);
     if (nidx == -1) {
@@ -2821,6 +2816,11 @@ void *monitor_thread(void *in) {
 
     if (config->ccState == ENABLED) {
 
+      rc = update_config();
+      if (rc) {
+	logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
+      }
+
       // NC Polling operations
       if (ncTimer >= config->ncPollingFrequency) {
 	ncTimer=0;
@@ -3094,9 +3094,9 @@ int update_config(void) {
 
   ret = 0;
 
-  
   configMtime = 0;
   sem_mywait(CONFIG);
+
   for (i=0; i<2; i++) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
@@ -3114,30 +3114,65 @@ int update_config(void) {
   
   // check to see if the configfile has changed
   if (config->configMtime != configMtime) {
-    // something has changed
-    logprintfl(EUCAINFO, "update_config(): config file has been modified, refreshing node list\n");
-    res = NULL;
-    rc = refreshNodes(config, &res, &numHosts);
+    rc = readConfigFile(config->configFiles, 2);
     if (rc) {
-      logprintfl(EUCAERROR, "update_config(): cannot read list of nodes, check your config file\n");
-      sem_mywait(RESCACHE);
-      resourceCache->numResources = 0;
-      config->schedState = 0;
-      bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
-      sem_mypost(RESCACHE);
-      ret = 1;
-    } else {
-      sem_mywait(RESCACHE);
-      if (numHosts > MAXNODES) {
-	logprintfl(EUCAWARN, "update_config(): the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d).  Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
-	numHosts = MAXNODES;
+      // something has changed that can be read in
+      logprintfl(EUCAINFO, "update_config(): ingressing new options.\n");
+
+      // NODES
+      logprintfl(EUCAINFO, "update_config(): refreshing node list.\n");
+      res = NULL;
+      rc = refreshNodes(config, &res, &numHosts);
+      if (rc) {
+	logprintfl(EUCAERROR, "update_config(): cannot read list of nodes, check your config file\n");
+	sem_mywait(RESCACHE);
+	resourceCache->numResources = 0;
+	config->schedState = 0;
+	bzero(resourceCache->resources, sizeof(ccResource) * MAXNODES);
+	sem_mypost(RESCACHE);
+	ret = 1;
+      } else {
+	sem_mywait(RESCACHE);
+	if (numHosts > MAXNODES) {
+	  logprintfl(EUCAWARN, "update_config(): the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d).  Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
+	  numHosts = MAXNODES;
+	}
+	resourceCache->numResources = numHosts;
+	config->schedState = 0;
+	memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
+	sem_mypost(RESCACHE);
       }
-      resourceCache->numResources = numHosts;
-      config->schedState = 0;
-      memcpy(resourceCache->resources, res, sizeof(ccResource) * numHosts);
-      sem_mypost(RESCACHE);
+      if (res) free(res);
+
+      // polling frequencies
+
+      // CLC
+      tmpstr = configFileValue("CLC_POLLING_FREQUENCY");
+      if (tmpstr) {
+	if (atoi(tmpstr) > 0) {
+	  config->clcPollingFrequency = atoi(tmpstr);
+	} else {
+	  config->clcPollingFrequency = 6;
+	}
+	free(tmpstr);
+      } else {
+	config->clcPollingFrequency = 6;
+      }
+
+      // NC
+      tmpstr = configFileValue("NC_POLLING_FREQUENCY");
+      if (tmpstr) {
+	if (atoi(tmpstr) > 6) {
+	  config->ncPollingFrequency = atoi(tmpstr);
+	} else {
+	  config->ncPollingFrequency = 6;	  
+	}
+	free(tmpstr);
+      } else {
+	config->ncPollingFrequency = 6;
+      }
+
     }
-    if (res) free(res);
   }
   
   config->configMtime = configMtime;
@@ -3175,18 +3210,27 @@ int init_config(void) {
   snprintf(policyFile, MAX_PATH, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
   snprintf(eucahome, MAX_PATH, "%s/", home);
 
+  sem_mywait(INIT);
+
   if (config_init && config->initialized) {
     // this means that this thread has already been initialized
-    ret = 0;
-    return(ret);
+    sem_mypost(INIT);
+    return(0);
   }
   
   if (config->initialized) {
     config_init = 1;
+    sem_mypost(INIT);
     return(0);
   }
   
-  logprintfl(EUCADEBUG,"init_config(): initializing CC configuration\n");  
+  logprintfl(EUCADEBUG, "init_config(): called.\n");
+  logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");  
+
+  rc = readConfigFile(configFiles, 2);
+  if (rc) {
+    logprintfl(EUCAERROR, "init_config(): cannot read config file!\n");
+  }
   
   // DHCP configuration section
   {
@@ -3204,18 +3248,19 @@ int init_config(void) {
       *pubRouter=NULL,
       *pubDomainname=NULL,
       *pubDNS=NULL,
-      *localIp=NULL;
-      //      *cloudIp=NULL;
+      *localIp=NULL,
+      *macPrefix=NULL;
+
     uint32_t *ips, *nms;
-    int initFail=0, len;
+    int initFail=0, len, usednew=0;;
     
     // DHCP Daemon Configuration Params
-    daemon = getConfString(configFiles, 2, "VNET_DHCPDAEMON");
+    daemon = configFileValue("VNET_DHCPDAEMON");
     if (!daemon) {
       logprintfl(EUCAWARN,"init_config(): no VNET_DHCPDAEMON defined in config, using default\n");
     }
     
-    dhcpuser = getConfString(configFiles, 2, "VNET_DHCPUSER");
+    dhcpuser = configFileValue("VNET_DHCPUSER");
     if (!dhcpuser) {
       dhcpuser = strdup("root");
       if (!dhcpuser) {
@@ -3224,7 +3269,7 @@ int init_config(void) {
       }
     }
     
-    pubmode = getConfString(configFiles, 2, "VNET_MODE");
+    pubmode = configFileValue("VNET_MODE");
     if (!pubmode) {
       logprintfl(EUCAWARN,"init_config(): VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
       pubmode = strdup("SYSTEM");
@@ -3234,82 +3279,94 @@ int init_config(void) {
       }
     }
     
-    {
-      int usednew=0;
+    macPrefix = configFileValue("VNET_MACPREFIX");
+    if (!macPrefix) {
+      logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+      macPrefix = strdup("d0:0d");
+      if (!macPrefix) {
+	logprintfl(EUCAFATAL, "init_config(): Out of memory!\n");
+	unlock_exit(1);
+      }
+    } else {
+      unsigned int a=0, b=0;
+      if (sscanf(macPrefix, "%02X:%02X", &a,&b) != 2 || (a > 0xFF || b > 0xFF)) {
+	logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+	macPrefix = strdup("d0:0d");
+      }
+    }
       
-      pubInterface = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
+    pubInterface = configFileValue("VNET_PUBINTERFACE");
+    if (!pubInterface) {
+      logprintfl(EUCAWARN,"init_config(): VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
+      pubInterface = strdup("eth0");
       if (!pubInterface) {
-	logprintfl(EUCAWARN,"init_config(): VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
-	pubInterface = strdup("eth0");
+	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	unlock_exit(1);
+      }
+    } else {
+      usednew=1;
+    }
+      
+    privInterface = NULL;
+    privInterface = configFileValue("VNET_PRIVINTERFACE");
+    if (!privInterface) {
+      logprintfl(EUCAWARN,"init_config(): VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
+      privInterface = strdup("eth0");
+      if (!privInterface) {
+	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	unlock_exit(1);
+      }
+      usednew = 0;
+    }
+      
+    if (!usednew) {
+      tmpstr = NULL;
+      tmpstr = configFileValue("VNET_INTERFACE");
+      if (tmpstr) {
+	logprintfl(EUCAWARN, "init_config(): VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
+	if (pubInterface) free(pubInterface);
+	pubInterface = strdup(tmpstr);
 	if (!pubInterface) {
 	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
 	  unlock_exit(1);
 	}
-      } else {
-	usednew=1;
-      }
-      
-      privInterface = NULL;
-      privInterface = getConfString(configFiles, 2, "VNET_PRIVINTERFACE");
-      if (!privInterface) {
-	logprintfl(EUCAWARN,"init_config(): VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
-	privInterface = strdup("eth0");
+	
+	if (privInterface) free(privInterface);
+	privInterface = strdup(tmpstr);
 	if (!privInterface) {
 	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
 	  unlock_exit(1);
 	}
-	usednew = 0;
       }
-      
-      if (!usednew) {
-	tmpstr = NULL;
-	tmpstr = getConfString(configFiles, 2, "VNET_INTERFACE");
-	if (tmpstr) {
-	  logprintfl(EUCAWARN, "init_config(): VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
-	  if (pubInterface) free(pubInterface);
-	  pubInterface = strdup(tmpstr);
-	  if (!pubInterface) {
-	    logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-
-	  if (privInterface) free(privInterface);
-	  privInterface = strdup(tmpstr);
-	  if (!privInterface) {
-	    logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
-	    unlock_exit(1);
-	  }
-	}
-	if (tmpstr) free(tmpstr);
-      }
+      if (tmpstr) free(tmpstr);
     }
-
+    
     if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
-      pubSubnet = getConfString(configFiles, 2, "VNET_SUBNET");
-      pubSubnetMask = getConfString(configFiles, 2, "VNET_NETMASK");
-      pubBroadcastAddress = getConfString(configFiles, 2, "VNET_BROADCAST");
-      pubRouter = getConfString(configFiles, 2, "VNET_ROUTER");
-      pubDNS = getConfString(configFiles, 2, "VNET_DNS");
-      pubDomainname = getConfString(configFiles, 2, "VNET_DOMAINNAME");
-      pubmacmap = getConfString(configFiles, 2, "VNET_MACMAP");
-      pubips = getConfString(configFiles, 2, "VNET_PUBLICIPS");
+      pubSubnet = configFileValue("VNET_SUBNET");
+      pubSubnetMask = configFileValue("VNET_NETMASK");
+      pubBroadcastAddress = configFileValue("VNET_BROADCAST");
+      pubRouter = configFileValue("VNET_ROUTER");
+      pubDNS = configFileValue("VNET_DNS");
+      pubDomainname = configFileValue("VNET_DOMAINNAME");
+      pubmacmap = configFileValue("VNET_MACMAP");
+      pubips = configFileValue("VNET_PUBLICIPS");
 
       if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!pubmacmap && !pubips)) {
 	logprintfl(EUCAFATAL,"init_config(): in 'STATIC' network modes, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS, and (VNET_MACMAP or VNET_PUBLICIPS)'\n");
 	initFail = 1;
       }
     } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
-      numaddrs = getConfString(configFiles, 2, "VNET_ADDRSPERNET");
-      pubSubnet = getConfString(configFiles, 2, "VNET_SUBNET");
-      pubSubnetMask = getConfString(configFiles, 2, "VNET_NETMASK");
-      pubDNS = getConfString(configFiles, 2, "VNET_DNS");
-      pubDomainname = getConfString(configFiles, 2, "VNET_DOMAINNAME");
-      pubips = getConfString(configFiles, 2, "VNET_PUBLICIPS");
-      localIp = getConfString(configFiles, 2, "VNET_LOCALIP");
+      numaddrs = configFileValue("VNET_ADDRSPERNET");
+      pubSubnet = configFileValue("VNET_SUBNET");
+      pubSubnetMask = configFileValue("VNET_NETMASK");
+      pubDNS = configFileValue("VNET_DNS");
+      pubDomainname = configFileValue("VNET_DOMAINNAME");
+      pubips = configFileValue("VNET_PUBLICIPS");
+      localIp = configFileValue("VNET_LOCALIP");
       if (!localIp) {
 	logprintfl(EUCAWARN, "init_config(): VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
-      //      cloudIp = getConfString(configFiles, 2, "VNET_CLOUDIP");
+      //      cloudIp = configFileValue("VNET_CLOUDIP");
 
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"init_config(): in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
@@ -3319,7 +3376,6 @@ int init_config(void) {
     
     if (initFail) {
       logprintfl(EUCAFATAL, "init_config(): bad network parameters, must fix before system will work\n");
-      //      if (cloudIp) free(cloudIp);
       if (pubSubnet) free(pubSubnet);
       if (pubSubnetMask) free(pubSubnetMask);
       if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3335,13 +3391,14 @@ int init_config(void) {
       if (dhcpuser) free(dhcpuser);
       if (daemon) free(daemon);
       if (pubmode) free(pubmode);
+      if (macPrefix) free(macPrefix);
+      sem_mypost(INIT);
       return(1);
     }
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp);
-    //    if (cloudIp) free(cloudIp);
+    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3354,6 +3411,8 @@ int init_config(void) {
     if (daemon) free(daemon);
     if (privInterface) free(privInterface);
     if (pubInterface) free(pubInterface);
+    if (macPrefix) free(macPrefix);
+    if (localIp) free(localIp);
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
@@ -3408,7 +3467,7 @@ int init_config(void) {
     sem_mypost(VNET);
   }
   
-  tmpstr = getConfString(configFiles, 2, "SCHEDPOLICY");
+  tmpstr = configFileValue("SCHEDPOLICY");
   if (!tmpstr) {
     // error
     logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
@@ -3423,7 +3482,7 @@ int init_config(void) {
   if (tmpstr) free(tmpstr);
 
   // powersave options
-  tmpstr = getConfString(configFiles, 2, "POWER_IDLETHRESH");
+  tmpstr = configFileValue("POWER_IDLETHRESH");
   if (!tmpstr) {
     logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     idleThresh = 300;
@@ -3437,7 +3496,7 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(configFiles, 2, "POWER_WAKETHRESH");
+  tmpstr = configFileValue("POWER_WAKETHRESH");
   if (!tmpstr) {
     logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_WAKETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     wakeThresh = 300;
@@ -3452,7 +3511,7 @@ int init_config(void) {
   if (tmpstr) free(tmpstr);
 
   // some administrative options
-  tmpstr = getConfString(configFiles, 2, "NC_POLLING_FREQUENCY");
+  tmpstr = configFileValue("NC_POLLING_FREQUENCY");
   if (!tmpstr) {
     ncPollingFrequency = 6;
     tmpstr = NULL;
@@ -3465,7 +3524,7 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(configFiles, 2, "CLC_POLLING_FREQUENCY");
+  tmpstr = configFileValue("CLC_POLLING_FREQUENCY");
   if (!tmpstr) {
     clcPollingFrequency = 6;
     tmpstr = NULL;
@@ -3478,7 +3537,7 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(configFiles, 2, "NC_FANOUT");
+  tmpstr = configFileValue("NC_FANOUT");
   if (!tmpstr) {
     ncFanout = 1;
     tmpstr = NULL;
@@ -3491,7 +3550,7 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(configFiles, 2, "INSTANCE_TIMEOUT");
+  tmpstr = configFileValue("INSTANCE_TIMEOUT");
   if (!tmpstr) {
     instanceTimeout = 300;
     tmpstr = NULL;
@@ -3506,10 +3565,11 @@ int init_config(void) {
 
   // WS-Security
   use_wssec = 0;
-  tmpstr = getConfString(configFiles, 2, "ENABLE_WS_SECURITY");
+  tmpstr = configFileValue("ENABLE_WS_SECURITY");
   if (!tmpstr) {
     // error
     logprintfl(EUCAFATAL,"init_config(): parsing config file (%s) for ENABLE_WS_SECURITY\n", configFiles[0]);
+    sem_mypost(INIT);
     return(1);
   } else {
     if (!strcmp(tmpstr, "Y")) {
@@ -3520,7 +3580,7 @@ int init_config(void) {
 
   // Multi-cluster tunneling
   use_tunnels = 1;
-  tmpstr = getConfString(configFiles, 2, "DISABLE_TUNNELING");
+  tmpstr = configFileValue("DISABLE_TUNNELING");
   if (tmpstr) {
     if (!strcmp(tmpstr, "Y")) {
       use_tunnels = 0;
@@ -3531,7 +3591,7 @@ int init_config(void) {
   // CC Image Caching
   proxyIp = NULL;
   use_proxy=0;
-  tmpstr = getConfString(configFiles, 2, "CC_IMAGE_PROXY");
+  tmpstr = configFileValue("CC_IMAGE_PROXY");
   if (tmpstr) {
     proxyIp = strdup(tmpstr);
     if (!proxyIp) {
@@ -3543,13 +3603,13 @@ int init_config(void) {
   if (tmpstr) free(tmpstr);
 
   proxy_max_cache_size=32768;
-  tmpstr = getConfString(configFiles, 2, "CC_IMAGE_PROXY_CACHE_SIZE");
+  tmpstr = configFileValue("CC_IMAGE_PROXY_CACHE_SIZE");
   if (tmpstr) {
     proxy_max_cache_size = atoi(tmpstr);
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(configFiles, 2, "CC_IMAGE_PROXY_PATH");
+  tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
   if (tmpstr) {
     snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
   } else {
@@ -3600,13 +3660,13 @@ int init_config(void) {
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
   
   logprintfl(EUCAINFO, "init_config(): CC Configuration: eucahome=%s, policyfile=%s, ws-security=%s, schedulerPolicy=%s, idleThreshold=%d, wakeThreshold=%d\n", SP(config->eucahome), SP(config->policyFile), use_wssec ? "ENABLED" : "DISABLED", SP(SCHEDPOLICIES[config->schedPolicy]), config->idleThresh, config->wakeThresh);
-
   sem_mypost(CONFIG);
 
   res = NULL;
   rc = refreshNodes(config, &res, &numHosts);
   if (rc) {
     logprintfl(EUCAERROR, "init_config(): cannot read list of nodes, check your config file\n");
+    sem_mypost(INIT);
     return(1);
   }
       
@@ -3622,7 +3682,8 @@ int init_config(void) {
   
   config_init=1;
   logprintfl(EUCADEBUG,"init_config(): done\n");
-  
+
+  sem_mypost(INIT);
   return(0);
 }
 
@@ -3834,6 +3895,7 @@ int reconfigureNetworkFromCLC() {
     return(1);
   }
 
+  sem_mywait(VNET);
   rc = vnetGetAllVlans(vnetconfig, &users, &nets, &usernetlen);
   if (rc) {
   } else {
@@ -3849,6 +3911,7 @@ int reconfigureNetworkFromCLC() {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
     ret = 1;
   }
+  sem_mypost(VNET);
 
   unlink(clcnetfile);
   unlink(chainmapfile);
@@ -3866,7 +3929,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   *numHosts = 0;
   *res = NULL;
 
-  tmpstr = getConfString(config->configFiles, 2, CONFIG_NC_SERVICE);
+  tmpstr = configFileValue(CONFIG_NC_SERVICE);
   if (!tmpstr) {
     // error
     logprintfl(EUCAFATAL,"refreshNodes(): parsing config files (%s,%s) for NC_SERVICE\n", config->configFiles[1], config->configFiles[0]);
@@ -3879,7 +3942,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(config->configFiles, 2, CONFIG_NC_PORT);
+  tmpstr = configFileValue(CONFIG_NC_PORT);
   if (!tmpstr) {
     // error
     logprintfl(EUCAFATAL,"refreshNodes(): parsing config files (%s,%s) for NC_PORT\n", config->configFiles[1], config->configFiles[0]);
@@ -3890,7 +3953,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   }
   if (tmpstr) free(tmpstr);
 
-  tmpstr = getConfString(config->configFiles, 2, CONFIG_NODES);
+  tmpstr = configFileValue(CONFIG_NODES);
   if (!tmpstr) {
     // error
     logprintfl(EUCAWARN,"refreshNodes(): NODES parameter is missing from config files(%s,%s)\n", config->configFiles[1], config->configFiles[0]);
@@ -4210,7 +4273,8 @@ void print_ccInstance(char *tag, ccInstance *in) {
     }
   }
   
-  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s emiId=%s kernelId=%s ramdiskId=%s emiURL=%s kernelURL=%s ramdiskURL=%s state=%s ts=%d accountId=%s keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->state, in->ts, in->accountId, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+  //  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s emiId=%s kernelId=%s ramdiskId=%s emiURL=%s kernelURL=%s ramdiskURL=%s state=%s ts=%d accountId=%s keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->state, in->ts, in->accountId, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s state=%s accountId=%s ts=%d keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
 
   free(volbuf);
   free(groupbuf);
@@ -4647,3 +4711,67 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
   if (nodestr) free(nodestr);
   return(rc);
 }
+
+char *configFileValue(char *key) {
+  int i;
+  for (i=0; i<configRestartLen; i++) {
+    if (configKeysRestart[i].key) {
+      if (!strcmp(configKeysRestart[i].key, key)) {
+	return(configValuesRestart[i] ? strdup(configValuesRestart[i]) : (configKeysRestart[i].defaultValue ? strdup(configKeysRestart[i].defaultValue) : NULL));
+      }
+    }
+  }
+  for (i=0; i<configNoRestartLen; i++) {
+    if (configKeysNoRestart[i].key) {
+      if (!strcmp(configKeysNoRestart[i].key, key)) {
+	return(configValuesNoRestart[i] ? strdup(configValuesNoRestart[i]) : (configKeysNoRestart[i].defaultValue ? strdup(configKeysNoRestart[i].defaultValue) : NULL));
+      }
+    }
+  }
+  return(NULL);
+}
+
+int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
+  int i, ret=0;
+  char *old=NULL, *new=NULL;
+
+  for (i=0; configKeysRestart[i].key; i++) {
+    old = configValuesRestart[i];
+    new = getConfString(configFiles, numFiles, configKeysRestart[i].key);
+    if (configRestartLen) {
+      if ( (!old && new) || (old && !new) || ( (old && new) && strcmp(old, new) ) ) {
+	logprintfl(EUCAWARN, "readConfigFile(): configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change will take effect!\n", configKeysRestart[i].key, SP(old), SP(new));
+      }
+      if (new) free(new);
+    } else {
+      logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
+      if (configValuesRestart[i]) free(configValuesRestart[i]);
+      configValuesRestart[i] = new;
+    }
+  }
+  configRestartLen = i;
+  
+  for (i=0; configKeysNoRestart[i].key; i++) {
+    old = configValuesNoRestart[i];
+    new = getConfString(configFiles, numFiles, configKeysNoRestart[i].key);
+    
+    if (configNoRestartLen) {
+      if ( (!old && new) || (old && !new) || ( (old && new) && strcmp(old, new) ) ) {
+	logprintfl(EUCAINFO, "readConfigFile(): configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
+	ret++;
+	if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
+	configValuesNoRestart[i] = new;
+      } else {
+	if (new) free(new);
+      }
+    } else {
+      logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
+      if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
+      configValuesNoRestart[i] = new;
+    }
+  }
+  configNoRestartLen = i;
+
+  return(ret);
+}
+

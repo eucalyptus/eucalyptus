@@ -69,23 +69,20 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
 
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.StorageProperties;
 
 import javax.persistence.CascadeType;
 import javax.persistence.*;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Table;
 import java.util.*;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "Volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VolumeInfo {
-    @Id
-    @GeneratedValue
-    @Column(name = "volume_id")
-    private Long id = -1l;
+public class VolumeInfo extends AbstractPersistent {
     @Column(name = "volume_user_name")
     private String userName;
     @Column(name = "volume_name", unique=true)

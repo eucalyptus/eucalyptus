@@ -1,4 +1,3 @@
-import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.Groups;
 import com.eucalyptus.auth.NoSuchUserException;
 import com.eucalyptus.auth.principal.AvailabilityZonePermission;

@@ -109,11 +109,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
     this( namespacePattern );
     this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
-    try {
-      this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
-    } catch ( BindingException ex ) {
-      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
-    }
+    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
   }
   
   @Override
@@ -142,11 +138,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
-    try {
-      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
-    } catch ( BindingException ex ) {
-      LOG.error( "Failed to find binding for namespace: " + namespace, Exceptions.filterStackTrace( ex ) );
-    }
+    this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
   }
   
   private void setNamespaceVersion( String bindingVersion ) {

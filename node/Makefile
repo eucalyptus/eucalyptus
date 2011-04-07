@@ -12,7 +12,7 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-NC_LIBS	= $(LIBS) -lvirt -lcurl -lssl -lcrypto -lrampart
+NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
 
 all: server client clientlib test_nc test
@@ -25,7 +25,8 @@ generated/stubs: $(NCWSDL)
 	mkdir -p generated
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
+#	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Compiling the stubs

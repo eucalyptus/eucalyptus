@@ -69,5 +69,10 @@ public class StorageDisplayBean
 				INTERNAL_UNITS.getSizeTimeSizeUnit(), units.getSizeTimeSizeUnit(),
 				INTERNAL_UNITS.getSizeTimeTimeUnit(), units.getSizeTimeTimeUnit());
 	}
+	
+	public Units getUnits()
+	{
+		return units;
+	}
 
 }

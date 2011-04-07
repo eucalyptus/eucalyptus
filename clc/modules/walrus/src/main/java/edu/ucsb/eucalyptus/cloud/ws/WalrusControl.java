@@ -209,10 +209,6 @@ public class WalrusControl {
 
 	public WalrusControl() {}
 
-	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return new EntityWrapper<T>( WalrusProperties.DB_NAME );
-	}
-
 	public static void enable() throws EucalyptusCloudException {
 		storageManager.enable();
 	}

@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.describecomponents
+
+if __name__ == "__main__":
+    r = eucadmin.describecomponents.DescribeComponents()
+    r.main_cli()

@@ -63,26 +63,12 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Any extends ComponentId {
-  @SuppressWarnings( "unchecked" )
-  public static final List<Class<? extends ComponentId>> LIST = ComponentId.getList( Any.class );
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
-
   @Override
   public Boolean hasDispatcher( ) {
     return false;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-
+  
 }

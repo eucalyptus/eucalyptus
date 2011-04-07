@@ -79,7 +79,7 @@ public class NetworkGroupManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create network group for " + ctx.getUser( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1 ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
       }
     }

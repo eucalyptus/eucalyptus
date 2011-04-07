@@ -7,7 +7,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.Enumerated;
 import javax.persistence.EnumType;
 import javax.persistence.FetchType;
@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -89,7 +89,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   Map<String, String> info;
   
   // User's groups
-  @ManyToMany( fetch = FetchType.EAGER, mappedBy="users" ) // not owning side
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<GroupEntity> groups;
   
@@ -136,18 +136,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
     sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
     sb.append( "regStat=" ).append( this.getRegistrationStatus( ) ).append( ", " );
-//    sb.append( "password=" ).append( this.getPassword( ) ).append( ", " );
-    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) ).append( ", " );
-//    sb.append( "token=" ).append( this.getToken( ) ).append( ", " );
-//    sb.append( "confirmationCode=" ).append( this.getConfirmationCode( ) ).append( ", " );
-//    sb.append( "info=" ).append( this.getInfo( ) ).append( ", " );
-//    sb.append( "keys=" ).append( this.keys ).append( ", " ).append( ", " );
-//    sb.append( "certificates=" ).append( this.certificates ).append( ", " );
-    sb.append( "groups=[" );
-    for ( GroupEntity g : this.groups ) {
-      sb.append( g.getName( ) ).append( ' ' );
-    }
-    sb.append( ']' );
+    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) );
     sb.append( ")" );
     return sb.toString( );
   }

@@ -65,19 +65,21 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import javax.persistence.*;
+import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "CNAMERecords" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class CNAMERecordInfo {
-    @Id
-    @GeneratedValue
-    @Column( name = "cnamerecord_id" )
-    private Long id = -1l;
+public class CNAMERecordInfo extends AbstractPersistent {
     @Column( name = "name" )
     private String name;
     @Column( name = "zone")

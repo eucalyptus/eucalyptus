@@ -74,8 +74,8 @@ import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
@@ -97,8 +97,8 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
         } else {
           lastTime = System.currentTimeMillis( );
           StringBuilder buf = new StringBuilder( );
-          Multimap<String, String> networks = Multimaps.newArrayListMultimap( );
-          Multimap<String, String> rules = Multimaps.newArrayListMultimap( );
+          Multimap<String, String> networks = ArrayListMultimap.create( );
+          Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );

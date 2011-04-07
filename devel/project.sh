@@ -36,7 +36,7 @@ fixProjectName() {
   TARGET=$1
   SUFFIX=$2
   printf "%-40.40s %s in %s\n" "--> Setting project name:" ${NAME} ${TARGET}
-  sed -i "s/<name>$(xpath -q -e projectDescription/name/text\(\) ${TARGET})<\/name>/<name>${NAME}:${SUFFIX}<\/name>/g"   ${TARGET}
+  sed -i "s/<name>$(xpath -e projectDescription/name/text\(\) ${TARGET} 2>/dev/null)<\/name>/<name>${NAME}:${SUFFIX}<\/name>/g"   ${TARGET}
 }
 
 
@@ -47,14 +47,21 @@ fixProjectName ${SRC_DIR}/clc/tools/.project python
 for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do 
   f=$(basename $m)
   if [[ -d ${SRC_DIR}/clc/modules/$f ]]; then 
-    if [[ -d ${SRC_DIR}/clc/modules/$f/src/main/java ]]; then
+    if ls -1 ${SRC_DIR}/clc/modules/$f/src/main/java/* >/dev/null 2>&1; then
       SOURCES="${SOURCES}<classpathentry kind=\"src\" output=\"modules/$f/build\" path=\"modules/$f/src/main/java\"/>"
+      printf "%-40.40s %s\n" "---> Adding directory to build path:" "${SRC_DIR}/clc/modules/$f/src/main/java"
     fi
-    if [[ -d ${SRC_DIR}/clc/modules/$f/src/test/java ]]; then
+    if ls -1 ${SRC_DIR}/clc/modules/$f/src/test/java/* >/dev/null 2>&1; then
       SOURCES="${SOURCES}<classpathentry kind=\"src\" output=\"modules/$f/build\" path=\"modules/$f/src/test/java\"/>"
+      printf "%-40.40s %s\n" "---> Adding directory to build path:" "${SRC_DIR}/clc/modules/$f/src/test/java"
     fi
-    if [[ -d ${SRC_DIR}/clc/modules/$f/conf/scripts ]]; then
-      SOURCES="${SOURCES}<classpathentry kind=\"src\" path=\"modules/$f/conf/scripts\"/>"
+    if [[ -d ${SRC_DIR}/clc/modules/$f/conf ]]; then
+      for CONF_SUBDIR in ${SRC_DIR}/clc/modules/$f/conf/*; do
+        if [[ -d ${CONF_SUBDIR} ]] && ls -1 ${CONF_SUBDIR}/* >/dev/null 2>&1 && [[ "upgrade" != "$(basename ${CONF_SUBDIR})" ]]; then
+          SOURCES="${SOURCES}<classpathentry kind=\"src\" path=\"modules/$f/conf/$(basename ${CONF_SUBDIR})\"/>"
+          printf "%-40.40s %s\n" "---> Adding directory to build path:" "${SRC_DIR}/clc/modules/$f/conf/$(basename ${CONF_SUBDIR})"
+        fi
+      done 
     fi
   fi
 done
@@ -67,7 +74,7 @@ fi
 printf "%-40.40s %s\n" "--> Generating new .classpath:" ${SRC_DIR}/clc/.classpath
 echo "${CLASSPATH_HEADER}${SOURCES}${CLASSPATH_STANDARD}${LIBS}${CLASSPATH_FOOTER}" > ${SRC_DIR}/clc/.classpath
 if which xmlindent >/dev/null 2>&1; then 
-  xmlindent -f -w ${SRC_DIR}/clc/.classpath
+  xmlindent -f -w ${SRC_DIR}/clc/.classpath 2>/dev/null
 fi
 echo "FIN"
 

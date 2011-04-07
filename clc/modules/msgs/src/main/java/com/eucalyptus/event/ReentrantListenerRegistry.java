@@ -4,14 +4,13 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Record;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-import com.eucalyptus.records.EventRecord;
 
 public class ReentrantListenerRegistry<T> {
   private static Logger              LOG = Logger.getLogger( ReentrantListenerRegistry.class );
@@ -20,7 +19,7 @@ public class ReentrantListenerRegistry<T> {
   
   public ReentrantListenerRegistry( ) {
     super( );
-    this.listenerMap = Multimaps.newArrayListMultimap( );
+    this.listenerMap = ArrayListMultimap.create( );
     this.modificationLock = new ReentrantLock( );
   }
   

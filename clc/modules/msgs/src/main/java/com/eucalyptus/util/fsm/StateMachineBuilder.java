@@ -7,11 +7,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
 public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> {
@@ -21,8 +21,8 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
   protected S                            startState;
   private ImmutableList<S>               immutableStates;
   private final Set<Transition<P, S, T>> transitions       = Sets.newHashSet( );
-  private final Multimap<S, Callback<S>> inStateListeners  = Multimaps.newArrayListMultimap( );
-  private final Multimap<S, Callback<S>> outStateListeners = Multimaps.newArrayListMultimap( );
+  private final Multimap<S, Callback<S>> inStateListeners  = ArrayListMultimap.create( );
+  private final Multimap<S, Callback<S>> outStateListeners = ArrayListMultimap.create( );
   
   protected class InStateBuilder {
     S state;
@@ -195,7 +195,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
 //    for ( S s : this.immutableStates ) {
 //      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
 //    }
-    Multimap<T, Transition<P, S, T>> transNames = Multimaps.newArrayListMultimap( );
+    Multimap<T, Transition<P, S, T>> transNames = ArrayListMultimap.create( );
     for ( Transition<P, S, T> t : this.transitions ) {
       transNames.put( t.getName( ), t );
     }
@@ -204,7 +204,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
 //        ? transNames.get( t )
 //        : t.name( ) + ":NONE" ) );
       for ( Transition<P, S, T> tr : transNames.get( t ) ) {
-        String trKey = String.format( "%s.%s->%s.%s", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ) );
+        String trKey = String.format( "%s.%s->%s.%s (err=%s.%s)", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ), tr.getErrorState( ), tr.getErrorStateMark( ) );
         if ( alltransitions.get( trKey ) != null ) {
           LOG.error( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );
           throw new IllegalStateException( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );

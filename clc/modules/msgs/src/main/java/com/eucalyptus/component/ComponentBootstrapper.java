@@ -73,13 +73,15 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CheckedFunction;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
   private static Logger LOG = Logger.getLogger( ComponentBootstrapper.class );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = Multimaps.newArrayListMultimap( );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = ArrayListMultimap.create( );
   private final Component component; 
   
   ComponentBootstrapper( Component component ) {
@@ -108,7 +110,7 @@ public class ComponentBootstrapper {
     }
   }
 
-  private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) throws BootstrapException {
+  private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
     String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
@@ -117,11 +119,10 @@ public class ComponentBootstrapper {
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            throw BootstrapException.throwError( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) );
+            throw Exceptions.error( new ServiceTransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
           }
         } catch ( Throwable e ) {
-          LOG.error( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.component.getName( ), b.getClass( ).getCanonicalName( ), e.getMessage( ) ).info( ).toString( ), e );
-          return false;
+          throw Exceptions.error( new ServiceTransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
         }
       }      
     }

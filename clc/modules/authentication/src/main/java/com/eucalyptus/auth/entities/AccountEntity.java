@@ -2,7 +2,7 @@ package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -17,7 +17,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  *
  */
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_account" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -58,10 +58,10 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "Account[" );
+    sb.append( "Account(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) );
-    sb.append( "]" );
+    sb.append( ")" );
     return sb.toString( );
   }
   

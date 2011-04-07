@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import eucadmin.registerstoragecontroller
+
+if __name__ == "__main__":
+    r = eucadmin.registerstoragecontroller.RegisterStorageController()
+    r.main_cli()

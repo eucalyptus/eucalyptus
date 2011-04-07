@@ -76,7 +76,6 @@ import javax.crypto.Cipher;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.BaseDirectory;

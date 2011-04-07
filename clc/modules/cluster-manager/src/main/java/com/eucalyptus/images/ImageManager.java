@@ -158,7 +158,6 @@ public class ImageManager {
     DescribeImagesResponseType reply = request.getReply( );
     ImageUtil.cleanDeregistered( );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
     final Account requestAccount = ctx.getAccount( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountId( );
     final List<String> imageList = request.getImagesSet( );
@@ -221,7 +220,7 @@ public class ImageManager {
       if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
         throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1 ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
       }
     }      
@@ -246,8 +245,6 @@ public class ImageManager {
     String kernelId = ImageUtil.extractKernelId( inputSource, xpath );
     String ramdiskId = ImageUtil.extractRamdiskId( inputSource, xpath );
     Image.Type imageType = Image.Type.machine;
-    Image.Platform platform = Image.Platform.linux;
-    String newImageId = null;
     String signature = null;
     try {
       signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
@@ -321,7 +318,6 @@ public class ImageManager {
 //    imageInfo.grantPermission( ctx.getAccount( ) );
     
     LOG.info( "Triggering cache population in Walrus for: " + imageInfo.getDisplayName( ) );
-    WalrusUtil.checkValid( imageInfo );
     WalrusUtil.triggerCaching( imageInfo );
     
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );

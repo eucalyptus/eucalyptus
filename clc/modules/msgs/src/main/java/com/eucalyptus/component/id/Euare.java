@@ -65,26 +65,17 @@ package com.eucalyptus.component.id;
 
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-public class Euare extends ComponentId {
-  
+public class Euare extends ComponentId.Unpartioned {
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
+  public List<Class<Eucalyptus>> serviceDependencies( ) {
+    return Lists.newArrayList( Eucalyptus.class );
   }
   
   @Override
   public Boolean hasDispatcher( ) {
     return true;
-  }
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
   }
   
 }
