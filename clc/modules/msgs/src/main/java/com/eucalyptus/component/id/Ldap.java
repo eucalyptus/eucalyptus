@@ -69,21 +69,19 @@ import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
 public class Ldap extends ComponentId.Unpartioned {
-
+  
   @Override
   public Boolean hasDispatcher( ) {
     return false;
   }
-
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-    {
-      this.add( Eucalyptus.class );
-    }
-  };
-
-@Override
-public List<Class<ComponentId>> serviceDependencies( ) {
-return deps;
-}
-
+  
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
+  }
+  
 }

@@ -97,14 +97,8 @@ public class Empyrean extends ComponentId.Unpartioned {
     return true;
   }
   
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-                                                       {
-                                                         this.add( Any.class );
-                                                       }
-                                                     };
-  
   @Override
-  public List<Class<ComponentId>> serviceDependencies( ) {
-    return deps;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList() {{ add( Any.class ); }};
   }
  }

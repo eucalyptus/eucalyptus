@@ -75,15 +75,13 @@ public class Notifications extends ComponentId.Unpartioned {
     return true;
   }
   
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-                                                       {
-                                                         this.add( Eucalyptus.class );
-                                                       }
-                                                     };
-  
   @Override
-  public List<Class<ComponentId>> serviceDependencies( ) {
-    return deps;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
   
 }

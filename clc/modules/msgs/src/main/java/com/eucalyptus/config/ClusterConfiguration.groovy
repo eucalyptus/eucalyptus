@@ -75,13 +75,13 @@ import org.hibernate.annotations.Entity
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.id.Cluster
+import com.eucalyptus.component.id.ClusterController
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(Cluster.class)
+@ComponentPart(ClusterController.class)
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";

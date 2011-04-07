@@ -1262,7 +1262,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     if( compId instanceof Walrus ) {
       String serviceFq = "Walrus @ "+conf.getHostName( );
       reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
-    } else if( compId  instanceof com.eucalyptus.component.id.Cluster ) {
+    } else if( compId  instanceof com.eucalyptus.component.id.ClusterController ) {
       reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
       Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
       for( String nodeTag : cluster.getNodeTags( ) ) {

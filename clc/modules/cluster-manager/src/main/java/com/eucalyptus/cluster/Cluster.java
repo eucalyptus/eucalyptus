@@ -169,7 +169,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
-    this.threadFactory = Threads.lookup( com.eucalyptus.component.id.Cluster.class, Cluster.class, this.getFullName( ).toString( ) );
+    this.threadFactory = Threads.lookup( com.eucalyptus.component.id.ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
       {
         //when entering state DOWN
@@ -232,7 +232,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public ServiceEndpoint getServiceEndpoint( ) {
-    return Components.lookup( com.eucalyptus.component.id.Cluster.class ).lookupService( this.configuration ).getEndpoint( );
+    return Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupService( this.configuration ).getEndpoint( );
   }
   
   public X509Certificate getClusterCertificate( ) {
@@ -527,7 +527,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
             Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
-                     .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.Cluster.getLogClientPipeline( ) )
+                     .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.ClusterController.getLogClientPipeline( ) )
                      .getResponse( ).get( );
           } else {
             Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );

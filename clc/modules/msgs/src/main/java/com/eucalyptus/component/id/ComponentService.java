@@ -83,15 +83,13 @@ public class ComponentService extends ComponentId.Unpartioned {
   public Boolean hasDispatcher( ) {
     return false;
   }
-  
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-                                                       {
-                                                         this.add( Any.class );
-                                                       }
-                                                     };
-  
+    
   @Override
-  public List<Class<ComponentId>> serviceDependencies( ) {
-    return deps;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Any.class );
+      }
+    };
   }
 }

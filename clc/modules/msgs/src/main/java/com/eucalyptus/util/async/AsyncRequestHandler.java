@@ -35,7 +35,7 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceEndpoint;
-import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
@@ -120,7 +120,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                         add( s );
                       }
                     }
-                    for ( ServiceInfoType s : Components.lookup( Cluster.class ).getServiceSnapshot( localhostAddr ) ) {
+                    for ( ServiceInfoType s : Components.lookup( ClusterController.class ).getServiceSnapshot( localhostAddr ) ) {
                       if ( serviceEndpoint.getParent( ).getServiceConfiguration( ).getPartition( ).equals( s.getPartition( ) ) ) {
                         add( s );
                       }

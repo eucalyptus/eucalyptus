@@ -69,32 +69,30 @@ import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
-  public static final Eucalyptus INCOGNITO = new Eucalyptus( );//NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-  
+  public static final Eucalyptus INCOGNITO = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+                                                                
   @Override
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueue";
   }
-
+  
   @Override
   public Boolean hasDispatcher( ) {
     return true;
   }
-
+  
   @Override
   public Boolean hasCredentials( ) {
     return true;
   }
-
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-    {
-      this.add( Eucalyptus.class );
-    }
-  };
-
-@Override
-public List<Class<ComponentId>> serviceDependencies( ) {
-return deps;
-}
-
+  
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
+  }
+  
 }

@@ -69,11 +69,6 @@ import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
 public class Database extends ComponentId.Unpartioned {
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-                                                       {
-                                                         this.add( Eucalyptus.class );
-                                                       }
-                                                     };
   
   public Database( ) {
     super( "Db" );
@@ -105,7 +100,11 @@ public class Database extends ComponentId.Unpartioned {
   }
   
   @Override
-  public List<Class<ComponentId>> serviceDependencies( ) {
-    return deps;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
 }

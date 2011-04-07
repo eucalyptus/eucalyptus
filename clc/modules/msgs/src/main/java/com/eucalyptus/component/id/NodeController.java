@@ -90,15 +90,13 @@ public class NodeController extends ComponentId {
     return false;
   }
   
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-                                                       {
-                                                         this.add( Cluster.class );
-                                                       }
-                                                     };
-  
   @Override
-  public List<Class<ComponentId>> serviceDependencies( ) {
-    return deps;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( ClusterController.class );
+      }
+    };
   }
   
 }

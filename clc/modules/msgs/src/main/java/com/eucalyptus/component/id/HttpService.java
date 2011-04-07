@@ -68,13 +68,12 @@ import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
-
 public class HttpService extends ComponentId.Unpartioned {
-
+  
   public HttpService( ) {
     super( "Jetty" );
   }
-
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://HttpServer";
@@ -84,7 +83,7 @@ public class HttpService extends ComponentId.Unpartioned {
   public Boolean hasDispatcher( ) {
     return true;
   }
-
+  
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
@@ -94,16 +93,15 @@ public class HttpService extends ComponentId.Unpartioned {
   public Boolean hasCredentials( ) {
     return true;
   }
-
-  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
-    {
-      this.add( Eucalyptus.class );
-    }
-  };
-
-@Override
-public List<Class<ComponentId>> serviceDependencies( ) {
-return deps;
-}
-
+  
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
+    
+  }
+  
 }

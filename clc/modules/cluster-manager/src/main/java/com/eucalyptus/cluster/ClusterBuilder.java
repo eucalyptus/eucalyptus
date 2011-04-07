@@ -41,7 +41,7 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.collect.Iterables;
 
-@DiscoverableServiceBuilder( com.eucalyptus.component.id.Cluster.class )
+@DiscoverableServiceBuilder( com.eucalyptus.component.id.ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   private static Logger LOG                 = Logger.getLogger( ClusterBuilder.class );
@@ -113,7 +113,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public Component getComponent( ) {
-    return Components.lookup( com.eucalyptus.component.id.Cluster.class );
+    return Components.lookup( com.eucalyptus.component.id.ClusterController.class );
   }
   
   @Override
