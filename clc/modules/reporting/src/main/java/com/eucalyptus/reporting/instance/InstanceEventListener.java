@@ -77,7 +77,7 @@ public class InstanceEventListener
 			  if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
 				  for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
 					  entityWrapper.recast(InstanceUsageSnapshot.class).add(ius);
-					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getId());
+					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
 				  }
 				  recentUsageSnapshots.clear();
 				  lastWriteMs = receivedEventMs;
@@ -100,7 +100,7 @@ public class InstanceEventListener
 			for (InstanceUsageSnapshot ius : recentUsageSnapshots) {
 				entityWrapper.add(ius);
 				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
-						+ ius.getId());
+						+ ius.getEntityId());
 			}
 			recentUsageSnapshots.clear();
 			entityWrapper.commit();

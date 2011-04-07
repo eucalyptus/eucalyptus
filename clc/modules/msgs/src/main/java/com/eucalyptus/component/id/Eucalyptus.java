@@ -86,9 +86,15 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
 
-  @Override
-  public List<Class<Eucalyptus>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class );
-  }
-  
+  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
+    {
+      this.add( Eucalyptus.class );
+    }
+  };
+
+@Override
+public List<Class<ComponentId>> serviceDependencies( ) {
+return deps;
+}
+
 }

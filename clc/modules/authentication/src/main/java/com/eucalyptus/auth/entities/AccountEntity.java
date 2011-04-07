@@ -32,7 +32,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   String name;
 
   @Column( name = "auth_account_number", unique = true )
-  Long accountNumber;
+  String accountNumber;
   
   public AccountEntity( ) {
   }
@@ -44,7 +44,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @PrePersist
   public void generateOnCommit() {
-    this.accountNumber = ( long ) ( Math.pow( 10, 12 ) * Math.random( ) );
+    this.accountNumber = String.format( "%012d", ( long ) ( Math.pow( 10, 12 ) * Math.random( ) ) );
   }
 
   public static AccountEntity newInstanceWithId( final String id ) {
@@ -82,12 +82,18 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
     this.name = name;
   }
 
-  public Long getAccountNumber( ) {
+  public String getAccountNumber( ) {
     return this.accountNumber;
   }
 
-  public void setAccountNumber( Long accountNumber ) {
+  public void setAccountNumber( String accountNumber ) {
     this.accountNumber = accountNumber;
+  }
+
+  public static AccountEntity newInstanceWithAccountNumber( String accountNumber ) {
+    AccountEntity a = new AccountEntity( );
+    a.setAccountNumber( accountNumber );
+    return a;
   }
 
 }

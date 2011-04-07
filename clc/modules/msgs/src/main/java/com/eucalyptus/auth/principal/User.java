@@ -76,7 +76,7 @@ import com.eucalyptus.auth.PolicyParseException;
  * @author decker
  *
  */
-public interface User extends HasId, BasePrincipal, Serializable {
+public interface User extends /*HasId, */BasePrincipal, Serializable {
   
   public static final String USER_GROUP_PREFIX = "_";  
   public static final String ACCOUNT_ADMIN = "admin";
@@ -88,6 +88,7 @@ public interface User extends HasId, BasePrincipal, Serializable {
     CONFIRMED,
   }
   
+  public String getUserId( );
   public void setName( String name ) throws AuthException;
   
   public String getPath( );

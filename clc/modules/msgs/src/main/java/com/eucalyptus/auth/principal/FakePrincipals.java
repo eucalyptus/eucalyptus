@@ -89,13 +89,8 @@ public class FakePrincipals {
   }
   public static final Account  NOBODY_ACCOUNT  = new Account( ) {
                                                  @Override
-                                                 public String getId( ) {
-                                                   return NOBODY_ID;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Long getAccountNumber( ) {
-                                                   return NOBODY_ACCOUNT_ID;
+                                                 public String getAccountNumber( ) {
+                                                   return String.format( "%012d", NOBODY_ACCOUNT_ID );
                                                  }
 
                                                  @Override
@@ -159,13 +154,8 @@ public class FakePrincipals {
   
   public static final Account  SYSTEM_ACCOUNT  = new Account( ) {
                                                  @Override
-                                                 public String getId( ) {
-                                                   return SYSTEM_ID;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Long getAccountNumber( ) {
-                                                   return SYSTEM_ACCOUNT_ID;
+                                                 public String getAccountNumber( ) {
+                                                   return String.format( "%012d", SYSTEM_ACCOUNT_ID );
                                                  }
 
                                                  @Override
@@ -230,11 +220,6 @@ public class FakePrincipals {
   public static final User     SYSTEM_USER     = new User( ) {
                                                  private final Certificate       cert  = new Certificate( ) {
                                                                                          @Override
-                                                                                         public String getId( ) {
-                                                                                           return Account.SYSTEM_ACCOUNT;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
                                                                                          public Boolean isActive( ) {
                                                                                            return true;
                                                                                          }
@@ -275,6 +260,11 @@ public class FakePrincipals {
                                                                                          public User getUser( ) throws AuthException {
                                                                                            return FakePrincipals.SYSTEM_USER;
                                                                                          }
+
+                                                                                        @Override
+                                                                                        public String getCertificateId( ) {
+                                                                                          return SYSTEM_ID;
+                                                                                        }
                                                                                        };
                                                  private final List<Certificate> certs = new ArrayList<Certificate>( ) {
                                                                                          {
@@ -283,7 +273,7 @@ public class FakePrincipals {
                                                                                        };
                                                  
                                                  @Override
-                                                 public String getId( ) {
+                                                 public String getUserId( ) {
                                                    return Account.SYSTEM_ACCOUNT;
                                                  }
                                                  
@@ -463,10 +453,6 @@ public class FakePrincipals {
   
   public static final User     NOBODY_USER     = new User( ) {
                                                  private final Certificate       cert  = new Certificate( ) {
-                                                                                         @Override
-                                                                                         public String getId( ) {
-                                                                                           return FakePrincipals.NOBODY_ID;
-                                                                                         }
                                                                                          
                                                                                          @Override
                                                                                          public Boolean isActive( ) {
@@ -509,6 +495,11 @@ public class FakePrincipals {
                                                                                          public User getUser( ) throws AuthException {
                                                                                            return FakePrincipals.NOBODY_USER;
                                                                                          }
+
+                                                                                        @Override
+                                                                                        public String getCertificateId( ) {
+                                                                                          return FakePrincipals.NOBODY_ID;
+                                                                                        }
                                                                                        };
                                                  private final List<Certificate> certs = new ArrayList<Certificate>( ) {
                                                                                          {
@@ -517,7 +508,7 @@ public class FakePrincipals {
                                                                                        };
                                                  
                                                  @Override
-                                                 public String getId( ) {
+                                                 public String getUserId( ) {
                                                    return Account.NOBODY_ACCOUNT;
                                                  }
                                                  

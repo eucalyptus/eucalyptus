@@ -63,14 +63,22 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
 public class Euare extends ComponentId.Unpartioned {
+  
+  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
+                                                       {
+                                                         this.add( Eucalyptus.class );
+                                                       }
+                                                     };
+  
   @Override
-  public List<Class<Eucalyptus>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class );
+  public List<Class<ComponentId>> serviceDependencies( ) {
+    return deps;
   }
   
   @Override

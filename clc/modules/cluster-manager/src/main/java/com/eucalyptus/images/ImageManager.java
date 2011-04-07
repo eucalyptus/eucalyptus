@@ -159,7 +159,7 @@ public class ImageManager {
     ImageUtil.cleanDeregistered( );
     final Context ctx = Contexts.lookup( );
     final Account requestAccount = ctx.getAccount( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountId( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final List<String> imageList = request.getImagesSet( );
     final List<String> owners = request.getOwnersSet( );
     final List<String> executable = request.getExecutableBySet( );
@@ -423,7 +423,7 @@ public class ImageManager {
  * @see {@link com.eucalyptus.auth.Account} for Account ID details
  */
 //        for ( LaunchPermission auth : imgInfo.getPermissions( ) )
-        reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getId( ) ) );
+        reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getAccountNumber( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
         for ( String p : imgInfo.listProductCodes( ) ) {

@@ -5,8 +5,8 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import com.eucalyptus.auth.AuthException;
 
-public interface Certificate extends HasId, Serializable {
-
+public interface  Certificate extends /*HasId,*/ Serializable {
+  public String getCertificateId( );
   public Boolean isActive( );
   public void setActive( Boolean active ) throws AuthException;
   

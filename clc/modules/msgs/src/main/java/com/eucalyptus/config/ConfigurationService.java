@@ -63,6 +63,7 @@
 
 package com.eucalyptus.config;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -84,10 +85,17 @@ public class ConfigurationService extends ComponentId.Unpartioned {
   public Boolean hasDispatcher( ) {
     return true;
   }
+  
+  private static final List<Class<ComponentId>> deps = new ArrayList( ) {
+    {
+      this.add( Eucalyptus.class );
+    }
+  };
 
-  @Override
-  public List<Class<Eucalyptus>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class );
-  }
+@Override
+public List<Class<ComponentId>> serviceDependencies( ) {
+return deps;
+}
+
 
 }

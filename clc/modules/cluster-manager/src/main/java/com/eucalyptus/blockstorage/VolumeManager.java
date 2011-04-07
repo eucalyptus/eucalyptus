@@ -69,11 +69,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -82,18 +79,17 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
@@ -160,7 +156,7 @@ public class VolumeManager {
     String newId = null;
     Volume newVol = null;
     while ( true ) {
-      newId = Crypto.generateId( ctx.getUserFullName( ).getAccountId( ), ID_PREFIX );
+      newId = Crypto.generateId( ctx.getUserFullName( ).getAccountNumber( ), ID_PREFIX );
       try {
         db.getUnique( Volume.named( null, newId ) );
       } catch ( EucalyptusCloudException e ) {
@@ -183,9 +179,11 @@ public class VolumeManager {
       CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
       req.regardingUserRequest( request );
       sc.getDispatcher( ).send( req );
-      EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_CREATE )
-                 .withDetails( newVol.getOwner( ).toString( ), newVol.getDisplayName( ), "size", newVol.getSize( ).toString( ) )
-                 .withDetails( "cluster", newVol.getCluster( ) ).withDetails( "snapshot", newVol.getParentSnapshot( ) ).info( );
+      try {
+        ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, newVol.getSize( ), newVol.getOwnerUserId( ), newVol.getOwnerAccountId( ), newVol.getCluster( ), newVol.getPartition( ) ) );
+      } catch ( EventFailedException ex ) {
+        LOG.error( ex , ex );
+      }
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       try {
@@ -241,9 +239,11 @@ public class VolumeManager {
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
         db.commit( );
-        EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE ).withDetails( vol.getOwner( ).toString( ), vol.getDisplayName( ),
-                                                                                                         "size", vol.getSize( ).toString( ) )
-                          .withDetails( "cluster", vol.getCluster( ) ).withDetails( "snapshot", vol.getParentSnapshot( ) ).info( );
+        try {
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ), vol.getOwnerAccountId( ), vol.getCluster( ), vol.getPartition( ) ) );
+        } catch ( EventFailedException ex ) {
+          LOG.error( ex , ex );
+        }
       } else {
         reallyFailed = true;
         throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
@@ -286,9 +286,11 @@ public class VolumeManager {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
-          EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DELETE )
-                     .withDetails( v.getOwner( ).toString( ), v.getDisplayName( ), "size", v.getSize( ).toString( ) ).withDetails( "cluster", v.getCluster( ) )
-                     .withDetails( "snapshot", v.getParentSnapshot( ) ).info( );
+          try {
+            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ), v.getOwnerAccountId( ), v.getCluster( ), v.getPartition( ) ) );
+          } catch ( EventFailedException ex ) {
+            LOG.error( ex , ex );
+          }
           db.delete( v );
         }
       }

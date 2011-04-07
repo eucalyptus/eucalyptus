@@ -136,7 +136,7 @@ public class EuareService {
       admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
-      account.setAccountId( newAccount.getId( ) );
+      account.setAccountId( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException && AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
@@ -185,7 +185,7 @@ public class EuareService {
       for ( Account account : Accounts.listAllAccounts( ) ) {
         AccountType at = new AccountType( );
         at.setAccountName( account.getName( ) );
-        at.setAccountId( account.getId( ) );
+        at.setAccountId( account.getAccountNumber( ) );
         accounts.add( at );
       }
     } catch ( Exception e ) {
@@ -285,7 +285,7 @@ public class EuareService {
         if ( !cert.isRevoked( ) ) {
           SigningCertificateType c = new SigningCertificateType( );
           c.setUserName( userFound.getName( ) );
-          c.setCertificateId( cert.getId( ) );
+          c.setCertificateId( cert.getCertificateId( ) );
           c.setCertificateBody( B64.url.decString( cert.getPem( ) ) );
           c.setStatus( cert.isActive( ) ? "Active" : "Inactive" );
           c.setUploadDate( cert.getCreateDate( ) );
@@ -325,9 +325,9 @@ public class EuareService {
       for ( Certificate c : userFound.getCertificates( ) ) {
         if ( c.getPem( ).equals( encodedPem ) ) {
           if ( !c.isRevoked( ) ) {
-            throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate: " + c.getId( ) );        
+            throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate: " + c.getCertificateId( ) );        
           } else {
-            userFound.removeCertificate( c.getId( ) );
+            userFound.removeCertificate( c.getCertificateId( ) );
           }
         }
       }
@@ -341,7 +341,7 @@ public class EuareService {
     }
     SigningCertificateType result = reply.getUploadSigningCertificateResult( ).getCertificate( );
     result.setUserName( userFound.getName( ) );
-    result.setCertificateId( cert.getId( ) );
+    result.setCertificateId( cert.getCertificateId( ) );
     result.setCertificateBody( request.getCertificateBody( ) );
     result.setStatus( "Active" );
     result.setUploadDate( cert.getCreateDate( ) );
@@ -853,7 +853,7 @@ public class EuareService {
       for ( AccessKey k : userFound.getKeys( ) ) {
         AccessKeyMetadataType key = new AccessKeyMetadataType( );
         key.setUserName( userFound.getName( ) );
-        key.setAccessKeyId( k.getId( ) );
+        key.setAccessKeyId( k.getAccessKey( ) );
         key.setStatus( k.isActive( ) ? "Active" : "Inactive" );
         keys.add( key );
       }
@@ -1186,7 +1186,7 @@ public class EuareService {
     try {
       AccessKey key = userFound.createKey( );
       AccessKeyType keyResult = reply.getCreateAccessKeyResult( ).getAccessKey( );
-      keyResult.setAccessKeyId( key.getId( ) );
+      keyResult.setAccessKeyId( key.getAccessKey( ) );
       keyResult.setCreateDate( key.getCreateDate( ) );
       keyResult.setSecretAccessKey( key.getSecretKey( ) );
       keyResult.setStatus( key.isActive( ) ? "Active" : "Inactive" );
@@ -1409,7 +1409,7 @@ public class EuareService {
       Certificate cert = userFound.addCertificate( x509 );
       SigningCertificateType result = reply.getCreateSigningCertificateResult( ).getCertificate( );
       result.setUserName( userFound.getName( ) );
-      result.setCertificateId( cert.getId( ) );
+      result.setCertificateId( cert.getCertificateId( ) );
       result.setCertificateBody( X509CertHelper.certificateToPem( x509 ) );
       result.setPrivateKey( X509CertHelper.privateKeyToPem( keyPair.getPrivate( ) ) );
       result.setStatus( "Active" );
@@ -1634,7 +1634,7 @@ public class EuareService {
   
   private void fillUserResult( UserType u, User userFound, Account account ) {
     u.setUserName( userFound.getName( ) );
-    u.setUserId( userFound.getId( ) );
+    u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
   }
@@ -1642,7 +1642,7 @@ public class EuareService {
   private void fillGroupResult( GroupType g, Group groupFound, Account account ) {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName( ) );
-    g.setGroupId( groupFound.getId( ) );
+    g.setGroupId( groupFound.getGroupId( ) );
     g.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath( ), groupFound.getName( ) ) ).toString( ) );
   }
   

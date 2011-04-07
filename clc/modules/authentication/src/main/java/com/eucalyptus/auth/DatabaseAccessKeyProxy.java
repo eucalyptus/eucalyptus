@@ -24,11 +24,6 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   }
   
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
-  }
-  
-  @Override
   public Boolean isActive( ) {
     return this.delegate.isActive( );
   }

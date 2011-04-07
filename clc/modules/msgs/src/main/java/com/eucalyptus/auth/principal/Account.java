@@ -20,7 +20,7 @@ import com.eucalyptus.auth.AuthException;
  * @see {@link com.eucalyptus.auth.Accounts}
  * @see {@link com.eucalyptus.auth.entities.AccountEntity#generateOnCommit()}
  */
-public interface Account extends HasId, BasePrincipal, Serializable {
+public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
   public static final String NOBODY_ACCOUNT = "nobody";
   public static final Long NOBODY_ACCOUNT_ID = 1l;
   /**
@@ -52,5 +52,5 @@ public interface Account extends HasId, BasePrincipal, Serializable {
   public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException;
   public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException;
   
-  public Long getAccountNumber( );
+  public String getAccountNumber( );
 }

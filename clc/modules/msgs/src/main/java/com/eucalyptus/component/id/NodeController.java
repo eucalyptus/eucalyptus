@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -68,22 +68,31 @@ import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
-public class Dns extends ComponentId.Unpartioned {
+public class NodeController extends ComponentId {
+  
+  @Override
+  public Integer getPort( ) {
+    return 8775;
+  }
   
   @Override
   public String getLocalEndpointName( ) {
-    return "vm://DNSControlInternal";
+    return "vm://NodeControllerEndpoint";
+  }
+  
+  @Override
+  public String getUriPattern( ) {
+    return "http://%s:%d/axis2/services/EucalyptusCC";
   }
   
   @Override
   public Boolean hasDispatcher( ) {
-    return true;
+    return false;
   }
   
   private static final List<Class<ComponentId>> deps = new ArrayList( ) {
                                                        {
-                                                         this.add( Eucalyptus.class );
-                                                         this.add( Any.class );
+                                                         this.add( Cluster.class );
                                                        }
                                                      };
   

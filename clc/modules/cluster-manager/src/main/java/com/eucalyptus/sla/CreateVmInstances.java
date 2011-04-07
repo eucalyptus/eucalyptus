@@ -99,7 +99,7 @@ public class CreateVmInstances {
     }
     User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
-    vmAllocInfo.setOwnerId( userFullName.getAccountId( ) );
+    vmAllocInfo.setOwnerId( userFullName.getAccountNumber( ) );
     String action = PolicySpec.requestToAction( request );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances

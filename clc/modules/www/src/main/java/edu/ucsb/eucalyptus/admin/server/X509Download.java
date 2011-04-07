@@ -190,7 +190,7 @@ public class X509Download extends HttpServlet {
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuilder sb = new StringBuilder( );
       //TODO:GRZE:FIXME velocity
-      Long userNumber = u.getAccount( ).getAccountNumber( );
+      String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );      
       try {
         sb.append( "\nexport S3_URL=" + SystemConfiguration.getWalrusUrl( ) );

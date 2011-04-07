@@ -10,8 +10,9 @@ import com.eucalyptus.auth.PolicyParseException;
  * @author wenye
  *
  */
-public interface Group extends HasId, BasePrincipal, Serializable {
+public interface Group extends /*HasId, */BasePrincipal, Serializable {
 
+  public String getGroupId( );
   public void setName( String name ) throws AuthException;
   
   public String getPath( );

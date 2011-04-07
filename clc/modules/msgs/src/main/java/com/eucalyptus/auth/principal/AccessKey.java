@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Date;
 import com.eucalyptus.auth.AuthException;
 
-public interface AccessKey extends HasId, Serializable {
+public interface AccessKey extends /*HasId, */Serializable {
 
   public Boolean isActive( );
   public void setActive( Boolean active ) throws AuthException;

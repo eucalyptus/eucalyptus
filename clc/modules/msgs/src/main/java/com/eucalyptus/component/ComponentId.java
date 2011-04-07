@@ -152,7 +152,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public <T extends ComponentId> List<Class<T>> serviceDependencies( ) {
+  public List<Class<ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }
   
