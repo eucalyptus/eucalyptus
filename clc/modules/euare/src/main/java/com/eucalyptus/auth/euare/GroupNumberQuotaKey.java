@@ -20,7 +20,8 @@ public class GroupNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.IAM_CREATEGROUP.equals( action ) && PolicySpec.IAM_RESOURCE_GROUP.equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_CREATEGROUP ).equals( action ) &&
+         PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP ).equals( resourceType ) ) {
       return true;
     }
     return false;

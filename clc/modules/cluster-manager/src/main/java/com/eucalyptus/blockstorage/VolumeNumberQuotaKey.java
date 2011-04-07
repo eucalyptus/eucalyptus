@@ -21,7 +21,8 @@ public class VolumeNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.EC2_CREATEVOLUME.equals( action ) && PolicySpec.EC2_RESOURCE_VOLUME.equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_CREATEVOLUME ).equals( action ) &&
+         PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME ).equals( resourceType ) ) {
       return true;
     }
     return false;
