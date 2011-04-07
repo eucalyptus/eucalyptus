@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.broker.vmware.VMwareBroker;
 import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /*

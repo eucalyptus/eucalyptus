@@ -100,7 +100,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Cluster;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.id.VMwareBroker;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -332,23 +331,6 @@ public class System extends AbstractPersistent implements Serializable {
   String defaultRamdisk
   @Column( name = "config_system_registration_id" )
   String registrationId
-}
-
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_vmwarebroker" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VMwareBrokerConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
-  private static String DEFAULT_SERVICE_PATH = "/services/VMwareBroker";
-  public VMwareBrokerConfiguration( ) {
-  }
-  public VMwareBrokerConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-  }
-  public ComponentId getComponentId() {
-    return ComponentIds.lookup(VMwareBroker.class);
-  }
 }
 
 @Entity @javax.persistence.Entity
