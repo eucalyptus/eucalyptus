@@ -63,18 +63,19 @@
  */
 package com.eucalyptus.config;
 
-import javax.persistence.Column
-import javax.persistence.MappedSuperclass
-import com.eucalyptus.component.Component
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.Components
-import com.eucalyptus.component.Service
-import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.entities.AbstractPersistent
-import com.eucalyptus.system.Ats
-import com.eucalyptus.util.FullName
-import com.eucalyptus.util.Internets
+import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Internets;
 
 @MappedSuperclass
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
@@ -126,7 +127,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     if( !Ats.from( this ).has( ComponentPart.class ) ) {
       throw new RuntimeException( "BUG: A component configuration must have the @ComponentPart(ComponentId.class) annotation" );
     } else {
-      return Ats.from( this ).get( ComponentPart.class ).value( );
+      return ComponentIds.lookup( Ats.from( this ).get( ComponentPart.class ).value( ) );
     }
   }
   
@@ -153,7 +154,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   public int compareTo(ServiceConfiguration that) {
     //ASAP: FIXME: GRZE useful ordering here plox.
-    return (partition + name).compareTo( that.partition + that.name );
+    return (partition + name).compareTo( that.getPartition( ) + that.getName( ) );
   }
   
   @Override
@@ -173,15 +174,51 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ComponentConfiguration other = ( ComponentConfiguration ) obj;
+  public boolean equals( Object that ) {
+    if ( this == that ) return true;
+    if ( that == null ) return false;
+    if ( !getClass( ).equals( that.getClass( ) ) ) return false;
+    ComponentConfiguration other = ( ComponentConfiguration ) that;
     if ( name == null ) {
       if ( other.name != null ) return false;
     } else if ( !name.equals( other.name ) ) return false;
     return true;
+  }
+
+  public String getPartition( ) {
+    return this.partition;
+  }
+
+  public void setPartition( String partition ) {
+    this.partition = partition;
+  }
+
+  public String getHostName( ) {
+    return this.hostName;
+  }
+
+  public void setHostName( String hostName ) {
+    this.hostName = hostName;
+  }
+
+  public Integer getPort( ) {
+    return this.port;
+  }
+
+  public void setPort( Integer port ) {
+    this.port = port;
+  }
+
+  public String getServicePath( ) {
+    return this.servicePath;
+  }
+
+  public void setServicePath( String servicePath ) {
+    this.servicePath = servicePath;
+  }
+
+  public void setName( String name ) {
+    this.name = name;
   }
 }
   
