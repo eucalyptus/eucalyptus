@@ -126,13 +126,15 @@ public class ServiceContextManager implements EventListener<Event> {
     if ( event instanceof Hertz ) {
       if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
         try {
-          if ( this.shouldReload( ) || this.pendingCount.getAndSet( 0 ) > 0 ) {
+          if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
             Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
               @Override
               public void run( ) {
                 try {
                   ServiceContextManager.this.update( );
-                  ServiceContextManager.this.pendingCount.set( 0 );
+                  if( !ServiceContextManager.this.pendingCount.compareAndSet( 0, 0 ) ) {
+                    
+                  }
                 } catch ( Throwable ex ) {
                   LOG.error( ex, ex );
                 }
@@ -153,11 +155,7 @@ public class ServiceContextManager implements EventListener<Event> {
     List<ComponentId> currentComponentIds = Components.toIds( components );
     if ( this.context == null ) {
       return true;
-    } else if ( currentComponentIds.isEmpty( ) ) {
-      return true;
-    } else if ( !this.enabledCompIds.containsAll( currentComponentIds ) ) {
-      return true;
-    } else if ( this.enabledCompIds.size( ) != currentComponentIds.size( ) ) {
+    } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {
       return true;
     } else {
       return false;
