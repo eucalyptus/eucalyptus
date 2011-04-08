@@ -116,7 +116,7 @@ public class ServiceContextManager implements EventListener<Event> {
   private AtomicInteger                                pendingCount      = new AtomicInteger( 0 );
   private static final ServiceContextManager           singleton         = new ServiceContextManager( );
   
-  private final MuleContextFactory                     contextFactory    = new DefaultMuleContextFactory( );
+  private static final MuleContextFactory              contextFactory    = new DefaultMuleContextFactory( );
   private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
   private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<String, String>( );
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
@@ -229,25 +229,19 @@ public class ServiceContextManager implements EventListener<Event> {
                                     .evaluate( id.getServiceModel( ) );
         ConfigResource configRsc = createConfigResource( component, outString );
         configs.add( configRsc );
-        SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-        try {
-          muleCtx = contextFactory.createMuleContext( builder );
-          this.enabledCompIds.clear( );
-          this.enabledCompIds.addAll( currentComponentIds );
-        } catch ( InitialisationException ex ) {
-          LOG.error( ex, ex );
-          throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
-        } catch ( ConfigurationException ex ) {
-          LOG.error( ex, ex );
-          throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
-        }
-      } catch ( ServiceInitializationException ex ) {
-        LOG.error( ex.getMessage( ), ex );
-        throw ex;
       } catch ( Exception ex ) {
         LOG.error( errMsg + ex.getMessage( ), ex );
         throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
       }
+    }
+    try {
+      SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+      muleCtx = contextFactory.createMuleContext( builder );
+      this.enabledCompIds.clear( );
+      this.enabledCompIds.addAll( currentComponentIds );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex );
     }
     return muleCtx;
   }
