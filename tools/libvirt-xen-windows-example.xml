@@ -12,7 +12,7 @@
   </features>
   <clock offset='localtime'/>
   <on_poweroff>destroy</on_poweroff>
-  <on_reboot>destroy</on_reboot>
+  <on_reboot>restart</on_reboot>
   <on_crash>destroy</on_crash>
     <memory>524288</memory>
     <vcpu>1</vcpu>
@@ -26,7 +26,11 @@
             <driver name='tap' type='aio'/>
             <source file='fully_qualified_path_to_secondary_disk'/>
             <target dev='xvda' bus='xen'/>
-        </disk>-->
+        </disk>
+	<disk type='file' device='floppy'>
+	     <source file='fully_qualified_path_to_floppy_disk'/>
+	     <target dev='fda'/>
+	</disk> -->
         <disk type='file' device='cdrom'>
             <source file='fully_qualified_path_to_iso'/>
             <target dev='hdc'/>

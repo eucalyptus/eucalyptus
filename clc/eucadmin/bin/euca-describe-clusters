@@ -1,11 +1,6 @@
 #!/usr/bin/env python
-import sys
-from eucadmin.clusters import Cluster
-
-def main():
-  c = Cluster().cli_describe()
-  sys.exit()
+import eucadmin.describeclusters
 
 if __name__ == "__main__":
-  main()
- 
+    r = eucadmin.describeclusters.DescribeClusters()
+    r.main_cli()

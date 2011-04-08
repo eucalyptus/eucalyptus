@@ -34,7 +34,7 @@ from boto.exception import EC2ResponseError
 from eucadmin.generic import BooleanResponse
 from eucadmin.generic import StringList
 from boto.resultset import ResultSet
-from eucadmin import EucaAdmin
+from eucadmin import EucAdmin
 from optparse import OptionParser
 
 SERVICE_PATH = '/services/Accounts'
@@ -45,7 +45,7 @@ class Group():
     self.group_groupName = groupName
     self.group_users = StringList()
     self.group_auths = StringList()
-    self.euca = EucaAdmin(path=SERVICE_PATH)
+    self.euca = EucAdmin(path=SERVICE_PATH)
           
   def __repr__(self):
     r = 'GROUP      \t%s\t' % (self.group_groupName)
