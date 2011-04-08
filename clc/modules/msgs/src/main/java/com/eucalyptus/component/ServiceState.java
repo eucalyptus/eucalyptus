@@ -265,8 +265,8 @@ public class ServiceState {
         on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( LOAD_TRANSITION );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( START_TRANSITION );
-        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines ).add( restartServiceContext ).run( ENABLE_TRANSITION );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines ).add( restartServiceContext ).run( DISABLE_TRANSITION );
+        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines, restartServiceContext ).run( ENABLE_TRANSITION );
+        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines, restartServiceContext ).run( DISABLE_TRANSITION );
         on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( STOP_TRANSITION );
         on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( DESTROY_TRANSITION );
         on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( CHECK_TRANSITION );

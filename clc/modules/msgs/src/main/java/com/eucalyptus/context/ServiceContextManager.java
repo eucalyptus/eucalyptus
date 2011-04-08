@@ -151,10 +151,8 @@ public class ServiceContextManager implements EventListener<Event> {
                 }
               }
             } );
-          } else {
-            if ( this.shouldReload( ) ) {
-              this.pendingCount.incrementAndGet( );
-            }
+          } else if ( this.shouldReload( ) ) {
+            this.pendingCount.incrementAndGet( );
           }
         } finally {
           this.canHasWrite.unlock( );
