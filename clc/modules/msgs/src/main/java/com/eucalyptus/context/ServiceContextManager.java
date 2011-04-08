@@ -177,10 +177,6 @@ public class ServiceContextManager implements EventListener<Event> {
     }
   }
   
-  public static final void start( ) {
-    restart( );
-  }
-  
   public static final void restart( ) {
     singleton.pendingCount.incrementAndGet( );
   }
@@ -281,7 +277,7 @@ public class ServiceContextManager implements EventListener<Event> {
     singleton.canHasRead.lock( );
     try {
       if ( singleton.context == null ) {
-        start( );
+        restart( );
       }
       return singleton.context;
     } finally {

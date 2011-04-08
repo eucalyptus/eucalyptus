@@ -446,7 +446,6 @@ public class Component implements HasName<Component> {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
                 future.set( Component.this );
-                ServiceContextManager.restart( );
               } catch ( Throwable ex ) {
                 future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
@@ -462,7 +461,6 @@ public class Component implements HasName<Component> {
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
           CheckedListenableFuture<Component> ret = Component.this.stateMachine.transition( State.ENABLED );
-          ServiceContextManager.restart( );
           return ret;
         } catch ( Throwable ex ) {
           final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
@@ -483,7 +481,6 @@ public class Component implements HasName<Component> {
     if ( config.isLocal( ) ) {
       try {
         CheckedListenableFuture<Component> ret = this.stateMachine.transition( State.DISABLED );
-        ServiceContextManager.restart( );
         return ret;
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
