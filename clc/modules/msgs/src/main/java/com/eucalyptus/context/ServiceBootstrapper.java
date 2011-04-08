@@ -84,7 +84,13 @@ public class ServiceBootstrapper extends Bootstrapper {
   
   @Override
   public boolean start( ) throws Exception {
-    return ServiceContextManager.startup( );
+    try {
+      ServiceContextManager.start( );
+      return true;
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      throw ex;
+    }
   }
   
   /**

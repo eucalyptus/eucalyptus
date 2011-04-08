@@ -252,10 +252,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.modelContent;
   }
   
-  public final Reader getServiceModelAsReader( ) {
-    return new StringReader( this.modelContent );
-  }
-  
   public String getServiceModelFileName( ) {
     return String.format( "%s-model.xml", this.getName( ) );
   }
