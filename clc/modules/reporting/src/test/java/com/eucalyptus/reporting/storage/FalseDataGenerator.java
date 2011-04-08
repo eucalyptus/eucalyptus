@@ -3,7 +3,7 @@ package com.eucalyptus.reporting.storage;
 import java.util.*;
 
 import com.eucalyptus.reporting.*;
-import com.eucalyptus.reporting.event.*;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
@@ -57,7 +57,7 @@ public class FalseDataGenerator
 		}
 
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -65,6 +65,94 @@ public class FalseDataGenerator
 		reportingBootstrapper.stop();
 
 	}
+	
+	
+	private static final long CORRECT_SIZE = 145000l;
+	private static final long CORRECT_TIME  = 460000000l;
+	private static final double ERROR_FACTOR = 0.2;
+	private static final double TIME_ERROR_FACTOR = 0.2;
+	
+	private static final long RANGE = MAX_MS - START_TIME;
+	private static final long DISTANCE =  RANGE / 5;
+
+	private static final int NUM_TESTS = 16;
+
+	public static void testFalseData()
+	{
+		System.out.println(" ----> TESTING FALSE DATA");
+
+		StorageUsageLog usageLog = StorageUsageLog.getStorageUsageLog();
+		Map<String, StorageUsageSummary> summary = usageLog.scanSummarize(new Period(START_TIME, MAX_MS), GroupByCriterion.USER);
+		for (String key: summary.keySet()) {
+			StorageUsageSummary sus = summary.get(key);
+			long totalSize = sus.getObjectsMegsMax()
+					+ sus.getSnapshotsMegsMax() + sus.getVolumesMegsMax();
+			long totalTime = sus.getObjectsMegsSecs()
+					+ sus.getSnapshotsMegsSecs() + sus.getVolumesMegsSecs();
+			System.out.printf("%s: %d,%d\n", key, totalSize, totalTime);
+		}
+
+		final Random rand = new Random();
+		for (int i=0; i<NUM_TESTS; i++) {
+
+			/* Calculate a random range of starting and ending times, of at
+			 * least a certain duration and within the range of generated false
+			 * data.
+			 */
+			final long lowerBound = rand.nextInt((int)(RANGE - DISTANCE)) + START_TIME;
+			final long upperBound = rand.nextInt((int)(MAX_MS - (lowerBound + DISTANCE))) + lowerBound + DISTANCE;
+			final double fraction =  ((double)upperBound - (double)lowerBound) / ((double)MAX_MS - (double)START_TIME);
+			final double adjustedCorrectSize = (double)CORRECT_SIZE*fraction;
+			final double adjustedCorrectTime  = (double)CORRECT_TIME*fraction;
+			final double adjustedError = ERROR_FACTOR * (1.0 + (1.0-fraction));
+			final double adjustedTimeError = TIME_ERROR_FACTOR * (1.0 + (1.0-fraction));
+
+			System.out.printf("#:%3d correct:(%d,%d) fraction:%3.3f adjusted:(%3.3f , %3.3f)"
+					   + " adjustedError:(%3.3f , %3.3f)\n",
+					i, CORRECT_SIZE, CORRECT_TIME,
+					fraction, adjustedCorrectSize, adjustedCorrectTime,
+					adjustedError, adjustedTimeError);
+
+			summary = usageLog.scanSummarize(new Period(lowerBound, upperBound), GroupByCriterion.USER);
+			for (String userId: summary.keySet()) {
+				StorageUsageSummary sus = summary.get(userId);
+				long totalSize = sus.getObjectsMegsMax() + sus.getSnapshotsMegsMax()
+						+ sus.getVolumesMegsMax();
+				long totalTime = sus.getObjectsMegsSecs() + sus.getSnapshotsMegsSecs()
+						+ sus.getVolumesMegsSecs();
+
+				final double sizeError = (double)totalSize / adjustedCorrectSize;
+				final double timeError = (double)totalTime / adjustedCorrectTime;;
+				final boolean sizeWithin = isWithinError(totalSize, adjustedCorrectSize, adjustedError);
+				final boolean timeWithin = isWithinError(totalTime, adjustedCorrectTime, adjustedError);
+
+				System.out.printf(" %8s:(%d/%3.3f , %d/%3.3f) " +
+						  "error:(%3.3f,%3.3f) isWithin:(%s,%s)\n",
+						userId, totalSize, adjustedCorrectSize,
+						totalTime, adjustedCorrectTime,
+						sizeError, timeError,
+						sizeWithin, timeWithin);
+
+				if (!sizeWithin || !timeWithin)
+				{
+					throw new RuntimeException("Incorrect result for user:" + userId);
+				}
+			}
+		}
+	}
+
+	private static boolean isWithinError(long val, long correctVal, double errorPercent)
+	{
+		return isWithinError((double)val, (double)correctVal, errorPercent);
+	}
+
+	private static boolean isWithinError(double val, double correctVal, double errorPercent)
+	{
+		return correctVal * (1-errorPercent) < val
+				&& val < correctVal * (1+errorPercent);
+	}
+
+
 	
 	public static void removeFalseData()
 	{
@@ -88,9 +176,11 @@ public class FalseDataGenerator
 
 	public static void runTest()
 	{
+		System.out.println("----> Running tests...");
 		removeFalseData();
 		printFalseData();
 		generateFalseData();
+		testFalseData();
 		printFalseData();
 		removeFalseData();
 	}
