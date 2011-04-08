@@ -107,8 +107,8 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Templates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.concurrent.locks.Lock;
-import edu.emory.mathcs.backport.java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ServiceContextManager implements EventListener<Event> {
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
@@ -139,7 +139,7 @@ public class ServiceContextManager implements EventListener<Event> {
       if ( this.shouldReload( ) ) {
         this.pendingCount.incrementAndGet( );
       }
-      if ( Bootstrap.isFinished( ) && this.pendingCount.get( ) > 0 ) {
+      if ( Bootstrap.isFinished( ) && this.pendingCount.get( ) > 0 && this.canHasWrite.tryLock( ) ) {
         Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {

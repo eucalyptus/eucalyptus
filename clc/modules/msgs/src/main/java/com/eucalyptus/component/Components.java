@@ -116,9 +116,6 @@ public class Components {
                                                          public boolean apply( Component c ) {
                                                            boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
                                                            boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-                                                           EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO,
-                                                                                               c.getName( ), "cloud-local", cloudLocal, "always-local",
-                                                                                               alwaysLocal ).debug( );
                                                            return cloudLocal || alwaysLocal;
                                                          }
                                                        };
@@ -141,9 +138,6 @@ public class Components {
                                                             boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
                                                             boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
                                                             boolean runningLocal = c.hasServiceEnabled( );
-                                                            EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ),
-                                                                                "cloud-local",
-                                                                                cloudLocal, "always-local", alwaysLocal, "running-locally", runningLocal ).debug( );
                                                             return cloudLocal || alwaysLocal || runningLocal;
                                                           }
                                                         };
