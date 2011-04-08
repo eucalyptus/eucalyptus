@@ -118,7 +118,6 @@ public class ServiceContextManager implements EventListener<Event> {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
-    
   }
   
   @Override
@@ -270,22 +269,26 @@ public class ServiceContextManager implements EventListener<Event> {
     }
   }
   
-  public static void shutdown( ) {
-    ListenerRegistry.getInstance( ).deregister( Hertz.class, singleton );
-    singleton.canHasWrite.lock( );
+  private void stop( ) {
+    this.canHasWrite.lock( );
     try {
-      if ( singleton.context != null ) {
+      if ( this.context != null ) {
         try {
-          singleton.context.stop( );
-          singleton.context.dispose( );
-          singleton.context = null;
-        } catch ( Exception ex ) {
-          LOG.trace( ex, ex );
+          this.context.stop( );
+          this.context.dispose( );
+        } catch ( MuleException ex ) {
+          LOG.error( ex, ex );
         }
+        this.context = null;
       }
     } finally {
-      singleton.canHasWrite.unlock( );
+      this.canHasWrite.unlock( );
     }
+  }
+  
+  public static void shutdown( ) {
+    ListenerRegistry.getInstance( ).deregister( Hertz.class, singleton );
+    singleton.shutdown( );
   }
   
   public static String mapServiceToEndpoint( String service ) {

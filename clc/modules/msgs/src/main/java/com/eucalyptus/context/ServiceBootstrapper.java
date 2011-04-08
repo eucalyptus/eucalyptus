@@ -106,7 +106,6 @@ public class ServiceBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean stop( ) throws Exception {
-    ServiceContextManager.shutdown( );
     return true;
   }
   
