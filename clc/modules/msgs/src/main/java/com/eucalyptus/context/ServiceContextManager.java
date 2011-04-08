@@ -143,12 +143,18 @@ public class ServiceContextManager implements EventListener<Event> {
         Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
-            Integer pending = ServiceContextManager.this.pendingCount.getAndSet( 0 );
-            if ( pending > 0 && ServiceContextManager.this.canHasWrite.tryLock( ) ) {
-              try {
-                ServiceContextManager.this.update( );
-              } catch ( Throwable ex ) {
-                LOG.error( ex, ex );
+            Integer pending = ServiceContextManager.this.pendingCount.get( );
+            try {
+              if ( pending > 0 && ServiceContextManager.this.canHasWrite.tryLock( ) ) {
+                try {
+                  ServiceContextManager.this.update( );
+                } catch ( Throwable ex ) {
+                  LOG.error( ex, ex );
+                }
+              }
+            } finally {
+              if( !ServiceContextManager.this.pendingCount.compareAndSet( 0, 0 ) ) {
+                ServiceContextManager.this.pendingCount.set( 0 );
               }
             }
           }
