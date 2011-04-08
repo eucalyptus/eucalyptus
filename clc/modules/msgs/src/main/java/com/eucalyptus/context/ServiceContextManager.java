@@ -111,12 +111,12 @@ import edu.emory.mathcs.backport.java.util.concurrent.locks.Lock;
 import edu.emory.mathcs.backport.java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ServiceContextManager implements EventListener<Event> {
-  private static final MuleContextFactory              contextFactory    = new DefaultMuleContextFactory( );
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
   private static Logger                                LOG               = Logger.getLogger( ServiceContextManager.class );
   private AtomicInteger                                pendingCount      = new AtomicInteger( 0 );
   private static final ServiceContextManager           singleton         = new ServiceContextManager( );
   
+  private final MuleContextFactory                     contextFactory    = new DefaultMuleContextFactory( );
   private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
   private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<String, String>( );
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
