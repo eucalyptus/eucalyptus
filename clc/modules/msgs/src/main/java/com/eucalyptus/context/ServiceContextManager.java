@@ -137,9 +137,9 @@ public class ServiceContextManager implements EventListener<Event> {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz ) {
-      if ( this.canHasWrite.tryLock( ) ) {
+      if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
         try {
-          if ( Bootstrap.isFinished( ) && this.pendingCount.getAndSet( 0 ) > 0 ) {
+          if ( this.pendingCount.getAndSet( 0 ) > 0 ) {
             Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
               @Override
               public void run( ) {
@@ -151,12 +151,14 @@ public class ServiceContextManager implements EventListener<Event> {
                 }
               }
             } );
+          } else {
+            if ( this.shouldReload( ) ) {
+              this.pendingCount.incrementAndGet( );
+            }
           }
         } finally {
           this.canHasWrite.unlock( );
         }
-      } else if ( this.shouldReload( ) ) {
-        this.pendingCount.incrementAndGet( );
       }
     }
   }

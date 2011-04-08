@@ -992,4 +992,8 @@ public class Component implements HasName<Component> {
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
   }
+
+  public boolean checkTransition( Transition transition ) {
+    return this.stateMachine.checkTransition( transition );
+  }
 }
