@@ -287,6 +287,7 @@ public class ServiceContextManager implements EventListener<Event> {
         try {
           singleton.context.stop( );
           singleton.context.dispose( );
+          singleton.context = null;
         } catch ( Exception ex ) {
           LOG.trace( ex, ex );
         }
