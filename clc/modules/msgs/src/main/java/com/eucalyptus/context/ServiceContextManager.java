@@ -64,35 +64,24 @@
 package com.eucalyptus.context;
 
 import java.io.ByteArrayInputStream;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.RuntimeConstants;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
-import org.mule.api.config.ConfigurationException;
 import org.mule.api.context.MuleContextFactory;
 import org.mule.api.endpoint.InboundEndpoint;
-import org.mule.api.lifecycle.InitialisationException;
 import org.mule.api.service.Service;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
@@ -107,8 +96,6 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Templates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ServiceContextManager implements EventListener<Event> {
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
@@ -139,7 +126,7 @@ public class ServiceContextManager implements EventListener<Event> {
     if ( event instanceof Hertz ) {
       if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
         try {
-          if ( this.pendingCount.getAndSet( 0 ) > 0 ) {
+          if ( this.shouldReload( ) || this.pendingCount.getAndSet( 0 ) > 0 ) {
             Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
               @Override
               public void run( ) {
