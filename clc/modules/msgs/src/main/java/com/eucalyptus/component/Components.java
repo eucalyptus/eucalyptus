@@ -153,7 +153,7 @@ public class Components {
    * 
    * @return
    */
-  public static List<Component> whichAreLocal( ) {
+  public static List<Component> whichAreEnabledLocally( ) {
     return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED_LOCAL ) );
   }
   
@@ -175,7 +175,7 @@ public class Components {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static List<Component> list( ) {
+  public static List<Component> list( ) {//TODO:GRZE:ASAP: review all usage of this and replace with Components.whichAre...
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
