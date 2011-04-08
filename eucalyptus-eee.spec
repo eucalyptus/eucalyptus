@@ -490,6 +490,20 @@ then
 fi
 
 %post
+# we need a eucalyptus user
+if ! getent passwd eucalyptus > /dev/null ; then
+%if %is_suse
+    groupadd eucalyptus
+    useradd -M eucalyptus -g eucalyptus
+%endif
+%if %is_centos
+    adduser -M eucalyptus
+%endif
+%if %is_fedora
+    adduser -U --system eucalyptus
+%endif
+fi
+
 # set up udev iscsi config
 mkdir -p /etc/udev/rules.d/
 cp /usr/share/eucalyptus/udev/55-openiscsi.rules /etc/udev/rules.d/
@@ -516,20 +530,6 @@ chmod +x /etc/udev/scripts/iscsidev.sh
 
 # set java home to location of SunJDK for EEE
 sed -i 's#.*CLOUD_OPTS=.*#CLOUD_OPTS="--java-home=/usr/java/latest"#' /etc/eucalyptus/eucalyptus.conf
-
-# we need a eucalyptus user
-if ! getent passwd eucalyptus > /dev/null ; then
-%if %is_suse
-    groupadd eucalyptus
-    useradd -M eucalyptus -g eucalyptus
-%endif
-%if %is_centos
-    adduser -M eucalyptus
-%endif
-%if %is_fedora
-    adduser -U --system eucalyptus
-%endif
-fi
 
 if [ "$1" = "1" ];
 then
