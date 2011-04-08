@@ -137,19 +137,21 @@ public class ServiceContextManager implements EventListener<Event> {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz ) {
-      if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) && this.pendingCount.getAndSet( 0 ) > 0 ) {
+      if ( this.canHasWrite.tryLock( ) ) {
         try {
-          Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                ServiceContextManager.this.update( );
-                ServiceContextManager.this.pendingCount.set( 0 );
-              } catch ( Throwable ex ) {
-                LOG.error( ex, ex );
+          if ( Bootstrap.isFinished( ) && this.pendingCount.getAndSet( 0 ) > 0 ) {
+            Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+              @Override
+              public void run( ) {
+                try {
+                  ServiceContextManager.this.update( );
+                  ServiceContextManager.this.pendingCount.set( 0 );
+                } catch ( Throwable ex ) {
+                  LOG.error( ex, ex );
+                }
               }
-            }
-          } );
+            } );
+          }
         } finally {
           this.canHasWrite.unlock( );
         }
@@ -218,34 +220,39 @@ public class ServiceContextManager implements EventListener<Event> {
   }
   
   private MuleContext createContext( List<Component> components, List<ComponentId> currentComponentIds ) throws ServiceInitializationException {
-    Set<ConfigResource> configs = Sets.newHashSet( );
-    MuleContext muleCtx = null;
-    for ( Component component : components ) {
-      ComponentId id = component.getComponentId( );
-      String errMsg = "Failed to render model for: " + component.getComponentId( ) + " because of: ";
-      LOG.info( "-> Rendering configuration for " + component.getComponentId( ).name( ) );
-      try {
-        String outString = Templates.prepare( id.getServiceModelFileName( ) )
-                                    .withProperty( "components", Components.toIds( components ) )
-                                    .withProperty( "thisComponent", id )
-                                    .evaluate( id.getServiceModel( ) );
-        ConfigResource configRsc = createConfigResource( component, outString );
-        configs.add( configRsc );
-      } catch ( Exception ex ) {
-        LOG.error( errMsg + ex.getMessage( ), ex );
-        throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
-      }
-    }
+    this.canHasWrite.lock( );
     try {
-      SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-      muleCtx = contextFactory.createMuleContext( builder );
-      this.enabledCompIds.clear( );
-      this.enabledCompIds.addAll( currentComponentIds );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex );
+      Set<ConfigResource> configs = Sets.newHashSet( );
+      MuleContext muleCtx = null;
+      for ( Component component : components ) {
+        ComponentId id = component.getComponentId( );
+        String errMsg = "Failed to render model for: " + component.getComponentId( ) + " because of: ";
+        LOG.info( "-> Rendering configuration for " + component.getComponentId( ).name( ) );
+        try {
+          String outString = Templates.prepare( id.getServiceModelFileName( ) )
+                                      .withProperty( "components", Components.toIds( components ) )
+                                      .withProperty( "thisComponent", id )
+                                      .evaluate( id.getServiceModel( ) );
+          ConfigResource configRsc = createConfigResource( component, outString );
+          configs.add( configRsc );
+        } catch ( Exception ex ) {
+          LOG.error( errMsg + ex.getMessage( ), ex );
+          throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
+        }
+      }
+      try {
+        SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+        muleCtx = contextFactory.createMuleContext( builder );
+        this.enabledCompIds.clear( );
+        this.enabledCompIds.addAll( currentComponentIds );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex );
+      }
+      return muleCtx;
+    } finally {
+      this.canHasWrite.unlock( );
     }
-    return muleCtx;
   }
   
   private static ConfigResource createConfigResource( Component component, String outString ) {
