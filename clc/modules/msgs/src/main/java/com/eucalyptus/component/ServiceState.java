@@ -83,8 +83,8 @@ import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.ws.util.PipelineRegistry;
 import com.google.common.base.Predicate;
 
-public class ComponentState {
-  private static Logger                                         LOG                   = Logger.getLogger( ComponentState.class );
+public class ServiceState {
+  private static Logger                                         LOG                   = Logger.getLogger( ServiceState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
   private Component.State                                       goal                  = Component.State.ENABLED;                 //TODO:GRZE:OMGFIXME
@@ -245,7 +245,7 @@ public class ComponentState {
                                                                                         }
                                                                                       } );
   
-  public ComponentState( Component parent ) {
+  public ServiceState( Component parent ) {
     this.parent = parent;
     this.stateMachine = this.buildStateMachine( );
   }
