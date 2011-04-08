@@ -47,12 +47,6 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
     this.accountNumber = String.format( "%012d", ( long ) ( Math.pow( 10, 12 ) * Math.random( ) ) );
   }
 
-  public static AccountEntity newInstanceWithId( final String id ) {
-    AccountEntity a = new AccountEntity( );
-    a.setId( id );
-    return a;
-  }
-
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
