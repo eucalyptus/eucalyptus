@@ -115,15 +115,6 @@ public class FalseDataGenerator
 	private static final long RANGE = MAX_MS - START_TIME;
 	private static final long DISTANCE =  RANGE / 5;
 
-	public static void testRanges()
-	{
-		System.out.printf("----> Range:%d Distance:%d\n", RANGE, DISTANCE);
-		
-		for (int i=0; i<100; i++) {
-
-		}
-	}
-	
 	private static final int NUM_TESTS = 16;
 
 	public static void testFalseData()
