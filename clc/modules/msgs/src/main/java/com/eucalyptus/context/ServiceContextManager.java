@@ -288,7 +288,7 @@ public class ServiceContextManager implements EventListener<Event> {
   
   public static void shutdown( ) {
     ListenerRegistry.getInstance( ).deregister( Hertz.class, singleton );
-    singleton.shutdown( );
+    singleton.stop( );
   }
   
   public static String mapServiceToEndpoint( String service ) {
