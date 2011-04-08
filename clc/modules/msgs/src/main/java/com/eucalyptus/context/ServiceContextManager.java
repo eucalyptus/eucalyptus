@@ -131,6 +131,7 @@ public class ServiceContextManager implements EventListener<Event> {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+    
   }
   
   @Override
@@ -265,7 +266,7 @@ public class ServiceContextManager implements EventListener<Event> {
     try {
       return singleton.client;
     } finally {
-      singleton.canHasRead.lock( );
+      singleton.canHasRead.unlock( );
     }
   }
   
@@ -277,11 +278,12 @@ public class ServiceContextManager implements EventListener<Event> {
       }
       return singleton.context;
     } finally {
-      singleton.canHasRead.lock( );
+      singleton.canHasRead.unlock( );
     }
   }
   
   public static void shutdown( ) {
+    ListenerRegistry.getInstance( ).deregister( Hertz.class, singleton );
     singleton.canHasWrite.lock( );
     try {
       if ( singleton.context != null ) {
@@ -309,7 +311,7 @@ public class ServiceContextManager implements EventListener<Event> {
       }
       return dest;
     } finally {
-      singleton.canHasRead.lock( );
+      singleton.canHasRead.unlock( );
     }
   }
   
@@ -326,7 +328,7 @@ public class ServiceContextManager implements EventListener<Event> {
       }
       return dest;
     } finally {
-      singleton.canHasRead.lock( );
+      singleton.canHasRead.unlock( );
     }
   }
   
