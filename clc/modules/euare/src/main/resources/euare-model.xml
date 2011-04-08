@@ -46,7 +46,7 @@
 		OF THE CODE SO IDENTIFIED, OR ~ WITHDRAWAL OF THE CODE CAPABILITY TO
 		THE EXTENT NEEDED TO COMPLY WITH ~ ANY SUCH LICENSES OR RIGHTS.
 		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		~ Author: Neil Soman neil@eucalyptus.com
+		~ Author: Ye Wen wenye@eucalyptus.com
 	-->
 <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
@@ -59,10 +59,10 @@
 
   <euca:endpoint name="EuareControllerWS"
                  connector-ref="eucaws"
-                 address="http://127.0.0.1:${euca.ws.port}/services/Euare"/>
+                 address="http://127.0.0.1:8773/services/Euare"/>
   <euca:endpoint name="EuareInternalWS"
                  connector-ref="eucaws"
-                 address="http://127.0.0.1:${euca.ws.port}/internal/EuareInternal"
+                 address="http://127.0.0.1:8773/internal/EuareInternal"
                  synchronous="true"/>
 
   <endpoint name="EuareWS" address="vm://Euare" synchronous="false"/>
