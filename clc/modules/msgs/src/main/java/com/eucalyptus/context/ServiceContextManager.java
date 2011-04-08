@@ -89,9 +89,15 @@ import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
@@ -110,7 +116,7 @@ public class ServiceContextManager {
     ve.setProperty( "runtime.log.logsystem.log4j.logger", ServiceContextManager.class.toString( ) );
     ve.init( );
   }
-  private static List<ComponentId>                            last                           = Lists.newArrayList( );
+  private static List<Component>                              last                           = Lists.newArrayList( );
   private static Integer                                      SERVICE_CONTEXT_RELOAD_TIMEOUT = 10 * 1000;
   private static String                                       FAIL_MSG                       = "ESB client not ready because the service bus has not been started.";
   private static final AtomicMarkableReference<MuleContext>   context                        = new AtomicMarkableReference<MuleContext>( null, false );
@@ -118,6 +124,7 @@ public class ServiceContextManager {
   private static final ConcurrentNavigableMap<String, String> serviceToEndpoint              = new ConcurrentSkipListMap<String, String>( );
   private static final MuleContextFactory                     contextFactory                 = new DefaultMuleContextFactory( );
   private static SpringXmlConfigurationBuilder                builder;
+  private static SpringXmlConfigurationBuilder                oldBuilder;
   
   private static final AtomicReference<MuleClient>            client                         = new AtomicReference<MuleClient>( null );
   private static final ThreadPool                             ctxMgmtThreadPool              = Threads.lookup( Empyrean.class, ServiceContext.class ).limitTo( 1 );
@@ -135,43 +142,36 @@ public class ServiceContextManager {
     }
   }
   
-  private static volatile Callable<MuleContext> caller;
-  
   public static final void restart( ) {
-    if ( !Bootstrap.isFinished( ) && caller == null ) {
-      caller = new Callable<MuleContext>( ) {
+    if ( !Bootstrap.isFinished( ) ) {
+//      caller = new Callable<MuleContext>( ) {
+//        @Override
+//        public MuleContext call( ) throws Exception {
+//          try {
+//            while ( !Bootstrap.isFinished( ) ) {
+//              TimeUnit.MILLISECONDS.sleep( 30 );
+//            }
+//            startup( );
+//          } catch ( Throwable ex ) {
+//            LOG.error( ex, ex );
+//          }
+//          return context.getReference( );
+//        }
+//      };
+//      ctxMgmtThreadPool.submit( caller );
+      LOG.error( "Ignoring spurious context restart trigger duing system bootstrap." );
+    } else {
+      ctxMgmtThreadPool.submit( new Callable<MuleContext>( ) {
         @Override
         public MuleContext call( ) throws Exception {
           try {
-            while ( !Bootstrap.isFinished( ) ) {
-              TimeUnit.MILLISECONDS.sleep( 30 );
-            }
             startup( );
           } catch ( Throwable ex ) {
             LOG.error( ex, ex );
           }
           return context.getReference( );
         }
-      };
-      ctxMgmtThreadPool.submit( caller );
-    } else if ( !Bootstrap.isFinished( ) ) {} else {
-      if ( caller == null ) {
-        caller = new Callable<MuleContext>( ) {
-          @Override
-          public MuleContext call( ) throws Exception {
-            try {
-              while ( !Bootstrap.isFinished( ) ) {
-                TimeUnit.MILLISECONDS.sleep( 30 );
-              }
-              startup( );
-            } catch ( Throwable ex ) {
-              LOG.error( ex, ex );
-            }
-            return context.getReference( );
-          }
-        };
-      }
-      ctxMgmtThreadPool.submit( caller );
+      } );
     }
   }
   
@@ -199,10 +199,10 @@ public class ServiceContextManager {
   }
   
   static boolean loadContext( ) {
-    List<ComponentId> components = ComponentIds.listLocallyRynning( );
     LOG.info( "The following components have been identified as active: " );
-    for ( ComponentId c : components ) {
-      LOG.info( "-> " + c );
+    List<Component> components = Components.whichAreEnabledLocally( );
+    for ( Component c : components ) {
+      LOG.info( "-> " + c.getComponentId( ) );
     }
     Set<ConfigResource> configs;
     try {
@@ -211,28 +211,34 @@ public class ServiceContextManager {
         LOG.info( "-> Rendered cfg: " + cfg.getResourceName( ) );
       }
       try {
-        builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+        if ( builder != null ) {
+          oldBuilder = builder;
+        } else {
+          builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+        }
       } catch ( Exception e ) {
+        if ( oldBuilder != null ) {
+          builder = oldBuilder;
+        }
         LOG.fatal( "Failed to bootstrap services.", e );
         return false;
       }
     } catch ( Throwable ex ) {
       LOG.error( ex, ex );
-      System.exit( 1 );
     }
     return true;
   }
   
-  private static Set<ConfigResource> renderServiceConfigurations( List<ComponentId> components ) {
+  private static Set<ConfigResource> renderServiceConfigurations( List<Component> components ) {
     Set<ConfigResource> configs = Sets.newHashSet( );
-    for ( ComponentId thisComponent : components ) {
+    for ( Component component : components ) {
       VelocityContext context = new VelocityContext( );
-      context.put( "components", components );
-      context.put( "thisComponent", thisComponent );
-      LOG.info( "-> Rendering configuration for " + thisComponent.name( ) );
+      context.put( "components", Components.toIds( components ) );
+      context.put( "thisComponent", component.getComponentId( ) );
+      LOG.info( "-> Rendering configuration for " + component.getComponentId( ).name( ) );
       StringWriter out = new StringWriter( );
       try {
-        ve.evaluate( context, out, thisComponent.getServiceModelFileName( ), thisComponent.getServiceModelAsReader( ) );
+        ve.evaluate( context, out, component.getComponentId( ).getServiceModelFileName( ), component.getComponentId( ).getServiceModelAsReader( ) );
         out.flush( );
         out.close( );
         String outString = out.toString( );
@@ -242,10 +248,10 @@ public class ServiceContextManager {
           CONFIG_LOG.trace( outString );
           CONFIG_LOG.trace( "===================================" );
         }
-        ConfigResource configRsc = new ConfigResource( thisComponent.getServiceModelFileName( ), bis );
+        ConfigResource configRsc = new ConfigResource( component.getComponentId( ).getServiceModelFileName( ), bis );
         configs.add( configRsc );
       } catch ( Throwable ex ) {
-        LOG.error( "Failed to render service model configuration for: " + thisComponent + " because of: " + ex.getMessage( ), ex );
+        LOG.error( "Failed to render service model configuration for: " + component.getComponentId( ) + " because of: " + ex.getMessage( ), ex );
       }
     }
     return configs;
@@ -286,9 +292,11 @@ public class ServiceContextManager {
       }
     } else if ( ref == null && !bit[0] ) {
       try {
-        LOG.trace( "Waiting for service context to start." );
-        TimeUnit.MILLISECONDS.sleep( 10000 );
-        if ( ( ref = context.getReference( ) ) == null ) {
+        for ( int i = 0; ( ref = context.getReference( ) ) == null && i < 15; i++ ) {
+          LOG.trace( "Waiting for service context to start." );
+          TimeUnit.MILLISECONDS.sleep( 1000 );
+        }
+        if ( ref == null ) {
           throw new ServiceStateException( "Attempt to reference service context before it is ready." );
         } else {
           return ref;
@@ -364,19 +372,19 @@ public class ServiceContextManager {
     try {
       ctx.stop( );
       ctx.dispose( );
-    } catch ( MuleException ex ) {
-      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.trace( ex, ex );
     }
   }
   
-  private static MuleContext createContext( ) throws ServiceInitializationException {
-    List<ComponentId> components = ComponentIds.listLocallyRynning( );
-    if ( checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) && context.getReference( ) != null ) {
+  private static synchronized MuleContext createContext( ) throws ServiceInitializationException {
+    List<Component> components = Components.whichAreEnabledLocally( );
+    if ( !checkStateChanged( components ) && context.getReference( ) != null ) {
       return context.getReference( );
     } else {
       LOG.info( "The following components have been identified as active: " );
-      for ( ComponentId c : components ) {
-        LOG.info( "-> " + c );
+      for ( Component c : components ) {
+        LOG.info( "-> " + c.getComponentId( ) );
       }
       Set<ConfigResource> configs = renderServiceConfigurations( components );
       for ( ConfigResource cfg : configs ) {
@@ -403,15 +411,35 @@ public class ServiceContextManager {
     }
   }
   
+  public static class ReloadListener implements EventListener<Event> {
+    public static void register( ) {
+      ListenerRegistry.getInstance( ).register( Hertz.class, new ReloadListener( ) );
+    }
+    
+    @Override
+    public void fireEvent( Event event ) {
+      if ( event instanceof Hertz ) {
+        check( );
+      }
+    }
+    
+  }
+  
   public static boolean check( ) {
-    if ( !checkStateUnchanged( ComponentIds.listLocallyRynning( ) ) ) {
+    if ( checkStateChanged( Components.whichAreEnabledLocally( ) ) ) {
       ServiceContextManager.restart( );
+    } else if ( context.getReference( ) == null ) {
+      try {
+        ServiceContextManager.startup( );
+      } catch ( ServiceInitializationException ex ) {
+        LOG.error( ex, ex );
+      }
     }
     return true;
   }
   
-  private static boolean checkStateUnchanged( List<ComponentId> now ) {
-    return last.containsAll( now ) && last.size( ) == now.size( );
+  private static boolean checkStateChanged( List<Component> components ) {
+    return last.isEmpty( ) || ( last.containsAll( components ) && last.size( ) == components.size( ) );
   }
   
 }

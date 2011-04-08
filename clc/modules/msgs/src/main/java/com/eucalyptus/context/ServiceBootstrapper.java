@@ -123,7 +123,7 @@ public class ServiceBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean check( ) throws Exception {
-    return ServiceContextManager.check( );
+    return true;
   }
   
 }
