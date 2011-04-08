@@ -426,9 +426,9 @@ public class ServiceContextManager {
   }
   
   public static boolean check( ) {
-    if ( checkStateChanged( Components.whichAreEnabledLocally( ) ) ) {
+    if ( checkStateChanged( Components.whichAreEnabledLocally( ) ) && !context.isMarked( ) ) {
       ServiceContextManager.restart( );
-    } else if ( context.getReference( ) == null ) {
+    } else if ( context.getReference( ) == null && !context.isMarked( ) ) {
       try {
         ServiceContextManager.startup( );
       } catch ( ServiceInitializationException ex ) {
