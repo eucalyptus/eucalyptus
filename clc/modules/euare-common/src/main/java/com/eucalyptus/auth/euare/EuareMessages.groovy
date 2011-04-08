@@ -828,3 +828,12 @@ public class GetAccountPolicyResultType extends EucalyptusData {
   String policyDocument;
   public GetAccountPolicyResultType() {  }
 }
+public class DeleteAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  public DeleteAccountPolicyType() {  }
+}
+public class DeleteAccountPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteAccountPolicyResponseType() {  }
+}

@@ -102,7 +102,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         @Override
         public boolean apply( final Cluster c ) {
           try {
-            return Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
+            return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
           } catch ( Exception e ) {}
           return false;
         }
@@ -121,7 +121,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
       if ( cluster == null ) {
         throw new NotEnoughResourcesAvailable( "Can't find cluster " + clusterName );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, clusterName, null, action, requestUser ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, clusterName, null, action, requestUser ) ) {
         throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + clusterName + " for " + requestUser.getName( ) );
       }
       return Lists.newArrayList( cluster );
