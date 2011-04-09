@@ -207,13 +207,13 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     if( this.action != null ) {
       actionName = this.action.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
     }
-    Iterable<String> listenerNames = Iterables.transform( this.listeners.values( ), new Function<TransitionListener<P>, String>( ) {
-      public String apply( TransitionListener<P> arg0 ) {
-        return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
-      }
-    } );
-    return String.format( "Transition:name=%s:from=%s/%s:to=%s/%s:action=%s:listeners=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
-                          this.getToState( ), this.getToStateMark( ), "" + this.action, listenerNames );
+//    Iterable<String> listenerNames = Iterables.transform( this.listeners.values( ), new Function<TransitionListener<P>, String>( ) {
+//      public String apply( TransitionListener<P> arg0 ) {
+//        return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
+//      }
+//    } );
+    return String.format( "Transition parent=%s name=%s from=%s/%s to=%s/%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+                          this.getToState( ), this.getToStateMark( ), "" + this.action );
   }
   
   /**
@@ -250,7 +250,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     Transition other = ( Transition ) obj;
     return this.rule.equals( other.rule );
   }
-
+  
   /**
    * @return the action
    */

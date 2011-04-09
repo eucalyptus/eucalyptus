@@ -136,7 +136,8 @@ public class ServiceContextManager implements EventListener<Event> {
                 }
               }
             } );
-          } else if ( this.shouldReload( ) ) {
+          } 
+          if ( this.shouldReload( ) ) {
             this.pendingCount.incrementAndGet( );
           }
         } finally {
@@ -165,10 +166,11 @@ public class ServiceContextManager implements EventListener<Event> {
   }
   
   private void update( ) throws ServiceInitializationException {
+    List<Component> components = Components.whichAreEnabledLocally( );
+    List<ComponentId> currentComponentIds = Components.toIds( components );
+    LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
     this.canHasWrite.lock( );
     try {
-      List<Component> components = Components.whichAreEnabledLocally( );
-      List<ComponentId> currentComponentIds = Components.toIds( components );
       if ( this.shouldReload( ) ) {
         if ( this.context != null ) {
           this.shutdown( );

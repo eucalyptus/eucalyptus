@@ -71,6 +71,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -223,13 +224,13 @@ public class ServiceState {
                                                                                         }
                                                                                       };
   
-  private static final TransitionListener<Component>            restartServiceContext = Transitions.createListener( new Predicate<Component>( ) {
+  private static final Predicate<State>            restartServiceContext = /*Transitions.createListener( */new Predicate<State>( ) {
                                                                                         @Override
-                                                                                        public boolean apply( Component arg0 ) {
+                                                                                        public boolean apply( State arg0 ) {
                                                                                           ServiceContextManager.restart( );
                                                                                           return true;
-                                                                                        }
-                                                                                      } );
+                                                                                        } };
+//                                                                                      } );
   private static final TransitionListener<Component>            addPipelines          = Transitions.createListener( new Predicate<Component>( ) {
                                                                                         @Override
                                                                                         public boolean apply( Component arg0 ) {
@@ -262,11 +263,13 @@ public class ServiceState {
     
     return new StateMachineBuilder<Component, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
+        in( State.ENABLED ).run( restartServiceContext );
+        in( State.DISABLED ).run( restartServiceContext );
         on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( LOAD_TRANSITION );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( START_TRANSITION );
-        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines, restartServiceContext ).run( ENABLE_TRANSITION );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines, restartServiceContext ).run( DISABLE_TRANSITION );
+        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).add( addPipelines ).run( ENABLE_TRANSITION );
+        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).add( removePipelines ).run( DISABLE_TRANSITION );
         on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( STOP_TRANSITION );
         on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( DESTROY_TRANSITION );
         on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( CHECK_TRANSITION );
