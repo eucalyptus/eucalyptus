@@ -131,9 +131,6 @@ public class ServiceContextManager implements EventListener<Event> {
               public void run( ) {
                 try {
                   ServiceContextManager.this.update( );
-                  if( !ServiceContextManager.this.pendingCount.compareAndSet( 0, 0 ) ) {
-                    
-                  }
                 } catch ( Throwable ex ) {
                   LOG.error( ex, ex );
                 }
@@ -153,6 +150,8 @@ public class ServiceContextManager implements EventListener<Event> {
     List<Component> components = Components.whichAreEnabledLocally( );
     List<ComponentId> currentComponentIds = Components.toIds( components );
     if ( this.context == null ) {
+      return true;
+    } else if ( currentComponentIds.isEmpty( ) ) {
       return true;
     } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {
       return true;
