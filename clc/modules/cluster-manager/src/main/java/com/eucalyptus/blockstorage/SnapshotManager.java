@@ -123,10 +123,10 @@ public class SnapshotManager {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
       }
     }
@@ -212,7 +212,7 @@ public class SnapshotManager {
         reply.set_return( false );
         return reply;
       }
-      if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+      if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) );
       }
       db.delete( snap );
@@ -253,7 +253,7 @@ public class SnapshotManager {
       List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
       
       for ( Snapshot v : snapshots ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
           LOG.debug( "Skip snapshot " + v.getDisplayName( ) + " due to access right" );
           continue;
         }
