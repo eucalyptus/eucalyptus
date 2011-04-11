@@ -31,12 +31,16 @@
 
 import optparse
 import inspect
+import os
 import boto.utils
 import eucadmin.configfile
 
+DefaultEucaDir = '/opt/eucalyptus'
+DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
+    
 class EucaConf(object):
 
-    def __init__(self, filepath='/opt/eucalyptus/etc/eucalyptus/eucalyptus.conf'):
+    def __init__(self, filepath=None):
         self.debug = 0
         self.config = None
         self.specified_options = {}
@@ -192,7 +196,11 @@ class EucaConf(object):
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
+        elif filepath is None:
+            euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
+            filepath = os.path.join(euca_dir, DefaultEucaConfPath)
         try:
+            print 'using %s' % filepath
             self.config = eucadmin.configfile.ConfigFile(filepath)
         except IOError:
             print 'Unable to find config file: %s' % filepath
