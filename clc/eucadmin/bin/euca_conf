@@ -227,6 +227,12 @@ class EucaConf(object):
             obj = cls(self.config, self.options.get_credentials,
                       self.options.cred_account, self.options.cred_user)
             obj.main()
+
+    def do_setup(self):
+        if self.options.do_setup:
+            cls = boto.utils.find_class('eucadmin.eucasetup')
+            req = cls(self.config)
+            req.main()
                 
     def do_heartbeat(self):
         if self.options.heartbeat:
