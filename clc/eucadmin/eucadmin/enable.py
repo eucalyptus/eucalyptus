@@ -58,10 +58,13 @@ class Enable(object):
     def main(self):
         path = os.path.join(self.config['EUCALYPTUS'],
                             'var/lib/eucalyptus/services')
-        fp = open(path)
-        s = fp.read()
-        fp.close()
-        current = s.split()
+        if os.path.exists(path):
+            fp = open(path)
+            s = fp.read()
+            fp.close()
+            current = s.split()
+        else:
+            current = []
         if self.enable:
             if self.service not in current:
                 current.append(self.service)
