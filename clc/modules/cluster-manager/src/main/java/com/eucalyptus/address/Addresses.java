@@ -207,7 +207,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr + " by " + ctx.getUser( ) );
       }
     }
@@ -218,10 +218,10 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }
