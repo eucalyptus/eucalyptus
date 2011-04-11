@@ -421,7 +421,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( EventType.TRANSITION ).append( this.name ).append( "Active" ).append( this.transition != null ? this.transition.toString( ) : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) ).append( " transition=" ).append(  )
+      sb.append( EventType.TRANSITION ).append( this.name ).append( "Active" ).append( this.transition != null ? this.transition.toString( ) : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) ).append( " transition=" )
         .append( '\n' ).append( Exceptions.string( this.startStackTrace ) );
       return sb.toString( );
     }
