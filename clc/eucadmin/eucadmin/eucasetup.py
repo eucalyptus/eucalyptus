@@ -173,7 +173,7 @@ class EucaSetup(object):
         if not os.path.isfile(rootwrap):
             raise IOError('Cannot find %s or not executable' % rootwrap)
         self.euca_user_name = self.config['EUCA_USER']
-        root_data = pwd.getpwname('root')
+        root_data = pwd.getpwnam('root')
         if self.euca_user_name == 'root':
             self.euca_user_id = root_data.pw_uid
         else:

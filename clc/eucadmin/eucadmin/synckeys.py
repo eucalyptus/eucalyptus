@@ -39,7 +39,7 @@ SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
 class SyncKeys(object):
 
-    def __init__(self, src_dirs, dst_dir, remote_host, file_names,
+    def __init__(self, src_dir, dst_dir, remote_host, file_names,
                  use_rsync=True, use_scp=True, use_smb=False):
         self.src_dirs = mklist(src_dirs)
         self.src_dirs = [os.path.expanduser(sd) for sd in self.src_dirs]
@@ -97,7 +97,7 @@ class SyncKeys(object):
         print 'Trying rsync to sync keys with %s' % self.remote_host
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
-        cmd += ' %s:%s/' % (self.remote_host, self.dst_dir)
+        cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
         cmd = Command(cmd, test=True)
         if cmd.status == 0:
             print 'done'
@@ -110,7 +110,7 @@ class SyncKeys(object):
         euca_user = os.environ.get('EUCA_USER', None)
         if not euca_user:
             try:
-                pwd.getpwname('eucalyptus')
+                pwd.getpwnam('eucalyptus')
                 euca_user = 'eucalyptus'
             except KeyError:
                 self.error('EUCA_USER is not defined!')
@@ -134,6 +134,7 @@ class SyncKeys(object):
             return False
 
     def sync(self):
+        self.get_file_list()
         if self.check_local():
             self.sync_local()
             return True

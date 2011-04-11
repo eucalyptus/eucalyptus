@@ -193,7 +193,7 @@ class EucaConf(object):
                                action='store', type='choice',
                                choices=['cloud', 'sc', 'walrus',
                                         'vmwarebroker'],
-                               dest='disable_what}', metavar='<service>',
+                               dest='disable_what', metavar='<service>',
                                help='disable service at next start')
         self.parser.add_option('--check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}',
                                action='store', type='choice',
@@ -245,30 +245,30 @@ class EucaConf(object):
             req.main()
 
     def do_check(self):
-        if self.options.check:
-            if self.options.check not in self.CheckedServices:
+        if self.options.check_what:
+            if self.options.check_what not in self.CheckedServices:
                 print 'check requires one of %s' % self.CheckedServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.check', 'Check')
-            req = cls(self.config, self.options.check)
+            req = cls(self.config, self.options.check_what)
             req.main()
                 
     def do_enable(self):
-        if self.options.enable:
-            if self.options.enable not in self.EnabledServices:
+        if self.options.enable_what:
+            if self.options.enable_what not in self.EnabledServices:
                 print 'enable requires one of %s' % self.EnabledServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.enable, True)
+            req = cls(self.config, self.options.enable_what, True)
             req.main()
                 
     def do_disable(self):
-        if self.options.disable:
-            if self.options.disable not in self.EnabledServices:
+        if self.options.disable_what:
+            if self.options.disable_what not in self.EnabledServices:
                 print 'disable requires one of %s' % self.EnabledServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.enable, False)
+            req = cls(self.config, self.options.disable_what, False)
             req.main()
                 
     def do_heartbeat(self):

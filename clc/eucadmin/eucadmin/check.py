@@ -120,6 +120,8 @@ import os
 import pwd
 from eucadmin.command import Command
 
+RootWrapPath = 'usr/lib/eucalyptus/euca_rootwrap'
+
 class Check(object):
 
     def __init__(self, config, service):
@@ -135,8 +137,8 @@ class Check(object):
         if not os.path.isfile(rootwrap):
             raise IOError('Cannot find %s or not executable' % rootwrap)
         self.euca_user_name = self.config['EUCA_USER']
-        root_data = pwd.getpwname('root')
-        if self.user_name is None or self.euca_user_name == 'root':
+        root_data = pwd.getpwnam('root')
+        if self.euca_user_name is None or self.euca_user_name == 'root':
             self.euca_user_id = root_data.pw_uid
             self.euca_group_id = root_data.pw_gid
         else:
@@ -146,7 +148,7 @@ class Check(object):
                 raise ValueError('Is EUCA_USER defined?')
             self.euca_user_id = user_data.pw_uid
             self.euca_user_group_id = user_data.pw_gid
-            os.chown(root_data.pw_uid, self.euca_user_group_id)
+            os.chown(rootwrap, root_data.pw_uid, self.euca_user_group_id)
             os.chmod(rootwrap, 04750)
         if self.service == 'nc':
             self.instance_path = self.config['INSTANCE_PATH']
