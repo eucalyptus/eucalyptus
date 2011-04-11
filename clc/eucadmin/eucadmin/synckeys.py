@@ -33,7 +33,7 @@ import sys
 import socket
 import shutil
 from boto.utils import mklist
-import command
+from eucadmin.command import Command
 
 SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
@@ -73,11 +73,11 @@ class SyncKeys(object):
             self.warning("Can't find %s in %s" % (not_found, self.src_dirs))
 
     def check_local(self):
-        if remote_host == '127.0.0.1':
+        if self.remote_host == '127.0.0.1':
             self.is_remote = True
-        elif remote_host == 'localhost':
+        elif self.remote_host == 'localhost':
             self.is_remote = True
-        elif remote_host == socket.gethostname():
+        elif self.remote_host == socket.gethostname():
             self.is_remote = True
 
     def sync_local(self):
@@ -134,11 +134,11 @@ class SyncKeys(object):
             return False
 
     def sync(self):
-        if self.local:
+        if self.check_local():
             self.sync_local()
             return True
         else:
-            if self.use_rysync and self.sync_rsync():
+            if self.use_rsync and self.sync_rsync():
                 return True
             if self.use_scp and self.sync_scp():
                 return True
