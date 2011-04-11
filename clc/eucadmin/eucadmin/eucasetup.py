@@ -165,7 +165,8 @@ class EucaSetup(object):
 
     def make_dirs(self):
         for dir_name in MakeDirs:
-            os.mkdir(dir_name)
+            path = os.path.join(self.config['EUCALYPTUS'], dir_name)
+            os.mkdir(path)
 
     def main(self):
         # check for existence of rootwrap
@@ -183,13 +184,14 @@ class EucaSetup(object):
                 raise ValueError('Is EUCA_USER defined?')
             self.euca_user_id = user_data.pw_uid
             self.euca_user_group_id = user_data.pw_gid
-            os.chown(root_data.pw_uid, self.euca_user_group_id)
+            os.chown(rootwrap, root_data.pw_uid, self.euca_user_group_id)
             os.chmod(rootwrap, 04750)
         self.instance_path = self.config['INSTANCE_PATH']
         if self.instance_path and self.instance_path != 'not_configured':
             if not os.path.isdir(self.instance_path):
                 os.mkdir(self.instance_path)
-            os.chown(self.euca_user_id, self.euca_user_group_id)
+            os.chown(self.instance_path, self.euca_user_id,
+                     self.euca_user_group_id)
         self.make_dirs()
         self.chown_paths()
         self.chmod_paths()
