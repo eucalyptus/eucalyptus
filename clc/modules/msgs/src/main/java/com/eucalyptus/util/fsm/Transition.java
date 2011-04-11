@@ -212,7 +212,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
 //        return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
 //      }
 //    } );
-    return String.format( "Transition parent=%s name=%s from=%s/%s to=%s/%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+    return String.format( "Transition name=%s from=%s/%s to=%s/%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
                           this.getToState( ), this.getToStateMark( ), "" + this.action );
   }
   
