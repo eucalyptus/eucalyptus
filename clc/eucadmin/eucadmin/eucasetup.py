@@ -185,7 +185,7 @@ class EucaSetup(object):
             self.euca_user_group_id = user_data.pw_gid
             os.chown(root_data.pw_uid, self.euca_user_group_id)
             os.chmod(rootwrap, 04750)
-        self.instance_path = self.config('INSTANCE_PATH')
+        self.instance_path = self.config['INSTANCE_PATH']
         if self.instance_path and self.instance_path != 'not_configured':
             if not os.path.isdir(self.instance_path):
                 os.mkdir(self.instance_path)

@@ -149,7 +149,7 @@ class Check(object):
             os.chown(root_data.pw_uid, self.euca_user_group_id)
             os.chmod(rootwrap, 04750)
         if self.service == 'nc':
-            self.instance_path = self.config('INSTANCE_PATH')
+            self.instance_path = self.config['INSTANCE_PATH']
             if self.instance_path is None:
                 raise ValueError('INSTANCE_PATH is not defined')
             if not os.path.isdir(self.instance_path):
