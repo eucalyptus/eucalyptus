@@ -40,6 +40,8 @@ DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
     
 class EucaConf(object):
 
+    Services = ['cc', 'cloud', 'nc', 'sc', 'walrus', 'vmware', 'vmwarebroker']
+
     def __init__(self, filepath=None):
         self.debug = 0
         self.config = None
@@ -230,8 +232,17 @@ class EucaConf(object):
 
     def do_setup(self):
         if self.options.do_setup:
-            cls = boto.utils.find_class('eucadmin.eucasetup')
+            cls = boto.utils.find_class('eucadmin.eucasetup', 'EucaSetup')
             req = cls(self.config)
+            req.main()
+
+    def do_check(self):
+        if self.options.check:
+            if self.options.check not in self.Services:
+                print 'check requires one of %s' % self.Services
+                sys.exit(1)
+            cls = boto.utils.find_class('eucadmin.check', 'Check')
+            req = cls(self.config, self.options.check)
             req.main()
                 
     def do_heartbeat(self):
