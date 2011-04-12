@@ -220,7 +220,8 @@ class EucaConf(object):
 
     def update_config_file(self):
         if self.config:
-            self.config.update(self.specified_options)
+            for key in self.specified_options:
+                self.config[key] = self.specified_options[key]
 
     def main(self):
         self.update_config_file()
