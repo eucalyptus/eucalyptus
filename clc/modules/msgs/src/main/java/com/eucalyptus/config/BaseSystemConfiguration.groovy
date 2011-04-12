@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,21 +61,28 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.config
 
-import com.eucalyptus.component.ComponentId;
+import java.io.Serializable;
+import org.hibernate.annotations.Entity;
+import java.io.Serializable
+import javax.persistence.Column
+import javax.persistence.PersistenceContext
+import javax.persistence.Table
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Entity
+import com.eucalyptus.entities.AbstractPersistent
 
-
-public class VMwareBroker extends ComponentId {
-
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-
-  @Override
-  public String getServiceModelFileName( ) {
-    return "vmware-broker-model.xml";
-  }
-  
+@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_system" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class System extends AbstractPersistent implements Serializable {
+  @Column( name = "config_system_default_kernel" )
+  String defaultKernel
+  @Column( name = "config_system_default_ramdisk" )
+  String defaultRamdisk
+  @Column( name = "config_system_registration_id" )
+  String registrationId
 }

@@ -207,7 +207,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(isAdministrator || (
-				      objectInfo.canRead(account.getId()) &&
+				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -388,7 +388,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(objectInfo.canRead(account.getId())) {
+				if(objectInfo.canRead(account.getAccountNumber())) {
 					String objectName = objectInfo.getObjectName();
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
 					XMLParser parser = new XMLParser(file);
@@ -1079,7 +1079,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getId()) &&
+				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -1224,7 +1224,7 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getId()) &&
+				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -1268,7 +1268,7 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getId()) &&
+				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -1348,14 +1348,14 @@ public class WalrusImageManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (ctx.hasAdministrativePrivileges() || (
-						      objectInfo.canRead(account.getId()) &&
+						      objectInfo.canRead(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 						                             PolicySpec.VENDOR_S3,
 						                             PolicySpec.S3_RESOURCE_OBJECT,
 						                             PolicySpec.objectFullName(bucketName, manifestKey),
 						                             objectInfo.getOwnerId()))) {
 							//validate manifest
-							validateManifest(bucketName, manifestKey, account.getId());
+							validateManifest(bucketName, manifestKey, account.getAccountNumber());
 							db.commit();
 						} else {
 							db.rollback();

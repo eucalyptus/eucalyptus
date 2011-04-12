@@ -85,8 +85,6 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -123,7 +121,7 @@ public class Component implements HasName<Component> {
   private final ComponentId           identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
-  private final ComponentState        stateMachine;
+  private final ServiceState        stateMachine;
   private final AtomicBoolean         enabled = new AtomicBoolean( false );
   private final AtomicBoolean         local   = new AtomicBoolean( false );
   
@@ -151,10 +149,10 @@ public class Component implements HasName<Component> {
       }
     }
     this.bootstrapper = new ComponentBootstrapper( this );
-    this.stateMachine = new ComponentState( this );
+    this.stateMachine = new ServiceState( this );
   }
   
-  public ComponentState getStateMachine( ) {
+  public ServiceState getStateMachine( ) {
     return this.stateMachine;
   }
   
@@ -448,7 +446,6 @@ public class Component implements HasName<Component> {
               try {
                 Component.this.stateMachine.transition( State.ENABLED );
                 future.set( Component.this );
-                ServiceContextManager.restart( );
               } catch ( Throwable ex ) {
                 future.setException( ex );
                 Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
@@ -464,7 +461,6 @@ public class Component implements HasName<Component> {
       } else if ( State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         try {
           CheckedListenableFuture<Component> ret = Component.this.stateMachine.transition( State.ENABLED );
-          ServiceContextManager.restart( );
           return ret;
         } catch ( Throwable ex ) {
           final CheckedListenableFuture<Component> future = Futures.newGenericFuture( );
@@ -485,7 +481,6 @@ public class Component implements HasName<Component> {
     if ( config.isLocal( ) ) {
       try {
         CheckedListenableFuture<Component> ret = this.stateMachine.transition( State.DISABLED );
-        ServiceContextManager.restart( );
         return ret;
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
@@ -996,5 +991,9 @@ public class Component implements HasName<Component> {
    */
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
+  }
+
+  public boolean checkTransition( Transition transition ) {
+    return this.stateMachine.checkTransition( transition );
   }
 }

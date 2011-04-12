@@ -63,24 +63,31 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.google.common.collect.Lists;
 
 public class Dns extends ComponentId.Unpartioned {
-
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://DNSControlInternal";
-  }  
+  }
   
   @Override
   public Boolean hasDispatcher( ) {
     return true;
   }
-
+  
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class, Any.class );
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+        this.add( Any.class );
+      }
+    };
   }
+  
 }

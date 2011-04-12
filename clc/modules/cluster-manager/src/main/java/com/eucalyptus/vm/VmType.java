@@ -198,7 +198,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
 
   @Override
   public String getOwnerAccountId( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.getAccountId( );
+    return FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( );
   }
 
   @Override
@@ -210,7 +210,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountId( ) )
+                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
   }
 

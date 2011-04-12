@@ -35,7 +35,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public List<Condition> getConditions( ) {
     final List<Condition> results = Lists.newArrayList( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           for ( ConditionEntity c : t.getStatement( ).getConditions( ) ) {
             results.add( new DatabaseConditionProxy( c ) );
@@ -52,7 +52,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
@@ -82,7 +82,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Set<String> getActions( ) {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.addAll( t.getActions( ) );
         }
@@ -97,7 +97,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Set<String> getResources( ) {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.addAll( t.getResources( ) );
         }
@@ -112,7 +112,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Group getGroup( ) {
     final List<Group> results = Lists.newArrayList( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.add( new DatabaseGroupProxy( t.getStatement( ).getPolicy( ).getGroup( ) ) );
         }

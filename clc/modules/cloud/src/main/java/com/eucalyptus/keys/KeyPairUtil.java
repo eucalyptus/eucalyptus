@@ -27,7 +27,7 @@ public class KeyPairUtil {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     List<SshKeyPair> keys = Lists.newArrayList( );
     try {
-      keys = db.query( new SshKeyPair( accountName.getAccountId( ) ) );
+      keys = db.query( new SshKeyPair( accountName.getAccountNumber( ) ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -39,7 +39,7 @@ public class KeyPairUtil {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      key = db.getUnique( new SshKeyPair( accountName.getAccountId( ), keyName ) );
+      key = db.getUnique( new SshKeyPair( accountName.getAccountNumber( ), keyName ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -52,7 +52,7 @@ public class KeyPairUtil {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      SshKeyPair searchKey = new SshKeyPair( accountName.getAccountId( ) );
+      SshKeyPair searchKey = new SshKeyPair( accountName.getAccountNumber( ) );
       searchKey.setPublicKey( keyValue );
       key = db.getUnique( searchKey );
       db.commit( );
@@ -67,7 +67,7 @@ public class KeyPairUtil {
     EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
     SshKeyPair key = null;
     try {
-      key = db.getUnique( new SshKeyPair( accountName.getAccountId( ), keyName ) );
+      key = db.getUnique( new SshKeyPair( accountName.getAccountNumber( ), keyName ) );
       db.delete( key );
       db.commit( );
     } catch ( Throwable e ) {

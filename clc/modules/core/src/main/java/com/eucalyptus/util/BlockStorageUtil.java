@@ -77,7 +77,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.EntityWrapper;

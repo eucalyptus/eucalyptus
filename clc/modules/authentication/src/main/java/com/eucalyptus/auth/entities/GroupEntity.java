@@ -34,6 +34,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @Transient
   private static final long serialVersionUID = 1L;
 
+  // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_group_id_external" )
+  String groupId;
+
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
   String name;
@@ -77,9 +81,9 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.userGroup = userGroup;
   }
 
-  public static GroupEntity newInstanceWithId( final String id ) {
+  public static GroupEntity newInstanceWithGroupId( final String id ) {
     GroupEntity g = new GroupEntity( );
-    g.setId( id );
+    g.groupId = id;
     return g;
   }
 
@@ -144,6 +148,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   
   public List<UserEntity> getUsers( ) {
     return this.users;
+  }
+
+  public String getGroupId( ) {
+    return this.groupId;
   }
   
 }

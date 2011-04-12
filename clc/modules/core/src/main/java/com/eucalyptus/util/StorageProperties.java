@@ -72,7 +72,7 @@ import javax.persistence.PersistenceException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.component.ComponentState;
+import com.eucalyptus.component.ServiceState;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;

@@ -177,7 +177,7 @@ public class GrantInfo extends AbstractPersistent {
 						if(id == null || id.length() == 0)
 							continue;
 						try {
-							displayName = Accounts.lookupUserByAccessKeyId(id).getId();
+							displayName = Accounts.lookupUserByAccessKeyId(id).getUserId();
 						} catch ( AuthException e ) {
               LOG.warn(e,e);
             }

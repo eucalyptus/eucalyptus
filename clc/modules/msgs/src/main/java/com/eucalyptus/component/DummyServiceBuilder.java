@@ -1,10 +1,7 @@
 package com.eucalyptus.component;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -67,12 +64,12 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   @Override
   public ServiceConfiguration newInstance( String partition, String name, String host, Integer port ) {
     ComponentId compId = this.getComponent( ).getComponentId( );
-    return new EphemeralConfiguration( compId, compId.getPartition( ), compId.name( ), compId.makeRemoteUri( host, port ) );
+    return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.makeRemoteUri( host, port ) );
   }
   
   @Override
   protected ServiceConfiguration newInstance( ) {
     ComponentId compId = this.getComponent( ).getComponentId( );
-    return new EphemeralConfiguration( compId, compId.getPartition( ), compId.name( ), compId.getLocalEndpointUri( ) );
+    return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.getLocalEndpointUri( ) );
   }
 }

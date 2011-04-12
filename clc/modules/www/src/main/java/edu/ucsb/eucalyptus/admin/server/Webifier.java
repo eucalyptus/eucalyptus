@@ -60,8 +60,8 @@ public class Webifier {
     }
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {
-        uif.setQueryId( k.getId( ) );
-        uif.setSecretKey( k.getKey( ) );
+        uif.setQueryId( k.getAccessKey( ) );
+        uif.setSecretKey( k.getSecretKey( ) );
       }
     }
     return uif;
