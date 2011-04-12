@@ -339,7 +339,7 @@ class EucaConf(object):
                           'RegisterWalrus',
                           'walrus_port')
             
-    def do_register_cluster(self):
+    def do_register_sc(self):
         self._do_register('reg_scs',
                           'eucadmin.registerstoragecontroller',
                           'RegisterStorageController',

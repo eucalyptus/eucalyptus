@@ -123,7 +123,8 @@ import pwd
 
 RootWrapPath = 	'usr/lib/eucalyptus/euca_rootwrap'
 
-MakeDirs = ['var/lib/eucalyptus/dynserv/data',
+MakeDirs = ['var/lib/eucalyptus/dynserv',
+            'var/lib/eucalyptus/dynserv/data',
             'var/lib/eucalyptus/db',
             'var/lib/eucalyptus/keys',
             'var/lib/eucalyptus/CC']
@@ -167,7 +168,7 @@ class EucaSetup(object):
         for dir_name in MakeDirs:
             path = os.path.join(self.config['EUCALYPTUS'], dir_name)
             if not os.path.isdir(path):
-                os.mkdir(path)
+                os.makedirs(path)
 
     def main(self):
         # check for existence of rootwrap
