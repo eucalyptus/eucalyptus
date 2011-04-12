@@ -52,12 +52,11 @@ class EucaConf(object):
         self.config = None
         self.specified_options = {}
         self.parser = optparse.OptionParser()
-        self.parser.add_option('-d', action='store', type='string',
-                               metavar='<dir>',
-                               dest='euca_dir',
-                               help='point EUCALYPTUS to <dir>')
         self.parser.add_option('--heartbeat', action='store', type='string',
                                help='get heartbeat data for <host>')
+        self.parser.add_option('--synckey', action='store_true',
+                               dest='sync_keys', help='',
+                               default=False)
         self.parser.add_option('--no-rsync', action='store_true',
                                dest='no_rsync', help="don't use rsync",
                                default=False)
@@ -80,16 +79,17 @@ class EucaConf(object):
                                type='string', dest='cred_user',
                                metavar='<accountname>', default='admin',
                                help="set get-credentials user")
-        self.parser.add_option('--register-nodes', action='append',
-                               type='string', dest='nodes',
+        self.parser.add_option('--register-nodes',
+                               action='append', type='string', dest='nodes',
                                metavar='"host host..."',
                                help='add new nodes to EUCALYPTUS')
-        self.parser.add_option('--deregister-nodes', action='append',
-                               type='string', dest='nodes',
+        self.parser.add_option('--deregister-nodes',
+                               action='append', type='string', dest='nodes',
                                metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
-        self.parser.add_option('--register-cluster', action='store',
-                               type='string', dest='reg_clusters', nargs=3,
+        self.parser.add_option('--register-cluster',
+                               action='store',  type='string',
+                               dest='reg_clusters', nargs=3,
                                metavar='<partition> <clustername> <host>',
                                help='add new cluster to EUCALYPTUS')
         self.parser.add_option('--deregister-cluster', nargs=2,
@@ -133,6 +133,10 @@ class EucaConf(object):
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
                                help='used only with --register-* to skip syncing keys')
+        self.parser.add_option('-d', action='callback', type='string',
+                               metavar='<dir>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'EUCALYPTUS'},
+                               help='point EUCALYPTUS to <dir>')
         self.parser.add_option('--cc-port', action='callback', type='int', 
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'CC_PORT'},
@@ -174,6 +178,9 @@ class EucaConf(object):
                                metavar='<user>',
                                callback_kwargs={'optname' : 'DHCPC_USER'},
                                help='set the username to run dhcpd as')
+        self.parser.add_option('--bridge', action='callback',
+                               type='string', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'BRIDGE'}),
         self.parser.add_option('--name', action='store',
                                type='string', dest='var_name',
                                help='returns the value or <name>')
