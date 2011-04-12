@@ -256,8 +256,8 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
-                 tools/euca_conf:tools/euca_conf.in
 		 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
+		 clc/eucadmin/setup.cfg:clc/eucadmin/setup.cfg.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in])
 
