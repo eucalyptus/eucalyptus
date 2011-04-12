@@ -35,7 +35,7 @@ import os
 import boto.utils
 import eucadmin.configfile
 
-DefaultEucaDir = '/opt/eucalyptus'
+DefaultEucaDir = '@prefix@'
 DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
     
 class EucaConf(object):
@@ -156,7 +156,7 @@ class EucaConf(object):
         self.parser.add_option('--instances', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<path>',
-                               callback_kwargs={'optname' : 'INSTANCE'},
+                               callback_kwargs={'optname' : 'INSTANCE_PATH'},
                                help='set the INSTANCE path')
         self.parser.add_option('--hypervisor', action='callback',
                                type='choice', callback=self.option_callback,
