@@ -163,9 +163,9 @@ public class LicParser {
     if ( selection.getSearchFilter( ) == null ) {
       throw new JSONException( "Empty search filter is not allowed" );
     }
-    selection.getSelected( ).addAll( JsonUtils.getRequiredArrayByType( String.class, obj, LicSpec.SELECT ) );
+    selection.getSelected( ).addAll( JsonUtils.getArrayByType( String.class, obj, LicSpec.SELECT ) );
     validateDnSet( selection.getSelected( ) );
-    selection.getNotSelected( ).addAll( JsonUtils.getRequiredArrayByType( String.class, obj, LicSpec.NOT_SELECT ) );
+    selection.getNotSelected( ).addAll( JsonUtils.getArrayByType( String.class, obj, LicSpec.NOT_SELECT ) );
     validateDnSet( selection.getSelected( ) );
     selection.getSelected( ).removeAll( selection.getNotSelected( ) );
     return selection;

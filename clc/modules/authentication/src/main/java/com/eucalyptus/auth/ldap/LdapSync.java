@@ -119,8 +119,10 @@ public class LdapSync {
     }
   }
   
-  private static synchronized void setSyncCompleted( ) {
-    inSync = false;
+  private static synchronized boolean getAndSetSync( boolean newValue ) {
+    boolean old = inSync;
+    inSync = newValue;
+    return old;
   }
   
   private static synchronized void periodicSync( ) {
@@ -136,8 +138,7 @@ public class LdapSync {
     LOG.debug( "A new sync initiated." );
     
     timeTillNextSync = lic.getSyncInterval( );
-    if ( !inSync ) {
-      inSync = true;
+    if ( !getAndSetSync( true ) ) {
       
       Threads.newThread( new Runnable( ) {
         
@@ -145,7 +146,7 @@ public class LdapSync {
         public void run( ) {
           LOG.debug( "Sync started" );
           sync( lic );
-          setSyncCompleted( );
+          getAndSetSync( false );
           LOG.debug( "Sync ended" );
         }
         

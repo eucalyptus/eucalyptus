@@ -33,10 +33,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
       this.eusureSystemAdminExist( );
       LdapSync.start( );
-    
-      // Remove once done.
-      //AuthTest.test( );
-    
     }
     return true;
   }
