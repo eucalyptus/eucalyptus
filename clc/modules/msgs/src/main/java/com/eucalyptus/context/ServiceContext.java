@@ -47,7 +47,7 @@ public class ServiceContext {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       if( Bootstrap.isFinished( ) ) {
-        ServiceContextManager.restart( );
+        ServiceContextManager.restartSync( );
       }
     }
   }

@@ -68,6 +68,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -94,6 +96,7 @@ import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Templates;
+import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -123,27 +126,35 @@ public class ServiceContextManager implements EventListener<Event> {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz ) {
-      if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
-        try {
-          if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
-            Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-              @Override
-              public void run( ) {
-                try {
-                  ServiceContextManager.this.update( );
-                } catch ( Throwable ex ) {
-                  LOG.error( ex, ex );
-                }
+      doUpdate( );
+    }
+  }
+
+  private Future<?> doUpdate( ) {
+    if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
+      try {
+        Future<?> ret = null;
+        if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
+          Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+            @Override
+            public void run( ) {
+              try {
+                ServiceContextManager.this.update( );
+              } catch ( Throwable ex ) {
+                LOG.error( ex, ex );
               }
-            } );
-          } 
-          if ( this.shouldReload( ) ) {
-            this.pendingCount.incrementAndGet( );
-          }
-        } finally {
-          this.canHasWrite.unlock( );
+            }
+          } );
+        } 
+        if ( this.shouldReload( ) ) {
+          this.pendingCount.incrementAndGet( );
         }
+        return ret != null ? ret : Futures.predestinedFuture( null );
+      } finally {
+        this.canHasWrite.unlock( );
       }
+    } else {
+      return Futures.predestinedFuture( null );
     }
   }
   
@@ -160,7 +171,18 @@ public class ServiceContextManager implements EventListener<Event> {
       return false;
     }
   }
-  
+
+  public static final void restartSync( ) {
+    singleton.pendingCount.incrementAndGet( );
+    try {
+      singleton.doUpdate( ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    }
+  }
+
   public static final void restart( ) {
     singleton.pendingCount.incrementAndGet( );
   }
@@ -262,7 +284,7 @@ public class ServiceContextManager implements EventListener<Event> {
     singleton.canHasRead.lock( );
     try {
       if ( singleton.context == null ) {
-        restart( );
+        restartSync( );
       }
       return singleton.context;
     } finally {

@@ -227,7 +227,7 @@ public class ServiceState {
   private static final Predicate<State>            restartServiceContext = /*Transitions.createListener( */new Predicate<State>( ) {
                                                                                         @Override
                                                                                         public boolean apply( State arg0 ) {
-                                                                                          ServiceContextManager.restart( );
+                                                                                          ServiceContextManager.restartSync( );
                                                                                           return true;
                                                                                         } };
 //                                                                                      } );
