@@ -1,12 +1,8 @@
 package com.eucalyptus.reporting.instance;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import org.apache.log4j.Logger;
-import org.hibernate.Session;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.entities.EntityWrapper;
@@ -205,6 +201,10 @@ public class InstanceUsageLog
 			new HashMap<String, InstanceData>();
 		EntityWrapper<InstanceAttributes> entityWrapper = EntityWrapper.get(InstanceAttributes.class);
 		try {
+			/* TODO: Hibernate's iterate is stupid and doesn't do what you'd want.
+			 * It executes one query per row! Replace with something more
+			 * efficient.
+			 */
 			@SuppressWarnings("rawtypes")
 			Iterator iter = entityWrapper.createQuery(
 				"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
