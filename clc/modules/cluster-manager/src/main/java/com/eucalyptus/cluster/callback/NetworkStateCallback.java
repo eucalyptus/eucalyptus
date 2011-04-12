@@ -52,7 +52,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
           netToken = net.addTokenIfAbsent( netToken );
         }
       } catch ( NoSuchElementException e1 ) {
-        AccountFullName accountFn = Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) );
+        AccountFullName accountFn = Accounts.lookupAccountFullNameById( netInfo.getAccountId( ) );
         if( accountFn != null ) {
           net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
           if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {

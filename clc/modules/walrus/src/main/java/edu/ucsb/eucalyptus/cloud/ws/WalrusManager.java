@@ -262,7 +262,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo searchBucket = new BucketInfo();
-		searchBucket.setOwnerId(account.getId());
+		searchBucket.setOwnerId(account.getAccountNumber());
 		searchBucket.setHidden(false);
 		List<BucketInfo> bucketInfoList = db.query(searchBucket);
 
@@ -290,7 +290,7 @@ public class WalrusManager {
 							+ ".000Z"));
 		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getId());
+			CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getAccountNumber());
 			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 			reply.setOwner(owner);
 			bucketList.setBuckets(buckets);
@@ -332,7 +332,7 @@ public class WalrusManager {
 		if (WalrusProperties.shouldEnforceUsageLimits
 				&& !Contexts.lookup().hasAdministrativePrivileges()) {
 			BucketInfo searchBucket = new BucketInfo();
-			searchBucket.setOwnerId(account.getId());
+			searchBucket.setOwnerId(account.getAccountNumber());
 			List<BucketInfo> bucketList = db.query(searchBucket);
 			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
 				db.rollback();
@@ -344,7 +344,7 @@ public class WalrusManager {
 		List<BucketInfo> bucketList = db.query(bucketInfo);
 
 		if (bucketList.size() > 0) {
-			if (bucketList.get(0).getOwnerId().equals(account.getId())) {
+			if (bucketList.get(0).getOwnerId().equals(account.getAccountNumber())) {
 				// bucket already exists and you created it
 				db.rollback();
 				throw new BucketAlreadyOwnedByYouException(bucketName);
@@ -366,9 +366,9 @@ public class WalrusManager {
 		                            ctx.getUser(),
 		                            1L))){
 			// create bucket and set its acl
-			BucketInfo bucket = new BucketInfo(account.getId(), ctx.getUser( ).getId( ), bucketName, new Date());
+			BucketInfo bucket = new BucketInfo(account.getAccountNumber(), ctx.getUser( ).getUserId( ), bucketName, new Date());
 			ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-			bucket.addGrants(account.getId(), grantInfos, accessControlList);
+			bucket.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
 			bucket.setGrants(grantInfos);
 			bucket.setBucketSize(0L);
 			bucket.setLoggingEnabled(false);
@@ -397,7 +397,7 @@ public class WalrusManager {
 		if(WalrusProperties.enableVirtualHosting) {
 			if(checkDNSNaming(bucketName)) {
 				UpdateARecordType updateARecord = new UpdateARecordType();
-				updateARecord.setUserId(account.getId());
+				updateARecord.setUserId(account.getAccountNumber());
 				URI walrusUri;
 				String address = null;
 				try {
@@ -477,7 +477,7 @@ public class WalrusManager {
 			BucketLogData logData = bucketFound.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucketFound.canWrite(account.getId()) &&
+					      bucketFound.canWrite(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_DELETEBUCKET,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -525,7 +525,7 @@ public class WalrusManager {
 								URI walrusUri;
 								String address;
 								RemoveARecordType removeARecordType = new RemoveARecordType();
-								removeARecordType.setUserId(account.getId());
+								removeARecordType.setUserId(account.getAccountNumber());
 								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
 								removeARecordType.setName(bucketName + "." + zone);
 								removeARecordType.setZone(zone);
@@ -595,7 +595,7 @@ public class WalrusManager {
 			logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			List<GrantInfo> grantInfos = bucket.getGrants();
 			if (ctx.hasAdministrativePrivileges() || (
-			      bucket.canReadACP(account.getId()) &&
+			      bucket.canReadACP(account.getAccountNumber()) &&
 			      Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETACL,
 			                             PolicySpec.VENDOR_S3,
 			                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -632,7 +632,7 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getId()));
+			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getAccountNumber()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			db.rollback();
@@ -645,7 +645,7 @@ public class WalrusManager {
 
 	private static void addPermission(ArrayList<Grant> grants, Account account,
 			GrantInfo grantInfo) throws AuthException {
-		CanonicalUserType user = new CanonicalUserType(account.getName(), account.getId());
+		CanonicalUserType user = new CanonicalUserType(account.getName(), account.getAccountNumber());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
@@ -740,7 +740,7 @@ public class WalrusManager {
         objSize = 1L;
 			}
 			if (ctx.hasAdministrativePrivileges() || (
-			    bucket.canWrite(account.getId()) &&
+			    bucket.canWrite(account.getAccountNumber()) &&
 			    Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
 			                           PolicySpec.VENDOR_S3,
 			                           PolicySpec.S3_RESOURCE_BUCKET,
@@ -764,9 +764,9 @@ public class WalrusManager {
 						ObjectInfo objectInfo = null;
 						if (bucket.isVersioningEnabled()) {
 							objectInfo = new ObjectInfo(bucketName, objectKey);
-							objectInfo.setOwnerId(account.getId());
+							objectInfo.setOwnerId(account.getAccountNumber());
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-							objectInfo.addGrants(account.getId(), grantInfos, accessControlList);
+							objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
 							objectInfo.setGrants(grantInfos);
 							objectName = UUID.randomUUID().toString();
 							objectInfo.setObjectName(objectName);
@@ -779,7 +779,7 @@ public class WalrusManager {
 							EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 							try {
 								ObjectInfo foundObject = dbObject.getUnique(searchObject);
-								if (!foundObject.canWrite(account.getId())) {
+								if (!foundObject.canWrite(account.getAccountNumber())) {
 									db.rollback();
 									messenger.removeQueue(key, randomKey);
 									throw new AccessDeniedException("Key", objectKey,
@@ -790,9 +790,9 @@ public class WalrusManager {
 								throw ex;
 							} catch(EucalyptusCloudException ex) {
 								objectInfo = new ObjectInfo(bucketName, objectKey);
-								objectInfo.setOwnerId(account.getId());
+								objectInfo.setOwnerId(account.getAccountNumber());
 								List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-								objectInfo.addGrants(account.getId(), grantInfos, accessControlList);
+								objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
 								objectInfo.setGrants(grantInfos);
 								objectName =  UUID.randomUUID().toString();
 								objectInfo.setObjectName(objectName);
@@ -868,9 +868,9 @@ public class WalrusManager {
 									ObjectInfo foundObject;
 									try {
 										foundObject = dbObject.getUnique(searchObject);
-										if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getId())) {
+										if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 											List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-											foundObject.addGrants(account.getId(), grantInfos,
+											foundObject.addGrants(account.getAccountNumber(), grantInfos,
 													accessControlList);
 											foundObject.setGrants(grantInfos);
 										}
@@ -1118,7 +1118,7 @@ public class WalrusManager {
 	      objSize = 1L;
 	    }
       if (ctx.hasAdministrativePrivileges() || (
-          bucket.canWrite(account.getId()) &&
+          bucket.canWrite(account.getAccountNumber()) &&
           Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
                                  PolicySpec.VENDOR_S3,
                                  PolicySpec.S3_RESOURCE_BUCKET,
@@ -1145,7 +1145,7 @@ public class WalrusManager {
 						for (ObjectInfo objectInfo : objectInfos) {
 							if (objectInfo.getObjectKey().equals(objectKey)) {
 								// key (object) exists. check perms
-								if (!objectInfo.canWrite(account.getId())) {
+								if (!objectInfo.canWrite(account.getAccountNumber())) {
 									db.rollback();
 									throw new AccessDeniedException("Key", objectKey,
 											logData);
@@ -1160,19 +1160,19 @@ public class WalrusManager {
 						if (foundObject == null) {
 							// not found. create an object info
 							foundObject = new ObjectInfo(bucketName, objectKey);
-							foundObject.setOwnerId(account.getId());
+							foundObject.setOwnerId(account.getAccountNumber());
 							List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 							foundObject
-							.addGrants(account.getId(), grantInfos, accessControlList);
+							.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
 							foundObject.setGrants(grantInfos);
 							objectName = UUID.randomUUID().toString();
 							foundObject.setObjectName(objectName);
 							dbObject.add(foundObject);
 						} else {
 							// object already exists. see if we can modify acl
-							if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getId())) {
+							if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 								List<GrantInfo> grantInfos = foundObject.getGrants();
-								foundObject.addGrants(account.getId(), grantInfos,
+								foundObject.addGrants(account.getAccountNumber(), grantInfos,
 										accessControlList);
 							}
 							objectName = foundObject.getObjectName();
@@ -1277,7 +1277,7 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
-			if (bucket.canWrite(account.getId())) {
+			if (bucket.canWrite(account.getAccountNumber())) {
 				EntityWrapper<ObjectInfo> dbObject = db
 				.recast(ObjectInfo.class);
 				ObjectInfo searchObjectInfo = new ObjectInfo();
@@ -1295,12 +1295,12 @@ public class WalrusManager {
 				ObjectInfo objectInfo = new ObjectInfo(bucketName, key);
 				objectInfo.setObjectName(objectName);
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-				objectInfo.addGrants(account.getId(), grantInfos, accessControlList);
+				objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
 				objectInfo.setGrants(grantInfos);
 				dbObject.add(objectInfo);
 
 				objectInfo.setObjectKey(key);
-				objectInfo.setOwnerId(account.getId());
+				objectInfo.setOwnerId(account.getAccountNumber());
 				objectInfo.setSize(storageManager.getSize(bucketName,
 						objectName));
 				objectInfo.setEtag(request.getEtag());
@@ -1357,7 +1357,7 @@ public class WalrusManager {
 									objectKey);
 							deleteMarker.setDeleted(true);
 							deleteMarker.setLast(true);
-							deleteMarker.setOwnerId(account.getId());
+							deleteMarker.setOwnerId(account.getAccountNumber());
 							deleteMarker.setLastModified(new Date());
 							deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
 							dbObject.add(deleteMarker);
@@ -1373,7 +1373,7 @@ public class WalrusManager {
 						if (objectInfos.size() > 0) {
 							ObjectInfo nullObject = objectInfos.get(0);
 							if(ctx.hasAdministrativePrivileges() || (
-							      nullObject.canWrite(account.getId()) &&
+							      nullObject.canWrite(account.getAccountNumber()) &&
 							      Lookups.checkPrivilege(PolicySpec.S3_DELETEOBJECT,
 							                             PolicySpec.VENDOR_S3,
 							                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -1404,7 +1404,7 @@ public class WalrusManager {
 											objectKey);
 									deleteMarker.setDeleted(true);
 									deleteMarker.setLast(true);
-									deleteMarker.setOwnerId(account.getId());
+									deleteMarker.setOwnerId(account.getAccountNumber());
 									deleteMarker.setLastModified(new Date());
 									deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
 									dbObject.add(deleteMarker);
@@ -1481,7 +1481,7 @@ public class WalrusManager {
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canRead(account.getId()) &&
+					      bucket.canRead(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKET,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -1645,7 +1645,7 @@ public class WalrusManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (ctx.hasAdministrativePrivileges( ) || (
-						    objectInfo.canReadACP(account.getId()) &&
+						    objectInfo.canReadACP(account.getAccountNumber()) &&
                   Lookups.checkPrivilege(PolicySpec.S3_GETOBJECTACL,
                                          PolicySpec.VENDOR_S3,
                                          PolicySpec.S3_RESOURCE_OBJECT,
@@ -1687,7 +1687,7 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getId()));
+			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getAccountNumber()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -1720,7 +1720,7 @@ public class WalrusManager {
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canWriteACP(account.getId()) &&
+					      bucket.canWriteACP(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_PUTBUCKETACL,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -1774,7 +1774,7 @@ public class WalrusManager {
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canWriteACP(account.getId()) &&
+					      bucket.canWriteACP(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_PUTBUCKETACL,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -1836,7 +1836,7 @@ public class WalrusManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (!ctx.hasAdministrativePrivileges() && !(
-						      objectInfo.canWriteACP(account.getId()) &&
+						      objectInfo.canWriteACP(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECTACL,
 						                             PolicySpec.VENDOR_S3,
 						                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -1929,7 +1929,7 @@ public class WalrusManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (!ctx.hasAdministrativePrivileges() && !(
-						      objectInfo.canWriteACP(account.getId()) &&
+						      objectInfo.canWriteACP(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECTACL,
 						                             PolicySpec.VENDOR_S3,
 						                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -2026,7 +2026,7 @@ public class WalrusManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (ctx.hasAdministrativePrivileges() || (
-  						    objectInfo.canRead(account.getId()) &&
+  						    objectInfo.canRead(account.getAccountNumber()) &&
   						    Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
   						                           PolicySpec.VENDOR_S3,
   						                           PolicySpec.S3_RESOURCE_OBJECT,
@@ -2277,7 +2277,7 @@ public class WalrusManager {
 						ObjectInfo objectInfo = objectInfos.get(0);
 
 						if (ctx.hasAdministrativePrivileges( ) || (
-						      objectInfo.canRead(account.getId()) &&
+						      objectInfo.canRead(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege( PolicySpec.S3_GETOBJECT,
 						                              PolicySpec.VENDOR_S3,
 						                              PolicySpec.S3_RESOURCE_OBJECT,
@@ -2428,7 +2428,7 @@ public class WalrusManager {
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canRead(account.getId()) &&
+					      bucket.canRead(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETLOCATION,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -2492,7 +2492,7 @@ public class WalrusManager {
 			if (objectInfos.size() > 0) {
 				ObjectInfo sourceObjectInfo = objectInfos.get(0);
 				if (ctx.hasAdministrativePrivileges() || (
-				      sourceObjectInfo.canRead(account.getId()) &&
+				      sourceObjectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
 				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
@@ -2543,7 +2543,7 @@ public class WalrusManager {
 						BucketInfo foundDestinationBucketInfo = destinationBuckets
 						.get(0);
 						if (ctx.hasAdministrativePrivileges() || (
-						      foundDestinationBucketInfo.canWrite(account.getId()) &&
+						      foundDestinationBucketInfo.canWrite(account.getAccountNumber()) &&
 		              Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
 		                                     PolicySpec.VENDOR_S3,
 		                                     PolicySpec.S3_RESOURCE_BUCKET,
@@ -2569,7 +2569,7 @@ public class WalrusManager {
 							if (destinationObjectInfos.size() > 0) {
 								destinationObjectInfo = destinationObjectInfos
 								.get(0);
-								if (!destinationObjectInfo.canWrite(account.getId())) {
+								if (!destinationObjectInfo.canWrite(account.getAccountNumber())) {
 									db.rollback();
 									throw new AccessDeniedException("Key",
 											destinationKey);
@@ -2598,7 +2598,7 @@ public class WalrusManager {
   								.setBucketName(destinationBucket);
   								destinationObjectInfo
   								.setObjectKey(destinationKey);
-  								destinationObjectInfo.addGrants(account.getId(),
+  								destinationObjectInfo.addGrants(account.getAccountNumber(),
   										grantInfos, accessControlList);
   								destinationObjectInfo.setGrants(grantInfos);
   								destinationObjectInfo
@@ -2606,14 +2606,14 @@ public class WalrusManager {
 							  }
 							} else {
 								if (ctx.hasAdministrativePrivileges() || (
-								      destinationObjectInfo.canWriteACP(account.getId()) &&
+								      destinationObjectInfo.canWriteACP(account.getAccountNumber()) &&
 								      Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECTACL,
 								                             PolicySpec.VENDOR_S3,
 								                             PolicySpec.S3_RESOURCE_OBJECT,
 								                             PolicySpec.objectFullName(destinationBucket, destinationKey),
 								                             destinationObjectInfo.getOwnerId()))) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-									destinationObjectInfo.addGrants(account.getId(),
+									destinationObjectInfo.addGrants(account.getAccountNumber(),
 											grantInfos, accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 								}
@@ -2933,7 +2933,7 @@ public class WalrusManager {
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
 					.getLogData() : null;
 					if (ctx.hasAdministrativePrivileges() || (
-					      bucket.canRead(account.getId()) &&
+					      bucket.canRead(account.getAccountNumber()) &&
 					      Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKETVERSIONS,
 					                             PolicySpec.VENDOR_S3,
 					                             PolicySpec.S3_RESOURCE_BUCKET,
@@ -3128,7 +3128,7 @@ public class WalrusManager {
 
 					if (foundObject != null) {
 						if (ctx.hasAdministrativePrivileges() || (
-						      foundObject.canWrite(account.getId()) &&
+						      foundObject.canWrite(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege(PolicySpec.S3_DELETEOBJECTVERSION,
 						                             PolicySpec.VENDOR_S3,
 						                             PolicySpec.S3_RESOURCE_OBJECT,

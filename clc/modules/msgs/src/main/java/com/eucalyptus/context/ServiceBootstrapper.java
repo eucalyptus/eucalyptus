@@ -84,7 +84,13 @@ public class ServiceBootstrapper extends Bootstrapper {
   
   @Override
   public boolean start( ) throws Exception {
-    return ServiceContextManager.startup( );
+    try {
+      ServiceContextManager.restartSync( );
+      return true;
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      throw ex;
+    }
   }
   
   /**
@@ -100,7 +106,6 @@ public class ServiceBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean stop( ) throws Exception {
-    ServiceContextManager.shutdown( );
     return true;
   }
   
@@ -123,7 +128,7 @@ public class ServiceBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean check( ) throws Exception {
-    return ServiceContextManager.check( );
+    return true;
   }
   
 }

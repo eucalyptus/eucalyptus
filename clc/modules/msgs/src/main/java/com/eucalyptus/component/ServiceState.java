@@ -71,6 +71,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -83,8 +84,8 @@ import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.ws.util.PipelineRegistry;
 import com.google.common.base.Predicate;
 
-public class ComponentState {
-  private static Logger                                         LOG                   = Logger.getLogger( ComponentState.class );
+public class ServiceState {
+  private static Logger                                         LOG                   = Logger.getLogger( ServiceState.class );
   private final AtomicMarkedState<Component, State, Transition> stateMachine;
   private final Component                                       parent;
   private Component.State                                       goal                  = Component.State.ENABLED;                 //TODO:GRZE:OMGFIXME
@@ -223,13 +224,13 @@ public class ComponentState {
                                                                                         }
                                                                                       };
   
-  private static final TransitionListener<Component>            restartServiceContext = Transitions.createListener( new Predicate<Component>( ) {
+  private static final Predicate<State>            restartServiceContext = /*Transitions.createListener( */new Predicate<State>( ) {
                                                                                         @Override
-                                                                                        public boolean apply( Component arg0 ) {
-                                                                                          ServiceContextManager.restart( );
+                                                                                        public boolean apply( State arg0 ) {
+                                                                                          ServiceContextManager.restartSync( );
                                                                                           return true;
-                                                                                        }
-                                                                                      } );
+                                                                                        } };
+//                                                                                      } );
   private static final TransitionListener<Component>            addPipelines          = Transitions.createListener( new Predicate<Component>( ) {
                                                                                         @Override
                                                                                         public boolean apply( Component arg0 ) {
@@ -245,7 +246,7 @@ public class ComponentState {
                                                                                         }
                                                                                       } );
   
-  public ComponentState( Component parent ) {
+  public ServiceState( Component parent ) {
     this.parent = parent;
     this.stateMachine = this.buildStateMachine( );
   }
@@ -262,6 +263,8 @@ public class ComponentState {
     
     return new StateMachineBuilder<Component, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
+        in( State.ENABLED ).run( restartServiceContext );
+        in( State.DISABLED ).run( restartServiceContext );
         on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( LOAD_TRANSITION );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( START_TRANSITION );

@@ -116,9 +116,6 @@ public class Components {
                                                          public boolean apply( Component c ) {
                                                            boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
                                                            boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-                                                           EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO,
-                                                                                               c.getName( ), "cloud-local", cloudLocal, "always-local",
-                                                                                               alwaysLocal ).debug( );
                                                            return cloudLocal || alwaysLocal;
                                                          }
                                                        };
@@ -141,9 +138,6 @@ public class Components {
                                                             boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
                                                             boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
                                                             boolean runningLocal = c.hasServiceEnabled( );
-                                                            EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ),
-                                                                                "cloud-local",
-                                                                                cloudLocal, "always-local", alwaysLocal, "running-locally", runningLocal ).debug( );
                                                             return cloudLocal || alwaysLocal || runningLocal;
                                                           }
                                                         };
@@ -153,7 +147,7 @@ public class Components {
    * 
    * @return
    */
-  public static List<Component> whichAreLocal( ) {
+  public static List<Component> whichAreEnabledLocally( ) {
     return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED_LOCAL ) );
   }
   
@@ -175,7 +169,7 @@ public class Components {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static List<Component> list( ) {
+  public static List<Component> list( ) {//TODO:GRZE:ASAP: review all usage of this and replace with Components.whichAre...
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   

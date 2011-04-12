@@ -69,6 +69,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
@@ -77,6 +78,7 @@ import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Sets;
 
@@ -87,11 +89,23 @@ public class Configuration {
   
   public RegisterComponentResponseType registerComponent( RegisterComponentType request ) throws EucalyptusCloudException {
     Component component = Components.oneWhichHandles( request.getClass( ) );
+    ComponentId componentId = component.getComponentId( );
     RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     String name = request.getName( );
-    String partition = request.getPartition( );
     String hostName = request.getHost( );
     Integer port = request.getPort( );
+    Assertions.assertNotNull( name, "Name must not be null: " + request );
+    Assertions.assertNotNull( hostName, "Hostname must not be null: " + request );
+    Assertions.assertNotNull( port, "Port must not be null: " + request );
+
+    String partition = request.getPartition( );
+    if( !component.getComponentId( ).isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
+      partition = componentId.getPartition( ); 
+      LOG.error( "Unpartitioned component (" + componentId.getFullName( ) + ") is being registered w/o a partition.  Using fixed partition=" + partition + " for request: " + request );
+    } else if( component.getComponentId( ).isPartitioned( ) && partition == null ) {
+      partition = name;
+      LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition + " for request: " + request );
+    }
     try {
       reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
     } catch ( Throwable ex ) {

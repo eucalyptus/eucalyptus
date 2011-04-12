@@ -156,10 +156,9 @@ public class ImageManager {
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = request.getReply( );
-    ImageUtil.cleanDeregistered( );
     final Context ctx = Contexts.lookup( );
     final Account requestAccount = ctx.getAccount( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountId( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final List<String> imageList = request.getImagesSet( );
     final List<String> owners = request.getOwnersSet( );
     final List<String> executable = request.getExecutableBySet( );
@@ -208,6 +207,7 @@ public class ImageManager {
     } );
     List<ImageDetails> imageDetailsList = Lists.transform( images, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
+    ImageUtil.cleanDeregistered( );
     return reply;
   }
   
@@ -223,7 +223,7 @@ public class ImageManager {
       if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
       }
-    }      
+    }
     String[] imagePathParts;
     try {
       imagePathParts = ImageUtil.getImagePathParts( imageLocation );
@@ -276,7 +276,7 @@ public class ImageManager {
           try {
             k = Images.lookupImage( kernelId );
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kernelId, ex );
           }
           if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, kernelId, k.getOwner( ) ) ) {
@@ -288,7 +288,7 @@ public class ImageManager {
           try {
             r = Images.lookupImage( ramdiskId );
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + ramdiskId, ex );
           }
           if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, ramdiskId, r.getOwner( ) ) ) {
@@ -346,7 +346,7 @@ public class ImageManager {
     Context ctx = Contexts.lookup( );
     try {
       ImageInfo imgInfo = EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getFullName( ) ) ) {
+      if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), Accounts.lookupUserFullNameById( imgInfo.getOwnerUserId( ) ) ) ) {
         Images.deregisterImage( imgInfo.getDisplayName( ) );
       } else {
         throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
@@ -417,9 +417,13 @@ public class ImageManager {
         if ( imgInfo.getImagePublic( ) ) {
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( ) );
         }
-//TODO:GRZE:RESTORE
+/**
+ * TODO:GRZE:RESTORE:  this is so very wrong now 
+ * @see {@link com.eucalyptus.auth.Accounts} for ID details
+ * @see {@link com.eucalyptus.auth.Account} for Account ID details
+ */
 //        for ( LaunchPermission auth : imgInfo.getPermissions( ) )
-          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getId( ) ) );
+        reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getAccountNumber( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
         for ( String p : imgInfo.listProductCodes( ) ) {

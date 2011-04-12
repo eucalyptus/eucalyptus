@@ -152,7 +152,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public <T extends ComponentId> List<Class<T>> serviceDependencies( ) {
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }
   
@@ -250,10 +250,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public final String getServiceModel( ) {
     return this.modelContent;
-  }
-  
-  public final Reader getServiceModelAsReader( ) {
-    return new StringReader( this.modelContent );
   }
   
   public String getServiceModelFileName( ) {

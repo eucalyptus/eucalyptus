@@ -1,5 +1,6 @@
 package com.eucalyptus.util.fsm;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -8,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
@@ -350,6 +352,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
           this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
           LOG.trace( this );
         }
+      } else if ( LogLevels.EXTREME ) {
+        LOG.error( this.toString( ) );
       }
     }
     
@@ -365,7 +369,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.transition.getName( ) + "-" + id;
       if ( LogLevels.DEBUG ) {
-        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
+        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 2 );
       } else {
         this.startStackTrace = null;
       }
@@ -417,7 +421,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( "ActiveTransition name=" ).append( this.name ).append( " id=" ).append( this.id ).append( " startTime=" ).append( this.startTime ).append( " transition=" ).append( this.transition != null ? this.transition.toString( ) : "null" )
+      sb.append( EventType.TRANSITION ).append( this.name ).append( "Active" ).append( this.transition != null ? this.transition.toString( ) : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) ).append( " transition=" )
         .append( '\n' ).append( Exceptions.string( this.startStackTrace ) );
       return sb.toString( );
     }

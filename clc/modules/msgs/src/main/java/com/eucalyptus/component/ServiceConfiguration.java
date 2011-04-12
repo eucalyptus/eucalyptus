@@ -4,7 +4,6 @@ import java.io.Serializable;
 import com.eucalyptus.util.HasFullName;
 
 public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration> {
-  public abstract String getId( );
   
   public abstract void setName( String name );
   

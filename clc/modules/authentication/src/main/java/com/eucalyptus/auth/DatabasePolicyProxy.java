@@ -23,8 +23,8 @@ public class DatabasePolicyProxy implements Policy {
   }
   
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
+  public String getPolicyId( ) {
+    return this.delegate.getPolicyId( );
   }
   
   @Override
@@ -46,7 +46,7 @@ public class DatabasePolicyProxy implements Policy {
   public Group getGroup( ) throws AuthException {
     final List<Group> results = Lists.newArrayList( );
     try {
-      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<PolicyEntity>( ) {
+      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
         public void fire( PolicyEntity t ) throws Throwable {
           results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
         }
