@@ -47,7 +47,7 @@ public class NetworkGroupManager {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup();
     User requestUser = ctx.getUser( );
-    Account account = Permissions.getAccountByUserId( requestUser.getId( ) );
+    Account account = Permissions.getAccountByUserId( requestUser.getUserId( ) );
     
     NetworkGroupUtil.makeDefault( ctx.getUserFullName( ) );
     
@@ -58,7 +58,7 @@ public class NetworkGroupManager {
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
     for ( String groupName : networkNames ) {
       NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), groupName );
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
         throw new EucalyptusCloudException( "Not authorized to use network group " + groupName + " for " + requestUser.getName( ) );
       }
       networkRuleGroups.put( groupName, group );
@@ -76,10 +76,10 @@ public class NetworkGroupManager {
     Context ctx = Contexts.lookup();
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create network group for " + ctx.getUser( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
       }
     }
@@ -114,7 +114,7 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
       }
     } else {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
       }
       NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
@@ -149,7 +149,7 @@ public class NetworkGroupManager {
                                                               new Predicate<SecurityGroupItemType>( ) {
                                                                 @Override
                                                                 public boolean apply( SecurityGroupItemType arg0 ) {
-                                                                  if ( Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+                                                                  if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
                                                                     return false;
                                                                   }
                                                                   return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );
@@ -169,7 +169,7 @@ public class NetworkGroupManager {
     NetworkGroupUtil.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
-    if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );
@@ -225,7 +225,7 @@ public class NetworkGroupManager {
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
     EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
-    if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );

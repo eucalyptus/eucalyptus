@@ -83,9 +83,12 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -123,10 +126,10 @@ public class SnapshotManager {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
       }
     }
@@ -170,6 +173,7 @@ public class SnapshotManager {
         db.getUnique( Snapshot.named( newId ) );
       } catch ( EucalyptusCloudException e ) {
         snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ) );
+        snap.setVolumeSize( vol.getSize( ) );
         db.add( snap );
         break;
       }
@@ -180,6 +184,7 @@ public class SnapshotManager {
     try {
       scReply = sc.getDispatcher( ).send( scRequest );
       snap.setCluster( sc.getServiceConfiguration().getName( ) );
+      snap.setPartition( sc.getServiceConfiguration( ). getPartition( ) );
       snap.setMappedState( scReply.getStatus( ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
@@ -187,10 +192,12 @@ public class SnapshotManager {
       throw new EucalyptusCloudException( "Error calling CreateStorageSnapshot:" + e.getMessage( ), e );
     }
     db.commit( );
-    EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_CREATE, "user=" + snap.getOwner( ),
-                      "snapshot=" + snap.getDisplayName( ),
-                      "volume=" + snap.getParentVolume( ) ).info( );
-    
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ), snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex , ex );
+    }
+
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
@@ -212,7 +219,7 @@ public class SnapshotManager {
         reply.set_return( false );
         return reply;
       }
-      if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+      if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) );
       }
       db.delete( snap );
@@ -229,8 +236,11 @@ public class SnapshotManager {
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
-        EventRecord.here( SnapshotManager.class, EventClass.SNAPSHOT, EventType.SNAPSHOT_DELETE, "user=" + snap.getOwner( ),
-                          "snapshot=" + snap.getDisplayName( ) ).info( );
+        try {
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ), snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+        } catch ( EventFailedException ex ) {
+          LOG.error( ex , ex );
+        }
       } else {
         db.rollback( );
         throw new EucalyptusCloudException( "Unable to delete snapshot." );
@@ -253,7 +263,7 @@ public class SnapshotManager {
       List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
       
       for ( Snapshot v : snapshots ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
           LOG.debug( "Skip snapshot " + v.getDisplayName( ) + " due to access right" );
           continue;
         }

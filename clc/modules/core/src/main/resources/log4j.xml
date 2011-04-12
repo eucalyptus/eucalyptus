@@ -153,7 +153,11 @@
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
   -->
-  <category name="Configs" additivity="false">
+  <category name="EXHAUST" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+    <category name="Configs" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>

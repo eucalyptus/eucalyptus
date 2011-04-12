@@ -31,6 +31,9 @@ public class Keys {
   public static final String S3_QUOTA_BUCKET_SIZE = "s3:quota-bucketsize";
   public static final String S3_QUOTA_BUCKET_OBJECT_NUMBER = "s3:quota-bucketobjectnumber";
   
+  public static final String IAM_QUOTA_USER_NUMBER = "iam:quota-usernumber";
+  public static final String IAM_QUOTA_GROUP_NUMBER = "iam:quota-groupnumber";
+
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     
   public static Key getKeyInstance( Class<? extends Key> keyClass ) {

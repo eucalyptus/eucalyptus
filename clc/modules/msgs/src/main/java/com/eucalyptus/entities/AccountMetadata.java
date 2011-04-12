@@ -82,14 +82,14 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   public AccountMetadata( AccountFullName account ) {
     this.ownerAccountId = account != null
-      ? account.getAccountId( )
+      ? account.getAccountNumber( )
       : null;
   }
   
   public AccountMetadata( AccountFullName account, String displayName ) {
     super( displayName );
     this.ownerAccountId = account != null
-      ? account.getAccountId( )
+      ? account.getAccountNumber( )
       : null;
   }
   

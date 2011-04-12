@@ -61,7 +61,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateQueryId( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" ).substring( 0, 21 ).toUpperCase( );//NOTE: this MUST be 21-alnums upper case.
   }
   
   /**
@@ -69,7 +69,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA384, true ).replaceAll( "\\p{Punct}", "" ).substring( 0, 40 );//NOTE: this MUST be 40-chars from base64.
   }
   
   /**

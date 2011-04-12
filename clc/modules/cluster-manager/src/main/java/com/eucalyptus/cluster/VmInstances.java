@@ -288,7 +288,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     } catch ( AuthException e ) {
       throw new EucalyptusCloudException( e );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId + " by " + ctx.getUser( ) );
     }
     return vm;

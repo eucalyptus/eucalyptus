@@ -746,4 +746,13 @@
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
   </mapping>
+  <mapping name="DeleteAccountPolicy" class="com.eucalyptus.auth.euare.DeleteAccountPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteAccountPolicyResponse" class="com.eucalyptus.auth.euare.DeleteAccountPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
 </binding>

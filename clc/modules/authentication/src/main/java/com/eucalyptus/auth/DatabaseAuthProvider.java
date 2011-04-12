@@ -124,7 +124,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithId( userId ) );
+      UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( userId ) );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Throwable e ) {
@@ -153,7 +153,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
           .createCriteria( "keys" ).setCacheable( true ).add( 
-              Restrictions.and( Restrictions.idEq( keyId ), Restrictions.eq( "active", true ) ) )
+              Restrictions.and( Restrictions.eq( "accessKey", keyId ), Restrictions.eq( "active", true ) ) )
           .list( );
       if ( users.size( ) != 1 ) {
         throw new AuthException( "Found " + users.size( ) + " user(s)" );
@@ -210,7 +210,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity group = db.getUnique( GroupEntity.newInstanceWithId( groupId ) );
+      GroupEntity group = db.getUnique( GroupEntity.newInstanceWithGroupId( groupId ) );
       db.commit( );
       return new DatabaseGroupProxy( group );
     } catch ( Throwable e ) {
@@ -342,7 +342,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     try {
       User user1 = lookupUserById( userId1 );
       User user2 = lookupUserById( userId2 );
-      if ( user1.getAccount( ).getId( ).equals( user2.getAccount( ).getId( ) ) ) {
+      if ( user1.getAccount( ).getAccountNumber( ).equals( user2.getAccount( ).getAccountNumber( ) ) ) {
         return true;
       }
     } catch ( AuthException e ) {
@@ -399,7 +399,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      AccountEntity account = db.getUnique( AccountEntity.newInstanceWithId( accountId ) );
+      AccountEntity account = db.getUnique( AccountEntity.newInstanceWithAccountNumber( accountId ) );
       db.commit( );
       return new DatabaseAccountProxy( account );
     } catch ( Throwable e ) {
@@ -416,7 +416,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
     try {
-      AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithId( keyId ) );
+      AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Throwable e ) {

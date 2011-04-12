@@ -73,13 +73,13 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
-        String userId = requestUser.getId( );
+        String userId = requestUser.getUserId( );
         Account account = requestUser.getAccount( );
         
         // Check global (inter-account) authorizations first
         Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
         if ( ( decision == Decision.DENY )
-            || ( decision == Decision.DEFAULT && resourceAccount.getId( ) != null && !resourceAccount.getId( ).equals( account.getId( ) ) ) ) {
+            || ( decision == Decision.DEFAULT && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) ) {
           LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED ); 
         }
@@ -327,11 +327,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     Group group = auth.getGroup( );
     switch ( scope ) {
       case ACCOUNT:
-        return group.getAccount( ).getId( );
+        return group.getAccount( ).getAccountNumber( );
       case GROUP:
-        return group.getId( );
+        return group.getGroupId( );
       case USER:
-        return group.getUsers( ).get( 0 ).getId( );
+        return group.getUsers( ).get( 0 ).getUserId( );
     }
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }

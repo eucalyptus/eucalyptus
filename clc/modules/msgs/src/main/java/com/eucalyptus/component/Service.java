@@ -119,7 +119,7 @@ public class Service implements ComponentInformation, HasParent<Component>, HasF
   }
   
   public Boolean isLocal( ) {
-    return this.endpoint.isLocal( );
+    return this.serviceConfiguration.isLocal( );
   }
   
   public KeyPair getKeys( ) {

@@ -100,7 +100,7 @@ public class NetworkGroupUtil {
     if ( groupNames.isEmpty( ) ) {
       try {
         for( User u : Accounts.listAllUsers( ) ) {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( Accounts.lookupAccountFullNameByUserId( u.getId( ) ), groupNames ) );        
+          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( Accounts.lookupAccountFullNameByUserId( u.getUserId( ) ), groupNames ) );        
         }
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( "Fail to get all users", e );
@@ -145,7 +145,7 @@ public class NetworkGroupUtil {
     SecurityGroupItemType groupInfo = new SecurityGroupItemType();
     groupInfo.setGroupName( group.getDisplayName() );
     groupInfo.setGroupDescription( group.getDescription() );
-    groupInfo.setAccountId( accountFullName.getAccountId( ) );
+    groupInfo.setAccountId( accountFullName.getAccountNumber( ) );
     for ( NetworkRule rule : group.getNetworkRules() ) {
       IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol(), rule.getLowPort(), rule.getHighPort() );
       for ( IpRange ipRange : rule.getIpRanges() )

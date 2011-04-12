@@ -74,7 +74,7 @@ public class UserFullName extends AccountFullName implements FullName {
   private final String userName;
   private UserFullName( User user ) {
     super( Accounts.lookupAccount( user ), "user", user.getName( ) );
-    this.userId = user.getId( );
+    this.userId = user.getUserId( );
     this.userName = user.getName( );
   }
   

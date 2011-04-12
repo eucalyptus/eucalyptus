@@ -47,7 +47,7 @@ public class ServiceContext {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       if( Bootstrap.isFinished( ) ) {
-        ServiceContextManager.restart( );
+        ServiceContextManager.restartSync( );
       }
     }
   }
@@ -62,9 +62,6 @@ public class ServiceContext {
     MuleContext muleCtx;
     try {
       muleCtx = ServiceContextManager.getContext( );
-    } catch ( ServiceInitializationException ex ) {
-      LOG.debug( ex.getMessage( ) );
-      throw ex;
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service context reference: "
@@ -86,9 +83,6 @@ public class ServiceContext {
     try {
       muleSession = new DefaultMuleSession( muleMsg, ( ( AbstractConnector ) endpoint.getConnector( ) ).getSessionHandler( ),
                                                           ServiceContextManager.getContext( ) );
-    } catch ( ServiceStateException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
     } catch ( MuleException ex ) {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to contruct session: " + ex.getMessage( ), ex );

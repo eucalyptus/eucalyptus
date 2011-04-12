@@ -384,6 +384,10 @@ public class PolicySpec {
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
   
+  public static String qualifiedName( String vendor, String name ) {
+    return vendor + ":" + name;
+  }
+  
   /**
    * Map request to policy language's action string.
    * 

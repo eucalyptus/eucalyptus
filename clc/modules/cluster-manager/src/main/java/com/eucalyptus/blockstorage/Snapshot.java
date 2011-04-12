@@ -84,10 +84,14 @@ import com.eucalyptus.util.StorageProperties;
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Column( name = "parentvolume" )
+  @Column( name = "metadata_snapshot_vol_size" )
+  private Integer   volumeSize;
+  @Column( name = "metadata_snapshot_parentvolume" )
   private String   parentVolume;
-  @Column( name = "cluster" )
-  private String   cluster;
+  @Column( name = "metadata_snapshot_vol_cluster" )
+  private String   volumeCluster;
+  @Column( name = "metadata_snapshot_vol_partition" )
+  private String   volumePartition;
   @Transient
   private FullName fullName;
   
@@ -123,7 +127,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     //return new Snapshot( userFullName, snapshotId );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Snapshot v = new Snapshot( accountId, snapshotId );
     return v;
@@ -133,7 +137,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     //return new Snapshot( userFullName, null );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Snapshot v = new Snapshot( accountId, null );
     return v;
@@ -182,11 +186,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   }
   
   public String getCluster( ) {
-    return cluster;
+    return volumeCluster;
   }
   
   public void setCluster( String cluster ) {
-    this.cluster = cluster;
+    this.volumeCluster = cluster;
   }
   
   @Override
@@ -207,6 +211,34 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
                                        .namespace( this.getOwnerAccountId( ) )
                                        .relativeId( "snapshot", this.getDisplayName( ) )
       : this.fullName;
+  }
+
+  public Integer getVolumeSize( ) {
+    return this.volumeSize;
+  }
+
+  public void setVolumeSize( Integer integer ) {
+    this.volumeSize = integer;
+  }
+
+  public void setPartition( String partition ) {
+    this.volumePartition = partition;
+  }
+
+  public String getVolumeCluster( ) {
+    return this.volumeCluster;
+  }
+
+  public void setVolumeCluster( String volumeCluster ) {
+    this.volumeCluster = volumeCluster;
+  }
+
+  public String getVolumePartition( ) {
+    return this.volumePartition;
+  }
+
+  public void setVolumePartition( String volumePartition ) {
+    this.volumePartition = volumePartition;
   }
   
 }
