@@ -86,8 +86,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       Account system = Accounts.addSystemAccount( );
       User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
       admin.createKey( );
-      admin.createToken( );
-      admin.createConfirmationCode( );
       admin.createPassword( );
     }
   }
