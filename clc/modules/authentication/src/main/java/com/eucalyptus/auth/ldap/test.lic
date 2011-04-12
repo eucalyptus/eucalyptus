@@ -9,21 +9,36 @@
   "accounting-groups":{
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
-    "select":["salesmarket", "engineering"],
-    "member-attribute":"groups",
+    "member-attribute":"member",
+    "selection":{
+        "filter":"objectClass=accountingGroup",
+        "select":["cn=engAccounting,ou=Groups,dc=eucalyptus,dc=com"],
+        "not-select":["cn=marketAccounting,ou=Groups,dc=eucalyptus,dc=com"],
+    }
   },
   "groups":{
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
-    "select":["sales", "marketing", "dev", "qa"],
     "member-attribute":"member",
+    "selection":{
+        "filter":"objectClass=groupOfNames",
+        "select":["cn=engineering,ou=Groups,dc=eucalyptus,dc=com"],
+        "not-select":["cn=marketing,ou=Groups,dc=eucalyptus,dc=com"],
+    }
   },
   "users":{
     "base-dn":"ou=people,dc=foo,dc=com",
     "id-attribute":"uid",
-    "select":["Tom", "Jack"],
-    "user-info-attributes":["name", "full name"],
+    "user-info-attributes":{
+        "name":"Name",
+        "fullName":"Full Name"
+    },
     "password-attribute":"password",
+    "selection":{
+        "filter":"objectClass=inetOrgPersion",
+        "select":["uid=johndoe,ou=People,dc=eucalyptus,dc=com", "uid=jackbauer,ou=People,dc=eucalyptus,dc=com"],
+        "not-select":["uid=jackbauer,ou=People,dc=eucalyptus,dc=com"],
+    }
   },
   "sync":{
     "enable":"true",

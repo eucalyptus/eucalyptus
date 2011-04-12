@@ -63,6 +63,10 @@ public class LdapClient {
     }
   }
   
+  public LdapContext getContext( ) {
+    return this.context;
+  }
+  
   public synchronized NamingEnumeration<SearchResult> search( String baseDn, String filter, String[] attrs ) throws LdapException {
     if ( DEBUG ) { LOG.debug( "<search> " + baseDn + ": filter = " + filter ); }
     SearchControls searchControls = new SearchControls( );

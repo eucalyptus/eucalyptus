@@ -33,5 +33,7 @@ public class LicSpec {
   public static final String SYNC_INTERVAL = "interval";
   public static final String ID_ATTRIBUTE = "id-attribute";
   public static final String ACCOUNTING_GROUP_BASE_DN = "base-dn";
+  public static final String SELECTION = "selection";
+  public static final String FILTER = "filter";
 
 }
