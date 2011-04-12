@@ -209,6 +209,7 @@ public class WalrusImageManager {
 				if(isAdministrator || (
 				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
 				                             PolicySpec.objectFullName(bucketName, objectKey),
 				                             objectInfo.getOwnerId()))) {
@@ -1080,6 +1081,7 @@ public class WalrusImageManager {
 				if(ctx.hasAdministrativePrivileges() || (
 				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
 				                             PolicySpec.objectFullName(bucketName, objectKey),
 				                             objectInfo.getOwnerId()))) {
@@ -1224,6 +1226,7 @@ public class WalrusImageManager {
 				if(ctx.hasAdministrativePrivileges() || (
 				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
 				                             PolicySpec.objectFullName(bucketName, objectKey),
 				                             objectInfo.getOwnerId()))) {
@@ -1267,6 +1270,7 @@ public class WalrusImageManager {
 				if(ctx.hasAdministrativePrivileges() || (
 				      objectInfo.canRead(account.getAccountNumber()) &&
 				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+				                             PolicySpec.VENDOR_S3,
 				                             PolicySpec.S3_RESOURCE_OBJECT,
 				                             PolicySpec.objectFullName( bucketName, manifestKey ),
 				                             objectInfo.getOwnerId()))) {
@@ -1346,6 +1350,7 @@ public class WalrusImageManager {
 						if (ctx.hasAdministrativePrivileges() || (
 						      objectInfo.canRead(account.getAccountNumber()) &&
 						      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+						                             PolicySpec.VENDOR_S3,
 						                             PolicySpec.S3_RESOURCE_OBJECT,
 						                             PolicySpec.objectFullName(bucketName, manifestKey),
 						                             objectInfo.getOwnerId()))) {

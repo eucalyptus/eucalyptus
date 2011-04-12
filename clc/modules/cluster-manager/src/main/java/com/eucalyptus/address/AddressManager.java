@@ -137,7 +137,7 @@ public class AddressManager {
         } catch ( AuthException e ) {}
       }
       if ( addrAccount != null
-           && ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
+           && ( isAdmin || Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
         reply.getAddressesSet( ).add( isAdmin
             ? address.getAdminDescription( )
             : address.getDescription( ) );
