@@ -61,57 +61,74 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config
+package com.eucalyptus.component;
 
-import java.io.Serializable
-import javax.persistence.Column
-import javax.persistence.Lob
-import javax.persistence.PersistenceContext
-import javax.persistence.Table
-import javax.persistence.Transient
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
-import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentIds
-import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.id.ClusterController
+import java.security.cert.X509Certificate;
+import javax.persistence.Column;
+import javax.persistence.Lob;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(ClusterController.class)
-public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
-  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
-  @Transient
-  private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
-  @Column(name="minvlan")
-  Integer minVlan;
-  @Column(name="maxvlan")
-  Integer maxVlan;
+public class Partition extends AbstractPersistent {
+  @Column(name="config_partition_name")
+  String name;
+  @Lob
+  @Column(name="config_partition_x509_certificate")
+  private String pemCertificate;
+  @Lob
+  @Column(name="config_partition_node_x509_certificate")
+  private String pemNodeCertificate;
   
-  public ClusterConfiguration( ) {
-    
+  public Partition( ) {
+    super( );
   }
-  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+
+  public Partition( String name, X509Certificate certificate, X509Certificate nodeCertificate ) {
+    super( );
+    this.name = name;
+    this.pemCertificate = X509CertHelper.fromCertificate( certificate );
+    this.pemNodeCertificate = X509CertHelper.fromCertificate( nodeCertificate );
   }
-  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-    this.minVlan = minVlan;
-    this.maxVlan = maxVlan;
+
+  public String getPemCertificate( ) {
+    return this.pemCertificate;
   }
-  public String getInsecureServicePath() {
-    return INSECURE_SERVICE_PATH;
+
+  protected void setPemCertificate( String clusterCertificate ) {
+    this.pemCertificate = clusterCertificate;
   }
-  public String getInsecureUri() {
-    return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
+
+  public String getPemNodeCertificate( ) {
+    return this.pemNodeCertificate;
+  }
+
+  public X509Certificate getNodeCertificate( ) {
+    return X509CertHelper.toCertificate( this.getPemNodeCertificate( ) );
+  }
+
+  public X509Certificate getCertificate( ) {
+    return X509CertHelper.toCertificate( this.getPemCertificate( ) );
   }
   
-  @Override
-  public Boolean isLocal() {
-    return false;
+  protected void setPemNodeCertificate( String nodeCertificate ) {
+    this.pemNodeCertificate = nodeCertificate;
   }
+
+  public String getName( ) {
+    return this.name;
+  }
+
+  protected void setName( String name ) {
+    this.name = name;
+  }
+
 }

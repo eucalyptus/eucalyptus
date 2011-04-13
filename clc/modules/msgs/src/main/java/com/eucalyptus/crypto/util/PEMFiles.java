@@ -6,6 +6,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
@@ -15,6 +17,23 @@ import com.eucalyptus.records.EventRecord;
 
 public class PEMFiles {
   private static Logger LOG = Logger.getLogger( PEMFiles.class );
+
+  public static String fromCertificate( X509Certificate x509 ) {
+    return B64.url.encString( PEMFiles.getBytes( x509 ) );
+  }
+  
+  public static X509Certificate toCertificate( String x509PemString ) {
+    return PEMFiles.getCert( B64.url.dec( x509PemString ) );
+  }
+
+  public static String fromPrivateKey( PrivateKey pk ) {
+    return B64.url.encString( PEMFiles.getBytes( pk ) );
+  }
+  
+  public static PrivateKey toPrivateKey( String pkB64PemString ) {
+    return PEMFiles.getPrivateKey( B64.url.dec( pkB64PemString ) );
+  }
+  
   public static void write( final String fileName, final Object securityToken ) {
     PEMWriter privOut = null;
     try {
@@ -53,4 +72,16 @@ public class PEMFiles {
     return x509;
   }
 
+  public static PrivateKey getPrivateKey( final byte[] o ) {
+    PrivateKey pk = null;
+    PEMReader in = null;
+    ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
+    in = new PEMReader( new InputStreamReader( pemByteIn ) );
+    try {
+      pk = ( PrivateKey ) in.readObject( );
+    } catch ( IOException e ) {
+      LOG.error( e, e );//this can never happen
+    }
+    return pk;
+  }
 }

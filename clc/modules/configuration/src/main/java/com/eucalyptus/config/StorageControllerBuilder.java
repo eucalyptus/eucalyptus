@@ -10,6 +10,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -40,17 +41,11 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-//NOTE:GRZE: this restriction no longer applies with partitions.  the order of operations is irrelevant becuase service state determines usability (and service state is not sensitive to the ordering of registration events).
-//    try {
-//      ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, partition );
-//    } catch ( PersistenceException ex ) {
-//      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-//                                              + "  An error occurred while trying to lookup the partition: " + name );
-//    } catch ( NoSuchElementException ex ) {
-//      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-//                                              + "  No cluster found within the partition: " + name );
-//    }
-    return super.checkAdd( partition, name, host, port );
+    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+      throw new ServiceRegistrationException( "Storage Controller registration failed because the key directory cannot be created." );
+    } else {
+      return super.checkAdd( partition, name, host, port );
+    }
   }
 
   @Override
