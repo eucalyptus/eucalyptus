@@ -537,11 +537,11 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.checkTransition( transition ) ) {
+    if ( component.getLocalService( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getStateMachine( ).transition( transition );
+          component.getLocalService( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

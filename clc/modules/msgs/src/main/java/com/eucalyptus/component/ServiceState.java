@@ -119,8 +119,8 @@ public class ServiceState {
     }.newAtomicMarkedState( );
   }
   
-  public CheckedListenableFuture<Component> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    if ( !this.parent.isAvailableLocally( ) ) {
+  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    if ( !this.parent.lookupComponent( ).isAvailableLocally( ) ) {
       throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( )
                                        + " because it is not available locally." );
     }
@@ -138,7 +138,7 @@ public class ServiceState {
     }
   }
   
-  public CheckedListenableFuture<Component> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.startTransitionTo( state );
     } catch ( IllegalStateException ex ) {
@@ -153,7 +153,7 @@ public class ServiceState {
     }
   }
   
-  public CheckedListenableFuture<Component> transitionSelf( ) {
+  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
     try {
       if ( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
         return this.transition( Transition.READY_CHECK );
@@ -184,7 +184,7 @@ public class ServiceState {
   }
   
   public boolean checkTransition( Transition transition ) {
-    return this.parent.isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
+    return this.parent.lookupComponent( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
 }

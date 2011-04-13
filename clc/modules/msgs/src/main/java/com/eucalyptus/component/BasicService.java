@@ -63,26 +63,44 @@
 
 package com.eucalyptus.component;
 
+import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public class BasicService implements HasParent<Component>, HasFullName<ComplexService> {
-  private static Logger LOG = Logger.getLogger( BasicService.class );
+public class BasicService implements Service, EventListener {
+  private static Logger              LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration serviceConfiguration;
   private final ServiceState         stateMachine;
   private final Runnable             checker;
-  
-  public BasicService( ServiceConfiguration serviceConfiguration ) {
+  private State                      goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
+                                                                                    
+  BasicService( ServiceConfiguration serviceConfiguration ) {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
+
     this.checker = new Runnable( ) {
       @Override
       public void run( ) {
@@ -191,6 +209,87 @@ public class BasicService implements HasParent<Component>, HasFullName<ComplexSe
   @Override
   public Component getParent( ) {
     return this.getComponent( );
+  }
+  
+  /**
+   * TODO: DOCUMENT
+   * 
+   * @see com.eucalyptus.component.Service#getDispatcher()
+   * @return
+   */
+  @Override
+  public Dispatcher getDispatcher( ) {
+    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
+  }
+  
+  /**
+   * TODO: DOCUMENT
+   * 
+   * @see com.eucalyptus.component.Service#getDetails()
+   * @return
+   */
+  @Override
+  public List<String> getDetails( ) {
+    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
+  }
+  
+  /**
+   * TODO: DOCUMENT
+   * 
+   * @see com.eucalyptus.component.Service#enqueue(com.eucalyptus.util.async.Request)
+   * @param request
+   */
+  @Override
+  public void enqueue( Request request ) {}
+  
+  @Override
+  public boolean checkTransition( Transition transition ) {
+    return this.stateMachine.checkTransition( transition );
+  }
+  
+  @Override
+  public Component.State getGoal( ) {
+    return this.goal;
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.stateMachine.transition( transition );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.stateMachine.transition( state );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
+    return this.stateMachine.transitionSelf( );
+  }
+  
+  @Override
+  public void fireEvent( Event event ) {
+    if ( event instanceof Hertz ) {
+      for ( final Component c : Components.list( ) ) {
+        if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
+          if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+            Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
+          } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
+            c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public InetSocketAddress getSocketAddress( ) {
+    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
+  }
+
+  @Override
+  public void setGoal( State state ) {
+    this.goal = state;
   }
   
 }

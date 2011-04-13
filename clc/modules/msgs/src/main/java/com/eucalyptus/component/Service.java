@@ -63,10 +63,21 @@
 
 package com.eucalyptus.component;
 
+import java.net.InetSocketAddress;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public interface Service {
+public interface Service extends HasParent<Component>, HasFullName<ComplexService> {
   
   public abstract Dispatcher getDispatcher( );
   
@@ -76,5 +87,35 @@ public interface Service {
   public abstract List<String> getDetails( );
   
   public abstract void enqueue( Request request );
+  
+  public abstract State getState( );
+  
+  public abstract ServiceId getServiceId( );
+  
+  public abstract Boolean isLocal( );
+  
+  public abstract KeyPair getKeys( );
+  
+  public abstract X509Certificate getCertificate( );
+  
+  public abstract ServiceConfiguration getServiceConfiguration( );
+  
+  public abstract Component getComponent( );
+  
+  public abstract ComponentId getComponentId( );
+  
+  public abstract boolean checkTransition( Transition transition );
+  
+  public abstract State getGoal( );
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transitionSelf( );
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
+  
+  InetSocketAddress getSocketAddress( );
+  
+  public abstract void setGoal( State state );
   
 }

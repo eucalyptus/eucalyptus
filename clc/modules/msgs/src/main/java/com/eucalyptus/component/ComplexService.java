@@ -67,26 +67,31 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class ComplexService extends BasicService implements ComponentInformation, HasParent<Component>, HasFullName<ComplexService>, Service {
+public class ComplexService implements HasParent<Component>, HasFullName<ComplexService>, Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final ServiceEndpoint endpoint;
   private final Dispatcher      localDispatcher;
   private final Dispatcher      remoteDispatcher;
+  private final Service         serviceDelegate;
   
   /** ASAP:FIXME:GRZE **/
   
-  public ComplexService( BasicService baseService ) {
-    super( baseService.getServiceConfiguration( ) );
+  ComplexService( Service baseService ) {
+    this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isLocal( ) ) {
       remoteUri = this.getComponentId( ).makeRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
@@ -100,20 +105,8 @@ public class ComplexService extends BasicService implements ComponentInformation
     this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
   }
   
-  public URI getUri( ) {
-    return this.endpoint.get( );
-  }
-  
-  public String getHost( ) {
-    return this.endpoint.get( ).getHost( );
-  }
-  
-  public Integer getPort( ) {
-    return this.endpoint.get( ).getPort( );
-  }
-  
-  public ServiceEndpoint getEndpoint( ) {
-    return this.endpoint;
+  ComplexService( ServiceConfiguration config ) {
+    this( new BasicService( config ) );
   }
   
   @Override
@@ -123,7 +116,6 @@ public class ComplexService extends BasicService implements ComponentInformation
       : this.remoteDispatcher;
   }
   
-  @Override
   @Override
   public String toString( ) {
     return String.format( "Service %s name=%s endpoint=%s serviceConfiguration=%s\n",
@@ -135,14 +127,118 @@ public class ComplexService extends BasicService implements ComponentInformation
   public List<String> getDetails( ) {
     return Arrays.asList( this.toString( ).split( "\n" ) );
   }
-
+  
   @Override
   public void enqueue( Request request ) {
     this.endpoint.enqueue( request );
   }
+  
+  @Override
+  public int hashCode( ) {
+    return this.serviceDelegate.hashCode( );
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    return this.serviceDelegate.equals( obj );
+  }
+  
+  @Override
+  public final String getName( ) {
+    return this.serviceDelegate.getName( );
+  }
+  
+  @Override
+  public State getState( ) {
+    return this.serviceDelegate.getState( );
+  }
+  
+  @Override
+  public final ServiceId getServiceId( ) {
+    return this.serviceDelegate.getServiceId( );
+  }
+  
+  @Override
+  public Boolean isLocal( ) {
+    return this.serviceDelegate.isLocal( );
+  }
+  
+  @Override
+  public KeyPair getKeys( ) {
+    return this.serviceDelegate.getKeys( );
+  }
+  
+  @Override
+  public X509Certificate getCertificate( ) {
+    return this.serviceDelegate.getCertificate( );
+  }
+  
+  @Override
+  public int compareTo( ComplexService that ) {
+    return this.serviceDelegate.compareTo( that );
+  }
+  
+  @Override
+  public ServiceConfiguration getServiceConfiguration( ) {
+    return this.serviceDelegate.getServiceConfiguration( );
+  }
+  
+  @Override
+  public Component getComponent( ) {
+    return this.serviceDelegate.getComponent( );
+  }
+  
+  @Override
+  public ComponentId getComponentId( ) {
+    return this.serviceDelegate.getComponentId( );
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return this.serviceDelegate.getFullName( );
+  }
+  
+  @Override
+  public String getPartition( ) {
+    return this.serviceDelegate.getPartition( );
+  }
+  
+  @Override
+  public Component getParent( ) {
+    return this.serviceDelegate.getParent( );
+  }
+  
+  @Override
+  public boolean checkTransition( Transition transition ) {
+    return this.serviceDelegate.checkTransition( transition );
+  }
+  
+  @Override
+  public State getGoal( ) {
+    return this.serviceDelegate.getGoal( );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.serviceDelegate.transition( transition );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.serviceDelegate.transition( state );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
+    return this.serviceDelegate.transitionSelf( );
+  }
+
+  public void setGoal( State state ) {
+    this.serviceDelegate.setGoal( state );
+  }
 
   public InetSocketAddress getSocketAddress( ) {
-    return this.endpoint.getSocketAddress( );
+    return this.serviceDelegate.getSocketAddress( );
   }
   
 }
