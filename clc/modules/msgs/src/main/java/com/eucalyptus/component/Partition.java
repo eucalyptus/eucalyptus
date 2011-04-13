@@ -105,10 +105,10 @@ public class Partition extends AbstractPersistent {
   @Column(name="config_partition_node_x509_certificate")
   private String pemNodeCertificate;
   @Lob
-  @Column(name="config_partition_pk")
+  @Column(name="config_partition_kp")
   private String pemPrivateKey;
   @Lob
-  @Column(name="config_partition_node_pk")
+  @Column(name="config_partition_node_kp")
   private String pemNodePrivateKey;
   
   public Partition( ) {
