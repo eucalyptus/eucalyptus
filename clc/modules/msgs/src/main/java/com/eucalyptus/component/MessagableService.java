@@ -81,7 +81,7 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class MessagableService implements HasParent<Component>, HasFullName<MessagableService>, Service {
+public class MessagableService implements Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final ServiceEndpoint endpoint;
   private final Dispatcher      localDispatcher;
@@ -174,7 +174,7 @@ public class MessagableService implements HasParent<Component>, HasFullName<Mess
   }
   
   @Override
-  public int compareTo( MessagableService that ) {
+  public int compareTo( Service that ) {
     return this.serviceDelegate.compareTo( that );
   }
   

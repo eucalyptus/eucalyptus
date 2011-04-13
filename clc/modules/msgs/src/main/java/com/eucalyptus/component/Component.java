@@ -895,7 +895,7 @@ public class Component implements HasName<Component> {
                           service.getServiceConfiguration( ).isLocal( )
                             ? "local"
                             : "remote",
-                          config.getName( ), config.getUri( ), service.getDispatcher( ) ).info( );
+                          config.getName( ), config.getUri( ) ).info( );
     }
     
     /**

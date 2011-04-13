@@ -77,7 +77,7 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public interface Service extends HasParent<Component>, HasFullName<MessagableService> {
+public interface Service extends HasParent<Component>, HasFullName<Service> {
   
   public abstract Dispatcher getDispatcher( );
   
