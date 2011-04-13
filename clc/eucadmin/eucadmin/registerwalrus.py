@@ -37,7 +37,7 @@ class RegisterWalrus(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Register walruses'
-    Params = Param(name='Partition',
+    Params = [Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
