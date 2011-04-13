@@ -53,7 +53,7 @@ MySQLCmd = \
 		a.auth_account_name='%s'
 		and g.auth_group_name='_%s'
 		and k.auth_access_key_active=1;
-        "  | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1"""
+        "  | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1 | awk '{print $1}"""
 
 DBPassCmd = """echo -n eucalyptus | openssl dgst -sha256 -sign %(EUCALYPTUS)s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""
 
