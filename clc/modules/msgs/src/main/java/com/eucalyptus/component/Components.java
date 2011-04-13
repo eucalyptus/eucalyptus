@@ -92,7 +92,7 @@ public class Components {
                                                                                                                                       .getLogger( Components.class );
   private static ConcurrentMap<Class, Map>        componentInformation = new ConcurrentHashMap<Class, Map>( ) {
                                                                          {
-                                                                           put( Service.class, new ConcurrentHashMap<String, Service>( ) );
+                                                                           put( ComplexService.class, new ConcurrentHashMap<String, ComplexService>( ) );
                                                                            put( Component.class, new ConcurrentHashMap<String, Component>( ) );
                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                          }
@@ -300,7 +300,7 @@ public class Components {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( Service s : comp.lookupServices( ) ) {
+            for ( ComplexService s : comp.lookupServices( ) ) {
               buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
               buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
                           + s.getDispatcher( ).getAddress( ) ).append( "\n" );

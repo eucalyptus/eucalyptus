@@ -90,11 +90,11 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
+public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<ComplexService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
   private static final int                   offerInterval = 2000;
   private static final int                   pollInterval  = 2000;
-  private final Service                      parent;
+  private final ComplexService                      parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -102,7 +102,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
   private ThreadPool                         workers;
   
-  public ServiceEndpoint( Service parent, Boolean local, URI uri ) {
+  public ServiceEndpoint( ComplexService parent, Boolean local, URI uri ) {
     super( uri );
     this.parent = parent;
     this.local = local;
@@ -115,7 +115,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getParent( ).getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = Threads.lookup( parent.getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -188,7 +188,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     this.workers.shutdownNow( );
   }
   
-  public Service getParent( ) {
+  public ComplexService getParent( ) {
     return this.parent;
   }
   
@@ -297,10 +297,6 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       } );
     }
     return false;
-  }
-  
-  public ChannelPipelineFactory getPipelineFactory( ) {
-    return this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( );    
   }
   
 }

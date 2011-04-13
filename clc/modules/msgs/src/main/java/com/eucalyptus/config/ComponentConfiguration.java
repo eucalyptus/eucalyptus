@@ -63,6 +63,8 @@
  */
 package com.eucalyptus.config;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.component.Component;
@@ -109,8 +111,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.servicePath = servicePath;
   }
   
-  public String getUri() {
-    return "http://" + this.getHostName() + ":" + this.getPort() + this.getServicePath();
+  public InetSocketAddress getSocketAddress( ) {
+    return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
+  }
+  
+  public URI getUri() {
+    return this.getComponentId( ).makeRemoteUri( this.getHostName( ), this.getPort( ) );
   }
   
   public String getName() {

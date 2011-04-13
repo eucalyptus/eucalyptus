@@ -60,79 +60,63 @@
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util.async;
 
-import java.util.concurrent.ExecutionException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+package com.eucalyptus.util.fsm;
 
-public interface Request<Q extends BaseMessage, R extends BaseMessage> {
-  //ASAP: move these to message callback.
+import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.async.Callback.Completion;
+
+/**
+ * Trivial TransitionAction implementation with no-op implementations for
+ * {@link TransitionAction#before(HasName)}, {@link TransitionAction#enter(HasName)}, and
+ * {@link TransitionAction#after(HasName)}
+ */
+public abstract class AbstractTransitionAction<P extends HasName<P>> implements TransitionAction<P> {
   /**
-   * TODO: DOCUMENT Request.java
-   * @param serviceEndpoint
-   * @return
+   * @see com.eucalyptus.util.fsm.TransitionAction#leave(com.eucalyptus.util.HasName,
+   *      com.eucalyptus.util.async.Callback.Completion)
+   * @param parent
+   * @param transitionCallback
    */
-  public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param endpoint
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   */
-  public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
-  public Request<Q, R> execute( ServiceConfiguration config );
-  //ASAP: add time information
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( UnconditionalCallback callback );  
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Completion callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Failure<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Success<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Callback.TwiceChecked<Q, R> getCallback( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract CheckedListenableFuture<R> getResponse( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Q getRequest( );
+  public abstract void leave( P parent, Completion transitionCallback );
   
   /**
-   * Don't even think about using this call.
-   * @param cluster
+   * @see com.eucalyptus.util.fsm.TransitionAction#before(com.eucalyptus.util.HasName)
+   * @param parent
    * @return
    */
-  @Deprecated
-  public abstract CheckedListenableFuture<R> dispatch( String cluster );
-
+  public boolean before( P parent ) {
+    return true;
+  }
   
+  /**
+   * @see com.eucalyptus.util.fsm.TransitionAction#enter(com.eucalyptus.util.HasName)
+   * @param parent
+   */
+  public void enter( P parent ) {}
+  
+  /**
+   * @see com.eucalyptus.util.fsm.TransitionAction#after(com.eucalyptus.util.HasName)
+   * @param parent
+   */
+  public void after( P parent ) {}
+  
+  public static final AbstractTransitionAction NOOP      = new AbstractTransitionAction( ) {
+                                                           public void leave( HasName parent, Completion transitionCallback ) {
+                                                             transitionCallback.fire( );
+                                                           }
+                                                           
+                                                           public String toString( ) {
+                                                             return "TransitionAction.noop";
+                                                           }
+                                                         };
+  public static final AbstractTransitionAction OUTOFBAND = new AbstractTransitionAction( ) {
+                                                           @Override
+                                                           public void leave( HasName parent, Completion transitionCallback ) {}
+                                                           
+                                                           public String toString( ) {
+                                                             return "TransitionAction.OUTOFBAND";
+                                                           }
+                                                           
+                                                         };
 }

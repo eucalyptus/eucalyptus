@@ -60,79 +60,89 @@
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util.async;
+package com.eucalyptus.component;
 
-import java.util.concurrent.ExecutionException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.util.List;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
-public interface Request<Q extends BaseMessage, R extends BaseMessage> {
-  //ASAP: move these to message callback.
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param serviceEndpoint
-   * @return
-   */
-  public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param endpoint
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   */
-  public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
-  public Request<Q, R> execute( ServiceConfiguration config );
-  //ASAP: add time information
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( UnconditionalCallback callback );  
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Completion callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Failure<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Success<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Callback.TwiceChecked<Q, R> getCallback( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract CheckedListenableFuture<R> getResponse( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Q getRequest( );
+public class ComplexService extends BasicService implements ComponentInformation, HasParent<Component>, HasFullName<ComplexService>, Service {
+  public static String          LOCAL_HOSTNAME = "@localhost";
+  private final ServiceEndpoint endpoint;
+  private final Dispatcher      localDispatcher;
+  private final Dispatcher      remoteDispatcher;
   
-  /**
-   * Don't even think about using this call.
-   * @param cluster
-   * @return
-   */
-  @Deprecated
-  public abstract CheckedListenableFuture<R> dispatch( String cluster );
+  /** ASAP:FIXME:GRZE **/
+  
+  public ComplexService( BasicService baseService ) {
+    super( baseService.getServiceConfiguration( ) );
+    URI remoteUri;
+    if ( this.getServiceConfiguration( ).isLocal( ) ) {
+      remoteUri = this.getComponentId( ).makeRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
+    } else {
+      remoteUri = this.getComponentId( ).makeRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
+    }
+    this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isLocal( )
+      ? this.getComponentId( ).getLocalEndpointUri( )
+      : remoteUri );//TODO:GRZE: fix remote/local swaps
+    this.localDispatcher = ServiceDispatcher.makeLocal( this.getServiceConfiguration( ) );
+    this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
+  }
+  
+  public URI getUri( ) {
+    return this.endpoint.get( );
+  }
+  
+  public String getHost( ) {
+    return this.endpoint.get( ).getHost( );
+  }
+  
+  public Integer getPort( ) {
+    return this.endpoint.get( ).getPort( );
+  }
+  
+  public ServiceEndpoint getEndpoint( ) {
+    return this.endpoint;
+  }
+  
+  @Override
+  public Dispatcher getDispatcher( ) {
+    return this.isLocal( )
+      ? this.localDispatcher
+      : this.remoteDispatcher;
+  }
+  
+  @Override
+  @Override
+  public String toString( ) {
+    return String.format( "Service %s name=%s endpoint=%s serviceConfiguration=%s\n",
+                          this.getComponentId( ), this.getName( ), this.endpoint, this.getServiceConfiguration( ) );
+  }
+  
+  /** ASAP:FIXME:GRZE **/
+  @Override
+  public List<String> getDetails( ) {
+    return Arrays.asList( this.toString( ).split( "\n" ) );
+  }
 
+  @Override
+  public void enqueue( Request request ) {
+    this.endpoint.enqueue( request );
+  }
+
+  public InetSocketAddress getSocketAddress( ) {
+    return this.endpoint.getSocketAddress( );
+  }
   
 }

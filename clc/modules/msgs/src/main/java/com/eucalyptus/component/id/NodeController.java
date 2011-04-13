@@ -70,6 +70,10 @@ import com.google.common.collect.Lists;
 
 public class NodeController extends ComponentId {
   
+  public NodeController( ) {
+    super( "node" );
+  }
+
   @Override
   public Integer getPort( ) {
     return 8775;
@@ -77,7 +81,7 @@ public class NodeController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return "vm://NodeControllerEndpoint";
+    return String.format( getUriPattern(), "127.0.0.1", this.getPort( ) );
   }
   
   @Override

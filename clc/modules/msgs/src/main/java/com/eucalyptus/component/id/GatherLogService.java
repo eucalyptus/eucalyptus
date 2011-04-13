@@ -53,86 +53,60 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util.async;
 
-import java.util.concurrent.ExecutionException;
+package com.eucalyptus.component.id;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.component.ComponentId;
 
-public interface Request<Q extends BaseMessage, R extends BaseMessage> {
-  //ASAP: move these to message callback.
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param serviceEndpoint
-   * @return
-   */
-  public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param endpoint
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   */
-  public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
-  public Request<Q, R> execute( ServiceConfiguration config );
-  //ASAP: add time information
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( UnconditionalCallback callback );  
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Completion callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Failure<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( Callback.Success<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Callback.TwiceChecked<Q, R> getCallback( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract CheckedListenableFuture<R> getResponse( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
-  public abstract Q getRequest( );
+public class GatherLogService extends ComponentId {
+  @Override
+  public Integer getPort( ) {
+    return 8774;
+  }
   
+  @Override
+  public String getLocalEndpointName( ) {
+    return String.format( getUriPattern(), "127.0.0.1", this.getPort( ) );
+  }
+  
+  @Override
+  public String getUriPattern( ) {
+    return "http://%s:%d/axis2/services/EucalyptusGL";
+  }
+  
+  @Override
+  public Boolean hasDispatcher( ) {
+    return false;
+  }
+  
+  @Override
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( ClusterController.class );
+      }
+    };
+  }
+  private static ChannelPipelineFactory logPipeline;
   /**
-   * Don't even think about using this call.
-   * @param cluster
+   * This was born under a bad sign. No touching.
+   * 
    * @return
    */
-  @Deprecated
-  public abstract CheckedListenableFuture<R> dispatch( String cluster );
+  public ChannelPipelineFactory getClientPipeline( ) {
+    return ( logPipeline = ( logPipeline != null
+      ? logPipeline
+      : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
+  }
 
-  
 }

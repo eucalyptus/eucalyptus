@@ -119,8 +119,8 @@ public class ServiceConfigurations {
       return c;
     }
     
-    public String getUri( ) {
-      return this.uri.toASCIIString( );
+    public URI getUri( ) {
+      return this.uri;
     }
 
     @Override

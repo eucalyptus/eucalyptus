@@ -12,7 +12,7 @@ import com.eucalyptus.util.async.Callback;
  * @param <T>
  * @param <S>
  */
-public abstract class SplitTransition<P extends HasName<P>, S extends Enum<S>> extends TransitionAction<P> {
+public abstract class SplitTransition<P extends HasName<P>, S extends Enum<S>> extends AbstractTransitionAction<P> {
   
   @Override
   public final boolean before( P parent ) {

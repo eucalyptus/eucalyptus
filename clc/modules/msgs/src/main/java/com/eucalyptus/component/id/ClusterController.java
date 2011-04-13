@@ -4,7 +4,11 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 
 public class ClusterController extends ComponentId {
-  
+
+  public ClusterController( ) {
+    super( "cluster" );
+  }
+
   @Override
   public Integer getPort( ) {
     return 8774;
@@ -26,7 +30,6 @@ public class ClusterController extends ComponentId {
   }
   
   private static ChannelPipelineFactory clusterPipeline;
-  private static ChannelPipelineFactory logPipeline;
   
   @Override
   public ChannelPipelineFactory getClientPipeline( ) {
@@ -34,16 +37,5 @@ public class ClusterController extends ComponentId {
         ? clusterPipeline
           : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
   }
-  
-  /**
-   * This was born under a bad sign. No touching.
-   * 
-   * @return
-   */
-  public static ChannelPipelineFactory getLogClientPipeline( ) {
-    return ( logPipeline = ( logPipeline != null
-      ? logPipeline
-      : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
-  }
-  
+    
 }

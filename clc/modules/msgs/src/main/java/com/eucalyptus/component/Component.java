@@ -121,9 +121,9 @@ public class Component implements HasName<Component> {
   private final ComponentId           identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
-  private final ServiceState        stateMachine;
   private final AtomicBoolean         enabled = new AtomicBoolean( false );
   private final AtomicBoolean         local   = new AtomicBoolean( false );
+  private BasicService localService;
   
   public enum State {
     BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
@@ -149,14 +149,15 @@ public class Component implements HasName<Component> {
       }
     }
     this.bootstrapper = new ComponentBootstrapper( this );
-    this.stateMachine = new ServiceState( this );
+    this.localService = new BasicService( null );
+    this.serviceRegistry.register( this.localService );
   }
   
   public ServiceState getStateMachine( ) {
     return this.stateMachine;
   }
   
-  public Service getLocalService( ) {
+  public ComplexService getLocalService( ) {
     return this.serviceRegistry.getLocalService( );
   }
   
@@ -168,7 +169,7 @@ public class Component implements HasName<Component> {
    * @return
    * @see com.eucalyptus.component.Component.ServiceRegistry#getServices()
    */
-  public NavigableSet<Service> lookupServices( ) {
+  public NavigableSet<ComplexService> lookupServices( ) {
     return this.serviceRegistry.getServices( );
   }
   
@@ -249,7 +250,7 @@ public class Component implements HasName<Component> {
   }
   
   public URI getUri( ) {
-    NavigableSet<Service> services = this.serviceRegistry.getServices( );
+    NavigableSet<ComplexService> services = this.serviceRegistry.getServices( );
     if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.getName( ) ) ) {
       throw new RuntimeException( "Cloud local component has " + services.size( ) + " registered services (Should be exactly 1): " + this + " "
                                   + services.toString( ) );
@@ -258,7 +259,7 @@ public class Component implements HasName<Component> {
     } else if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) == 1 ) {
       return services.first( ).getUri( );
     } else {
-      for ( Service s : services ) {
+      for ( ComplexService s : services ) {
         if ( s.isLocal( ) ) {
           return s.getUri( );
         }
@@ -291,7 +292,7 @@ public class Component implements HasName<Component> {
    * @throws NoSuchElementException
    * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
    */
-  public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
+  public ComplexService lookupService( ServiceConfiguration config ) throws NoSuchElementException {
     return this.serviceRegistry.lookup( config );
   }
   
@@ -306,11 +307,11 @@ public class Component implements HasName<Component> {
   }
   
   @Deprecated
-  public Service lookupService( String name ) {
+  public ComplexService lookupService( String name ) {
     return this.serviceRegistry.getService( name );
   }
   
-  public NavigableSet<Service> lookupServices( String partition ) {
+  public NavigableSet<ComplexService> lookupServices( String partition ) {
     return this.serviceRegistry.lookupPartition( partition );
   }
   
@@ -326,14 +327,14 @@ public class Component implements HasName<Component> {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
                                                                     uri.getPort( ) );
-      Service service = new Service( this.getComponentId( ), config );
+      ComplexService service = new ComplexService( config );
       this.serviceRegistry.register( service );
       return config;
     } else if ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
                                                                     uri.getPort( ) );
-      Service service = new Service( this.getComponentId( ), config );
+      ComplexService service = new ComplexService( config );
       this.serviceRegistry.register( service );
       return config;
     } else {
@@ -351,7 +352,7 @@ public class Component implements HasName<Component> {
     if ( !Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                     this.getComponentId( ).getPort( ) );
-      Service service = new Service( this.getComponentId( ), config );
+      ComplexService service = new ComplexService( config );
       this.serviceRegistry.register( service );
       return config;
     } else {
@@ -367,24 +368,19 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public CheckedListenableFuture<Component> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    Service service = new Service( this.getComponentId( ), config );
+    ComplexService service = new ComplexService( config );
     this.serviceRegistry.register( service );
-//    if ( service.isLocal( ) ) {
-      if ( State.INITIALIZED.equals( this.getState( ) ) ) {
-        try {
-          return this.stateMachine.transition( Transition.LOADING );
-        } catch ( Throwable ex ) {
-          throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
-        }
-      } else if ( State.LOADED.equals( this.getState( ) ) ) {
-        return Futures.predestinedFuture( this );
-      } else {
-        return Futures.predestinedFuture( this );
+    if ( State.INITIALIZED.equals( this.getState( ) ) ) {
+      try {
+        return this.stateMachine.transition( Transition.LOADING );
+      } catch ( Throwable ex ) {
+        throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
-//    } else {
-//      return Futures.predestinedFuture( this );
-      //TODO:GRZE:ASAP handle loadService
-//    }
+    } else if ( State.LOADED.equals( this.getState( ) ) ) {
+      return Futures.predestinedFuture( this );
+    } else {
+      return Futures.predestinedFuture( this );
+    }
   }
   
   public CheckedListenableFuture<Component> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
@@ -392,7 +388,7 @@ public class Component implements HasName<Component> {
     try {
       this.serviceRegistry.register( this.serviceRegistry.lookup( config ) );
     } catch ( NoSuchElementException ex1 ) {
-      this.serviceRegistry.register( new Service( this.getComponentId( ), config ) );
+      this.serviceRegistry.register( new ComplexService( config ) );
     }
     if( config.isLocal( ) ) {
       this.stateMachine.setGoal( this.serviceRegistry.getServices( ).isEmpty( ) ? State.ENABLED : State.DISABLED );
@@ -531,7 +527,7 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<Component> destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
-      Service remove = this.serviceRegistry.deregister( config );
+      ComplexService remove = this.serviceRegistry.deregister( config );
       if ( remove.getServiceConfiguration( ).isLocal( ) ) {
         if ( State.STOPPED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
           this.stopService( config );
@@ -570,21 +566,6 @@ public class Component implements HasName<Component> {
         }
       }
     }
-  }
-  
-  private Runnable getCheckRunner( ) {
-    return new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          if ( Component.this.isAvailableLocally( ) && Component.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            Component.this.stateMachine.transitionSelf( );
-          }
-        } catch ( Throwable ex ) {
-          LOG.debug( "CheckRunner caught an exception: " + ex );
-        }
-      }
-    };
   }
   
   private final Callable<Component> noTransition = new Callable<Component>( ) {
@@ -719,15 +700,15 @@ public class Component implements HasName<Component> {
   }
   
   class ServiceRegistry {
-    private final AtomicReference<Service> localService = new AtomicReference( null );
-    private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
+    private final AtomicReference<ComplexService> localService = new AtomicReference( null );
+    private final Map<FullName, ComplexService>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return ( this.localService.get( ) == null );
     }
     
-    public Service getLocalService( ) {
-      Service ret = this.localService.get( );
+    public ComplexService getLocalService( ) {
+      ComplexService ret = this.localService.get( );
       if ( ret == null ) {
         throw new NoSuchElementException( "Attempt to access a local service reference when none exists" );
       } else {
@@ -742,13 +723,13 @@ public class Component implements HasName<Component> {
      * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
      *         type.
      */
-    public NavigableSet<Service> getServices( ) {
+    public NavigableSet<ComplexService> getServices( ) {
       return Sets.newTreeSet( this.services.values( ) );
     }
     
     List<ServiceInfoType> getServiceInfos( final String localhostAddr ) {
       List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
-      for ( final Service s : this.services.values( ) ) {
+      for ( final ComplexService s : this.services.values( ) ) {
         if ( State.ENABLED.equals( s.getState( ) ) ) {
           serviceSnapshot.add( 0, new ServiceInfoType( ) {
             {
@@ -756,7 +737,7 @@ public class Component implements HasName<Component> {
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
               if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
-                getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+                getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
               }
@@ -769,7 +750,7 @@ public class Component implements HasName<Component> {
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
               if ( s.getServiceConfiguration( ).getUri( ).startsWith( "vm" ) ) {
-                getUris( ).add( s.getParent( ).getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getParent( ).getComponentId( ).getPort( ) ).toASCIIString( ) );
+                getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ) );
               }
@@ -780,7 +761,7 @@ public class Component implements HasName<Component> {
       return serviceSnapshot;
     }
     
-    public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
+    public ComplexService deregister( ServiceConfiguration config ) throws NoSuchElementException {
       return this.deregister( config.getFullName( ) );
     }
     
@@ -788,12 +769,12 @@ public class Component implements HasName<Component> {
      * Deregisters the service with the provided {@link FullName}.
      * 
      * @param fullName
-     * @return {@link Service} instance of the deregistered service.
-     * @throws NoSuchElementException if no {@link Service} is registered with the provided
+     * @return {@link ComplexService} instance of the deregistered service.
+     * @throws NoSuchElementException if no {@link ComplexService} is registered with the provided
      *           {@link FullName}
      */
-    public Service deregister( FullName fullName ) throws NoSuchElementException {
-      Service ret = this.services.remove( fullName );
+    public ComplexService deregister( FullName fullName ) throws NoSuchElementException {
+      ComplexService ret = this.services.remove( fullName );
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
       } else if ( ret.getServiceConfiguration( ).isLocal( ) ) {
@@ -803,29 +784,29 @@ public class Component implements HasName<Component> {
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided
+     * Returns the {@link ComplexService} instance which was registered with the provided
      * {@link ServiceConfiguration}, if it exists. If a service with the given name does not exist a
      * NoSuchElementException is thrown.
      * 
      * @see #lookup(FullName)
      * @param configuration
-     * @return {@link Service} corresponding to provided the {@link ServiceConfiguration}
+     * @return {@link ComplexService} corresponding to provided the {@link ServiceConfiguration}
      * @throws NoSuchElementException
      */
-    public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
+    public ComplexService lookup( ServiceConfiguration config ) throws NoSuchElementException {
       return this.lookup( config.getFullName( ) );
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided {@link FullName},
+     * Returns the {@link ComplexService} instance which was registered with the provided {@link FullName},
      * if it exists. If a service with the given name does not exist a
      * NoSuchElementException is thrown.
      * 
      * @param configuration
-     * @return {@link Service} corresponding to provided the {@link FullName}
+     * @return {@link ComplexService} corresponding to provided the {@link FullName}
      * @throws NoSuchElementException
      */
-    public Service lookup( FullName fullName ) throws NoSuchElementException {
+    public ComplexService lookup( FullName fullName ) throws NoSuchElementException {
       if ( !this.services.containsKey( fullName ) ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
       } else {
@@ -838,12 +819,12 @@ public class Component implements HasName<Component> {
      * 
      * @param partition - name of the partition.
      * @return a new set with the list of service registered in the give partition.
-     * @throws NoSuchElementException if no {@link Service}s are registered within the given
+     * @throws NoSuchElementException if no {@link ComplexService}s are registered within the given
      *           partition.
      */
-    public NavigableSet<Service> lookupPartition( String partition ) throws NoSuchElementException {
-      NavigableSet<Service> partitionServices = Sets.newTreeSet( );
-      for ( Service s : this.services.values( ) ) {
+    public NavigableSet<ComplexService> lookupPartition( String partition ) throws NoSuchElementException {
+      NavigableSet<ComplexService> partitionServices = Sets.newTreeSet( );
+      for ( ComplexService s : this.services.values( ) ) {
         if ( partition.equals( s.getServiceConfiguration( ).getPartition( ) ) ) {
           partitionServices.add( s );
         }
@@ -855,11 +836,11 @@ public class Component implements HasName<Component> {
     }
     
     /**
-     * Register the given {@link Service} with the registry. Only used internally.
+     * Register the given {@link ComplexService} with the registry. Only used internally.
      * 
      * @param service
      */
-    void register( Service service ) {
+    void register( ComplexService service ) {
       if ( service.getServiceConfiguration( ).isLocal( ) ) {
         this.localService.set( service );
       }
@@ -873,7 +854,7 @@ public class Component implements HasName<Component> {
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided service name if
+     * Returns the {@link ComplexService} instance which was registered with the provided service name if
      * it
      * exists. If a service with the given name does not exist a NoSuchElementException is thrown.
      * 
@@ -882,9 +863,9 @@ public class Component implements HasName<Component> {
      * @throws NoSuchElementException
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
-    public Service getService( String name ) throws NoSuchElementException {
+    public ComplexService getService( String name ) throws NoSuchElementException {
       Assertions.assertNotNull( name );
-      for ( Service s : this.services.values( ) ) {
+      for ( ComplexService s : this.services.values( ) ) {
         if ( s.getServiceConfiguration( ).getName( ).equals( name ) ) {
           return s;
         }
@@ -962,15 +943,15 @@ public class Component implements HasName<Component> {
     return true;
   }
   
-  public NavigableSet<Service> getServices( ) {
+  public NavigableSet<ComplexService> getServices( ) {
     return this.lookupServices( );
   }
   
-  public Iterable<Service> enabledServices( ) {
-    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<Service>( ) {
+  public Iterable<ComplexService> enabledServices( ) {
+    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<ComplexService>( ) {
       
       @Override
-      public boolean apply( Service arg0 ) {
+      public boolean apply( ComplexService arg0 ) {
         return Component.State.ENABLED.equals( arg0.getState( ) );
       }
     } );
