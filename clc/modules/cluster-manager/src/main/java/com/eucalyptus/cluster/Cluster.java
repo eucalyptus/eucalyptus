@@ -85,7 +85,9 @@ import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceEndpoint;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.crypto.util.B64;
@@ -236,18 +238,20 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   public X509Certificate getClusterCertificate( ) {
-    if( this.configuration.getClusterCertificate( ) == null ) {
+    try {
+      return Partitions.lookup( this.configuration ).getCertificate( );
+    } catch ( ServiceRegistrationException ex ) {
+      LOG.error( ex , ex );
       return null;
-    } else {
-      return X509CertHelper.toCertificate( this.configuration.getClusterCertificate( ) );
     }
   }
   
   public X509Certificate getNodeCertificate( ) {
-    if( this.configuration.getNodeCertificate( ) == null ) {
+    try {
+      return Partitions.lookup( this.configuration ).getNodeCertificate( );
+    } catch ( ServiceRegistrationException ex ) {
+      LOG.error( ex , ex );
       return null;
-    } else {
-      return X509CertHelper.toCertificate( this.configuration.getNodeCertificate( ) );
     }
   }
   
