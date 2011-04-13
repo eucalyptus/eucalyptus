@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.persistence.Column;
@@ -114,13 +115,13 @@ public class Partition extends AbstractPersistent {
     super( );
   }
 
-  public Partition( String name, PrivateKey pk, X509Certificate certificate, PrivateKey nodePk, X509Certificate nodeCertificate ) {
+  public Partition( String name, KeyPair keyPair, X509Certificate certificate, KeyPair nodeKeyPair, X509Certificate nodeCertificate ) {
     super( );
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
     this.pemNodeCertificate = PEMFiles.fromCertificate( nodeCertificate );
-    this.pemPrivateKey = PEMFiles.fromPrivateKey( pk );
-    this.pemNodePrivateKey = PEMFiles.fromPrivateKey( nodePk );
+    this.pemPrivateKey = PEMFiles.fromKeyPair( keyPair );
+    this.pemNodePrivateKey = PEMFiles.fromKeyPair( nodeKeyPair );
   }
 
 
@@ -133,11 +134,11 @@ public class Partition extends AbstractPersistent {
   }
 
   public PrivateKey getNodePrivateKey( ) {
-    return PEMFiles.toPrivateKey( this.getPemNodePrivateKey( ) );
+    return PEMFiles.toKeyPair( this.getPemNodePrivateKey( ) ).getPrivate( );
   }
 
   public PrivateKey getPrivateKey( ) {
-    return PEMFiles.toPrivateKey( this.getPemPrivateKey( ) );
+    return PEMFiles.toKeyPair( this.getPemPrivateKey( ) ).getPrivate( );
   }
 
   @PrePersist

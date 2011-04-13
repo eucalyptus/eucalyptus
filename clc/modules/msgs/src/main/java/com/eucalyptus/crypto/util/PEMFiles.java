@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
@@ -26,12 +27,12 @@ public class PEMFiles {
     return PEMFiles.getCert( B64.url.dec( x509PemString ) );
   }
 
-  public static String fromPrivateKey( PrivateKey pk ) {
-    return B64.url.encString( PEMFiles.getBytes( pk ) );
+  public static String fromKeyPair( KeyPair keyPair ) {
+    return B64.url.encString( PEMFiles.getBytes( keyPair ) );
   }
   
-  public static PrivateKey toPrivateKey( String pkB64PemString ) {
-    return PEMFiles.getPrivateKey( B64.url.dec( pkB64PemString ) );
+  public static KeyPair toKeyPair( String keyPairB64PemString ) {
+    return PEMFiles.getKeyPair( B64.url.dec( keyPairB64PemString ) );
   }
   
   public static void write( final String fileName, final Object securityToken ) {
@@ -72,16 +73,16 @@ public class PEMFiles {
     return x509;
   }
 
-  public static PrivateKey getPrivateKey( final byte[] o ) {
-    PrivateKey pk = null;
+  public static KeyPair getKeyPair( final byte[] o ) {
+    KeyPair keyPair = null;
     PEMReader in = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
     in = new PEMReader( new InputStreamReader( pemByteIn ) );
     try {
-      pk = ( PrivateKey ) in.readObject( );
+      keyPair = ( KeyPair ) in.readObject( );
     } catch ( IOException e ) {
       LOG.error( e, e );//this can never happen
     }
-    return pk;
+    return keyPair;
   }
 }
