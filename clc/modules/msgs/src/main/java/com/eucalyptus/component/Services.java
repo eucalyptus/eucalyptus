@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,65 +63,12 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetSocketAddress;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
-
-public interface Service extends HasParent<Component>, HasFullName<MessagableService> {
-  
-  public abstract Dispatcher getDispatcher( );
-  
-  public abstract String toString( );
-  
-  /** ASAP:FIXME:GRZE **/
-  public abstract List<String> getDetails( );
-  
-  public abstract void enqueue( Request request );
-  
-  public abstract State getState( );
-  
-  public abstract ServiceId getServiceId( );
-  
-  public abstract Boolean isLocal( );
-  
-  public abstract KeyPair getKeys( );
-  
-  public abstract X509Certificate getCertificate( );
-  
-  public abstract ServiceConfiguration getServiceConfiguration( );
-  
-  public abstract Component getComponent( );
-  
-  public abstract ComponentId getComponentId( );
-  
-  public abstract boolean checkTransition( Transition transition );
-  
-  public abstract State getGoal( );
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transitionSelf( );
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
-  InetSocketAddress getSocketAddress( );
-  
-  public abstract void setGoal( State state );
-
-  /**
-   * TODO: DOCUMENT Service.java
-   * @return
-   */
-  ServiceEndpoint getEndpoint( );
-  
+public class Services {
+  public static Service newServiceInstance( ServiceConfiguration config ) {
+    if( config.isLocal( ) ) {
+      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );
+    } else {
+      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );//TODO:GRZE:fix this up.
+    }
+  }
 }

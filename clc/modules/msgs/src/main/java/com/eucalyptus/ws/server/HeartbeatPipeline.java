@@ -134,7 +134,7 @@ public class HeartbeatPipeline extends FilteredPipeline {
           HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
           String resp = "";
           for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isRunningRemoteMode( ),
                                    c.isRunningLocally( ) );
           }
           ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );

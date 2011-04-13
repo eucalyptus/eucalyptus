@@ -132,7 +132,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
   
   private void prepareComponent( String componentName, String hostName ) throws ServiceRegistrationException {
     final Component c = safeLookupComponent( componentName );
-    c.loadService( c.getBuilder( ).lookupByName( c.getName( ) ) );
+//    c.loadService( c.getBuilder( ).lookupByName( c.getName( ) ) );
   }
   
   private void handleInitialize( ChannelHandlerContext ctx, MappingHttpRequest request ) throws IOException, SocketException {
@@ -156,7 +156,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
         URI uri = comp.getUri( localAddr.getHostName( ), 8773 );
         ServiceConfiguration config = comp.getBuilder( ).lookupByName( comp.getName( ) );
         System.setProperty( "euca." + component.getComponent( ) + ".name", component.getName( ) );
-        comp.loadService( config );
+//        comp.loadService( config );
         initializedComponents.add( component.getComponent( ) );
       } catch ( Exception ex ) {
         LOG.warn( LogUtil.header( "Failed registering local component "+LogUtil.dumpObject( component )+":  Are the required packages installed?\n The cause of the error: " + ex.getMessage( ) ) );
@@ -247,7 +247,7 @@ public class HeartbeatHandler extends SimpleChannelHandler {
     MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
     String resp = "";
     for ( Component c : Components.list( ) ) {
-      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
+      resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isRunningRemoteMode( ),
                              c.isRunningLocally( ) );
     }
     ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
@@ -284,12 +284,12 @@ public class HeartbeatHandler extends SimpleChannelHandler {
       }
     }
     for ( HeartbeatComponentType component : hb.getComponents( ) ) {
-      if ( !initializedComponents.contains( component.getComponent( ) ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
+      if ( !initializedComponents.contains( component.getComponent( ) ) && !Components.lookup( "eucalyptus" ).isRunningRemoteMode( ) ) {
         System.exit( 123 );//HUP
       }
       registeredComponents.add( component.getComponent( ) );
     }
-    if ( !registeredComponents.containsAll( initializedComponents ) && !Components.lookup( "eucalyptus" ).isLocal( ) ) {
+    if ( !registeredComponents.containsAll( initializedComponents ) && !Components.lookup( "eucalyptus" ).isRunningRemoteMode( ) ) {
       System.exit( 123 );//HUP
     }
     //FIXME: end.

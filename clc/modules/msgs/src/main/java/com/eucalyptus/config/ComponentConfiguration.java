@@ -72,7 +72,10 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
@@ -225,6 +228,16 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
 
   public void setName( String name ) {
     this.name = name;
+  }
+
+  @Override
+  public ServiceBuilder lookupBuilder( ) {
+    ServiceBuilder ret = null;
+    if( ( ret = ServiceBuilderRegistry.lookup( this.getComponentId( ) ) ) != null ) {
+      return ret;
+    } else {
+      return new DummyServiceBuilder( this );
+    }
   }
 }
   

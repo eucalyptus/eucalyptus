@@ -23,10 +23,13 @@ public class ServiceConfigurations {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
 
-  public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
-    ComponentId compId = component.getComponentId( );
+  public static ServiceConfiguration createEphemeral( ComponentId compId, InetAddress host ) {
     return new EphemeralConfiguration( compId, compId.getPartition( ), host.getCanonicalHostName( ), compId.makeRemoteUri( host.getCanonicalHostName( ),
                                                                                                                            compId.getPort( ) ) );
+  }
+
+  public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
+    return createEphemeral( component.getComponentId( ), host );
   }
   
   public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {

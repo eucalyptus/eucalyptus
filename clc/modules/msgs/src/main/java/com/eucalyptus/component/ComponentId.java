@@ -350,4 +350,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
     
   }
+  
+  public boolean runLimitedServices( ) {
+    return false;
+  }
 }

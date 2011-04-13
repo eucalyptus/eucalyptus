@@ -444,6 +444,10 @@ public class Bootstrap {
     parents = ImmutableList.copyOf( rents );
   }
   
+  public static Boolean isCloudController( ) {
+    return !Bootstrap.isChild( ) || Bootstrap.shouldMergeDatabase( );
+  }
+  
   public static Boolean isChild( ) {
     return childHost;
   }

@@ -84,34 +84,16 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public class BasicService implements Service, EventListener {
-  private static Logger              LOG  = Logger.getLogger( BasicService.class );
+public class DisabledService implements Service {
+  private static Logger              LOG  = Logger.getLogger( DisabledService.class );
   private final ServiceConfiguration serviceConfiguration;
-  private final ServiceState         stateMachine;
-  private final Runnable             checker;
-  private State                      goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
   
-  BasicService( ServiceConfiguration serviceConfiguration ) {
-    super( );
+  DisabledService( ServiceConfiguration serviceConfiguration ) {
     this.serviceConfiguration = serviceConfiguration;
-    this.stateMachine = new ServiceState( this.serviceConfiguration );
-    this.checker = new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          if ( BasicService.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transitionSelf( );
-          }
-        } catch ( Throwable ex ) {
-          LOG.debug( "CheckRunner caught an exception: " + ex );
-        }
-      }
-    };
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   @Override
@@ -120,8 +102,8 @@ public class BasicService implements Service, EventListener {
   }
   
   @Override
-  public State getState( ) {
-    return this.stateMachine.getState( );
+  public Component.State getState( ) {
+    return Component.State.PRIMORDIAL;
   }
   
   /** TODO:GRZE: clean this up **/
@@ -129,11 +111,11 @@ public class BasicService implements Service, EventListener {
   public final ServiceId getServiceId( ) {
     return new ServiceId( ) {
       {
-        this.setUuid( BasicService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( BasicService.this.serviceConfiguration.getPartition( ) );
-        this.setName( BasicService.this.serviceConfiguration.getName( ) );
-        this.setType( BasicService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( BasicService.this.serviceConfiguration.getUri( ).toString( ) );
+        this.setUuid( DisabledService.this.serviceConfiguration.getFullName( ).toString( ) );
+        this.setPartition( DisabledService.this.serviceConfiguration.getPartition( ) );
+        this.setName( DisabledService.this.serviceConfiguration.getName( ) );
+        this.setType( DisabledService.this.serviceConfiguration.getComponentId( ).getName( ) );
+        this.setUri( DisabledService.this.serviceConfiguration.getUri( ).toString( ) );
       }
     };
   }
@@ -233,84 +215,35 @@ public class BasicService implements Service, EventListener {
   
   @Override
   public boolean checkTransition( Transition transition ) {
-    return this.stateMachine.checkTransition( transition );
+    return false;
   }
   
   @Override
   public Component.State getGoal( ) {
-    return this.goal;
+    return Component.State.PRIMORDIAL;
   }
   
   @Override
   public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( transition );
+    return Futures.predestinedFuture( this.serviceConfiguration );
   }
   
   @Override
   public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( state );
+    return Futures.predestinedFuture( this.serviceConfiguration );
   }
   
   @Override
   public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return this.stateMachine.transitionSelf( );
+    return Futures.predestinedFuture( this.serviceConfiguration );
   }
   
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz ) {
-      for ( final Component c : Components.list( ) ) {
-        if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
-          if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
-            Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
-          } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-            c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
-          }
-        }
-      }
-    }
-  }
-
   @Override
   public InetSocketAddress getSocketAddress( ) {
     throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
   }
 
   @Override
-  public void setGoal( State state ) {
-    this.goal = state;
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.serviceConfiguration == null )
-      ? 0
-      : this.serviceConfiguration.hashCode( ) );
-    return result;
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( obj == null ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    BasicService other = ( BasicService ) obj;
-    if ( this.serviceConfiguration == null ) {
-      if ( other.serviceConfiguration != null ) {
-        return false;
-      }
-    } else if ( !this.serviceConfiguration.equals( other.serviceConfiguration ) ) {
-      return false;
-    }
-    return true;
-  }
+  public void setGoal( State state ) {}
   
 }

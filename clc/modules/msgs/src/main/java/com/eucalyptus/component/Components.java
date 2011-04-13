@@ -92,7 +92,7 @@ public class Components {
                                                                                                                                       .getLogger( Components.class );
   private static ConcurrentMap<Class, Map>        componentInformation = new ConcurrentHashMap<Class, Map>( ) {
                                                                          {
-                                                                           put( ComplexService.class, new ConcurrentHashMap<String, ComplexService>( ) );
+                                                                           put( MessagableService.class, new ConcurrentHashMap<String, MessagableService>( ) );
                                                                            put( Component.class, new ConcurrentHashMap<String, Component>( ) );
                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
                                                                          }
@@ -288,7 +288,7 @@ public class Components {
           public String apply( Component comp ) {
             final StringBuilder buf = new StringBuilder( );
             buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isLocal( ) ).append( "\n" );
+            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isRunningRemoteMode( ) ).append( "\n" );
             buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunningLocally( ) ).append( "\n" );
             buf.append( "-> Builder:            "
                         + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );

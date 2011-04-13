@@ -81,7 +81,7 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class ComplexService implements HasParent<Component>, HasFullName<ComplexService>, Service {
+public class MessagableService implements HasParent<Component>, HasFullName<MessagableService>, Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final ServiceEndpoint endpoint;
   private final Dispatcher      localDispatcher;
@@ -90,7 +90,7 @@ public class ComplexService implements HasParent<Component>, HasFullName<Complex
   
   /** ASAP:FIXME:GRZE **/
   
-  ComplexService( Service baseService ) {
+  MessagableService( Service baseService ) {
     this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isLocal( ) ) {
@@ -105,7 +105,7 @@ public class ComplexService implements HasParent<Component>, HasFullName<Complex
     this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
   }
   
-  ComplexService( ServiceConfiguration config ) {
+  MessagableService( ServiceConfiguration config ) {
     this( new BasicService( config ) );
   }
   
@@ -174,7 +174,7 @@ public class ComplexService implements HasParent<Component>, HasFullName<Complex
   }
   
   @Override
-  public int compareTo( ComplexService that ) {
+  public int compareTo( MessagableService that ) {
     return this.serviceDelegate.compareTo( that );
   }
   

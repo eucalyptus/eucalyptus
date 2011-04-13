@@ -90,11 +90,11 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<ComplexService> {
+public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<MessagableService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
   private static final int                   offerInterval = 2000;
   private static final int                   pollInterval  = 2000;
-  private final ComplexService                      parent;
+  private final MessagableService                      parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -102,7 +102,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<C
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
   private ThreadPool                         workers;
   
-  public ServiceEndpoint( ComplexService parent, Boolean local, URI uri ) {
+  public ServiceEndpoint( MessagableService parent, Boolean local, URI uri ) {
     super( uri );
     this.parent = parent;
     this.local = local;
@@ -188,7 +188,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<C
     this.workers.shutdownNow( );
   }
   
-  public ComplexService getParent( ) {
+  public MessagableService getParent( ) {
     return this.parent;
   }
   

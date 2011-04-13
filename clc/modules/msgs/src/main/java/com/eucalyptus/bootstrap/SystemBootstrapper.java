@@ -71,6 +71,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -346,7 +347,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) && c.isLocal( ) ) {
+      if ( c.isAvailableLocally( ) && c.isRunningRemoteMode( ) ) {
         for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
           banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
         }
@@ -355,14 +356,11 @@ public class SystemBootstrapper {
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.isAvailableLocally( ) ) {
-        banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
-        for ( Service s : c.lookupServices( ) ) {
-          if ( s.getServiceConfiguration( ).isLocal( ) ) {
-            banner += prefix + c.getName( ) + SEP + s.toString( );
-          }
-        }
+        ServiceConfiguration localConfig = c.getLocalService( ).getServiceConfiguration( );
+        banner += prefix + c.getName( ) + SEP + localConfig.toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
+        banner += prefix + c.getName( ) + SEP + c.getLocalService( ).getState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
