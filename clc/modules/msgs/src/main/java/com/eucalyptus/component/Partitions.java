@@ -92,11 +92,7 @@ public class Partitions {
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     Partition p = null;
     try {
-      p = db.getUnique( new Partition( ) {
-        {
-          setName( partitionName );
-        }
-      } );
+      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
       db.commit( );
     } catch ( EucalyptusCloudException ex1 ) {
       db.rollback( );

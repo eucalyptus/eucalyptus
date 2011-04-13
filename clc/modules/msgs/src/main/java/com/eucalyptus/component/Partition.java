@@ -112,11 +112,17 @@ public class Partition extends AbstractPersistent {
   private String pemNodePrivateKey;
   
   public Partition( ) {
-    super( );
+  }
+  
+  private Partition( String name ) {
+    this.name = name;
+  }
+  
+  public static Partition newInstanceNamed( String partitionName ) {
+    return new Partition( partitionName );
   }
 
   public Partition( String name, KeyPair keyPair, X509Certificate certificate, KeyPair nodeKeyPair, X509Certificate nodeCertificate ) {
-    super( );
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
     this.pemNodeCertificate = PEMFiles.fromCertificate( nodeCertificate );
