@@ -353,7 +353,7 @@ class EucaConf(object):
             self._do_register(args, 'eucadmin.registercluster',
                               'RegisterCluster', 'cc_port')
             if not self.options.no_sync:
-                path1 = os.path.join(self.options['EUCALYPTUS'],
+                path1 = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
                 path2 = os.path.join(path1, args[0])
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
@@ -369,7 +369,7 @@ class EucaConf(object):
             self._do_register(args, 'eucadmin.registerwalrus',
                               'RegisterWalrus', 'walrus_port')
             if not self.options.no_sync:
-                path = os.path.join(self.options['EUCALYPTUS'],
+                path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path], path, args[2], ['euca.p12'])
@@ -381,7 +381,7 @@ class EucaConf(object):
             self._do_register(args, 'eucadmin.registerstoragecontroller',
                               'RegisterStorageController', 'sc_port')
             if not self.options.no_sync:
-                path = os.path.join(self.options['EUCALYPTUS'],
+                path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path], path, args[2], ['euca.p12'])
@@ -408,7 +408,7 @@ class EucaConf(object):
                             'DeregisterWalrus')
 
     def _sync_node(self, node):
-        path = os.path.join(self.options['EUCALYPTUS'],
+        path = os.path.join(self.config['EUCALYPTUS'],
                             'var/lib/eucalyptus/keys')
         # probably need to look in partition directory
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
@@ -435,7 +435,7 @@ class EucaConf(object):
 
     def do_register_nodes(self):
         if self.options.reg_nodes:
-            nodes_to_add = self.options.reg_nodes.split()
+            nodes_to_add = self.options.reg_nodes
             current_nodes = self.config['NODES'].split()
             for node in nodes_to_add:
                 if node not in current_nodes:
@@ -445,10 +445,10 @@ class EucaConf(object):
                         current_nodes.append(node)
             self.config['NODES'] = ' '.join(current_nodes)
 
-    def do_unregister_nodes(self):
+    def do_deregister_nodes(self):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
-            for node in self.options.unreg_nodes.split():
+            for node in self.options.dereg_nodes:
                 current_nodes.remove(node)
             self.config['NODES'] = ' '.join(current_nodes)
 
