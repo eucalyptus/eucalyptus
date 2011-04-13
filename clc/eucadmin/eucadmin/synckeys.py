@@ -39,7 +39,7 @@ SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
 class SyncKeys(object):
 
-    def __init__(self, src_dir, dst_dir, remote_host, file_names,
+    def __init__(self, src_dirs, dst_dir, remote_host, file_names,
                  use_rsync=True, use_scp=True, use_smb=False):
         self.src_dirs = mklist(src_dirs)
         self.src_dirs = [os.path.expanduser(sd) for sd in self.src_dirs]
