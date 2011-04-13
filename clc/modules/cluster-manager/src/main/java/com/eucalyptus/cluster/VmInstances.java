@@ -215,7 +215,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccountId( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getServiceEndpoint( ) );
+                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
               }
             }
           }
@@ -244,7 +244,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         }
       }
       req.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
-      req.dispatch( cluster.getServiceEndpoint( ) );
+      req.dispatch( cluster.getConfiguration( ) );
     } catch ( Throwable e ) {
       LOG.error( e, e );
     }

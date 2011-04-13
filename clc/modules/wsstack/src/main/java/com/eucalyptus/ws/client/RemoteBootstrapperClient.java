@@ -258,7 +258,7 @@ public class RemoteBootstrapperClient extends Bootstrapper implements ChannelPip
       if( !c.getComponentId( ).isCloudLocal( ) && !c.getComponentId( ).isAlwaysLocal( ) ) {
         for( Service s : c.lookupServices( ) ) {
           if( s.isLocal( ) ) {
-            services.put( s.getHost( ), s.getServiceConfiguration( ) );
+            services.put( s.getServiceConfiguration( ).getHostName( ), s.getServiceConfiguration( ) );
           }
         }
       }

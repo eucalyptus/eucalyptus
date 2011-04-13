@@ -94,6 +94,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
@@ -240,10 +241,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
     }
   }
   
-  public ServiceEndpoint getServiceEndpoint( ) {
-    return Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupService( this.configuration ).getEndpoint( );
-  }
-  
   public X509Certificate getClusterCertificate( ) {
     try {
       return Partitions.lookup( this.configuration ).getCertificate( );
@@ -308,11 +305,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public RegisterClusterType getWeb( ) {
     String host = this.getConfiguration( ).getHostName( );
     int port = 0;
-    try {
-      URI uri = new URI( this.getConfiguration( ).getUri( ) );
-      host = uri.getHost( );
-      port = uri.getPort( );
-    } catch ( URISyntaxException e ) {}
+    URI uri = this.getConfiguration( ).getUri( );
+    host = uri.getHost( );
+    port = uri.getPort( );
     return new RegisterClusterType( this.getConfiguration( ).getPartition( ), this.getName( ), host, port );
   }
   
@@ -326,7 +321,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void start( ) {
     Clusters.getInstance( ).register( this );
-    this.getServiceEndpoint( ).start( );
+    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
@@ -334,7 +329,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public void stop( ) {
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-    this.getServiceEndpoint( ).stop( );
+    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     Clusters.getInstance( ).registerDisabled( this );
   }
   
@@ -394,7 +389,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public String toString( ) {
     StringBuilder buf = new StringBuilder( );
     buf.append( "Cluster " ).append( this.configuration ).append( '\n' );
-    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getServiceEndpoint( ) ).append( '\n' );
+    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getConfiguration( ).lookupService( ).getEndpoint( ) ).append( '\n' );
     for ( NodeInfo node : this.nodeMap.values( ) ) {
       buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " node=" ).append( node ).append( '\n' );
     }

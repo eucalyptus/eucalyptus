@@ -274,7 +274,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     }
   }
   
@@ -379,7 +379,7 @@ public class VmControl {
         
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( v.getBundleTask( ) );
-        Callbacks.newClusterRequest( new CancelBundleCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new CancelBundleCallback( request ) ).dispatch( cluster.getConfiguration( ) );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
@@ -448,7 +448,7 @@ public class VmControl {
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       if ( v.getPasswordData( ) == null ) {
-        Callbacks.newClusterRequest( new PasswordDataCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new PasswordDataCallback( request ) ).dispatch( cluster.getConfiguration( ) );
       } else {
         GetPasswordDataResponseType reply = request.getReply( );
         reply.set_return( true );

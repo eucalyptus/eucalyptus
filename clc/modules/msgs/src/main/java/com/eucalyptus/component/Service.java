@@ -117,5 +117,11 @@ public interface Service extends HasParent<Component>, HasFullName<ComplexServic
   InetSocketAddress getSocketAddress( );
   
   public abstract void setGoal( State state );
+
+  /**
+   * TODO: DOCUMENT Service.java
+   * @return
+   */
+  ServiceEndpoint getEndpoint( );
   
 }

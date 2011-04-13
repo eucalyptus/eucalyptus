@@ -219,5 +219,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   protected void setRequest( Q request ) {
     this.request = request;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "AsyncRequest:callback=%s", this.callback );
+  }
+  
   
 }

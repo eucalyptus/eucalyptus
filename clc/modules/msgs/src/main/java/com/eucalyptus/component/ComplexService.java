@@ -240,5 +240,10 @@ public class ComplexService implements HasParent<Component>, HasFullName<Complex
   public InetSocketAddress getSocketAddress( ) {
     return this.serviceDelegate.getSocketAddress( );
   }
+
+  @Override
+  public ServiceEndpoint getEndpoint( ) {
+    return this.endpoint;
+  }
   
 }

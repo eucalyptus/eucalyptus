@@ -300,14 +300,17 @@ public class Components {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( ComplexService s : comp.lookupServices( ) ) {
-              buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
-              buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
-                          + s.getDispatcher( ).getAddress( ) ).append( "\n" );
-              buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
-              buf.append( "|-> Service config:   "
-                          + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
-              //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
+            for ( Service s : comp.getServices( ) ) {
+              try {
+                buf.append( "->  Service:          " + s.getName( ) + " " + s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
+                buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
+                            + s.getDispatcher( ).getAddress( ) ).append( "\n" );
+                buf.append( "|-> Service config:   "
+                            + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
+                //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
             }
             return buf.toString( );
           }

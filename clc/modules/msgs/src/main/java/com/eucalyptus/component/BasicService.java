@@ -211,36 +211,26 @@ public class BasicService implements Service, EventListener {
     return this.getComponent( );
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.component.Service#getDispatcher()
-   * @return
-   */
   @Override
   public Dispatcher getDispatcher( ) {
     throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.component.Service#getDetails()
-   * @return
-   */
   @Override
   public List<String> getDetails( ) {
     throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.component.Service#enqueue(com.eucalyptus.util.async.Request)
-   * @param request
-   */
+
   @Override
-  public void enqueue( Request request ) {}
+  public ServiceEndpoint getEndpoint( ) {
+    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[0] );
+  }
+
+  @Override
+  public void enqueue( Request request ) {
+    LOG.error( "Discarding request submitted to a basic service: " + request );
+  }
   
   @Override
   public boolean checkTransition( Transition transition ) {

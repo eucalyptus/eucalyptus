@@ -161,7 +161,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<C
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ),
                               event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
-            event.getRequest( ).sendSync( ServiceEndpoint.this );
+            event.getRequest( ).sendSync( ServiceEndpoint.this.getParent( ).getServiceConfiguration( ) );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
             .append( event.getCallback( ).getClass( ).getSimpleName( ) )//
             .append( EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ) )//

@@ -161,7 +161,7 @@ public class StorageProperties {
 			walrusConfigs = ServiceConfigurations.getConfigurations( WalrusConfiguration.class );
 			if(walrusConfigs.size() > 0) {
 				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
-				WALRUS_URL = walrusConfig.getUri();
+				WALRUS_URL = walrusConfig.getUri().toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
 			} else {

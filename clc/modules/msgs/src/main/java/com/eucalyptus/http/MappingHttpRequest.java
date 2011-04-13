@@ -126,7 +126,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceConfiguration serviceConfiguration, final Object source ) {
     super( httpVersion );
     this.method = method;
-    URI fullUri = serviceConfiguration.lookupService( ).getUri( );
+    URI fullUri = serviceConfiguration.getUri( );
     this.uri = fullUri.toString( );
     this.servicePath = fullUri.getPath( );
     this.query = null;

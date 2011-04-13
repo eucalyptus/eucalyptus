@@ -68,7 +68,7 @@ public class QueueBroker
 			NavigableSet<Service> services = reportingComponent.getServices();
 			for (Service service: services) {
 				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
-						service.getHost(), DEFAULT_PORT);
+						service.getServiceConfiguration( ).getHostName( ), DEFAULT_PORT);
 			}
 		} else {
 			log.info("Reporting broker will run locally");

@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.util.async.Callback;
@@ -72,6 +73,7 @@ import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class ServiceTransitions {
+  private static Logger                                      LOG                   = Logger.getLogger( ServiceTransitions.class );
   
   public static final TransitionAction<ServiceConfiguration> LOAD_TRANSITION       = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      
@@ -231,6 +233,32 @@ public class ServiceTransitions {
                                                                                            }
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
+                                                                                         }
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  
+  static final Callback<ServiceConfiguration>                startEndpoint         = new Callback<ServiceConfiguration>( ) {
+                                                                                     @Override
+                                                                                     public void fire( ServiceConfiguration parent ) {
+                                                                                       if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {
+                                                                                         try {
+                                                                                           parent.lookupService( ).getEndpoint( ).start( );
+                                                                                         } catch ( Exception ex ) {
+                                                                                           LOG.error( ex, ex );
+                                                                                         }
+                                                                                       }
+                                                                                     }
+                                                                                   };
+  
+  static final Callback<ServiceConfiguration>                stopEndpoint         = new Callback<ServiceConfiguration>( ) {
+                                                                                     @Override
+                                                                                     public void fire( ServiceConfiguration parent ) {
+                                                                                       if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {
+                                                                                         try {
+                                                                                           parent.lookupService( ).getEndpoint( ).stop( );
+                                                                                         } catch ( Exception ex ) {
+                                                                                           LOG.error( ex, ex );
                                                                                          }
                                                                                        }
                                                                                      }
