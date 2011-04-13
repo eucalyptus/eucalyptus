@@ -75,6 +75,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.ClusterController;
@@ -95,7 +96,7 @@ public class BlockStorageUtil {
         throw new EucalyptusCloudException(msg);
       } else {
         ClusterConfiguration clusterConfig = clusterList.get( 0 );
-        PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
+        PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
         return new String(Base64.encode(cipher.doFinal(password.getBytes())));
