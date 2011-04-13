@@ -50,8 +50,8 @@ MySQLCmd = \
 			auth_account a on g.auth_group_owning_account=a.id 
 		)
 	where 
-		a.auth_account_name='${1}'
-		and g.auth_group_name='_${2}'
+		a.auth_account_name='%s'
+		and g.auth_group_name='_%s'
 		and k.auth_access_key_active=1;
         "  | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1"""
 
