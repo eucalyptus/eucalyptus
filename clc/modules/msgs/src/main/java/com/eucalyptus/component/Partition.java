@@ -64,17 +64,25 @@
 package com.eucalyptus.component;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostPersist;
+import javax.persistence.PostRemove;
+import javax.persistence.PostUpdate;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.bootstrap.SystemIds;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -87,7 +95,7 @@ import com.eucalyptus.system.SubDirectory;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Partition extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( Partition.class );
-  @Column(name="config_partition_name")
+  @Column(name="config_partition_name", unique=true)
   String name;
   @Lob
   @Column(name="config_partition_x509_certificate")
@@ -95,36 +103,72 @@ public class Partition extends AbstractPersistent {
   @Lob
   @Column(name="config_partition_node_x509_certificate")
   private String pemNodeCertificate;
+  @Lob
+  @Column(name="config_partition_pk")
+  private String pemPrivateKey;
+  @Lob
+  @Column(name="config_partition_node_pk")
+  private String pemNodePrivateKey;
   
   public Partition( ) {
     super( );
   }
 
-  public Partition( String name, X509Certificate certificate, X509Certificate nodeCertificate ) {
+  public Partition( String name, PrivateKey pk, X509Certificate certificate, PrivateKey nodePk, X509Certificate nodeCertificate ) {
     super( );
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
     this.pemNodeCertificate = PEMFiles.fromCertificate( nodeCertificate );
+    this.pemPrivateKey = PEMFiles.fromPrivateKey( pk );
+    this.pemNodePrivateKey = PEMFiles.fromPrivateKey( nodePk );
   }
 
+
+  public X509Certificate getNodeCertificate( ) {
+    return PEMFiles.toCertificate( this.getPemNodeCertificate( ) );
+  }
+
+  public X509Certificate getCertificate( ) {
+    return PEMFiles.toCertificate( this.getPemCertificate( ) );
+  }
+
+  public PrivateKey getNodePrivateKey( ) {
+    return PEMFiles.toPrivateKey( this.getPemNodePrivateKey( ) );
+  }
+
+  public PrivateKey getPrivateKey( ) {
+    return PEMFiles.toPrivateKey( this.getPemPrivateKey( ) );
+  }
+
+  @PrePersist
+  void prepareKeyDirectory() {
+    File keyDir = SubDirectory.KEYS.getChildFile( this.name );
+    LOG.info( "Creating key directory: " + keyDir.getAbsolutePath( ) );
+    if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
+      throw new RuntimeException( "Failed to create partition key directory: " + keyDir.getAbsolutePath( ) );
+    }
+  }
+  
   /**
    * This removes the key directory link for related components.  This is temporary, do not plan on using it.
    * @param config
    */
   @Deprecated
-  public void link( ComponentConfiguration config ) {
+  public void link( ServiceConfiguration config ) {
     File keyLink = SubDirectory.KEYS.getChildFile( config.getName( ) );
     if( !keyLink.exists( ) ) {
+      LOG.debug( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) ); 
       try {
         GroovyUtil.exec( "ln -sf " + SubDirectory.KEYS.getChildFile( this.name ).getAbsolutePath( ) + " " + keyLink.getAbsolutePath( ) );
         try {
-          LOG.info( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) + " -> " + keyLink.getCanonicalPath( ) );
+          LOG.debug( "Created key directory link: " + keyLink.getAbsolutePath( ) + " -> " + keyLink.getCanonicalPath( ) );
         } catch ( IOException ex ) {
-          LOG.info( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) ); 
         } 
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex , ex );
       }
+    } else {
+      LOG.debug( "Skipped creating key directory link for " + config.getFullName( ) + " because it already exists at " + keyLink.getAbsolutePath( ) ); 
     }
   }
 
@@ -133,12 +177,12 @@ public class Partition extends AbstractPersistent {
    * @param config
    */
   @Deprecated
-  public void unlink( ComponentConfiguration config ) {
+  public void unlink( ServiceConfiguration config ) {
     LOG.info( "Removing key directory link for " + config ); 
     SubDirectory.KEYS.getChildFile( config.getName( ) ).delete( );
   }
 
-  public String getPemCertificate( ) {
+  protected String getPemCertificate( ) {
     return this.pemCertificate;
   }
 
@@ -146,16 +190,8 @@ public class Partition extends AbstractPersistent {
     this.pemCertificate = clusterCertificate;
   }
 
-  public String getPemNodeCertificate( ) {
+  protected String getPemNodeCertificate( ) {
     return this.pemNodeCertificate;
-  }
-
-  public X509Certificate getNodeCertificate( ) {
-    return PEMFiles.toCertificate( this.getPemNodeCertificate( ) );
-  }
-
-  public X509Certificate getCertificate( ) {
-    return PEMFiles.toCertificate( this.getPemCertificate( ) );
   }
   
   protected void setPemNodeCertificate( String nodeCertificate ) {
@@ -168,6 +204,71 @@ public class Partition extends AbstractPersistent {
 
   protected void setName( String name ) {
     this.name = name;
+  }
+
+  protected String getPemPrivateKey( ) {
+    return this.pemPrivateKey;
+  }
+
+  protected void setPemPrivateKey( String pemPrivateKey ) {
+    this.pemPrivateKey = pemPrivateKey;
+  }
+
+  protected String getPemNodePrivateKey( ) {
+    return this.pemNodePrivateKey;
+  }
+
+  protected void setPemNodePrivateKey( String pemNodePrivateKey ) {
+    this.pemNodePrivateKey = pemNodePrivateKey;
+  }
+
+  @PostRemove
+  private void removePartitionKeyFiles( ) {
+    LOG.info( String.format( "Removing credentials for the partition=%s.", this.getName( ) ) );
+    File keyDir = SubDirectory.KEYS.getChildFile(this.getName( ) );
+    if ( keyDir.exists( ) ) {
+      for ( File f : keyDir.listFiles( ) ) {
+        if ( f.delete( ) ) {
+          LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
+        } else {
+          LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
+        }
+      }
+      if ( keyDir.delete( ) ) {
+        LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
+      } else {
+        LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
+      }
+    }
+  }
+  
+  @PostUpdate
+  @PostPersist
+  private void writePartitionKeyFiles( ) {
+    File keyDir = SubDirectory.KEYS.getChildFile( this.getName( ) );
+    X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+    FileWriter out = null;
+    try {
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-pk.pem", this.getPrivateKey( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-cert.pem", this.getCertificate( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-pk.pem", this.getNodePrivateKey( ) );
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-cert.pem", this.getNodeCertificate( ) );
+      
+      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cloud-cert.pem", systemX509 );
+      out = new FileWriter( keyDir.getAbsolutePath( ) + File.separator + "vtunpass" );
+      out.write( SystemIds.tunnelPassword( ) );
+      out.flush( );
+      out.close( );
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      throw new RuntimeException( "Failed to write partition credentials to disk: " + this, ex );
+    } finally {
+      if ( out != null ) try {
+        out.close( );
+        } catch ( IOException e ) {
+        LOG.error( e, e );
+        }
+    }
   }
 
 }

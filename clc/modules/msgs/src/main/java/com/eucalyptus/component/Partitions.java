@@ -64,26 +64,18 @@
 package com.eucalyptus.component;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class Partitions {
-  private static Logger LOG = Logger.getLogger( Partitions.class );
+  static Logger         LOG                 = Logger.getLogger( Partitions.class );
   private static String CLUSTER_KEY_FSTRING = "cc-%s";
   private static String NODE_KEY_FSTRING    = "nc-%s";
-
-  
   
   public static void maybeRemove( final String partitionName ) {
     LOG.error( "Ignoring attempt for partition at the moment" );
@@ -94,26 +86,6 @@ public class Partitions {
 //      Partitions.remove( partitionName );
 //    }
   }
-
-  private static void remove( final String partitionName ) {
-  LOG.info( String.format( "Removing credentials for the partition=%s.", partitionName ) );
-  String directory = SubDirectory.KEYS.toString( ) + File.separator + partitionName;
-  File keyDir = new File( directory );
-  if ( keyDir.exists( ) ) {
-    for ( File f : keyDir.listFiles( ) ) {
-      if ( f.delete( ) ) {
-        LOG.info( "Removing cluster key file: " + f.getAbsolutePath( ) );
-      } else {
-        LOG.info( "Failed to remove cluster key file: " + f.getAbsolutePath( ) );
-      }
-    }
-    if ( keyDir.delete( ) ) {
-      LOG.info( "Removing cluster key directory: " + keyDir.getAbsolutePath( ) );
-    } else {
-      LOG.info( "Failed to remove cluster key directory: " + keyDir.getAbsolutePath( ) );
-    }
-  }
-  }
   
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
     final String partitionName = config.getPartition( );
@@ -121,10 +93,10 @@ public class Partitions {
     Partition p = null;
     try {
       p = db.getUnique( new Partition( ) {
-          {
-            setName( partitionName );
-          }
-        } );
+        {
+          setName( partitionName );
+        }
+      } );
       db.commit( );
     } catch ( EucalyptusCloudException ex1 ) {
       db.rollback( );
@@ -133,11 +105,14 @@ public class Partitions {
     }
     return p;
   }
-
+  
   private static Partition generatePartition( ServiceConfiguration config ) throws ServiceRegistrationException {
-    File keyDir = Partitions.makeKeyDir( config );
+    File keyDir = SubDirectory.KEYS.getChildFile( config.getPartition( ) );
+    if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
+      throw new ServiceRegistrationException( "Failed to create partition key directory: " + keyDir.getAbsolutePath( ) );
+    }
     X509Certificate clusterX509;
-    X509Certificate nodeX509;    
+    X509Certificate nodeX509;
     /** generate the cluster/node keys **/
     KeyPair clusterKp;
     KeyPair nodeKp;
@@ -146,61 +121,22 @@ public class Partitions {
       clusterX509 = Certs.generateServiceCertificate( clusterKp, String.format( CLUSTER_KEY_FSTRING, config.getName( ) ) );
       nodeKp = Certs.generateKeyPair( );
       nodeX509 = Certs.generateServiceCertificate( nodeKp, String.format( NODE_KEY_FSTRING, config.getName( ) ) );
-      Partition partition = new Partition( config.getPartition( ), clusterX509, nodeX509 );
-      EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
-      try {
-        Partitions.writePartitionKeyFiles( partition, keyDir, clusterKp, clusterX509, nodeKp, nodeX509 );
-        db.persist( partition );
-        db.commit( );
-        return partition;
-      } catch ( Throwable ex ) {
-        db.rollback( );
-        Partitions.remove( partition.getName( ) );
-        throw new ServiceRegistrationException( "Failed to store partition credentials during registration: " + config, ex );
-      }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( "Failed to generate credentials for partition: " + config, ex );
     }
-  }
-
-  private static File makeKeyDir( ServiceConfiguration config ) throws ServiceRegistrationException {
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
-    File keyDir = new File( directory );
-    LOG.info( "creating keys in " + directory );
-    if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
-      throw new ServiceRegistrationException( "Failed to create cluster key directory: " + keyDir.getAbsolutePath( ) );
-    }
-    return keyDir;
-  }
-
-  private static void writePartitionKeyFiles( Partition partition, File keyDir, KeyPair clusterKp, X509Certificate clusterX509, KeyPair nodeKp, X509Certificate nodeX509 ) throws ServiceRegistrationException {
-    X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
-    FileWriter out = null;
+    Partition partition = new Partition( config.getPartition( ), clusterKp.getPrivate( ), clusterX509, nodeKp.getPrivate( ), nodeX509 );
+    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     try {
-      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-pk.pem", clusterKp.getPrivate( ) );
-      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-cert.pem", clusterX509 );
-      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-pk.pem", nodeKp.getPrivate( ) );
-      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "node-cert.pem", nodeX509 );
-      
-      PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cloud-cert.pem", systemX509 );
-      out = new FileWriter( keyDir.getAbsolutePath( ) + File.separator + "vtunpass" );
-      out.write( SystemIds.tunnelPassword( ) );
-      out.flush( );
-      out.close( );
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Failed to write partition credentials to disk: " + partition, ex );
-    } finally {
-      if ( out != null ) try {
-        out.close( );
-        } catch ( IOException e ) {
-        LOG.error( e, e );
-        }
+      db.persist( partition );
+      db.commit( );
+      return partition;
+    } catch ( Exception ex ) {
+      db.rollback( );
+      throw new ServiceRegistrationException( "Failed to store partition credentials during registration: " + config, ex );
     }
   }
-
-
+  
   public static boolean testPartitionCredentialsDirectory( String name ) {
     String directory = SubDirectory.KEYS.toString( ) + File.separator + name;
     File keyDir = new File( directory );
@@ -214,5 +150,5 @@ public class Partitions {
       return keyDir.canWrite( );
     }
   }
-
+  
 }
