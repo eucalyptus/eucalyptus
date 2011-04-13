@@ -414,7 +414,8 @@ class EucaConf(object):
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
         files = ['node-cert.pem', 'cluster-cert.pem',
                  'node-pk.pem', 'cluster-pk.pem']
-        return cls([path], path, files, node)
+        req = cls([path], path, node, files)
+        return req.sync()
 
     def _print_sync_error(self):
         print 'ERROR: could not synchronize keys with %s' % node
