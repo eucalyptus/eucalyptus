@@ -68,27 +68,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
-import org.hibernate.criterion.Property;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.cluster.ClusterBuilder;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.HasFullName;
-import com.google.common.collect.Iterables;
 
 public class Partitions {
   private static Logger LOG = Logger.getLogger( Partitions.class );

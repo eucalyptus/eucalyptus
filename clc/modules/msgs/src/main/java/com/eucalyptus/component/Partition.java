@@ -71,7 +71,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
@@ -95,8 +95,8 @@ public class Partition extends AbstractPersistent {
   public Partition( String name, X509Certificate certificate, X509Certificate nodeCertificate ) {
     super( );
     this.name = name;
-    this.pemCertificate = X509CertHelper.fromCertificate( certificate );
-    this.pemNodeCertificate = X509CertHelper.fromCertificate( nodeCertificate );
+    this.pemCertificate = PEMFiles.fromCertificate( certificate );
+    this.pemNodeCertificate = PEMFiles.fromCertificate( nodeCertificate );
   }
 
   public String getPemCertificate( ) {
@@ -112,11 +112,11 @@ public class Partition extends AbstractPersistent {
   }
 
   public X509Certificate getNodeCertificate( ) {
-    return X509CertHelper.toCertificate( this.getPemNodeCertificate( ) );
+    return PEMFiles.toCertificate( this.getPemNodeCertificate( ) );
   }
 
   public X509Certificate getCertificate( ) {
-    return X509CertHelper.toCertificate( this.getPemCertificate( ) );
+    return PEMFiles.toCertificate( this.getPemCertificate( ) );
   }
   
   protected void setPemNodeCertificate( String nodeCertificate ) {
