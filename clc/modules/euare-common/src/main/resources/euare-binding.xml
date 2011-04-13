@@ -639,6 +639,7 @@
   <mapping name="DeleteAccount" class="com.eucalyptus.auth.euare.DeleteAccountType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="AccountName" field="accountName" usage="required"/>
+    <value name="Recursive" field="recursive" usage="optional"/>
   </mapping>
   <mapping name="DeleteAccountResponse" class="com.eucalyptus.auth.euare.DeleteAccountResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>

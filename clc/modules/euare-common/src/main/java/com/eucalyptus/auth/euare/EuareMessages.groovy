@@ -713,6 +713,7 @@ public class AccountType extends EuareMessage {
 
 public class DeleteAccountType extends EuareMessage {
   String accountName;
+  Boolean recursive;
   public DeleteAccountType() {  }
 }
 public class DeleteAccountResponseType extends EuareMessage {

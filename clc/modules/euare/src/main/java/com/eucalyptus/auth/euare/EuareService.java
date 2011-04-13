@@ -157,7 +157,8 @@ public class EuareService {
                                 "Not authorized to delete account by " + requestUser.getName( ) );
     }
     try {
-      Accounts.deleteAccount( request.getAccountName( ), false/*forceDeleteSystem*/, false/*recursive*/ );
+      boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
+      Accounts.deleteAccount( request.getAccountName( ), false/*forceDeleteSystem*/, recursive );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCOUNT_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
