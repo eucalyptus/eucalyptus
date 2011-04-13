@@ -63,22 +63,30 @@
 
 package com.eucalyptus.component;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.cert.X509Certificate;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.system.SubDirectory;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Partition extends AbstractPersistent {
+  private static Logger LOG = Logger.getLogger( Partition.class );
   @Column(name="config_partition_name")
   String name;
   @Lob
@@ -97,6 +105,37 @@ public class Partition extends AbstractPersistent {
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
     this.pemNodeCertificate = PEMFiles.fromCertificate( nodeCertificate );
+  }
+
+  /**
+   * This removes the key directory link for related components.  This is temporary, do not plan on using it.
+   * @param config
+   */
+  @Deprecated
+  public void link( ComponentConfiguration config ) {
+    File keyLink = SubDirectory.KEYS.getChildFile( config.getName( ) );
+    if( !keyLink.exists( ) ) {
+      try {
+        GroovyUtil.exec( "ln -sf " + SubDirectory.KEYS.getChildFile( this.name ).getAbsolutePath( ) + " " + keyLink.getAbsolutePath( ) );
+        try {
+          LOG.info( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) + " -> " + keyLink.getCanonicalPath( ) );
+        } catch ( IOException ex ) {
+          LOG.info( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) ); 
+        } 
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+  }
+
+  /**
+   * This removes the key directory link for related components.  This is temporary, do not plan on using it.
+   * @param config
+   */
+  @Deprecated
+  public void unlink( ComponentConfiguration config ) {
+    LOG.info( "Removing key directory link for " + config ); 
+    SubDirectory.KEYS.getChildFile( config.getName( ) ).delete( );
   }
 
   public String getPemCertificate( ) {

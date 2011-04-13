@@ -9,6 +9,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -23,6 +24,9 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.system.SubDirectory;
 
 @DiscoverableServiceBuilder( com.eucalyptus.component.id.ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
@@ -84,12 +88,16 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public ClusterConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration prelimConfig = this.newInstance( partition, name, host, port );
+  public ClusterConfiguration add( String partitionName, String name, String host, Integer port ) throws ServiceRegistrationException {
+    ClusterConfiguration prelimConfig = this.newInstance( partitionName, name, host, port );
     try {
-      Partitions.lookup( prelimConfig );
+      Partition part = Partitions.lookup( prelimConfig );
       ServiceConfigurations.getInstance( ).store( prelimConfig );
-      
+      try {
+        GroovyUtil.exec( "ln -sf " + part.getKeyDirectory( ).getAbsolutePath( ) + " " + SubDirectory.KEYS.getChildPath( name ) );
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex , ex );
+      }
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( prelimConfig.getPartition( ) );
       throw ex;
@@ -97,7 +105,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       Partitions.maybeRemove( prelimConfig.getPartition( ) );
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
-                                                             partition, name, host, port ), ex );
+                                                             partitionName, name, host, port ), ex );
     }
     return prelimConfig;
   }
@@ -105,16 +113,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     return super.checkRemove( partition, name );
-//NOTE: we no longer enforce this ordering check becuase of possible need for partial recovery where SC remains registered and CC needs to be re-registered
-//    try {
-//      ServiceConfigurations.getPartitionConfigurations( StorageControllerConfiguration.class, partition );
-//      throw new ServiceRegistrationException( "Cannot deregister a cluster controller when there is a storage controller registered." );
-//    } catch ( PersistenceException ex ) {
-//      LOG.error( ex, ex );
-//      return true;
-//    } catch ( NoSuchElementException ex ) {
-//      return true;
-//    }
   }
   
   @Override
@@ -129,8 +127,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
-//    Partition.removeKeyDirectory( config );
-    return super.remove( config );
+    ClusterConfiguration ret = super.remove( config );
+    SubDirectory.KEYS.getChildFile( config.getName( ) ).delete( );//TODO:GRZE: remove this eventually
+    return ret;
   }
   
   @Override
