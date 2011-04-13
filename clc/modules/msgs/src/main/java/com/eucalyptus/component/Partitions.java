@@ -72,7 +72,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.ServiceConfiguration;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.EntityWrapper;
