@@ -10,6 +10,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -75,6 +76,25 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }
     super.fireStart( config );
+  }
+
+  @Override
+  public StorageControllerConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    StorageControllerConfiguration config = this.newInstance( partition, name, host, port );
+    try {
+      Partition part = Partitions.lookup( config );
+      ServiceConfigurations.getInstance( ).store( config );
+      part.link( config );
+    } catch ( ServiceRegistrationException ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      throw ex;
+    } catch ( Throwable ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
+                                                             partition, name, host, port ), ex );
+    }
+    return config;
   }
   
 }

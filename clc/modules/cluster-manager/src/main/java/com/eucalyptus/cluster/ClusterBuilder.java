@@ -89,25 +89,21 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration add( String partitionName, String name, String host, Integer port ) throws ServiceRegistrationException {
-    ClusterConfiguration prelimConfig = this.newInstance( partitionName, name, host, port );
+    ClusterConfiguration config = this.newInstance( partitionName, name, host, port );
     try {
-      Partition part = Partitions.lookup( prelimConfig );
-      ServiceConfigurations.getInstance( ).store( prelimConfig );
-      try {
-        GroovyUtil.exec( "ln -sf " + part.getKeyDirectory( ).getAbsolutePath( ) + " " + SubDirectory.KEYS.getChildPath( name ) );
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex , ex );
-      }
+      Partition part = Partitions.lookup( config );
+      ServiceConfigurations.getInstance( ).store( config );
+      part.link( config );
     } catch ( ServiceRegistrationException ex ) {
-      Partitions.maybeRemove( prelimConfig.getPartition( ) );
+      Partitions.maybeRemove( config.getPartition( ) );
       throw ex;
     } catch ( Throwable ex ) {
-      Partitions.maybeRemove( prelimConfig.getPartition( ) );
+      Partitions.maybeRemove( config.getPartition( ) );
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
                                                              partitionName, name, host, port ), ex );
     }
-    return prelimConfig;
+    return config;
   }
 
   @Override
@@ -127,8 +123,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public ClusterConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
+    Partition part = Partitions.lookup( config );
     ClusterConfiguration ret = super.remove( config );
-    SubDirectory.KEYS.getChildFile( config.getName( ) ).delete( );//TODO:GRZE: remove this eventually
+    part.unlink( ret );
     return ret;
   }
   

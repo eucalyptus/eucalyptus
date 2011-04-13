@@ -72,7 +72,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.config.ServiceConfiguration;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.EntityWrapper;
@@ -116,7 +116,7 @@ public class Partitions {
   }
   }
   
-  public static Partition lookup( final ComponentConfiguration config ) throws ServiceRegistrationException {
+  public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
     final String partitionName = config.getPartition( );
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     Partition p = null;
@@ -135,7 +135,7 @@ public class Partitions {
     return p;
   }
 
-  private static Partition generatePartition( ComponentConfiguration config ) throws ServiceRegistrationException {
+  private static Partition generatePartition( ServiceConfiguration config ) throws ServiceRegistrationException {
     File keyDir = Partitions.makeKeyDir( config );
     X509Certificate clusterX509;
     X509Certificate nodeX509;    
@@ -165,7 +165,7 @@ public class Partitions {
     }
   }
 
-  private static File makeKeyDir( ComponentConfiguration config ) throws ServiceRegistrationException {
+  private static File makeKeyDir( ServiceConfiguration config ) throws ServiceRegistrationException {
     String directory = SubDirectory.KEYS.toString( ) + File.separator + config.getName( );
     File keyDir = new File( directory );
     LOG.info( "creating keys in " + directory );
