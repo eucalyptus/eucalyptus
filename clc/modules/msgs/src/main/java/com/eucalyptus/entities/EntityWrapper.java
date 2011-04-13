@@ -207,6 +207,7 @@ public class EntityWrapper<TYPE> {
    * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
    * @param newObject
    */
+  @Deprecated
   public void add( TYPE newObject ) {
     this.persist( newObject );
   }

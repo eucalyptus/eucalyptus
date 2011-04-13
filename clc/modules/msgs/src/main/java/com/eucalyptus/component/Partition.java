@@ -83,7 +83,7 @@ import com.eucalyptus.system.SubDirectory;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_clusters" )
+@Table( name = "config_partition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Partition extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( Partition.class );

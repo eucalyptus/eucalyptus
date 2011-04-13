@@ -150,7 +150,7 @@ public class Partitions {
       EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
       try {
         Partitions.writePartitionKeyFiles( partition, keyDir, clusterKp, clusterX509, nodeKp, nodeX509 );
-        db.add( partition );
+        db.persist( partition );
         db.commit( );
         return partition;
       } catch ( Throwable ex ) {
