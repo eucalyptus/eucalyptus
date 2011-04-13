@@ -125,7 +125,7 @@ public class Partitions {
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( "Failed to generate credentials for partition: " + config, ex );
     }
-    Partition partition = new Partition( config.getPartition( ), clusterKp.getPrivate( ), clusterX509, nodeKp.getPrivate( ), nodeX509 );
+    Partition partition = new Partition( config.getPartition( ), clusterKp, clusterX509, nodeKp, nodeX509 );
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     try {
       db.persist( partition );
