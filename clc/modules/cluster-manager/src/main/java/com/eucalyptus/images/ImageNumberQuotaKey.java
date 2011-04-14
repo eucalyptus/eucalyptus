@@ -21,7 +21,8 @@ public class ImageNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.EC2_REGISTERIMAGE.equals( action ) && PolicySpec.EC2_RESOURCE_IMAGE.equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_REGISTERIMAGE ).equals( action ) &&
+         PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE ).equals( resourceType ) ) {
       return true;
     }
     return false;

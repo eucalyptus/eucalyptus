@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+import sys
+from euca_admin.vmwarebrokers import VMwareBroker
+
+def main():
+  c = VMwareBroker().cli_modify()
+  sys.exit()
+
+if __name__ == "__main__":
+    main()
+ 

@@ -75,7 +75,7 @@ import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -111,7 +111,7 @@ public class ComponentType extends EucalyptusData {
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
     final ComponentId c = ComponentId.lookup( component );
-    return new EphemeralConfiguration( name, c, realUri );
+    return ServiceConfigurations.createEphemeral( name, c, realUri );
   }
 }
 public class ComponentProperty extends EucalyptusData {

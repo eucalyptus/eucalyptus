@@ -38,6 +38,10 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   Boolean revoked;
   
   // The certificate
+  @Column( name = "auth_certificate_id" )
+  String certificateId;
+
+  // The certificate
   @Lob
   @Column( name = "auth_certificate_pem" )
   String pem;
@@ -60,7 +64,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public static CertificateEntity newInstanceWithId( final String id ) {
     CertificateEntity c = new CertificateEntity( );
-    c.setId( id );
+    c.certificateId = id;
     return c;
   }
 
@@ -128,6 +132,10 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public void setUser( UserEntity user ) {
     this.user = user;
+  }
+
+  public String getCertificateId( ) {
+    return this.certificateId;
   }
   
 }

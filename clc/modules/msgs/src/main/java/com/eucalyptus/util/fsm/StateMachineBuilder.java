@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -29,6 +30,13 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
     
     public void run( Callback<S> callback ) {
       inStateListeners.put( state, callback );
+    }
+    public void run( final Predicate<S> predicate ) {
+      inStateListeners.put( state, new Callback<S>() {{ }
+      @Override
+      public void fire( S s ) {
+        predicate.apply( s );
+      }} );
     }
   }
   

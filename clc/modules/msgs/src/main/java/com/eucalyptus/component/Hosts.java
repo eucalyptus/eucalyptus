@@ -75,7 +75,6 @@ import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import com.eucalyptus.bootstrap.HostManager;
-import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;

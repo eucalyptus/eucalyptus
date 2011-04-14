@@ -62,14 +62,14 @@ def db_pass():
   pk = RSA.load_key(path,passphrase_callback)
   return binascii.hexlify(pk.sign(d.digest(),algo="sha256"))
   
-def db_get(field=None):
+def db_get(query=None):
   conn = MySQLdb.connect (host = "127.0.0.1",
                           user = "eucalyptus",
                           passwd = db_pass(),
                           db = "eucalyptus_auth",
                           port = 8777 )
   cursor = conn.cursor ()
-  cursor.execute ("select %s from auth_users where auth_user_name='admin';"%field)
+  cursor.execute (query)
   row = cursor.fetchone ()
   result = row[0]
   cursor.close ()
@@ -107,8 +107,34 @@ def get_credentials(fileName=None,source=None):
     print ex
     sys.exit()
 
+def AUTH_SYS_ACCT = "eucalyptus"
+def AUTH_DEFAULT_ADMIN = "admin"
+def AUTH_TABLE_QUERY_BASE = "select k.%s from auth_access_key k inner join auth_user u on k.auth_access_key_owning_user=u.id join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='%s' and g.auth_group_name='_admin' and k.auth_access_key_active=1;"
+def AUTH_USER_QUERY = """select 
+    u.auth_user_token,
+    k.id, 
+    k.auth_access_key_key
+  from (
+    auth_access_key k 
+    join 
+      auth_user u on k.auth_access_key_owning_user=u.id 
+    inner join 
+      auth_group_has_users gu on u.id=gu.auth_user_id 
+    join
+      auth_group g on gu.auth_group_id=g.id 
+    join 
+      auth_account a on g.auth_group_owning_account=a.id 
+    )
+where 
+  a.auth_account_name='eucalyptus'
+  and g.auth_group_name='_admin'
+  and k.auth_access_key_active=1;
+"""
+def get_db_query(field=None,account=AUTH_SYS_ACCT,user=AUTH_DEFAULT_ADMIN):
+  return AUTH_TABLE_QUERY_BASE % (field,account,user)
+
 def get_query_id():
-  return db_get("auth_user_query_id")
+  return db_get( get_db_query( "auth_access_key_key" ) )
 
 def get_secret_key():
   return db_get("auth_user_secretkey")

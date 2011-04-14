@@ -3,7 +3,7 @@ package com.eucalyptus.component.id;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 
-public class Cluster extends ComponentId {
+public class ClusterController extends ComponentId {
   
   @Override
   public Integer getPort( ) {

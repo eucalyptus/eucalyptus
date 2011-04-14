@@ -7,16 +7,22 @@ import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
  * Database secret key entity.
  * 
  * @author wenye
+ *
+ */
+/**
  *
  */
 @Entity @javax.persistence.Entity
@@ -32,7 +38,10 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   @Column( name = "auth_access_key_active" )
   Boolean active;
   
-  // The key
+  // The Access Key ID
+  @Column( name = "auth_access_key_query_id" )
+  String accessKey;
+  // The SECRET key
   @Column( name = "auth_access_key_key" )
   String key;
   
@@ -48,14 +57,30 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   public AccessKeyEntity( ) {
   }
   
-  public AccessKeyEntity( String key ) {
-    this.key = key;
-    this.createDate = new Date( );
+  public AccessKeyEntity( UserEntity user ) {
+    this.user = user;
+    this.key = Hmacs.generateSecretKey( user.getName( ) );
   }
 
-  public static AccessKeyEntity newInstanceWithId( final String id ) {
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.accessKey == null && this.key != null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
+      this.accessKey = Crypto.getHmacProvider( ).generateQueryId( this.key );//NOTE: here we use the key 
+    }
+  }
+  
+  /**
+   * NOTE: should not be needed, replaced by {@link #newInstanceWithAccessKeyId()}
+   */
+//  public static AccessKeyEntity newInstanceWithId( final String id ) {
+//    AccessKeyEntity k = new AccessKeyEntity( );
+//    k.setId( id );
+//    return k;
+//  }
+
+  public static AccessKeyEntity newInstanceWithAccessKeyId( final String accessKeyId ) {
     AccessKeyEntity k = new AccessKeyEntity( );
-    k.setId( id );
+    k.accessKey = accessKeyId;
     return k;
   }
 
@@ -65,7 +90,8 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     
     AccessKeyEntity that = ( AccessKeyEntity ) o;    
-    if ( !this.getKey( ).equals( that.getKey( ) ) ) return false;
+    if ( !this.getAccessKey( ).equals( that.getAccessKey( ) ) ) return false;//NOTE: prefer for equality check to not rely on sensitive data -- e.g., secret key.
+    if ( !this.getSecretKey( ).equals( that.getSecretKey( ) ) ) return false;
     
     return true;
   }
@@ -76,16 +102,24 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     sb.append( "Key(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "active=" ).append( this.isActive( ) ).append( ", " );
-    sb.append( "key=" ).append( this.getKey( ) );
+    sb.append( "key=" ).append( this.getSecretKey( ) );
     sb.append( ")" );
     return sb.toString( );
   }
+
+  public String getAccessKey( ) {
+    return this.accessKey;
+  }
   
-  public String getKey( ) {
+  public void setAccess( String accessKey ) {
+    this.accessKey = accessKey;
+  }
+
+  public String getSecretKey( ) {
     return this.key;
   }
   
-  public void setKey( String key ) {
+  public void setSecretKey( String key ) {
     this.key = key;
   }
   

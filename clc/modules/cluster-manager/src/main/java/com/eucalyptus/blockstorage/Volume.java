@@ -125,7 +125,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     //Volume v = new Volume( userFullName, volumeId );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Volume v = new Volume( accountId, volumeId );
     return v;
@@ -135,7 +135,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     //Volume v = new Volume( userFullName, null );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Volume v = new Volume( accountId, null );
     return v;

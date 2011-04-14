@@ -215,5 +215,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public Binding getBinding( ) {
     return this.binding;
   }
+
+  public Binding getDefaultBinding( ) {
+    return this.defaultBinding;
+  }
   
 }

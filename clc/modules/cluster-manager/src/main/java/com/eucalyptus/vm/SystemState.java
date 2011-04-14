@@ -370,7 +370,7 @@ public class SystemState {
         throw new EucalyptusCloudException( e );
       }
       if ( ( !isAdmin && 
-             !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
+             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
           || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
         continue;
       }
@@ -406,14 +406,14 @@ public class SystemState {
   public static Long countByAccount( String accountId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getId( ).equals( accountId ) ) {
+      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getAccountNumber( ).equals( accountId ) ) {
         vmNum++;
       }
     }
     return vmNum;
   }
 
-  public static long countByUser( String userId ) throws AuthException {
+  public static Long countByUser( String userId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {

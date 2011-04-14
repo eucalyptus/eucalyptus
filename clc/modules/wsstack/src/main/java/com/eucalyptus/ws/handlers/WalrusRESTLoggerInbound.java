@@ -103,7 +103,7 @@ public class WalrusRESTLoggerInbound extends MessageStackHandler {
 					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
 					User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
 					if(user != null)
-						logData.setAccessorId(user.getId());
+						logData.setAccessorId(user.getUserId());
 					if(request.getBucket() != null)
 						logData.setBucketName(request.getBucket());
 					if(request.getKey() != null) 
