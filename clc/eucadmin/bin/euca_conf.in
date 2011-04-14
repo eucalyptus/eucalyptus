@@ -236,6 +236,21 @@ class EucaConf(object):
             print 'problem finding sshkey for user eucalyptus'
         return key
 
+    def check_local_service(self, service_name):
+        valid_services = ['CLC', 'CC']
+        if service_name is None or service_name not in valid_services:
+            print 'ERROR: must pass in service name %s' % valid_services
+            return False
+        if service_name == 'CLC':
+            resp = boto.utils.retry_url('https://127.0.0.1:8443/register')
+            if resp.find('CloudVersion') < 0:
+                return False
+        elif service_name == 'CC':
+            resp = boto.utils.retry_url('http://127.0.0.1:8774/axis2/services')
+            if resp.find('EucalyptusCC') < 0:
+                return False
+        return True
+
     def option_callback(self, option, opt_str, value, parser, optname=None):
         self.specified_options[optname] = value
 
@@ -436,6 +451,12 @@ class EucaConf(object):
 
     def do_register_nodes(self):
         if self.options.reg_nodes:
+            if self.check_local_service('CC'):
+                print 'CC must be local service to run this command'
+                sys.exit(1)
+            msg = 'INFO: We expect all nodes to have eucalyptus'
+            msg += ' installed in $EUCALYPTUS for key synchronization.'
+            print msg
             nodes_to_add = self.options.reg_nodes
             current_nodes = self.config['NODES'].split()
             for node in nodes_to_add:
