@@ -115,14 +115,6 @@ public class Component implements HasName<Component> {
     this.identity = componentId;
     this.serviceRegistry = new ServiceRegistry( );
     this.bootstrapper = new ComponentBootstrapper( this );
-    ServiceConfiguration prelimConfig = ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
-    if ( this.isAvailableLocally( ) && this.identity.hasDispatcher( ) ) {
-      this.serviceRegistry.register( new MessagableService( prelimConfig ) );
-    } else if ( this.isAvailableLocally( ) && !this.identity.hasDispatcher( ) ) {
-      this.serviceRegistry.register( new BasicService( prelimConfig ) );
-    } else {
-      this.serviceRegistry.register( new DisabledService( prelimConfig ) );
-    }
   }
   
   public Service getLocalService( ) {
@@ -184,7 +176,7 @@ public class Component implements HasName<Component> {
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return !this.identity.isCloudLocal( ) || Bootstrap.isCloudController( );
+    return this.identity.isAlwaysLocal( ) || ( !this.identity.isCloudLocal( ) || Bootstrap.isCloudController( ) );
   }
   
   /**
@@ -197,7 +189,7 @@ public class Component implements HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isRunningRemoteMode( ) {
-    return this.isAvailableLocally( ) && !this.identity.runLimitedServices( );
+    return this.isAvailableLocally( ) && this.identity.runLimitedServices( );
   }
   
   public List<ServiceConfiguration> lookupServiceConfigurations( ) throws ServiceRegistrationException {
@@ -296,19 +288,26 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
+    if ( !this.isAvailableLocally( ) ) {
+      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
+    } else if ( this.identity.isAlwaysLocal( ) || ( ) {
+      URI uri = this.getComponentId( ).getLocalEndpointUri( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
+                                                                    uri.getPort( ) );
+      this.serviceRegistry.register( config );
+      return config;
+    }
     if ( ( this.isAvailableLocally( ) && this.getComponentId( ).isAlwaysLocal( ) ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
                                                                     uri.getPort( ) );
-      Service service = new BasicService( config );
-      this.serviceRegistry.register( service );
+      this.serviceRegistry.register( config );
       return config;
-    } else if ( Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
+    } else if ( Bootstrap.isCloudController( ) && this.getComponentId( ).isCloudLocal( ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
                                                                     uri.getPort( ) );
-      Service service = new BasicService( config );
-      this.serviceRegistry.register( service );
+      this.serviceRegistry.register( config );
       return config;
     } else {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
@@ -322,13 +321,10 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-    if ( !Bootstrap.isCloudLocal( ) && this.getComponentId( ).isCloudLocal( ) ) {
+    if ( !Bootstrap.isCloudController( ) && this.getComponentId( ).isCloudLocal( ) ) {
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                     this.getComponentId( ).getPort( ) );
-      Service service = this.getComponentId( ).hasDispatcher( )
-        ? new MessagableService( config )
-        : new BasicService( config );
-      this.serviceRegistry.register( service );
+      this.serviceRegistry.register( config );
       return config;
     } else {
       throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
@@ -347,8 +343,7 @@ public class Component implements HasName<Component> {
     if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
     } else {
-      service = Services.newServiceInstance( config );
-      this.serviceRegistry.register( service );
+      service = this.serviceRegistry.register( config );
     }
     if ( State.INITIALIZED.equals( service.getState( ) ) ) {
       try {
@@ -639,9 +634,8 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s enabled=%s local=%s goal=%s state=%s builder=%s\n", this.identity.name( ),
-                          this.isAvailableLocally( ), this.isRunningRemoteMode( ), this.serviceRegistry.getLocalService( ).getGoal( ), this.getState( ),
-                          this.getBuilder( ).getClass( ).getSimpleName( ) );
+    return String.format( "Component %s available=%s mark-remote=%s local-service=%s\n",
+                          this.identity.name( ), this.isAvailableLocally( ), this.isRunningRemoteMode( ), this.serviceRegistry.getLocalService( ) );
   }
   
   /**
@@ -864,8 +858,8 @@ public class Component implements HasName<Component> {
      * 
      * @param service
      */
-    void register( Service service ) {
-      ServiceConfiguration config = service.getServiceConfiguration( );
+    Service register( ServiceConfiguration config ) {
+      Service service = Services.newServiceInstance( config );
       if ( config.isLocal( ) ) {
         this.localService.set( service );
       }
@@ -876,6 +870,7 @@ public class Component implements HasName<Component> {
                             ? "local"
                             : "remote",
                           config.getName( ), config.getUri( ) ).info( );
+      return service;
     }
     
     /**

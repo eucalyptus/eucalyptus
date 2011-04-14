@@ -110,16 +110,6 @@ public class HeartbeatPipeline extends FilteredPipeline {
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
     pipeline.addLast( "hb-get-handler", new SimpleHeartbeatHandler( ) );
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
-    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
     return pipeline;
   }
   
@@ -128,23 +118,31 @@ public class HeartbeatPipeline extends FilteredPipeline {
     
     @Override
     public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if ( e.getMessage( ) instanceof MappingHttpRequest && HttpMethod.GET.equals( ( ( MappingHttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
+      if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest request = ( MappingHttpRequest ) e.getMessage( );
-        try {
-          HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-          String resp = "";
-          for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isRunningRemoteMode( ),
-                                   c.isRunningLocally( ) );
+        HttpMethod method = request.getMethod( );
+        if( HttpMethod.GET.equals( method ) ) {
+          try {
+            HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+            String resp = "";
+            for ( Component c : Components.list( ) ) {
+              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), !c.isRunningRemoteMode( ), c.getLocalService( ) );
+            }
+            ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+            response.setContent( buf );
+            response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+            response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+            ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+            writeFuture.addListener( ChannelFutureListener.CLOSE );
+          } finally {
+            Contexts.clear( request.getCorrelationId( ) );
           }
-          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-          response.setContent( buf );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        } finally {
-          Contexts.clear( request.getCorrelationId( ) );
+        } else {
+          try {
+            ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.METHOD_NOT_ALLOWED ) ).addListener( ChannelFutureListener.CLOSE );
+          } finally {
+            Contexts.clear( request.getCorrelationId( ) );
+          }
         }
       } else {
         ctx.sendUpstream( e );

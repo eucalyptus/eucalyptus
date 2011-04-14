@@ -52,7 +52,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     LOG.info( "Starting up cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isRunningRemoteMode( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isRunningLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           Clusters.getInstance( ).register( newCluster );
@@ -134,7 +134,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     LOG.info( "Enabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isRunningRemoteMode( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isRunningLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           newCluster.start( );
@@ -159,7 +159,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
     LOG.info( "Disabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isRunningRemoteMode( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isRunningLocally( ) ) {
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );

@@ -107,7 +107,6 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( systemThreadFactory == null ) {
-        System.setProperty( "euca.ws.port", "" + PORT );
         systemThreadFactory = ChannelUtil.getSystemThreadFactory( );
         serverPipelineFactory = ChannelUtil.getServerPipeline( );
         serverBossThreadPool = ChannelUtil.getServerBossThreadPool( );

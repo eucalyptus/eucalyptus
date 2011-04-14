@@ -65,9 +65,11 @@ package com.eucalyptus.component;
 
 public class Services {
   public static Service newServiceInstance( ServiceConfiguration config ) {
-    if( config.isLocal( ) ) {
+    if( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
       return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );
-    } else {
+    } else if( config.isLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+      return new DisabledService( config );
+    } else /**if( !config.isLocal() )**/ {
       return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );//TODO:GRZE:fix this up.
     }
   }

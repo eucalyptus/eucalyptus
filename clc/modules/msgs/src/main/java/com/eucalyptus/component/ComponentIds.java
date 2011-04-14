@@ -69,12 +69,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class ComponentIds {
-  private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
-  private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
+  private static Logger                        LOG              = Logger.getLogger( ComponentIds.class );
+  private static final Map<Class, ComponentId> compIdMap        = new HashMap<Class, ComponentId>( );
+  
+  public static boolean shouldBootstrapLocally( ComponentId c ) {
+    boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( );
+    boolean alwaysLocal = c.isAlwaysLocal( );
+    return cloudLocal || alwaysLocal;
+  }
+  
+  private static Predicate<ComponentId>        BOOTSTRAP_LOCALS = new Predicate<ComponentId>( ) {
+                                                                  
+                                                                  @Override
+                                                                  public boolean apply( ComponentId c ) {
+                                                                    return ComponentIds.shouldBootstrapLocally( c );
+                                                                  }
+                                                                };
+  
+  /**
+   * Components which are staticly determined as ones to load. This determination is made
+   * independent of access to the database; i.e. only the command line flags and presence/absence of
+   * files determines this list.
+   * 
+   * @return
+   */
+  public static List<ComponentId> whichCanLoad( ) {
+    return Lists.newArrayList( Iterables.filter( ComponentIds.list( ), BOOTSTRAP_LOCALS ) );
+  }
   
   public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
     List<ComponentId> components = Lists.newArrayList( );
@@ -99,15 +127,15 @@ public class ComponentIds {
   public final static ComponentId lookup( final Class compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       try {
-        if( ComponentId.class.isAssignableFrom( compIdClass ) ) {
+        if ( ComponentId.class.isAssignableFrom( compIdClass ) ) {
           ComponentIds.register( ( ComponentId ) compIdClass.newInstance( ) );
           return compIdMap.get( compIdClass );
         }
       } catch ( InstantiationException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( IllegalAccessException ex ) {
-        LOG.error( ex , ex );
-      } 
+        LOG.error( ex, ex );
+      }
       throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
     } else {
       return compIdMap.get( compIdClass );

@@ -114,9 +114,7 @@ public class Components {
                                                          
                                                          @Override
                                                          public boolean apply( Component c ) {
-                                                           boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
-                                                           boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-                                                           return cloudLocal || alwaysLocal;
+                                                           return ComponentIds.shouldBootstrapLocally( c.getComponentId( ) );
                                                          }
                                                        };
   
@@ -135,7 +133,7 @@ public class Components {
                                                           
                                                           @Override
                                                           public boolean apply( Component c ) {
-                                                            boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
+                                                            boolean cloudLocal = Bootstrap.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
                                                             boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
                                                             boolean runningLocal = c.hasServiceEnabled( );
                                                             return cloudLocal || alwaysLocal || runningLocal;
@@ -289,25 +287,14 @@ public class Components {
             final StringBuilder buf = new StringBuilder( );
             buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
             buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isRunningRemoteMode( ) ).append( "\n" );
-            buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunningLocally( ) ).append( "\n" );
-            buf.append( "-> Builder:            "
-                        + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
-            buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".disable" )
-                        + "/"
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".remote" ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
             for ( Service s : comp.getServices( ) ) {
               try {
-                buf.append( "->  Service:          " + s.getName( ) + " " + s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
-                buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
-                            + s.getDispatcher( ).getAddress( ) ).append( "\n" );
-                buf.append( "|-> Service config:   "
-                            + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
-                //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
+                buf.append( "->  Service:          " + s.getFullName( ) + " " + s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
+                buf.append( "|-> Service config:   " + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
               } catch ( Exception ex ) {
                 LOG.error( ex , ex );
               }

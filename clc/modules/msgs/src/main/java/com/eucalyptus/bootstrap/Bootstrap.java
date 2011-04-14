@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Any;
@@ -452,12 +453,6 @@ public class Bootstrap {
     return childHost;
   }
   
-  public static Boolean isCloudLocal( ) {
-    return childHost
-      ? mergeDatabase
-      : true;
-  }
-  
   public static Boolean shouldMergeDatabase( ) {
     return mergeDatabase;
   }
@@ -506,8 +501,14 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
     Bootstrap.doDiscovery( );
     
+    LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
+    for( ComponentId compId : ComponentIds.whichCanLoad( ) ) {
+      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName() );
+      Components.create( compId );
+    }
+
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.list( ) ) {
+    for ( Component c : Components.whichCanLoad( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
     
@@ -516,7 +517,7 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
-                              + Bootstrap.isCloudLocal( ) ) );
+                              + Bootstrap.isCloudController( ) ) );
     List<Component> components = Components.list( );
 //    for ( Component comp : components ) {
     Iterables.all( components, new Callback.Success<Component>( ) {

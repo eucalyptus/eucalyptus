@@ -134,7 +134,9 @@ public class SystemBootstrapper {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null ? "null" : string.replaceAll( "\n$","" ) ) );
+            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null
+              ? "null"
+              : string.replaceAll( "\n$", "" ) ) );
           }
         }
       }
@@ -144,7 +146,9 @@ public class SystemBootstrapper {
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null ? "null" : string.replaceAll( "\n$","" ) ) );
+            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null
+              ? "null"
+              : string.replaceAll( "\n$", "" ) ) );
           }
         }
       }
@@ -152,7 +156,6 @@ public class SystemBootstrapper {
       
       LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( LogLevels.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
-      System.setProperty( "euca.ws.port", "8773" );
     } catch ( Throwable t ) {
       t.printStackTrace( );
       System.exit( 1 );
@@ -190,7 +193,7 @@ public class SystemBootstrapper {
       System.exit( 1 );
       throw t;
     }
-    for( Component c : Components.whichCanLoad( ) ) {
+    for ( Component c : Components.whichCanLoad( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.LOADING );
     }
     return true;
