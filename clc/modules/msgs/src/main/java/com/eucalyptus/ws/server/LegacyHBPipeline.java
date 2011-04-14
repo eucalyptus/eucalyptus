@@ -60,7 +60,6 @@
  *******************************************************************************/
 package com.eucalyptus.ws.server;
 
-import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -78,20 +77,12 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.HeartbeatHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
 
 @ComponentPart( Empyrean.class )
 public class LegacyHBPipeline extends FilteredPipeline {
