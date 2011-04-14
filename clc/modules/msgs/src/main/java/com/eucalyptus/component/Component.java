@@ -623,7 +623,7 @@ public class Component implements HasName<Component> {
   @Override
   public String toString( ) {
     return String.format( "Component %s available=%s mark-remote=%s local-service=%s\n",
-                          this.identity.name( ), this.isAvailableLocally( ), this.isRunningRemoteMode( ), this.serviceRegistry.getLocalService( ) );
+                          this.identity.name( ), this.isAvailableLocally( ), this.isRunningRemoteMode( ), this.serviceRegistry.hasLocalService( ) ? this.serviceRegistry.getLocalService( ) : "none" );
   }
   
   /**
