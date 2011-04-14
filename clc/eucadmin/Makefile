@@ -30,7 +30,7 @@ euca_admin:
 	python2.5 setup.py build 
 
 install: euca_admin
-	python setup.py install
+	python2.5 setup.py install
 
 clean:
 	@$(RM) -fr ./dist
