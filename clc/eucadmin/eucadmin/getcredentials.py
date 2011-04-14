@@ -29,6 +29,7 @@
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 import os
+import boto.utils
 from eucadmin.command import Command
 
 OpenSSLCmd = """openssl pkcs12 -in %s -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" >  %s"""
