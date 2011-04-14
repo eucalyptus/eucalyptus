@@ -39,7 +39,7 @@ MySQLCmd = \
 DBPassCmd = """echo -n eucalyptus | openssl dgst -sha256 -sign %(EUCALYPTUS)s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""
 
 # Should wget be parameterized?  
-WGETCmd = r"""wget --no-check-certificate "https://localhost:8443/getX509?account=%s&user=%s&code=%s" -O %s"""
+GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
 
 EucaP12File = '%(EUCALYPTUS)s/var/lib/eucalyptus/keys/euca.p12'
 CloudPKFile = '%(EUCALYPTUS)s/var/lib/eucalyptus/keys/cloud-pk.pem'
@@ -88,10 +88,12 @@ class GetCredentials(object):
             raise ValueError('cannot find code in database')
 
     def get_credentials(self):
-        cmd = Command(WGETCmd % (self.account, self.user,
-                                 self.token, self.zipfile_name))
-        if cmd.status != 0:
-            raise IOError('failed to obtain credentials')
+        data = boto.utils.retry_url(GetCertURL % (self.account,
+                                                  self.user,
+                                                  self.token))
+        fp = open(self.zipfile_name, 'wb')
+        fp.write(data)
+        fp.close()
 
     def get_dbpass(self):
         cmd = Command(DBPassCmd % self.config)

@@ -98,7 +98,7 @@ class SyncKeys(object):
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
         cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
@@ -125,7 +125,7 @@ class SyncKeys(object):
         cmd = 'sudo -u %s scp ' % euca_user
         cmd += ' '.join(self.files)
         cmd += ' %s@%s:%s' % (euca_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
