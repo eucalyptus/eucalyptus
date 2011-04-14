@@ -29,6 +29,7 @@
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 import os
+import time
 import boto.utils
 from eucadmin.command import Command
 
@@ -82,9 +83,16 @@ class GetCredentials(object):
     def gen_cloudpk_file(self):
         cmd = Command(OpenSSLCmd % (self.eucap12_file, self.cloudpk_file))
                       
-    def get_token(self):
-        cmd = Command(MySQLCmd % (self.account, self.user, self.db_pass))
-        self.token = cmd.stdout.strip()
+    def get_token(self, num_retries=10):
+        i = 0
+        while i < num_retries:
+            cmd = Command(MySQLCmd % (self.account, self.user, self.db_pass))
+            self.token = cmd.stdout.strip()
+            if self.token:
+                break
+            print 'waiting for MySQL to respond'
+            time.sleep(10)
+            i += 1
         if not self.token:
             raise ValueError('cannot find code in database')
 
