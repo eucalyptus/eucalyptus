@@ -194,18 +194,18 @@ public class DisabledService implements Service {
   
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
   }
   
   @Override
   public List<String> getDetails( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
   }
   
 
   @Override
   public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
   }
 
   @Override
@@ -240,7 +240,7 @@ public class DisabledService implements Service {
   
   @Override
   public InetSocketAddress getSocketAddress( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
   }
 
   @Override
