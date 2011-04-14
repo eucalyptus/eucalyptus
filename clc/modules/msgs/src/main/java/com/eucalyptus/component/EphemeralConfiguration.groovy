@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,80 +61,101 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.component
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.google.common.collect.Lists;
+import java.net.URI;
+import com.eucalyptus.config.ComponentConfiguration;
 
-public class ComponentIds {
-  private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
-  private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
+class EphemeralConfiguration extends ComponentConfiguration {
+  URI         uri;
+  ComponentId c;
   
-  public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
-    List<ComponentId> components = Lists.newArrayList( );
-    for ( Component comp : Components.list( ) ) {
-      if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
-        components.add( comp.getComponentId( ) );
-      } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
-        components.add( comp.getComponentId( ) );
-      } else if ( comp.hasServiceEnabled( ) ) {
-        components.add( comp.getComponentId( ) );
-      }
-    }
-    LOG.trace( "Found the following running components: " + components );
-    return components;
+  public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
+    super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    this.uri = uri;
+    this.c = c;
   }
   
-  @SuppressWarnings( "unchecked" )
-  public static List<ComponentId> list( ) {
-    return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
+  public ComponentId lookupComponentId( ) {
+    return c;
   }
   
-  public final static ComponentId lookup( final Class compIdClass ) {
-    if ( !compIdMap.containsKey( compIdClass ) ) {
-      try {
-        if( ComponentId.class.isAssignableFrom( compIdClass ) ) {
-          ComponentIds.register( ( ComponentId ) compIdClass.newInstance( ) );
-          return compIdMap.get( compIdClass );
-        }
-      } catch ( InstantiationException ex ) {
-        LOG.error( ex , ex );
-      } catch ( IllegalAccessException ex ) {
-        LOG.error( ex , ex );
-      } 
-      throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
-    } else {
-      return compIdMap.get( compIdClass );
-    }
+  public URI getUri( ) {
+    return this.uri;
   }
   
-  /**
-   * Lookup the ComponentId with name <tt>name</tt>. Note that this method is case-insensitive in
-   * that the lower-case of <tt>name</tt> is compared to the l-case of ComponentId names.
-   * 
-   * @param name
-   * @throws NoSuchElementException
-   * @return
-   */
-  public final static ComponentId lookup( final String name ) {
-    String realName = name.toLowerCase( );
-    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
-    if ( !map.containsKey( realName ) ) {
-      throw new NoSuchElementException( "No ComponentId with name: " + realName );
-    } else {
-      return map.get( realName );
-    }
+  @Override
+  public String getName( ) {
+    return super.getName( );
   }
   
-  public final static void register( final ComponentId componentId ) {
-    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
-    map.put( componentId.getName( ), componentId );
-    compIdMap.put( componentId.getClass( ), componentId );
+  @Override
+  public Boolean isLocal( ) {
+    return super.isLocal( );
+  }
+  
+  @Override
+  public int compareTo( ServiceConfiguration that ) {
+    return super.compareTo( that );
+  }
+  
+  @Override
+  public String toString( ) {
+    return super.toString( );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    return super.hashCode( );
+  }
+  
+  @Override
+  public boolean equals( Object that ) {
+    return super.equals( that );
+  }
+  
+  @Override
+  public String getPartition( ) {
+    return super.getPartition( );
+  }
+  
+  @Override
+  public void setPartition( String partition ) {
+    super.setPartition( partition );
+  }
+  
+  @Override
+  public String getHostName( ) {
+    return super.getHostName( );
+  }
+  
+  @Override
+  public void setHostName( String hostName ) {
+    super.setHostName( hostName );
+  }
+  
+  @Override
+  public Integer getPort( ) {
+    return super.getPort( );
+  }
+  
+  @Override
+  public void setPort( Integer port ) {
+    super.setPort( port );
+  }
+  
+  @Override
+  public String getServicePath( ) {
+    return super.getServicePath( );
+  }
+  
+  @Override
+  public void setServicePath( String servicePath ) {
+    super.setServicePath( servicePath );
+  }
+  
+  @Override
+  public void setName( String name ) {
+    super.setName( name );
   }
 }

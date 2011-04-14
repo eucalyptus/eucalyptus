@@ -341,44 +341,6 @@ public class Components {
     }
   }
   
-  private static final Function<Dispatcher, String> dispatcherToString = dispatcherToString( );
-  
-  public static Function<Dispatcher, String> dispatcherToString( ) {
-    if ( dispatcherToString != null ) {
-      return dispatcherToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Dispatcher, String>( ) {
-          
-          @Override
-          public String apply( Dispatcher comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( "-> Dispatcher key=" ).append( comp.getName( ) ).append( " entry=" ).append( comp );
-            return buf.toString( );
-          }
-        };
-      }
-    }
-  }
-  
-  private static final Callback.Success<Dispatcher> dispatcherPrinter = dispatcherPrinter( );
-  
-  public static Callback.Success<Dispatcher> dispatcherPrinter( ) {
-    if ( dispatcherPrinter != null ) {
-      return dispatcherPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Dispatcher>( ) {
-          
-          @Override
-          public void fire( Dispatcher arg0 ) {
-            LOG.info( dispatcherToString.apply( arg0 ) );
-          }
-        };
-      }
-    }
-  }
-  
   private static final Function<Bootstrapper, String> bootstrapperToString = new Function<Bootstrapper, String>( ) {
                                                                              @Override
                                                                              public String apply( Bootstrapper b ) {

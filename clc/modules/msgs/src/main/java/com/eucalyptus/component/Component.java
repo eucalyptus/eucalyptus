@@ -64,37 +64,20 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.URI;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.component.ServiceConfigurations.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -103,11 +86,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.util.concurrent.GenericFuture;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -115,8 +95,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.SortedMaps;
-import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class Component implements HasName<Component> {
   private static Logger               LOG   = Logger.getLogger( Component.class );
@@ -138,7 +116,9 @@ public class Component implements HasName<Component> {
     this.serviceRegistry = new ServiceRegistry( );
     this.bootstrapper = new ComponentBootstrapper( this );
     ServiceConfiguration prelimConfig = ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
-    if ( this.isAvailableLocally( ) ) {
+    if ( this.isAvailableLocally( ) && this.identity.hasDispatcher( ) ) {
+      this.serviceRegistry.register( new MessagableService( prelimConfig ) );
+    } else if ( this.isAvailableLocally( ) && !this.identity.hasDispatcher( ) ) {
       this.serviceRegistry.register( new BasicService( prelimConfig ) );
     } else {
       this.serviceRegistry.register( new DisabledService( prelimConfig ) );

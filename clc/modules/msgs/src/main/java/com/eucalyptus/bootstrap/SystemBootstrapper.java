@@ -134,7 +134,7 @@ public class SystemBootstrapper {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + string );
+            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null ? "null" : string.replaceAll( "\n$","" ) ) );
           }
         }
       }
@@ -144,7 +144,7 @@ public class SystemBootstrapper {
       System.setErr( new PrintStream( System.err ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + string );
+            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null ? "null" : string.replaceAll( "\n$","" ) ) );
           }
         }
       }
