@@ -4022,29 +4022,6 @@ void shawn() {
 
 }
 
-int timeread(int fd, void *buf, size_t bytes, int timeout) {
-  int rc;
-  fd_set rfds;
-  struct timeval tv;
-
-  if (timeout <= 0) timeout = 1;
-
-  FD_ZERO(&rfds);
-  FD_SET(fd, &rfds);
-  
-  tv.tv_sec = timeout;
-  tv.tv_usec = 0;
-  
-  rc = select(fd+1, &rfds, NULL, NULL, &tv);
-  if (rc <= 0) {
-    // timeout
-    logprintfl(EUCAERROR, "timeread(): select() timed out for read: timeout=%d\n", timeout);
-    return(-1);
-  }
-  rc = read(fd, buf, bytes);
-  return(rc);
-}
-
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart) {
 
   if (out != NULL) {
