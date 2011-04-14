@@ -93,7 +93,7 @@ public class BasicService implements Service, EventListener {
   private final ServiceState         stateMachine;
   private final Runnable             checker;
   private State                      goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
-  
+                                                                                    
   BasicService( ServiceConfiguration serviceConfiguration ) {
     super( );
     this.serviceConfiguration = serviceConfiguration;
@@ -212,20 +212,19 @@ public class BasicService implements Service, EventListener {
   
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( "This service does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
   public List<String> getDetails( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( "This service does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
-
   @Override
   public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( "This service does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
-
+  
   @Override
   public void enqueue( Request request ) {
     LOG.error( "Discarding request submitted to a basic service: " + request );
@@ -270,17 +269,17 @@ public class BasicService implements Service, EventListener {
       }
     }
   }
-
+  
   @Override
   public InetSocketAddress getSocketAddress( ) {
-    throw new RuntimeException("This service does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    return this.serviceConfiguration.getSocketAddress( );
   }
-
+  
   @Override
   public void setGoal( State state ) {
     this.goal = state;
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -290,7 +289,7 @@ public class BasicService implements Service, EventListener {
       : this.serviceConfiguration.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {
