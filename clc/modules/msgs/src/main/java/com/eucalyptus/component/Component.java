@@ -290,23 +290,11 @@ public class Component implements HasName<Component> {
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
     if ( !this.isAvailableLocally( ) ) {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
-    } else if ( this.identity.isAlwaysLocal( ) || ( ) {
+    } else if ( this.identity.isAlwaysLocal( ) || this.identity.isCloudLocal( ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
-                                                                    uri.getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
-    }
-    if ( ( this.isAvailableLocally( ) && this.getComponentId( ).isAlwaysLocal( ) ) ) {
-      URI uri = this.getComponentId( ).getLocalEndpointUri( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
-                                                                    uri.getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
-    } else if ( Bootstrap.isCloudController( ) && this.getComponentId( ).isCloudLocal( ) ) {
-      URI uri = this.getComponentId( ).getLocalEndpointUri( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), Internets.localhost( ), uri.getHost( ),
-                                                                    uri.getPort( ) );
+      String fakeName = Internets.localhost( );
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
+                                                                    uri.getHost( ), uri.getPort( ) );
       this.serviceRegistry.register( config );
       return config;
     } else {

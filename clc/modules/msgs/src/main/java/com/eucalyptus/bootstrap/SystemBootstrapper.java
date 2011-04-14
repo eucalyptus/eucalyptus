@@ -350,7 +350,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) && c.isRunningRemoteMode( ) ) {
+      if ( c.isAvailableLocally( ) ) {
         for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
           banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
         }

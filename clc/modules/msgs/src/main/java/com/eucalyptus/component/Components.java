@@ -286,7 +286,7 @@ public class Components {
           public String apply( Component comp ) {
             final StringBuilder buf = new StringBuilder( );
             buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isRunningRemoteMode( ) ).append( "\n" );
+            buf.append( "-> Available/Marked-Remote:      " + comp.isAvailableLocally( ) + "/" + comp.isRunningRemoteMode( ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }

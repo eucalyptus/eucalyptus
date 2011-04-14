@@ -206,7 +206,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Components.lookup( Eucalyptus.class ).isRunningRemoteMode( ) );
+    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Components.lookup( Eucalyptus.class ).isAvailableLocally( ) );
     if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
       LOG.info( "Receiving initial view..." );
       this.currentView.set( newView, !isFirstDb );

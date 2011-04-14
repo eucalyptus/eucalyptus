@@ -358,7 +358,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private Map<String, String> getMetadataMap( ) {
-    boolean dns = Components.lookup( "dns" ).isRunningRemoteMode( );
+    boolean dns = !Components.lookup( Dns.class ).isRunningRemoteMode( );
     Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
@@ -530,7 +530,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
-    boolean dns = Components.lookup( Dns.class ).isRunningRemoteMode( );
+    boolean dns = !Components.lookup( Dns.class ).isRunningRemoteMode( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
