@@ -94,8 +94,8 @@ import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 
 @ComponentPart( Empyrean.class )
-public class HeartbeatPipeline extends FilteredPipeline {
-  private static Logger LOG = Logger.getLogger( HeartbeatPipeline.class );
+public class LegacyHBPipeline extends FilteredPipeline {
+  private static Logger LOG = Logger.getLogger( LegacyHBPipeline.class );
   
   @Override
   public boolean checkAccepts( HttpRequest message ) {
