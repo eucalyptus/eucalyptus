@@ -347,7 +347,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  private CheckedListenableFuture<ServiceConfiguration> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
     service.setGoal( this.serviceRegistry.getServices( ).isEmpty( )
@@ -387,7 +387,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> enableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  private CheckedListenableFuture<ServiceConfiguration> enableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_ENABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
     service.setGoal( State.ENABLED );
@@ -565,6 +565,9 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
+    if( !this.hasLocalService( ) ) {
+      this.serviceRegistry.register( configuration );
+    }
     Callable<ServiceConfiguration> transition = null;
     switch ( this.getState( ) ) {
       case LOADED:
@@ -591,6 +594,9 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
+    if( !this.hasLocalService( ) ) {
+      this.serviceRegistry.register( configuration );
+    }
     Callable<ServiceConfiguration> transition = null;
     switch ( this.getState( ) ) {
       case NOTREADY:

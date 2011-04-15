@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -150,7 +151,12 @@ public class Configuration {
         throw e;
       }
       if ( "enable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        builder.getComponent( ).enableService( conf );
+        try {
+          builder.getComponent( ).enableTransition( conf ).get( );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+          throw new EucalyptusCloudException( ex.getMessage( ), ex );
+        }
       } else if ( "disable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
         builder.getComponent( ).disableService( conf );
       }
