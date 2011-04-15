@@ -7,6 +7,18 @@ import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.system.LogLevels;
 
 /**
+ * <p>MethodRunner runs a single static method, and returns a return code
+ * to the calling shell. It's invoked using the <code>main</code> method.
+ * 
+ * <p>MethodRunner is invoked by the <code>clc/tools/runMethod.sh</code>
+ * bash script. It's used as a part of Kyo's testing framework which requires
+ * things to be executed from the shell and to provide return codes.
+ * 
+ * <p>MethodRunner does not require Eucalyptus to be running. MethodRunner
+ * initializes everything, starts the db, sets up persistence contexts, etc.
+ * It allows you to execute a single method within the context of Eucalyptus
+ * and to get a return code.
+ * 
  * @author tom.werges
  */
 public class MethodRunner
@@ -37,7 +49,10 @@ public class MethodRunner
 	public static int count = 1;
 
 	/**
-	 * @param args className methodName commaDelimitedStringArgs
+	 * <p>Takes a series of command-line arguments, runs a static method specified in
+	 * those arguments, and returns a return code to the shell which invoked it.
+	 * 
+	 * @param args Should consist of 3 Strings: className methodName commaDelimitedStringArgs
 	 */
 	public static void main(String[] args)
 	{
