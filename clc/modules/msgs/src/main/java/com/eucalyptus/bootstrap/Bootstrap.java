@@ -514,19 +514,15 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
                               + Bootstrap.isCloudController( ) ) );
     List<Component> components = Components.list( );
-//    for ( Component comp : components ) {
-    Iterables.all( components, new Callback.Success<Component>( ) {
-      @Override
-      public void fire( Component comp ) {
-        try {
-          comp.initService( );
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.info( ex.getMessage( ) );
-        } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
-        }
+    for ( Component comp : components ) {
+      try {
+        comp.initService( );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.info( ex.getMessage( ) );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
       }
-    } );
+    }
     
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     for ( Component c : Components.whichCanLoad( ) ) {
