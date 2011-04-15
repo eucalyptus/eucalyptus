@@ -232,12 +232,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
 
   @Override
   public ServiceBuilder lookupBuilder( ) {
-    ServiceBuilder ret = null;
-    if( ( ret = ServiceBuilderRegistry.lookup( this.getComponentId( ) ) ) != null ) {
-      return ret;
-    } else {
-      return new DummyServiceBuilder( this );
-    }
+    return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
   }
 }
   

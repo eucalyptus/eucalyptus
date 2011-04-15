@@ -507,11 +507,6 @@ public class Bootstrap {
       Components.create( compId );
     }
 
-    LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
-    }
-    
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
@@ -532,7 +527,12 @@ public class Bootstrap {
       }
     }
     } );
-    
+
+    LOG.info( LogUtil.header( "Initializing component resources:" ) );
+    for ( Component c : Components.whichCanLoad( ) ) {
+      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+    }
+
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
     

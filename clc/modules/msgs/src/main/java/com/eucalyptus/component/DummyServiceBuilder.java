@@ -11,12 +11,12 @@ import com.google.common.collect.Maps;
  */
 public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfiguration> {
   private Map<String, ServiceConfiguration> services = Maps.newConcurrentMap( );
-  private final ServiceConfiguration serviceConfiguration;
+  private final Component component;
   
-  public DummyServiceBuilder( ServiceConfiguration config ) {
-    this.serviceConfiguration = config;
+  DummyServiceBuilder( Component component ) {
+    this.component = component;
   }
-  
+
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     return this.services.containsKey( name );
@@ -24,12 +24,12 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   
   @Override
   public Component getComponent( ) {
-    return this.serviceConfiguration.lookupComponent( );
+    return this.component;
   }
   
   @Override
   public List<ServiceConfiguration> list( ) throws ServiceRegistrationException {
-    return this.serviceConfiguration.lookupComponent( ).lookupServiceConfigurations( );
+    return this.getComponent( ).lookupServiceConfigurations( );
   }
   
   @Override
@@ -50,7 +50,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   @Override
   public ServiceConfiguration lookupByName( String name ) throws ServiceRegistrationException {
     try {
-      return this.serviceConfiguration.lookupComponent( ).lookupService( name ).getServiceConfiguration( );
+      return this.getComponent( ).lookupService( name ).getServiceConfiguration( );
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( ex );
     }
@@ -65,14 +65,14 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   public ServiceConfiguration lookup( String partition, String name ) throws ServiceRegistrationException {
     Service service;
     try {
-      service = this.serviceConfiguration.lookupComponent( ).lookupService( name );
+      service = this.getComponent( ).lookupService( name );
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( ex );
     }
     if( service.getPartition( ).equals( partition ) ) {
       return service.getServiceConfiguration( );
     } else {
-      throw new ServiceRegistrationException( "No service found matching partition: " + partition+ " and name: " + name + " for component: " + this.serviceConfiguration.lookupComponent( ).getName( ) );
+      throw new ServiceRegistrationException( "No service found matching partition: " + partition+ " and name: " + name + " for component: " + this.getComponent( ).getName( ) );
     }
   }
   

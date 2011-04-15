@@ -166,8 +166,8 @@ public class Component implements HasName<Component> {
     return this.identity.name( );
   }
   
-  public ServiceBuilder<ServiceConfiguration> getBuilder( ) {
-    return this.serviceRegistry.getLocalService( ).getServiceConfiguration( ).lookupBuilder( );
+  public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
+    return ServiceBuilderRegistry.lookup( this.identity );
   }
   
   /**
