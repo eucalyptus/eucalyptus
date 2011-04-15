@@ -45,7 +45,7 @@ public class FalseDataGenerator
 		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
 	}
 
-	public static void generateFalseData()
+	public static int generateFalseData()
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
@@ -104,6 +104,7 @@ public class FalseDataGenerator
 		
 		reportingBootstrapper.stop();
 
+		return 0;
 	}
 
 	private static final long CORRECT_DISK_USAGE = 1010000l;
@@ -117,8 +118,10 @@ public class FalseDataGenerator
 
 	private static final int NUM_TESTS = 16;
 
-	public static void testFalseData()
+	
+	public static int testFalseData()
 	{
+		boolean allTestsPassed = true;
 		System.out.println(" ----> TESTING FALSE DATA");
 
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
@@ -172,7 +175,8 @@ public class FalseDataGenerator
 
 				if (!diskWithin || !netWithin || !usageWithin)
 				{
-					throw new RuntimeException("Incorrect result for user:" + userId);
+					System.out.println("Incorrect result for user:" + userId);
+					allTestsPassed = false;
 				}
 
 			}
@@ -237,12 +241,12 @@ public class FalseDataGenerator
 
 			if (!diskWithin || !netWithin || !totalWithin)
 			{
-				throw new RuntimeException("Incorrect result for user:" + key);
+				System.out.println("Incorrect result for user:" + key);
 			}
 			
 		}
 		
-		System.out.println("Test passed");
+		return allTestsPassed ? 0 : 1; 
 	}
 
 	private static boolean isWithinError(long val, long correctVal, double errorPercent)
@@ -268,14 +272,15 @@ public class FalseDataGenerator
 		long c1XLargeTimeSecs = 0l;
 	}
 	
-	public static void removeFalseData()
+	public static int removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
 
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
+		return 0;
 	}
 
-	public static void printFalseData()
+	public static int printFalseData()
 	{
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		System.out.println(" ----> PRINTING FALSE DATA");
@@ -293,16 +298,19 @@ public class FalseDataGenerator
 					period.getBeginningMs(), period.getEndingMs(),
 					usageData.getNetworkIoMegs(), usageData.getDiskIoMegs());
 		}
+		return 0;
 	}
 
-	public static void runTest()
+	public static int runTest()
 	{
+		int rv = 0;
 		removeFalseData();
 		printFalseData();
 		generateFalseData();
 		printFalseData();
-		testFalseData();
+		rv = testFalseData();
 		removeFalseData();
+		return rv;
 	}
 	
 	private static GroupByCriterion getCriterion(String name)
@@ -319,7 +327,7 @@ public class FalseDataGenerator
 	 * @throws IllegalArgumentException if criterion does not match
 	 *   any GroupByCriterion
 	 */
-	public static void summarizeFalseDataOneCriterion(
+	public static int summarizeFalseDataOneCriterion(
 			String criterion)
 	{
 		GroupByCriterion crit = getCriterion(criterion);
@@ -332,6 +340,7 @@ public class FalseDataGenerator
 			System.out.printf("%s:%s Summary:%s\n", crit, critVal,
 					summaryMap.get(critVal));
 		}
+		return 0;
 	}
 
 	/**
@@ -341,7 +350,7 @@ public class FalseDataGenerator
 	 * @throws IllegalArgumentException if either criterion does not match
 	 *   any GroupByCriterion
 	 */
-	public static void summarizeFalseDataTwoCriteria(
+	public static int summarizeFalseDataTwoCriteria(
 			String outerCriterion,
 			String innerCriterion)
 	{
@@ -362,8 +371,9 @@ public class FalseDataGenerator
 						innerMap.get(innerCritVal));
 			}
 		}
+		return 0;
 	}
-
+	
 	/**
 	 * TestEventListener provides fake times which you can modify.
 	 * 
