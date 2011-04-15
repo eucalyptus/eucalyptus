@@ -78,9 +78,9 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -118,10 +118,10 @@ public class SystemBootstrapper {
   
   public boolean init( ) throws Exception {
     try {
-      LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.EXTREME;
-      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.TRACE;
-      if ( LogLevels.EXTREME ) {
+      Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+      Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
+      Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
+      if ( Logs.EXTREME ) {
         System.setProperty( "euca.log.level", "TRACE" );
         System.setProperty( "euca.exhaust.level", "TRACE" );
         System.setProperty( "euca.log.exhaustive.user", "TRACE" );
@@ -154,7 +154,7 @@ public class SystemBootstrapper {
       }
             );
       
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( LogLevels.class.getDeclaredFields( ) ) ) );
+      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
       Security.addProvider( new BouncyCastleProvider( ) );
     } catch ( Throwable t ) {
       t.printStackTrace( );

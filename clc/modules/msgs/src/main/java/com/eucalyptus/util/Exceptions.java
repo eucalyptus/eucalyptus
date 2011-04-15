@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.system.LogLevels;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -21,7 +20,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return LogLevels.DEBUG ? string( ex ) : ex.getMessage( ); 
+    return Logs.DEBUG ? string( ex ) : ex.getMessage( ); 
   }
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null ? new RuntimeException() : ex );

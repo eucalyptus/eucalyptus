@@ -95,7 +95,7 @@ import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Logs;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -137,7 +137,7 @@ public class PersistenceErrorFilter {
       @Override
       public RuntimeException handleException( RuntimeException e ) {
         String msg = this.getMessage( e );
-        if( !LogLevels.DEBUG ) {
+        if( !Logs.DEBUG ) {
           LOG.error( msg, e );
         }
         return e;
@@ -145,7 +145,7 @@ public class PersistenceErrorFilter {
     };
     protected String getMessage( RuntimeException e ) {
       String msg = new StringBuilder( ).append( "[" ).append( this.name( ) ).append( "] Persistence error occurred because of: " + e.getMessage( ) ).toString( );
-      if ( LogLevels.DEBUG ) {
+      if ( Logs.DEBUG ) {
         LOG.error( msg, e );
       } else {
         LOG.error( msg );

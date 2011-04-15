@@ -7,8 +7,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.TransitionListener.Phases;
 import com.google.common.base.Function;
@@ -44,14 +44,14 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
    * @param transitionListener
    */
   public TransitionImpl<P, S, T> addListener( TransitionListener<P> listener ) {
-    if ( LogLevels.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
+    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
   }
   
   private void removeListener( Integer key ) {
     TransitionListener<P> listener = this.listeners.remove( key );
-    if ( LogLevels.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
+    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
   }
   
   /**
@@ -108,7 +108,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
       final TransitionListener<P> tl = entry.getValue( );
-      if ( LogLevels.TRACE ) {
+      if ( Logs.TRACE ) {
         EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
                           entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
       }

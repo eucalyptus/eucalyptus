@@ -10,9 +10,9 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ArrayListMultimap;
@@ -333,7 +333,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   public String toString( ) {
     ActiveTransition t = this.currentTransition.get( );
-    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( LogLevels.EXTREME
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( Logs.EXTREME
       ? ( t != null
         ? t.toString( )
         : "idle" )
@@ -383,7 +383,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
     
     private void teardown( ) {
-      if ( LogLevels.TRACE ) {
+      if ( Logs.TRACE ) {
         RuntimeException ex = new RuntimeException( );
         if ( this.endTime != 0l ) {
           LOG.error( "Transition being committed for a second time!" );
@@ -394,7 +394,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
           this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
           LOG.trace( this );
         }
-      } else if ( LogLevels.EXTREME ) {
+      } else if ( Logs.EXTREME ) {
         LOG.error( this.toString( ) );
       }
     }
@@ -411,7 +411,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.rule = rule;
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
-      if ( LogLevels.DEBUG ) {
+      if ( Logs.DEBUG ) {
         this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 2 );
       } else {
         this.startStackTrace = null;

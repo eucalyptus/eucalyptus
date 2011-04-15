@@ -92,7 +92,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -131,7 +131,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( LogLevels.EXTREME && request instanceof MappingHttpMessage ) {
+      if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
         ((MappingHttpMessage)request).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
@@ -181,7 +181,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status, Throwable t ) {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    if ( LogLevels.DEBUG ) {
+    if ( Logs.DEBUG ) {
       ByteArrayOutputStream os = new ByteArrayOutputStream( );
       PrintWriter out = new PrintWriter( os );
       t.printStackTrace( out );

@@ -76,13 +76,13 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.Request;
@@ -139,7 +139,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if ( LogLevels.TRACE ) {
+          if ( Logs.TRACE ) {
             Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
