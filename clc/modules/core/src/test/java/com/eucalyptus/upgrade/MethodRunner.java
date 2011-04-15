@@ -7,17 +7,22 @@ import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.system.LogLevels;
 
 /**
- * <p>MethodRunner runs a single static method, and returns a return code
- * to the calling shell. It's invoked using the <code>main</code> method.
+ * <p>MethodRunner runs a single static method, specified by arguments to the
+ * <code>main</code> method. The method specified must be a static method, must
+ * take only String arguments, and may optionally return an int. If the method
+ * specified returns an int, then that int will be returned to the calling shell
+ * as a return code. If the specified method does not return an int, it must
+ * return void, in which case this will return failure (non-zero) to the calling
+ * shell in the event of any exception, and success (0) otherwise.
  * 
- * <p>MethodRunner is invoked by the <code>clc/tools/runMethod.sh</code>
- * bash script. It's used as a part of Kyo's testing framework which requires
- * things to be executed from the shell and to provide return codes.
+ * <p>MethodRunner is invoked by the <code>clc/tools/runMethod.sh</code> bash
+ * script. It's used as a part of Kyo's testing framework which requires things
+ * to be executed from the shell and to provide return codes.
  * 
  * <p>MethodRunner does not require Eucalyptus to be running. MethodRunner
- * initializes everything, starts the db, sets up persistence contexts, etc.
- * It allows you to execute a single method within the context of Eucalyptus
- * and to get a return code.
+ * initializes everything, starts the db, sets up persistence contexts, etc. It
+ * allows you to execute a single method within the context of Eucalyptus and to
+ * get a return code.
  * 
  * @author tom.werges
  */
@@ -49,10 +54,16 @@ public class MethodRunner
 	public static int count = 1;
 
 	/**
-	 * <p>Takes a series of command-line arguments, runs a static method specified in
-	 * those arguments, and returns a return code to the shell which invoked it.
+	 * <p>Takes a series of command-line arguments, runs a static method
+	 * specified in those arguments, and returns a return code to the shell
+	 * which invoked it.
 	 * 
-	 * @param args Should consist of 3 Strings: className methodName commaDelimitedStringArgs
+	 * <p>Expects that the method specified is a static method which takes
+	 * only String arguments and returns an int return code.
+	 * 
+	 * @param args
+	 *            Should consist of 3 Strings: className, methodName,
+	 *            commaDelimitedStringArgs
 	 */
 	public static void main(String[] args)
 	{
@@ -158,12 +169,19 @@ public class MethodRunner
 		}
 
 			
-		Class clazz = Class.forName(className);
 		@SuppressWarnings("unchecked")
-		Integer retVal = (Integer) clazz.getDeclaredMethod(methodName, params)
+		Object retVal = Class.forName(className)
+				.getDeclaredMethod(methodName, params)
 				.invoke(null, (Object[]) methodArgsArray);
 
-		return retVal.intValue();
+		if (retVal == null) {
+			return 0;
+		} else if (retVal instanceof Integer) {
+			return ((Integer)retVal).intValue();
+		} else {
+			throw new NoSuchMethodException("No method with return type int");			
+		}
+
 	}
 
 }
