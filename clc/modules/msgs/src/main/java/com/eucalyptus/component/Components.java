@@ -285,16 +285,15 @@ public class Components {
           @Override
           public String apply( Component comp ) {
             final StringBuilder buf = new StringBuilder( );
-            buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Available/Marked-Remote:      " + comp.isAvailableLocally( ) + "/" + comp.isRunningRemoteMode( ) ).append( "\n" );
+            buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
             for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
               buf.append( "-> " + b.toString( ) ).append( "\n" );
             }
             buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
             for ( Service s : comp.getServices( ) ) {
               try {
-                buf.append( "->  Service:          " + s.getFullName( ) + " " + s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
-                buf.append( "|-> Service config:   " + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
+                buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
+                buf.append( "|-> Service config:   " ).append( s.getServiceConfiguration( ) ).append( "\n" );
               } catch ( Exception ex ) {
                 LOG.error( ex , ex );
               }

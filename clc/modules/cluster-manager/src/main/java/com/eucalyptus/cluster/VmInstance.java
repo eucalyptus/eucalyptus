@@ -83,6 +83,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Dns;
@@ -358,7 +359,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private Map<String, String> getMetadataMap( ) {
-    boolean dns = !Components.lookup( Dns.class ).isRunningRemoteMode( );
+    boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
@@ -530,7 +531,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
-    boolean dns = !Components.lookup( Dns.class ).isRunningRemoteMode( );
+    boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );

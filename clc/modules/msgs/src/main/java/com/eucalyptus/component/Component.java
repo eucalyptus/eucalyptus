@@ -619,8 +619,8 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s available=%s mark-remote=%s local-service=%s\n",
-                          this.identity.name( ), this.isAvailableLocally( ), this.isRunningRemoteMode( ), this.serviceRegistry.hasLocalService( ) ? this.serviceRegistry.getLocalService( ) : "none" );
+    return String.format( "Component %s available=%s local-service=%s\n",
+                          this.identity.name( ), this.isAvailableLocally( ), this.serviceRegistry.hasLocalService( ) ? this.serviceRegistry.getLocalService( ) : "none" );
   }
   
   /**
@@ -707,7 +707,7 @@ public class Component implements HasName<Component> {
     private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
+      return !Component.this.identity.runLimitedServices( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
     }
     
     public Service getLocalService( ) {
