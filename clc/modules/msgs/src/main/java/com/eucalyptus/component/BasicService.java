@@ -86,6 +86,7 @@ import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.google.common.collect.Lists;
 
 public class BasicService implements Service, EventListener {
   private static Logger              LOG  = Logger.getLogger( BasicService.class );
@@ -217,7 +218,7 @@ public class BasicService implements Service, EventListener {
   
   @Override
   public List<String> getDetails( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
+    return Lists.newArrayList( );
   }
   
   @Override
