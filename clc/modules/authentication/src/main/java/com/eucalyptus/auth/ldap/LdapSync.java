@@ -65,6 +65,10 @@ public class LdapSync {
     
   }
   
+  public static synchronized boolean inSync( ) {
+    return inSync;
+  }
+  
   public static synchronized void start( ) {
     if ( lic.isSyncEnabled( ) ) {
       if ( lic.isAutoSync( ) ) {

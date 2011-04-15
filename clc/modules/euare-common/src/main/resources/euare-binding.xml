@@ -756,4 +756,16 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
+  <mapping name="GetLdapSyncStatus" class="com.eucalyptus.auth.euare.GetLdapSyncStatusType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  </mapping>
+  <mapping name="GetLdapSyncStatusResponse" class="com.eucalyptus.auth.euare.GetLdapSyncStatusResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getLdapSyncStatusResult" usage="required" map-as="com.eucalyptus.auth.euare.GetLdapSyncStatusResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetLdapSyncStatusResult" class="com.eucalyptus.auth.euare.GetLdapSyncStatusResultType">
+    <value name="SyncEnabled" field="syncEnabled" usage="required"/>
+    <value name="InSync" field="inSync" usage="required"/>
+  </mapping>
 </binding>
