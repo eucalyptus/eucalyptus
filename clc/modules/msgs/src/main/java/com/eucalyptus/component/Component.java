@@ -314,7 +314,9 @@ public class Component implements HasName<Component> {
    */
   public CheckedListenableFuture<ServiceConfiguration> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = null;
-    if ( this.serviceRegistry.hasService( config ) ) {
+    if ( config.isLocal( ) && !this.serviceRegistry.hasLocalService( ) ) {
+      service = this.serviceRegistry.register( config );
+    } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
     } else {
       service = this.serviceRegistry.register( config );
