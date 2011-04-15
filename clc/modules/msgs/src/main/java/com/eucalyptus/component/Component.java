@@ -710,7 +710,7 @@ public class Component implements HasName<Component> {
     private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return ( this.localService.get( ) != null );
+      return ( this.localService.get( ) != null && !( this.localService.get( ) instanceof DisabledService ) );
     }
     
     public Service getLocalService( ) {
