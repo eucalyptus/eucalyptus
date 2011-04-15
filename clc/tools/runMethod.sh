@@ -5,6 +5,9 @@
 #  contexts, etc. Returns whatever return value the method returns. Requires
 #  the method to be static, to take only String arguments, and to return an int.
 #
+# This is used as part of Kyo's test suite, which requires things to be called
+#  from a shell and to return an int return code.
+#
 # Syntax: runMethod.sh className methodName commaDelimitedArgs
 #
 # Example usage:
