@@ -258,13 +258,12 @@ public class BasicService implements Service, EventListener {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz ) {
-      for ( final Component c : Components.list( ) ) {
-        if ( Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) && c.isAvailableLocally( ) ) {
-          if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
-            Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
-          } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-            c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
-          }
+      Component c = this.getComponent( );
+      if ( c.hasLocalService( ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
+        if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+          Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
+        } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
+          c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
         }
       }
     }
