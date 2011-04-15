@@ -513,7 +513,7 @@ public class Bootstrap {
      */
     LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
                               + Bootstrap.isCloudController( ) ) );
-    List<Component> components = Components.list( );
+    List<Component> components = Components.whichCanLoad( );
     for ( Component comp : components ) {
       try {
         comp.initService( );
