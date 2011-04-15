@@ -538,12 +538,7 @@ public class Bootstrap {
     
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
     for ( Component c : Components.list( ) ) {
-      StringBuilder s = new StringBuilder( );
-      s.append( c.getName( ) ).append( " available=" ).append( c.isAvailableLocally( ) )
-       .append( " remote-mode=" ).append( c.isRunningRemoteMode( ) )
-       .append( " running=" ).append( c.isRunningLocally( ) )
-       .append( " service=" ).append( c.getLocalService( ) );
-      LOG.info( s.toString( ) );
+      LOG.info( c.toString( ) );
     }
   }
   
