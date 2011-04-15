@@ -2,6 +2,7 @@ package com.eucalyptus.component.id;
 
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Internets;
 
 public class ClusterController extends ComponentId {
 
@@ -16,7 +17,7 @@ public class ClusterController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return "vm://ClusterEndpoint";
+    return String.format( getUriPattern(), Internets.localhost( ), this.getPort( ) );
   }
   
   @Override

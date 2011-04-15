@@ -66,6 +66,7 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Internets;
 import com.google.common.collect.Lists;
 
 public class NodeController extends ComponentId {
@@ -81,7 +82,7 @@ public class NodeController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), "127.0.0.1", this.getPort( ) );
+    return String.format( getUriPattern(), Internets.localhost( ), this.getPort( ) );
   }
   
   @Override
