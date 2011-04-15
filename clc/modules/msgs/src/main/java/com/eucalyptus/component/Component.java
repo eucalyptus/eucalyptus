@@ -88,6 +88,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -316,6 +317,18 @@ public class Component implements HasName<Component> {
     Service service = null;
     if ( config.isLocal( ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
+      try {
+        service.transition( State.INITIALIZED );
+      } catch ( IllegalStateException ex ) {
+        LOG.error( ex , ex );
+        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex , ex );
+        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+      }
     } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
     } else {
