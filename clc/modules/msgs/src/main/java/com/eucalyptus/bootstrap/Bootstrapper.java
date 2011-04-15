@@ -274,7 +274,7 @@ public abstract class Bootstrapper {
     for ( ComponentId c : this.getDependsLocal( ) ) {
       try {
         if ( Components.lookup( c ).hasLocalService( ) ) {
-          return false;
+          return true;
         }
       } catch ( NoSuchElementException ex ) {
 //        return false;
