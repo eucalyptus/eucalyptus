@@ -225,11 +225,11 @@ public class Component implements HasName<Component> {
   }
   
   public Boolean hasServiceEnabled( ) {
-    return State.ENABLED.equals( this.getState( ) );
+    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getState( ) );
   }
   
   public Boolean isRunningLocally( ) {
-    return State.ENABLED.equals( this.getState( ) );// && this.serviceRegistry.hasLocalService( );
+    return this.hasServiceEnabled( );
   }
   
   /**
