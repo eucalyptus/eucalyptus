@@ -566,7 +566,15 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
     if( !this.hasLocalService( ) ) {
-      this.serviceRegistry.register( configuration );
+      try {
+        this.serviceRegistry.register( configuration ).transition( State.INITIALIZED );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex.getMessage( ) );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex.getMessage( ) );
+      }
     }
     Callable<ServiceConfiguration> transition = null;
     switch ( this.getState( ) ) {
@@ -595,7 +603,15 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
     if( !this.hasLocalService( ) ) {
-      this.serviceRegistry.register( configuration );
+      try {
+        this.serviceRegistry.register( configuration ).transition( State.INITIALIZED );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex.getMessage( ) );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex.getMessage( ) );
+      }
     }
     Callable<ServiceConfiguration> transition = null;
     switch ( this.getState( ) ) {

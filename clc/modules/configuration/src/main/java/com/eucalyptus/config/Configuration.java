@@ -174,10 +174,18 @@ public class Configuration {
         } else {
           for ( Service s : c.lookupServices( ) ) {
             ServiceConfiguration conf = s.getServiceConfiguration( );
-            listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
-              ? conf.getPartition( )
-              : "-" ),
-                                                    conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
+            try {
+              listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
+                ? conf.getPartition( )
+                : "-" ),
+                                                      conf.getFullName( ).toString( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+              listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
+                  ? conf.getPartition( )
+                    : "-" ),
+                    conf.getFullName( ).toString( ), conf.getHostName( ), "none", "" ) );
+            }
             for ( String d : s.getDetails( ) ) {
               listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
                 ? conf.getPartition( )
