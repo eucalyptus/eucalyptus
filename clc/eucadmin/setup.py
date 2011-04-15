@@ -29,17 +29,10 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
-
-from eucadmin import __version__
-
-install_requires = ['boto', 'psutils']
+from distutils.core import setup
 
 setup(name = "eucadmin",
-      version = __version__,
+      version = '0.1',
       description = "Eucalyptus Admin Tools",
       long_description="CLI tools to help administer Eucalyptus",
       author = "Mitch Garnaat",
@@ -68,7 +61,6 @@ setup(name = "eucadmin",
                  "bin/euca-register-cluster",
                  "bin/euca-register-storage-controller",
                  "bin/euca-register-walrus"],
-      install_requires=install_requires,
       url = "http://eucalyptus.com/",
       packages = ['eucadmin'],
       license = 'BSD',
