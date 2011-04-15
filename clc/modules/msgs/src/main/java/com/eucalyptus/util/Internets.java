@@ -98,7 +98,7 @@ public class Internets {
   public static String localhost( ) {
     return localHost != null
       ? localHost
-      : Internets.getAllInetAddresses( ).get( 0 ).getCanonicalHostName( );
+      : Internets.getAllInetAddresses( ).get( 0 ).getHostAddress( );
   }
 
   public static String localhostIdentifier( ) {
