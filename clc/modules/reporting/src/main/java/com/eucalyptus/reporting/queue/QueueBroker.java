@@ -63,7 +63,7 @@ public class QueueBroker
 		 */
 		String remoteBrokerUrl = null;
 		Component reportingComponent = Components.lookup(Reporting.class);
-		if (null!=reportingComponent && !reportingComponent.isRunningLocally( )) {
+		if (null!=reportingComponent && !reportingComponent.hasServiceEnabled( )) {
 			log.info("Searching for remote reporting broker");
 			NavigableSet<Service> services = reportingComponent.getServices();
 			for (Service service: services) {

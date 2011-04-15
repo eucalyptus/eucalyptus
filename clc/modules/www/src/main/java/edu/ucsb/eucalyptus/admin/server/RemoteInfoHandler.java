@@ -172,7 +172,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
       try {
-        if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isRunningLocally( ) ) {
+        if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).hasServiceEnabled( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }
