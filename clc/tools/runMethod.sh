@@ -1,9 +1,12 @@
 
 # 
 # Runs a static method within eucalyptus. Does not require Eucalyptus to be
-#  running beforehand. Initializes everything, sets up database and persistence
-#  contexts, etc. Returns whatever return value the method returns. Requires
-#  the method to be static, to take only String arguments, and to return an int.
+#  running beforehand; it initializes everything, sets up database and
+#  persistence contexts, etc. Requires the method to be static, to take only
+#  String arguments, and to return either an int or void. If the method returns
+#  int, this script will return that int as a return code to the shell. If the
+#  method returns void, this script will return  0 (success) if no exceptions
+#  are encountered, and failure otherwise.
 #
 # This is used as part of Kyo's test suite, which requires things to be called
 #  from a shell and to return an int return code.
