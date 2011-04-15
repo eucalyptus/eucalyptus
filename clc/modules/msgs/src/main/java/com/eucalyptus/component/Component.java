@@ -201,17 +201,6 @@ public class Component implements HasName<Component> {
     } ) );
   }
   
-  /**
-   * TODO: DOCUMENT Component.java
-   * 
-   * @param hostName
-   * @param port
-   * @return
-   */
-  public URI getUri( String hostName, Integer port ) {
-    return this.getComponentId( ).makeRemoteUri( hostName, port );
-  }
-  
   public URI getUri( ) {
     NavigableSet<Service> services = this.serviceRegistry.getServices( );
     if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.getName( ) ) ) {

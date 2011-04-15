@@ -24,7 +24,7 @@ public class ServiceConfigurations {
   }
 
   public static ServiceConfiguration createEphemeral( ComponentId compId, InetAddress host ) {
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getCanonicalHostName( ), compId.makeRemoteUri( host.getCanonicalHostName( ),
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeRemoteUri( host.getCanonicalHostName( ),
                                                                                                                            compId.getPort( ) ) );
   }
 

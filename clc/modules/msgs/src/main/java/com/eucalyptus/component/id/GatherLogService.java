@@ -67,8 +67,14 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Internets;
 
 public class GatherLogService extends ComponentId {
+  
+  public GatherLogService( ) {
+    super( "gatherlog" );
+  }
+
   @Override
   public Integer getPort( ) {
     return 8774;
@@ -76,9 +82,9 @@ public class GatherLogService extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), "127.0.0.1", this.getPort( ) );
+    return String.format( getUriPattern(), Internets.localhost( ), this.getPort( ) );
   }
-  
+
   @Override
   public String getUriPattern( ) {
     return "http://%s:%d/axis2/services/EucalyptusGL";
