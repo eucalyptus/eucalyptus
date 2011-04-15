@@ -20,7 +20,7 @@ public class FalseDataGenerator
 
 	private static ReportingBootstrapper reportingBootstrapper;
 
-	public static void generateFalseData()
+	public static int generateFalseData()
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
@@ -63,7 +63,7 @@ public class FalseDataGenerator
 		}
 		
 		reportingBootstrapper.stop();
-
+		return 0;
 	}
 	
 	
@@ -77,8 +77,9 @@ public class FalseDataGenerator
 
 	private static final int NUM_TESTS = 16;
 
-	public static void testFalseData()
+	public static int testFalseData()
 	{
+		boolean allTestsPassed = true;
 		System.out.println(" ----> TESTING FALSE DATA");
 
 		StorageUsageLog usageLog = StorageUsageLog.getStorageUsageLog();
@@ -136,10 +137,12 @@ public class FalseDataGenerator
 
 				if (!correct)
 				{
-					//throw new RuntimeException("Incorrect result for user:" + userId);
+					System.out.println("Incorrect result for user:" + userId);
+					allTestsPassed = false;
 				}
 			}
 		}
+		return allTestsPassed ? 0 : 1;
 	}
 
 	private static boolean isWithinError(long val, long correctVal, double errorPercent)
@@ -155,14 +158,15 @@ public class FalseDataGenerator
 
 
 	
-	public static void removeFalseData()
+	public static int removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
 
 		StorageUsageLog.getStorageUsageLog().purgeLog(MAX_MS);
+		return 0;
 	}
 
-	public static void printFalseData()
+	public static int printFalseData()
 	{
 		System.out.println(" ----> PRINTING FALSE DATA");
 
@@ -172,18 +176,20 @@ public class FalseDataGenerator
 			StorageUsageSnapshot snapshot = iter.next();
 			System.out.println(snapshot);
 		}
-
+		return 0;
 	}
 
-	public static void runTest()
+	public static int runTest()
 	{
 		System.out.println("----> Running tests...");
+		int rv = 0;
 		removeFalseData();
 		printFalseData();
 		generateFalseData();
-		testFalseData();
+		rv = testFalseData();
 		printFalseData();
 		removeFalseData();
+		return rv;
 	}
 
 	private static GroupByCriterion getCriterion(String name)
@@ -203,7 +209,7 @@ public class FalseDataGenerator
 	 * @throws IllegalArgumentException if criterion does not match
 	 *   any GroupByCriterion
 	 */
-	public static void summarizeFalseDataOneCriterion(
+	public static int summarizeFalseDataOneCriterion(
 			String criterion)
 	{
 		GroupByCriterion crit = getCriterion(criterion);
@@ -218,6 +224,7 @@ public class FalseDataGenerator
 					summaryMap.get(critVal));
 		}
 
+		return 0;
 	}
 
 	/**
@@ -227,7 +234,7 @@ public class FalseDataGenerator
 	 * @throws IllegalArgumentException if either criterion does not match
 	 *   any GroupByCriterion
 	 */
-	public static void summarizeFalseDataTwoCriteria(
+	public static int summarizeFalseDataTwoCriteria(
 			String outerCriterion,
 			String innerCriterion)
 	{
@@ -250,6 +257,7 @@ public class FalseDataGenerator
 			}
 		}
 
+		return 0;
 	}
 
 	public static void main(String[] args)
