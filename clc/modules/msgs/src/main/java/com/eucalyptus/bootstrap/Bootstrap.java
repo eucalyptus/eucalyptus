@@ -502,11 +502,11 @@ public class Bootstrap {
     Bootstrap.doDiscovery( );
     
     LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
-    for( ComponentId compId : ComponentIds.whichCanLoad( ) ) {
-      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName() );
+    for ( ComponentId compId : ComponentIds.whichCanLoad( ) ) {
+      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName( ) );
       Components.create( compId );
     }
-
+    
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
@@ -518,31 +518,31 @@ public class Bootstrap {
     Iterables.all( components, new Callback.Success<Component>( ) {
       @Override
       public void fire( Component comp ) {
-      try {
-        comp.initService( );
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.info( ex.getMessage( ) );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        try {
+          comp.initService( );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.info( ex.getMessage( ) );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+        }
       }
-    }
     } );
-
+    
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     for ( Component c : Components.whichCanLoad( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
-
+    
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
     
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
-    for( Component c : Components.list( ) ) {
+    for ( Component c : Components.list( ) ) {
       StringBuilder s = new StringBuilder( );
       s.append( c.getName( ) ).append( " available=" ).append( c.isAvailableLocally( ) )
-      .append( " remote-mode=" ).append( c.isRunningRemoteMode( ) )
-      .append( " running=" ).append( c.isRunningLocally( ) )
-      .append( " service=" ).append( c.getLocalService( ) );
+       .append( " remote-mode=" ).append( c.isRunningRemoteMode( ) )
+       .append( " running=" ).append( c.isRunningLocally( ) )
+       .append( " service=" ).append( c.getLocalService( ) );
       LOG.info( s.toString( ) );
     }
   }

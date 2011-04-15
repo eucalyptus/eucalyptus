@@ -88,11 +88,11 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public class DisabledService implements Service {
-  private static Logger              LOG  = Logger.getLogger( DisabledService.class );
+public class MissingService implements Service {
+  private static Logger              LOG  = Logger.getLogger( MissingService.class );
   private final ServiceConfiguration serviceConfiguration;
   
-  DisabledService( ServiceConfiguration serviceConfiguration ) {
+  MissingService( ServiceConfiguration serviceConfiguration ) {
     this.serviceConfiguration = serviceConfiguration;
   }
   
@@ -103,7 +103,7 @@ public class DisabledService implements Service {
   
   @Override
   public Component.State getState( ) {
-    return Component.State.PRIMORDIAL;
+    return Component.State.MISSING;
   }
   
   /** TODO:GRZE: clean this up **/
@@ -111,11 +111,11 @@ public class DisabledService implements Service {
   public final ServiceId getServiceId( ) {
     return new ServiceId( ) {
       {
-        this.setUuid( DisabledService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( DisabledService.this.serviceConfiguration.getPartition( ) );
-        this.setName( DisabledService.this.serviceConfiguration.getName( ) );
-        this.setType( DisabledService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( DisabledService.this.serviceConfiguration.getUri( ).toString( ) );
+        this.setUuid( MissingService.this.serviceConfiguration.getFullName( ).toString( ) );
+        this.setPartition( MissingService.this.serviceConfiguration.getPartition( ) );
+        this.setName( MissingService.this.serviceConfiguration.getName( ) );
+        this.setType( MissingService.this.serviceConfiguration.getComponentId( ).getName( ) );
+        this.setUri( MissingService.this.serviceConfiguration.getUri( ).toString( ) );
       }
     };
   }

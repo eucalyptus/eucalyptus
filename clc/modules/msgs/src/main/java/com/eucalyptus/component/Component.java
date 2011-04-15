@@ -101,10 +101,9 @@ public class Component implements HasName<Component> {
   private final ComponentId           identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
-  private final AtomicBoolean         local = new AtomicBoolean( false );
   
   public enum State {
-    BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
+    MISSING, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
   }
   
   public enum Transition {
@@ -710,7 +709,7 @@ public class Component implements HasName<Component> {
     private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return ( this.localService.get( ) != null && !( this.localService.get( ) instanceof DisabledService ) );
+      return ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
     }
     
     public Service getLocalService( ) {
