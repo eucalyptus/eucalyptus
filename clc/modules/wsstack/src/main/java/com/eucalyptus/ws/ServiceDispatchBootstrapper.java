@@ -114,7 +114,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     boolean failed = false;
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
-      EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
+      LOG.info( "load(): " + comp );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
           try {
@@ -134,6 +134,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
+      LOG.info( "start(): " + comp );
       EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
