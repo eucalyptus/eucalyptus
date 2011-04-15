@@ -41,6 +41,12 @@ public class MethodRunner
 	 */
 	public static void main(String[] args)
 	{
+		if (args.length < 2) throw new IllegalArgumentException("At least 2 params required");
+		
+		final String className = args[0];
+		final String methodName = args[1];
+		final String argsParam = (args.length>2) ? args[2] : null;
+		
 		int rv = 0;
 		
 		try {	
@@ -52,7 +58,7 @@ public class MethodRunner
 		
 		try {
 			
-			rv = runMethod(args[0], args[1], args[2]);
+			rv = runMethod(className, methodName, argsParam);
 			
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
