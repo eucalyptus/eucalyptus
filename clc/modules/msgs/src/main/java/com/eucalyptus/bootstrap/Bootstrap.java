@@ -502,7 +502,7 @@ public class Bootstrap {
     Bootstrap.doDiscovery( );
     
     LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
-    for ( ComponentId compId : ComponentIds.whichCanLoad( ) ) {
+    for ( ComponentId compId : ComponentIds.list( ) ) {
       LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName( ) );
       Components.create( compId );
     }

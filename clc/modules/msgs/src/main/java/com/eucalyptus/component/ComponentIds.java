@@ -85,25 +85,6 @@ public class ComponentIds {
     return cloudLocal || alwaysLocal;
   }
   
-  private static Predicate<ComponentId>        BOOTSTRAP_LOCALS = new Predicate<ComponentId>( ) {
-                                                                  
-                                                                  @Override
-                                                                  public boolean apply( ComponentId c ) {
-                                                                    return ComponentIds.shouldBootstrapLocally( c );
-                                                                  }
-                                                                };
-  
-  /**
-   * Components which are staticly determined as ones to load. This determination is made
-   * independent of access to the database; i.e. only the command line flags and presence/absence of
-   * files determines this list.
-   * 
-   * @return
-   */
-  public static List<ComponentId> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( ComponentIds.list( ), BOOTSTRAP_LOCALS ) );
-  }
-  
   public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
     List<ComponentId> components = Lists.newArrayList( );
     for ( Component comp : Components.list( ) ) {
