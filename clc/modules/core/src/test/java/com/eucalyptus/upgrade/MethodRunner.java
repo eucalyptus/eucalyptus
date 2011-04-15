@@ -59,11 +59,11 @@ public class MethodRunner
 	 * which invoked it.
 	 * 
 	 * <p>Expects that the method specified is a static method which takes
-	 * only String arguments and returns an int return code.
+	 * only String arguments and returns an int return code or void.
 	 * 
 	 * @param args
 	 *            Should consist of 3 Strings: className, methodName,
-	 *            commaDelimitedStringArgs
+	 *            and commaDelimitedStringArgs which are passed to the method
 	 */
 	public static void main(String[] args)
 	{
@@ -168,8 +168,7 @@ public class MethodRunner
 			params[j] = String.class;
 		}
 
-			
-		@SuppressWarnings("unchecked")
+
 		Object retVal = Class.forName(className)
 				.getDeclaredMethod(methodName, params)
 				.invoke(null, (Object[]) methodArgsArray);
@@ -179,7 +178,7 @@ public class MethodRunner
 		} else if (retVal instanceof Integer) {
 			return ((Integer)retVal).intValue();
 		} else {
-			throw new NoSuchMethodException("No method with return type int");			
+			throw new NoSuchMethodException("No method with return type int or void");			
 		}
 
 	}
