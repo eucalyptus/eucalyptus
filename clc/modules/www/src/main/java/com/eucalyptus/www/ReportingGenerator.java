@@ -6,13 +6,14 @@ import javax.servlet.ServletException;
 import javax.servlet.http.*;
 
 /**
- * <p>This servlet will generate or remove false data, for testing the reporting
- * system. It accepts two HTTP params: <code>command</code> and
+ * <p>This servlet will generate or remove fake reporting data. It can be used
+ * for testing. It accepts two HTTP params: <code>command</code> and
  * <code>target</code>. Command can be either "generate" or "remove", and target
- * can be either "instance" (which means generate fake instance usage data) or
- * "storage" (which means generate fake storage data).
+ * can be either "instance" (which means generate/remove fake instance reporting
+ * data) or "storage" (which means generate/remove fake storage reporting data).
  */
-public class ReportingGenerator extends HttpServlet
+public class ReportingGenerator
+	extends HttpServlet
 {
 
 	@Override
