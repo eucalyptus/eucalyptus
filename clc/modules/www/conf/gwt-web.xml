@@ -89,6 +89,15 @@
     <servlet-class>com.eucalyptus.www.Reports</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
+
+  <servlet>
+    <description>Generates false reporting data; used for testing</description>
+    <display-name>Report False Data Generator</display-name>
+    <servlet-name>ReportsGen</servlet-name>
+    <servlet-class>com.eucalyptus.www.ReportingGenerator</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
   <servlet>
     <description></description>
     <display-name>X509Downloader</display-name>
@@ -96,6 +105,7 @@
     <servlet-class>edu.ucsb.eucalyptus.admin.server.X509Download</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
+
   <servlet>
     <description></description>
     <display-name>CloudRegistration</display-name>
