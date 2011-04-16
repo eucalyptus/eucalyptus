@@ -1646,7 +1646,7 @@ public class EuareService {
     return reply;
   }
   
-  public GetLdapSyncStatusResponseType deleteAccountPolicy(GetLdapSyncStatusType request) throws EucalyptusCloudException {
+  public GetLdapSyncStatusResponseType getLdapSyncStatus(GetLdapSyncStatusType request) throws EucalyptusCloudException {
     GetLdapSyncStatusResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
