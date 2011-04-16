@@ -263,9 +263,14 @@ class EucaConf(object):
         self.update_config_file()
         if self.options.debug:
             self.debug = 2
-        for name, method in inspect.getmembers(self):
-            if name.startswith('do_') and inspect.ismethod(method):
-                method()
+        try:
+            for name, method in inspect.getmembers(self):
+                if name.startswith('do_') and inspect.ismethod(method):
+                    method()
+        except Exception, e:
+            print e.message
+            sys.exit(1)
+            
 
     def do_get_credentials(self):
         if self.options.get_credentials:
