@@ -700,7 +700,7 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="InfoKey" field="infoKey" usage="required"/>
-    <value name="InfoValue" field="infoValue" usage="required"/>
+    <value name="InfoValue" field="infoValue" usage="optional"/>
   </mapping>
   <mapping name="UpdateUserInfoResponse" class="com.eucalyptus.auth.euare.UpdateUserInfoResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
