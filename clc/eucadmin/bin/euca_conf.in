@@ -141,19 +141,19 @@ class EucaConf(object):
         self.parser.add_option('--cc-port', action='callback', type='int', 
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'CC_PORT'},
-                               help='set CC port', default=8773)
+                               help='set CC port', default=8774)
         self.parser.add_option('--sc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'SC_PORT'},
-                               help='set SC port')
+                               help='set SC port', default=8773)
         self.parser.add_option('--walrus-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'WALRUS_PORT'},
-                               help='set Walrus port', default=8774)
+                               help='set Walrus port', default=8773)
         self.parser.add_option('--nc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'NC_PORT'},
-                               help='set NC port', default=8443)
+                               help='set NC port', default=8775)
         self.parser.add_option('--instances', action='callback',
                                type='string', callback=self.option_callback,
                                metavar='<path>',
