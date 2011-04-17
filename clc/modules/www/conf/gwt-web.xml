@@ -94,7 +94,7 @@
     <description>Generates false reporting data; used for testing</description>
     <display-name>Report False Data Generator</display-name>
     <servlet-name>ReportsGen</servlet-name>
-    <servlet-class>com.eucalyptus.www.ReportingGenerator</servlet-class>
+    <servlet-class>com.eucalyptus.www.ReportingFakeGenerator</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
