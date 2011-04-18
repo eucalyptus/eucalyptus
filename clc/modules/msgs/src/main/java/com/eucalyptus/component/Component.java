@@ -504,7 +504,7 @@ public class Component implements HasName<Component> {
           transitionFuture.set( Component.this.enableService( configuration ).get( ) );
         } catch ( Throwable ex ) {
           transitionFuture.setException( ex );
-          LOG.error( ex );
+          LOG.error( ex, ex );
         }
         return Component.this.getLocalService( ).getServiceConfiguration( );
       }
@@ -523,13 +523,13 @@ public class Component implements HasName<Component> {
             try {
               transitionFuture.set( Component.this.startService( configuration ).get( ) );
             } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
               transitionFuture.setException( ex );
-              LOG.error( ex );
             }
           }
         } catch ( ServiceRegistrationException ex ) {
-          transitionFuture.setException( ex );
           LOG.error( ex, ex );
+          transitionFuture.setException( ex );
           throw ex;
         }
         return Component.this.getLocalService( ).getServiceConfiguration( );
@@ -549,8 +549,8 @@ public class Component implements HasName<Component> {
             try {
               transitionFuture.set( Component.this.loadService( configuration ).get( ) );
             } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
               transitionFuture.setException( ex );
-              LOG.error( ex );
             }
           }
         } catch ( ServiceRegistrationException ex ) {
@@ -573,11 +573,10 @@ public class Component implements HasName<Component> {
     }
     if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
-        service.transition( State.INITIALIZED );
-      } catch ( NoSuchElementException ex ) {
+        this.loadService( configuration );
+      } catch ( ServiceRegistrationException ex ) {
         LOG.error( ex , ex );
-      } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        throw new IllegalStateException( ex.getMessage( ), ex );
       }
     }
     Callable<ServiceConfiguration> transition = null;

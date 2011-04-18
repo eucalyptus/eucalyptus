@@ -35,7 +35,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+    if ( !Partitions.testPartitionCredentialsDirectory( partition ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
       return super.checkAdd( partition, name, host, port );
