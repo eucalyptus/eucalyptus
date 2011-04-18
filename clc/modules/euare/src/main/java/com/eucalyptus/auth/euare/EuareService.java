@@ -98,6 +98,7 @@ import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadServerCertificateType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateType;
+import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PatternUtils;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -157,7 +158,8 @@ public class EuareService {
                                 "Not authorized to delete account by " + requestUser.getName( ) );
     }
     try {
-      Accounts.deleteAccount( request.getAccountName( ), false/*forceDeleteSystem*/, false/*recursive*/ );
+      boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
+      Accounts.deleteAccount( request.getAccountName( ), false/*forceDeleteSystem*/, recursive );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCOUNT_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
@@ -885,7 +887,7 @@ public class EuareService {
                                 "Not authorized to get login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
     if ( userFound.getPassword( ) == null ) {
-      throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NOT_AUTHORIZED, "Can not find login profile for " + request.getUserName( ) );
+      throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find login profile for " + request.getUserName( ) );
     }
     reply.getGetLoginProfileResult( ).getLoginProfile( ).setUserName( request.getUserName( ) );
     return reply;
@@ -1641,6 +1643,14 @@ public class EuareService {
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( e );
     }
+    return reply;
+  }
+  
+  public GetLdapSyncStatusResponseType getLdapSyncStatus(GetLdapSyncStatusType request) throws EucalyptusCloudException {
+    GetLdapSyncStatusResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
+    reply.getGetLdapSyncStatusResult( ).setInSync( LdapSync.inSync( ) );
     return reply;
   }
   
