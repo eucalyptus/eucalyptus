@@ -39,7 +39,7 @@ build: eucalyptus-cloud
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-eucalyptus-cloud: $(OBJS)
+eucalyptus-cloud: ggo $(OBJS)
 	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)
 
 ggo:
