@@ -565,19 +565,23 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
-    if( !this.hasLocalService( ) ) {
+    Service service = null;
+    if( this.serviceRegistry.hasService( configuration ) ) {
+      service = this.serviceRegistry.lookup( configuration );
+    } else {
+      service = this.serviceRegistry.register( configuration );
+    }
+    if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
-        this.serviceRegistry.register( configuration ).transition( State.INITIALIZED );
+        service.transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex , ex );
-        throw new RuntimeException( ex.getMessage( ) );
       } catch ( ExistingTransitionException ex ) {
         LOG.error( ex , ex );
-        throw new RuntimeException( ex.getMessage( ) );
       }
     }
     Callable<ServiceConfiguration> transition = null;
-    switch ( this.getState( ) ) {
+    switch ( service.getState( ) ) {
       case LOADED:
       case STOPPED:
         transition = makeStartCallable( configuration, null, makeEnableCallable( configuration, transitionFuture ) );
@@ -602,19 +606,23 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     final CheckedListenableFuture<ServiceConfiguration> transitionFuture = Futures.newGenericFuture( );
-    if( !this.hasLocalService( ) ) {
+    Service service = null;
+    if( this.serviceRegistry.hasService( configuration ) ) {
+      service = this.serviceRegistry.lookup( configuration );
+    } else {
+      service = this.serviceRegistry.register( configuration );
+    }
+    if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
-        this.serviceRegistry.register( configuration ).transition( State.INITIALIZED );
+        service.transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex , ex );
-        throw new RuntimeException( ex.getMessage( ) );
       } catch ( ExistingTransitionException ex ) {
         LOG.error( ex , ex );
-        throw new RuntimeException( ex.getMessage( ) );
       }
     }
     Callable<ServiceConfiguration> transition = null;
-    switch ( this.getState( ) ) {
+    switch ( service.getState( ) ) {
       case NOTREADY:
       case DISABLED:
         transition = makeEnableCallable( configuration, transitionFuture );
