@@ -26,14 +26,14 @@ public class QueueFactory
 	//TODO:
 	private static String clientUrl = "failover:(" + QueueBroker.DEFAULT_URL + ")?initialReconnectDelay=10000&maxReconnectAttempts=10";
 
-	private Map<QueueIdentifier,QueueSenderImpl>   senders;
-	private Map<QueueIdentifier,QueueReceiverImpl> receivers;
+	private Map<QueueIdentifier,MqQueueSenderImpl>   senders;
+	private Map<QueueIdentifier,MqQueueReceiverImpl> receivers;
 	private boolean started = false;
 	
 	private QueueFactory()
 	{
-		this.senders   = new HashMap<QueueIdentifier,QueueSenderImpl>();
-		this.receivers = new HashMap<QueueIdentifier,QueueReceiverImpl>();
+		this.senders   = new HashMap<QueueIdentifier,MqQueueSenderImpl>();
+		this.receivers = new HashMap<QueueIdentifier,MqQueueReceiverImpl>();
 	}
 
 	public enum QueueIdentifier
@@ -85,7 +85,7 @@ public class QueueFactory
 			return senders.get(identifier);
 		} else {
 			log.info("Client url:" + clientUrl);
-			QueueSenderImpl sender = new QueueSenderImpl(clientUrl, identifier);
+			MqQueueSenderImpl sender = new MqQueueSenderImpl(clientUrl, identifier);
 			sender.startup();
 			senders.put(identifier, sender);
 			log.info("Sender " + identifier + " started");
@@ -99,7 +99,7 @@ public class QueueFactory
 			return receivers.get(identifier);
 		} else {
 			log.info("Client url:" + clientUrl);
-			QueueReceiverImpl receiver = new QueueReceiverImpl(clientUrl,
+			MqQueueReceiverImpl receiver = new MqQueueReceiverImpl(clientUrl,
 					identifier);
 			receiver.startup();
 			receivers.put(identifier, receiver);
