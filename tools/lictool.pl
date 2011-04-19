@@ -6,10 +6,6 @@ use Getopt::Long;
 my $USAGE = <<END;
 
 This is a tool to help create the LDAP integration configuration.
-Examples:
-\$ lictool.pl --password secret > example.lic      # create a LIC template with encrypted password
-\$ lictool.pl --password secret --out example.lic  # create a LIC template with encrypted password
-\$ lictool.pl --password secret --passonly         # only print the encrypted password
 
 Usage: lictool.pl <options>
 
@@ -17,9 +13,25 @@ Options:
   --password <password>      : set the password for result LIC
   --out      <output path>   : output to a file
   --passonly                 : print encrypted password only, no LIC template
-  --custom <custom lic path> : use a custom LIC file. Note: the tool looks for
-                               'ENCRYPTED_PASSWORD' as the placeholder for 'auth-credentials'
-                               value.
+  --custom <custom lic path> : use a custom LIC file instead of installed LIC template
+  --nocomment                : remove comments from the LIC template
+
+Examples:
+
+# create a LIC template with encrypted password, print to STDOUT
+\$ lictool.pl --password secret > example.lic
+
+# create a LIC template with encrypted password, print to a file
+\$ lictool.pl --password secret --out example.lic
+
+# only print the encrypted password
+\$ lictool.pl --password secret --passonly
+
+# use an existing LIC and replace the credential field with encrypted password
+\$ lictool.pl --password secret --custom my.lic --out mynew.lic
+
+# create a LIC template with encrypted password and with comments removed
+\$ lictool.pl --password secret --out example.lic --nocomment
 END
 
 sub print_usage {
@@ -31,11 +43,13 @@ my $password = "";
 my $outfile = "";
 my $passonly = 0;
 my $custom_template = "";
+my $remove_comment = 0;
 
 my $result = GetOptions("password=s" => \$password,
                         "out=s"      => \$outfile,
                         "passonly"   => \$passonly,
-                        "custom=s"   => \$custom_template);
+                        "custom=s"   => \$custom_template,
+                        "nocomment"  => \$remove_comment);
 
 if ($password eq "" or not $result) {
   print_usage;
@@ -57,7 +71,7 @@ if ($passonly) {
 }
 
 my $TEMPLATE = "$EUCALYPTUS/usr/share/eucalyptus/lic_template";
-my $PASSWORD_PLACEHOLDER = "ENCRYPTED_PASSWORD";
+my $PASS_LINE = qr/"auth-credentials"\s*:\s*".*"/;
 
 my $input_file;
 if ($custom_template eq "") {
@@ -65,16 +79,23 @@ if ($custom_template eq "") {
 } else {
   $input_file = $custom_template;
 }
+my @lic = ();
 open TEMP, "<$input_file" or die "Can not open $input_file: $!";
-my $lic = do { local $/; <TEMP> };
+while (<TEMP>) {
+  if (/$PASS_LINE/) {
+    s/$PASS_LINE/"auth-credentials":"$encrypted"/g;
+  } elsif (/\"_comment\":/) {
+    next if ($remove_comment);
+  }
+  push(@lic, $_);
+}
 close TEMP;
 
-$lic =~ s/$PASSWORD_PLACEHOLDER/$encrypted/g;
-
+my $lic_out = join("", @lic);
 if ($outfile eq "") {
-  print $lic;
+  print $lic_out;
 } else {
   open OUT, ">$outfile" or die "Can not open $outfile to write: $!";
-  print OUT $lic;
+  print OUT $lic_out;
   close OUT;
 }
