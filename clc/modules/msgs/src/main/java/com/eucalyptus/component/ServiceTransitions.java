@@ -159,7 +159,7 @@ public class ServiceTransitions {
     final Component.State[] nextStates = ( toStates.length > 1 )
       ? Arrays.copyOfRange( toStates, 1, toStates.length )
       : new Component.State[] {};
-    final Callable<CheckedListenableFuture<ServiceConfiguration>> nextTransition = ( nextStates.length > 1 )
+    final Callable<CheckedListenableFuture<ServiceConfiguration>> nextTransition = ( nextStates.length != 0 )
       ? newServiceTransitionCallable( config, nextFromState, nextStates )
       : null;
     return new Callable<CheckedListenableFuture<ServiceConfiguration>>( ) {
@@ -170,7 +170,7 @@ public class ServiceTransitions {
           throw new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in " + service.getState( )
                                            + " for " + config.toString( ) );
         } else {
-          EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), config.getFullName( ).toString( ) ).debug( );
+          EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), fromState.toString( ), toState.toString( ), config.getFullName( ).toString( ) ).debug( );
           CheckedListenableFuture<ServiceConfiguration> future;
           try {
             future = service.transition( toState );
