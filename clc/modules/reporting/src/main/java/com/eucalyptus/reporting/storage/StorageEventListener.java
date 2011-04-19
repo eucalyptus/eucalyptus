@@ -20,6 +20,10 @@ public class StorageEventListener
 	private Map<UsageDataKey, StorageUsageData> usageDataMap;
 	private long lastStoredMs = 0l;
 
+	public StorageEventListener()
+	{
+	}
+	
 	@Override
 	public void fireEvent(Event event)
 	{
@@ -105,6 +109,8 @@ public class StorageEventListener
 				if ((timeMillis - lastStoredMs) > WRITE_INTERVAL_MS) {
 					/* Write all snapshots
 					 */
+					//TODO: move to thread
+					//TODO: how do we know there's an all-snapshot during the report period?
 					for (UsageDataKey udk: usageDataMap.keySet()) {
 						SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
 						StorageUsageSnapshot sus =
@@ -127,7 +133,6 @@ public class StorageEventListener
 				LOG.error(ex);		
 			}
 		}
-
 	}
 	
 	private static final Long addLong(Long a, long b)

@@ -3,15 +3,18 @@ package com.eucalyptus.reporting.queue.mem;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 
 public class MemQueueFactory
 	implements InternalQueueFactory
 {
+	private static Logger log = Logger.getLogger( MemQueueFactory.class );
+
 	private Map<QueueIdentifier, MemQueue> queueMap;
-	
-	
+
 	@Override
 	public void startup()
 	{
@@ -19,6 +22,7 @@ public class MemQueueFactory
 		for (QueueIdentifier id : QueueIdentifier.values()) {
 			queueMap.put(id, new MemQueue());
 		}
+		log.info("MemQueueFactory started");
 	}
 
 	@Override
