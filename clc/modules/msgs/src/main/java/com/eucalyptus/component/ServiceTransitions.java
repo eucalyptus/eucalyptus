@@ -142,8 +142,8 @@ public class ServiceTransitions {
       LOG.error( ex , ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
-      transitionResult = Futures.predestinedFailedFuture( ex );
+      LOG.error( ex.getCause( ) , ex.getCause( ) );
+      transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
     }
     return transitionResult;
   }
