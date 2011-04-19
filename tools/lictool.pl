@@ -15,8 +15,11 @@ Usage: lictool.pl <options>
 
 Options:
   --password <password>      : set the password for result LIC
-  --out      <output file>   : output to a file
+  --out      <output path>   : output to a file
   --passonly                 : print encrypted password only, no LIC template
+  --custom <custom lic path> : use a custom LIC file. Note: the tool looks for
+                               'ENCRYPTED_PASSWORD' as the placeholder for 'auth-credentials'
+                               value.
 END
 
 sub print_usage {
@@ -27,10 +30,12 @@ sub print_usage {
 my $password = "";
 my $outfile = "";
 my $passonly = 0;
+my $custom_template = "";
 
 my $result = GetOptions("password=s" => \$password,
                         "out=s"      => \$outfile,
-                        "passonly"   => \$passonly);
+                        "passonly"   => \$passonly,
+                        "custom=s"   => \$custom_template);
 
 if ($password eq "" or not $result) {
   print_usage;
@@ -50,12 +55,21 @@ if ($passonly) {
 }
 
 my $TEMPLATE = "$EUCALYPTUS/usr/share/eucalyptus/lic_template";
+my $PASSWORD_PLACEHOLDER = "ENCRYPTED_PASSWORD";
 
-open TEMP, "<$TEMPLATE" or die "Can not open $TEMPLATE: $!";
+my $input_file;
+if ($custom_template eq "") {
+  $input_file = $TEMPLATE;
+} else {
+  $input_file = $custom_template;
+}
+open TEMP, "<$input_file" or die "Can not open $input_file: $!";
 my $lic = do { local $/; <TEMP> };
 close TEMP;
 
-$lic =~ s/ENCRYPTED_PASSWORD/$encrypted/g;
+my $FORMAT = "RSA/ECB/PKCS1Padding";
+$encrypted = $FORMAT.$encrypted;
+$lic =~ s/$PASSWORD_PLACEHOLDER/$encrypted/g;
 
 if ($outfile eq "") {
   print $lic;

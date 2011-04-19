@@ -4,6 +4,8 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -21,6 +23,8 @@ public class LdapClient {
   
   public static final String CRYPTO_FORMAT = "RSA/ECB/PKCS1Padding";
   public static final String CRYPTO_PROVIDER = "BC";
+  
+  public static final Pattern ENCRYPTED_PATTERN = Pattern.compile( "\\{(.+)\\}(.+)" );
   
   public static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
   
@@ -45,19 +49,28 @@ public class LdapClient {
     }
   }
   
+  private String getPassword( String licCred ) throws LdapException {
+    try {
+      Matcher matcher = ENCRYPTED_PATTERN.matcher( licCred );
+      if ( matcher.matches( ) ) {
+        return sc.decryptOpenssl( matcher.group( 1 )/*format*/, matcher.group( 2 )/*passwordEncoded*/ );
+      } else {
+        // Not encrypted
+        return licCred;
+      }
+    } catch ( GeneralSecurityException e ) {
+      LOG.error( e, e );
+      throw new LdapException( "Decryption failure", e );
+    }
+  }
+  
   private void prepareLdapContextEnv( LdapIntegrationConfiguration lic ) throws LdapException {
     env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
     env.put( Context.PROVIDER_URL, lic.getServerUrl( ) );
     env.put( Context.SECURITY_AUTHENTICATION, lic.getAuthMethod( ) );
     if ( !LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI.equals( lic.getAuthMethod( ) ) ) {
       env.put( Context.SECURITY_PRINCIPAL, lic.getAuthPrincipal( ) );
-      try {
-        String credentials = sc.decryptOpenssl( lic.getAuthCredentials( ) );
-        env.put( Context.SECURITY_CREDENTIALS, credentials );
-      } catch ( GeneralSecurityException e ) {
-        LOG.error( e, e );
-        throw new LdapException( "Decryption failure", e );
-      }
+      env.put( Context.SECURITY_CREDENTIALS, getPassword( lic.getAuthCredentials( ) ) );
     }
     if ( lic.isUseSsl( ) ) {
       env.put( Context.SECURITY_PROTOCOL, "ssl" );
