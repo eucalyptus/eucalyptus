@@ -63,17 +63,99 @@
 
 package com.eucalyptus.component;
 
+import java.util.Arrays;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.context.ServiceContextManager;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class ServiceTransitions {
-  private static Logger                                      LOG                   = Logger.getLogger( ServiceTransitions.class );
+  private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
+  
+  public static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
+    final Service service = config.lookupService( );
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
+    switch ( service.getState( ) ) {
+      case NOTREADY:
+      case DISABLED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.DISABLED, Component.State.ENABLED );
+        break;
+      case LOADED:
+      case STOPPED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
+        break;
+      case INITIALIZED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
+        break;
+      case ENABLED:
+        break;
+      default:
+        throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
+    }
+    CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+    try {
+      transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+      transitionResult = Futures.predestinedFailedFuture( ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+      transitionResult = Futures.predestinedFailedFuture( ex );
+    }
+    return transitionResult;
+  }
+  
+  private static final Callable<CheckedListenableFuture<ServiceConfiguration>> newServiceTransitionCallable( final ServiceConfiguration config, final Component.State fromState, final Component.State... toStates ) {
+    if ( toStates.length < 1 ) {
+      throw new IllegalArgumentException( "At least one toState must be specified" );
+    }
+    final Component.State toState = ( toStates.length == 0 )
+      ? toStates[0]
+      : null;
+    final Component.State nextFromState = toState;
+    final Component.State[] nextStates = ( toStates.length > 1 )
+      ? Arrays.copyOfRange( toStates, 1, toStates.length )
+      : new Component.State[] {};
+    final Callable<CheckedListenableFuture<ServiceConfiguration>> nextTransition = ( nextStates.length > 1 )
+      ? newServiceTransitionCallable( config, nextFromState, nextStates )
+      : null;
+    return new Callable<CheckedListenableFuture<ServiceConfiguration>>( ) {
+      @Override
+      public CheckedListenableFuture<ServiceConfiguration> call( ) throws Exception {
+        Service service = config.lookupComponent( ).lookupRegisteredService( config );
+        if ( !fromState.equals( service.getState( ) ) ) {
+          throw new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in " + service.getState( )
+                                           + " for " + config.toString( ) );
+        } else {
+          EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), config.getFullName( ).toString( ) ).debug( );
+          CheckedListenableFuture<ServiceConfiguration> future;
+          try {
+            future = service.transition( toState );
+            if ( nextTransition != null ) {
+              return future.addListener( nextTransition ).get( );
+            } else {
+              return future;
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          }
+        }
+      }
+    };
+  }
   
   public static final TransitionAction<ServiceConfiguration> LOAD_TRANSITION       = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      
@@ -251,7 +333,7 @@ public class ServiceTransitions {
                                                                                      }
                                                                                    };
   
-  static final Callback<ServiceConfiguration>                stopEndpoint         = new Callback<ServiceConfiguration>( ) {
+  static final Callback<ServiceConfiguration>                stopEndpoint          = new Callback<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void fire( ServiceConfiguration parent ) {
                                                                                        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {

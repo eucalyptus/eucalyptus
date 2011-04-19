@@ -31,7 +31,15 @@ public class Futures {
       }
     };
   }
-  
+
+  public static <T> CheckedListenableFuture<T> predestinedFailedFuture( final Throwable exValue ) {
+    return new GenericFuture<T>( ) {
+      {
+        setException( exValue );
+      }
+    };
+  }
+
   public static <T> CheckedListenableFuture<T> newGenericFuture( ) {
     return new GenericFuture<T>( );
   }

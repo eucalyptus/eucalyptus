@@ -264,7 +264,7 @@ public class BasicService implements Service, EventListener {
         if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
           Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
         } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-          c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );
+          c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );//TODO:GRZE:URGENT state change happening here
         }
       }
     }
