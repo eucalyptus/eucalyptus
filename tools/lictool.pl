@@ -46,8 +46,10 @@ if ($EUCALYPTUS eq "") {
   $EUCALYPTUS = "/";
 }
 
+my $FORMAT = "RSA/ECB/PKCS1Padding";
 my $CERT = "$EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem";
 my $encrypted = `echo -n $password | openssl rsautl -encrypt -inkey $CERT -certin | openssl base64 | tr -d '\n'`;
+$encrypted = $FORMAT.$encrypted;
 
 if ($passonly) {
   print $encrypted;
@@ -67,8 +69,6 @@ open TEMP, "<$input_file" or die "Can not open $input_file: $!";
 my $lic = do { local $/; <TEMP> };
 close TEMP;
 
-my $FORMAT = "RSA/ECB/PKCS1Padding";
-$encrypted = $FORMAT.$encrypted;
 $lic =~ s/$PASSWORD_PLACEHOLDER/$encrypted/g;
 
 if ($outfile eq "") {
