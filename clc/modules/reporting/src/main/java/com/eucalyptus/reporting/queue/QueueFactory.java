@@ -24,7 +24,9 @@ public class QueueFactory
 	
 	private QueueFactory()
 	{
-		internalFactory = USE_MEM_QUEUE ? new MemQueueFactory() : new MqQueueFactory();
+		internalFactory = USE_MEM_QUEUE
+				? new MemQueueFactory()
+				: new MqQueueFactory();
 	}
 
 	public enum QueueIdentifier
