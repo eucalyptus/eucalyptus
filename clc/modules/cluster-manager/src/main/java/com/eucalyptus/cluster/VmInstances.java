@@ -81,7 +81,9 @@ import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Context;
@@ -230,7 +232,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static void cleanUp( final VmInstance vm ) {
     try {
       String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwner( ).getName( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
-      Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
       int networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
 
@@ -257,8 +259,8 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   };
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-      final ServiceConfiguration sc = StorageUtil.getActiveSc( vm.getPlacement( ) ).getServiceConfiguration( );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( AttachedVolume arg0 ) {
@@ -275,7 +277,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         }
       } );
     } catch ( Exception ex ) {
-      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPlacement( ) + ").  " );
+      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
     }
   }
 

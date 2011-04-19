@@ -2,6 +2,7 @@ package com.eucalyptus.ws.client;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -47,16 +49,6 @@ public abstract class ServiceDispatcher implements Dispatcher {
       LOG.error( "Failed to find service dispatcher for component=" + c, ex );
       throw new NoSuchElementException( "Failed to find service for component=" + c );
     }
-  }
-  
-  public static Iterable<Dispatcher> lookupMany( Component c ) {
-    return Iterables.transform( c.enabledServices( ), new Function<Service, Dispatcher>( ) {
-      
-      @Override
-      public Dispatcher apply( Service arg0 ) {
-        return arg0.getDispatcher( );
-      }
-    } );
   }
   
   public static Dispatcher lookup( ServiceConfiguration config ) {

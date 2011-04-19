@@ -39,7 +39,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   }
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
-    final Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
+    final Address addr = this.allocateSystemAddresses( vm.getClusterName( ), 1 ).get( 0 );
     Callbacks.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );

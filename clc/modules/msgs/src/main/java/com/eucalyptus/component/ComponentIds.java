@@ -92,7 +92,7 @@ public class ComponentIds {
         components.add( comp.getComponentId( ) );
       } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
         components.add( comp.getComponentId( ) );
-      } else if ( comp.hasServiceEnabled( ) ) {
+      } else if ( comp.isEnabledLocally( ) ) {
         components.add( comp.getComponentId( ) );
       }
     }

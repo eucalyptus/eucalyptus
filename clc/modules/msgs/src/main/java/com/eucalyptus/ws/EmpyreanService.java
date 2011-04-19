@@ -174,7 +174,7 @@ public class EmpyreanService {
   public DescribeServicesResponseType describeService( DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
     for( Component comp : Components.list( ) ) {
-      if( comp.hasServiceEnabled( ) ) {
+      if( comp.isEnabledLocally( ) ) {
         final Service localService = comp.getLocalService( );
         reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
           setServiceId( localService.getServiceId( ) );

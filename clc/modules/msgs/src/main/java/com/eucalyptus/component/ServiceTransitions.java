@@ -80,6 +80,7 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
+import com.google.common.base.Joiner;
 
 public class ServiceTransitions {
   private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
@@ -106,15 +107,15 @@ public class ServiceTransitions {
     try {
       transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     }
     return transitionResult;
   }
-
+  
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
     final Service service = config.lookupService( );
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
@@ -127,10 +128,12 @@ public class ServiceTransitions {
         break;
       case LOADED:
       case STOPPED:
-        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED,
+                                                                      Component.State.ENABLED );
         break;
       case INITIALIZED:
-        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY,
+                                                                      Component.State.DISABLED, Component.State.ENABLED );
         break;
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
@@ -139,7 +142,7 @@ public class ServiceTransitions {
     try {
       transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ) , ex.getCause( ) );
@@ -148,7 +151,7 @@ public class ServiceTransitions {
     return transitionResult;
   }
   
-  private static final Callable<CheckedListenableFuture<ServiceConfiguration>> newServiceTransitionCallable( final ServiceConfiguration config, final Component.State fromState, final Component.State... toStates ) {
+  private static Callable<CheckedListenableFuture<ServiceConfiguration>> newServiceTransitionCallable( final ServiceConfiguration config, final Component.State fromState, final Component.State... toStates ) {
     if ( toStates.length < 1 ) {
       throw new IllegalArgumentException( "At least one toState must be specified" );
     }
@@ -159,6 +162,8 @@ public class ServiceTransitions {
     final Component.State[] nextStates = ( toStates.length > 1 )
       ? Arrays.copyOfRange( toStates, 1, toStates.length )
       : new Component.State[] {};
+    LOG.debug( "Preparing callback for " + config.getFullName( ) + " of transition " + fromState + " -> " + toState + " with subsequent states: "
+               + Joiner.on( "->" ).join( nextStates ) );
     final Callable<CheckedListenableFuture<ServiceConfiguration>> nextTransition = ( nextStates.length != 0 )
       ? newServiceTransitionCallable( config, nextFromState, nextStates )
       : null;
@@ -170,7 +175,8 @@ public class ServiceTransitions {
           throw new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in " + service.getState( )
                                            + " for " + config.toString( ) );
         } else {
-          EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), fromState.toString( ), toState.toString( ), config.getFullName( ).toString( ) ).debug( );
+          EventRecord.here( Component.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), fromState.toString( ),
+                            toState.toString( ), config.getFullName( ).toString( ) ).debug( );
           CheckedListenableFuture<ServiceConfiguration> future;
           try {
             future = service.transition( toState );

@@ -219,7 +219,7 @@ public class ClusterEndpoint implements Startable {
       LOG.info( stage.describe( ) );
     }
     retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for ( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
+    for ( String val : Iterables.transform( Components.list( ), Components.Functions.componentToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.trace( val );
     }

@@ -2,7 +2,7 @@
 <launchConfiguration type="org.eclipse.jdt.launching.remoteJavaApplication">
 <stringAttribute key="bad_container_name" value="/bzr:grze_eee:clc/grze.debug"/>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-<listEntry value="/bzr::grze_eee::clc"/>
+<listEntry value="/grze_eee::clc"/>
 </listAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
 <listEntry value="4"/>
@@ -15,6 +15,6 @@
 <mapEntry key="hostname" value="10.1.1.10"/>
 <mapEntry key="port" value="5005"/>
 </mapAttribute>
-<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="bzr:grze_eee:clc"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="grze_eee:clc"/>
 <stringAttribute key="org.eclipse.jdt.launching.VM_CONNECTOR_ID" value="org.eclipse.jdt.launching.socketAttachConnector"/>
 </launchConfiguration>

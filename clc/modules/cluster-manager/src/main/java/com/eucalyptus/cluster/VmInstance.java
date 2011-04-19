@@ -141,7 +141,7 @@ public class VmInstance implements HasName<VmInstance> {
   private final int                                   launchIndex;
   private final String                                instanceId;
   private final FullName                              owner;
-  private final String                                placement;
+  private final String                                clusterName;
   private final String                                partition;
   private final byte[]                                userData;
   private final List<Network>                         networks      = Lists.newArrayList( );
@@ -173,14 +173,14 @@ public class VmInstance implements HasName<VmInstance> {
     this.launchIndex = launchIndex;
     this.instanceId = instanceId;
     this.owner = owner;
-    this.placement = placement;
+    this.clusterName = placement;
     String p = null;
     try {
-      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.placement ).getPartition( );
+      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.clusterName ).getPartition( );
     } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/
-      LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );
+      LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
     }
     this.partition = p;
     this.userData = userData;
@@ -342,7 +342,7 @@ public class VmInstance implements HasName<VmInstance> {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ),
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
-                                                                    this.placement, this.partition, this.networkBytes, this.blockBytes ) );
+                                                                    this.clusterName, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
@@ -404,7 +404,7 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "public-keys/0/openssh-key", this.getKeyInfo( ).getValue( ) );
     
     m.put( "placement/", "availability-zone" );
-    m.put( "placement/availability-zone", this.getPlacement( ) );
+    m.put( "placement/availability-zone", this.getPartition( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
       if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) ) {
@@ -594,7 +594,7 @@ public class VmInstance implements HasName<VmInstance> {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.placement );
+    runningInstance.setPlacement( this.partition );
     
     runningInstance.setLaunchTime( this.launchTime );
 
@@ -643,8 +643,12 @@ public class VmInstance implements HasName<VmInstance> {
     return launchIndex;
   }
   
+  public String getClusterName( ) {
+    return clusterName;
+  }
+
   public String getPlacement( ) {
-    return placement;
+    return clusterName;
   }
   
   public Date getLaunchTime( ) {
@@ -834,7 +838,7 @@ public class VmInstance implements HasName<VmInstance> {
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
-                          this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes );
   }
   
@@ -903,6 +907,10 @@ public class VmInstance implements HasName<VmInstance> {
    */
   public void setBlockBytes( Long blockBytes ) {
     this.blockBytes = blockBytes;
+  }
+
+  public String getPartition( ) {
+    return this.partition;
   }
   
 }

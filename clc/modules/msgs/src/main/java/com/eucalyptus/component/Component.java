@@ -68,15 +68,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ServiceEvents.ServiceEvent;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -92,13 +89,14 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Component implements HasName<Component> {
-  private static Logger               LOG   = Logger.getLogger( Component.class );
+  private static Logger               LOG = Logger.getLogger( Component.class );
   private final ComponentId           identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
@@ -225,12 +223,16 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
-  public Boolean hasServiceEnabled( ) {
-    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getState( ) );
+  public Boolean hasEnabledService( ) {
+    return !this.enabledServices( ).isEmpty( );
+  }
+  
+  public Boolean isEnabledLocally( ) {
+    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalService( ).getState( ) );
   }
   
   public Boolean isRunningLocally( ) {
-    return this.hasServiceEnabled( );
+    return this.isEnabledLocally( );
   }
   
   /**
@@ -265,7 +267,7 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getService( name );
   }
   
-  public NavigableSet<Service> lookupServices( String partition ) {
+  NavigableSet<Service> lookupServices( String partition ) {
     return this.serviceRegistry.lookupPartition( partition );
   }
   
@@ -327,7 +329,7 @@ public class Component implements HasName<Component> {
       return Futures.predestinedFuture( service.getServiceConfiguration( ) );
     }
   }
-
+  
   public CheckedListenableFuture<ServiceConfiguration> disableService( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DISABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
@@ -391,27 +393,27 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     Service service = null;
-    if( this.serviceRegistry.hasService( configuration ) ) {
+    if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
     } else {
       service = this.serviceRegistry.register( configuration );
     }
     service.setGoal( State.ENABLED );
-    if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
+    if ( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
         service.transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
     return ServiceTransitions.enableTransitionChain( configuration );
   }
-
+  
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     Service service = null;
-    if( this.serviceRegistry.hasService( configuration ) ) {
+    if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
     } else {
       service = this.serviceRegistry.register( configuration );
@@ -419,30 +421,29 @@ public class Component implements HasName<Component> {
     service.setGoal( this.serviceRegistry.getServices( ).size( ) == 1
                      ? State.ENABLED
                      : State.DISABLED );
-    if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
+    if ( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
         service.transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
     return ServiceTransitions.enableTransitionChain( configuration );
   }
-
+  
   public NavigableSet<Service> getServices( ) {
     return this.lookupServices( );
   }
   
-  public Iterable<Service> enabledServices( ) {
-    return Iterables.filter( this.serviceRegistry.getServices( ), new Predicate<Service>( ) {
-      
-      @Override
-      public boolean apply( Service arg0 ) {
-        return Component.State.ENABLED.equals( arg0.getState( ) );
-      }
-    } );
+  public NavigableSet<Service> enabledServices( ) {
+    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Components.Predicates.enabledService( ) ) );
+  }
+  
+  NavigableSet<ServiceConfiguration> enabledPartitionServices( final String partitionName ) {
+    Iterable<Service> services = Iterables.filter( this.serviceRegistry.getServices( ), Predicates.and( Components.Predicates.enabledService( ), Components.Predicates.serviceInPartition( partitionName ) ) );
+    return Sets.newTreeSet( Iterables.transform( services, Components.Functions.serviceToServiceConfiguration() ) );
   }
   
   private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
@@ -459,15 +460,15 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasService( config );
   }
   
-
-  
   /**
    * @see java.lang.Object#toString()
    */
   @Override
   public String toString( ) {
     return String.format( "Component %s available=%s local-service=%s\n",
-                          this.identity.name( ), this.isAvailableLocally( ), this.serviceRegistry.hasLocalService( ) ? this.serviceRegistry.getLocalService( ) : "none" );
+                          this.identity.name( ), this.isAvailableLocally( ), this.serviceRegistry.hasLocalService( )
+                            ? this.serviceRegistry.getLocalService( )
+                            : "none" );
   }
   
   /**
@@ -528,13 +529,13 @@ public class Component implements HasName<Component> {
       try {
         service.transition( State.INITIALIZED );
       } catch ( IllegalStateException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
       } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
       }
     } else if ( this.serviceRegistry.hasService( config ) ) {
@@ -544,7 +545,6 @@ public class Component implements HasName<Component> {
     }
     return service;
   }
-
   
   class ServiceRegistry {
     private final AtomicReference<Service> localService = new AtomicReference( null );
@@ -583,7 +583,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).getUri( ).toASCIIString( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).isLocal( ) ) {
                 getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
@@ -596,7 +596,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).getUri( ).toASCIIString( ).startsWith( "vm" ) ) {
+              if ( s.getServiceConfiguration( ).isLocal( ) ) {
                 getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
@@ -732,5 +732,5 @@ public class Component implements HasName<Component> {
       return this.services.containsKey( config.getFullName( ) );
     }
   }
-    
+  
 }

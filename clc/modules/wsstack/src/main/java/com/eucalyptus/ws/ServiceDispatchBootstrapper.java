@@ -125,7 +125,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex, ex );//TODO:GRZE: report error
             } catch ( Throwable ex ) {
-              Exceptions.trace( "load(): Building service failed: " + Components.componentToString( ).apply( comp ), ex );
+              Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
             }
           }
         }
@@ -148,7 +148,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             try {
               comp.enableTransition( s ).get( );
             } catch ( Throwable ex ) {
-              Exceptions.trace( "start()/enable(): Starting service failed: " + Components.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+              Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
             }
           }
         }
