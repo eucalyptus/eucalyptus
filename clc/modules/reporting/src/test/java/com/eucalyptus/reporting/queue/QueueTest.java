@@ -3,6 +3,7 @@ package com.eucalyptus.reporting.queue;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
+import com.eucalyptus.reporting.queue.mq.QueueBroker;
 
 public class QueueTest
 {
