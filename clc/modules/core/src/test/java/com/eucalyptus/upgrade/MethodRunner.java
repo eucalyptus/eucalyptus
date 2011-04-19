@@ -8,12 +8,12 @@ import com.eucalyptus.system.LogLevels;
 
 /**
  * <p>MethodRunner runs a single static method, specified by arguments to the
- * <code>main</code> method. The method specified must be a static method, must
- * take only String arguments, and may optionally return an int. If the method
- * specified returns an int, then that int will be returned to the calling shell
- * as a return code. If the specified method does not return an int, it must
- * return void, in which case this will return failure (non-zero) to the calling
- * shell in the event of any exception, and success (0) otherwise.
+ * <code>main</code> method. The static method specified must take only String
+ * arguments, and may optionally return an int. If the method specified returns
+ * an int, then that int will be returned to the calling shell as a return code.
+ * If the specified method does not return an int, it must return void, in which
+ * case, this will return failure (non-zero) to the calling shell in the event of
+ * any exception, and success (0) otherwise.
  * 
  * <p>MethodRunner is invoked by the <code>clc/tools/runMethod.sh</code> bash
  * script. It's used as a part of Kyo's testing framework which requires things
