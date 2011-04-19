@@ -59,8 +59,8 @@
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
 
         "filter":"objectClass=groupOfNames",
-        "select":["cn=groupToSelect,ou=Groups,dc=eucalyptus,dc=com"],
-        "not-select":["cn=groupToIgnore,ou=Groups,dc=eucalyptus,dc=com"],
+        "select":["cn=groupToSelect,ou=Groups,dc=foo,dc=com"],
+        "not-select":["cn=groupToIgnore,ou=Groups,dc=foo,dc=com"],
     }
   },
 
@@ -81,7 +81,7 @@
 
         "filter":"objectClass=inetOrgPersion",
         "select":["uid=john,ou=People,dc=foo,dc=com", "uid=jack,ou=People,dc=foo,dc=com"],
-        "not-select":["uid=tom,ou=People,dc=eucalyptus,dc=com"],
+        "not-select":["uid=tom,ou=People,dc=foo,dc=com"],
     }
   },
 }
