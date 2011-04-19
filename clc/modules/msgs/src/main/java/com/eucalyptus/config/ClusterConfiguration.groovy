@@ -91,12 +91,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   Integer minVlan;
   @Column(name="maxvlan")
   Integer maxVlan;
-  @Lob
-  @Column(name="auth_cluster_x509_certificate")
-  String clusterCertificate;
-  @Lob
-  @Column(name="auth_cluster_node_x509_certificate")
-  String nodeCertificate;
   
   public ClusterConfiguration( ) {
     

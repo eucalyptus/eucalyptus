@@ -596,7 +596,7 @@ public class DatabaseUserProxy implements User {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true )
-          .createCriteria( "users" ).setCacheable( true ).add(Restrictions.idEq( userId ) )
+          .createCriteria( "users" ).setCacheable( true ).add(Restrictions.eq( "userId", userId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );
@@ -625,7 +625,7 @@ public class DatabaseUserProxy implements User {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true )
-          .createCriteria( "users" ).add(Restrictions.idEq( userId ) )
+          .createCriteria( "users" ).add(Restrictions.eq( "userId", userId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );

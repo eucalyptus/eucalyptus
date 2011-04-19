@@ -148,7 +148,7 @@ public class DatabaseGroupProxy implements Group {
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.idEq( this.delegate.getGroupId( ) ) )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "groupId", this.delegate.getGroupId( ) ) )
           .list( );
       db.commit( );
       return users.size( ) > 0;

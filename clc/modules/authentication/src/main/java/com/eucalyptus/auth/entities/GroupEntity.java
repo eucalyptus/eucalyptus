@@ -12,10 +12,12 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
@@ -87,6 +89,13 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     return g;
   }
 
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.groupId == null ) {
+      this.groupId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );
+    }
+  }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

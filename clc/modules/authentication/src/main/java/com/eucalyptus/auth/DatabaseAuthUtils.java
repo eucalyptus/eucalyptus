@@ -112,7 +112,7 @@ public class DatabaseAuthUtils {
     @SuppressWarnings( "unchecked" )
     List<PolicyEntity> policies = ( List<PolicyEntity> ) db
         .createCriteria( PolicyEntity.class ).setCacheable( true ).add( example )
-        .createCriteria( "group" ).setCacheable( true ).add( Restrictions.idEq( groupId ) )
+        .createCriteria( "group" ).setCacheable( true ).add( Restrictions.eq( "groupId", groupId ) )
         .list( );
     if ( policies.size( ) != 1 ) {
       throw new AuthException( "Found " + policies.size( ) + " policies" );

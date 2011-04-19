@@ -10,6 +10,8 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -40,17 +42,11 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-//NOTE:GRZE: this restriction no longer applies with partitions.  the order of operations is irrelevant becuase service state determines usability (and service state is not sensitive to the ordering of registration events).
-//    try {
-//      ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, partition );
-//    } catch ( PersistenceException ex ) {
-//      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-//                                              + "  An error occurred while trying to lookup the partition: " + name );
-//    } catch ( NoSuchElementException ex ) {
-//      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-//                                              + "  No cluster found within the partition: " + name );
-//    }
-    return super.checkAdd( partition, name, host, port );
+    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+      throw new ServiceRegistrationException( "Storage Controller registration failed because the key directory cannot be created." );
+    } else {
+      return super.checkAdd( partition, name, host, port );
+    }
   }
 
   @Override
@@ -80,6 +76,25 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }
     super.fireStart( config );
+  }
+
+  @Override
+  public StorageControllerConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    StorageControllerConfiguration config = this.newInstance( partition, name, host, port );
+    try {
+      Partition part = Partitions.lookup( config );
+      ServiceConfigurations.getInstance( ).store( config );
+      part.link( config );
+    } catch ( ServiceRegistrationException ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      throw ex;
+    } catch ( Throwable ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
+                                                             partition, name, host, port ), ex );
+    }
+    return config;
   }
   
 }
