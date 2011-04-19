@@ -49,7 +49,7 @@ if ($EUCALYPTUS eq "") {
 my $FORMAT = "RSA/ECB/PKCS1Padding";
 my $CERT = "$EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem";
 my $encrypted = `echo -n $password | openssl rsautl -encrypt -inkey $CERT -certin | openssl base64 | tr -d '\n'`;
-$encrypted = $FORMAT.$encrypted;
+$encrypted = "{$FORMAT}".$encrypted;
 
 if ($passonly) {
   print $encrypted;
