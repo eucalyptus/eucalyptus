@@ -64,6 +64,7 @@ package com.eucalyptus.util.async;
 
 import java.util.concurrent.ExecutionException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -74,7 +75,7 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
    * @param serviceEndpoint
    * @return
    */
-  public abstract CheckedListenableFuture<R> dispatch( ServiceEndpoint serviceEndpoint );
+  public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
   /**
    * TODO: DOCUMENT Request.java
    * @param endpoint
@@ -82,8 +83,8 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  public abstract R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException;
-  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory );
+  public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
+  public Request<Q, R> execute( ServiceConfiguration config );
   //ASAP: add time information
   /**
    * TODO: DOCUMENT Request.java

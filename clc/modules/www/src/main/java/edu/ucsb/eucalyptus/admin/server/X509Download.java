@@ -78,11 +78,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -191,10 +194,13 @@ public class X509Download extends HttpServlet {
       StringBuilder sb = new StringBuilder( );
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
-      sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );      
-      try {
-        sb.append( "\nexport S3_URL=" + SystemConfiguration.getWalrusUrl( ) );
-      } catch ( Throwable e ) {
+      sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
+      if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
+        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( ).getServiceConfiguration( );
+        String uri = walrusConfig.getUri( ).toASCIIString( );
+        LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
+        sb.append( "\nexport S3_URL=" + uri );
+      } else {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
       sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );

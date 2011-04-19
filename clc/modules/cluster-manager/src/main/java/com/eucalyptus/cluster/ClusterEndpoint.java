@@ -115,7 +115,7 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
     DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
-    if ( Contexts.lookup().hasAdministrativePrivileges() && request.getAvailabilityZoneSet( ).lastIndexOf( "help" ) == 0 ) {
+    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) && request.getAvailabilityZoneSet( ).lastIndexOf( "help" ) == 0 ) {
       reply.getAvailabilityZoneInfo( ).addAll( this.addHelpInfo( ) );
       return reply;
     }
@@ -140,7 +140,7 @@ public class ClusterEndpoint implements Startable {
   }
   
   private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, DescribeAvailabilityZonesType request ) {
-    boolean admin = Contexts.lookup().hasAdministrativePrivileges();
+    boolean admin = Contexts.lookup( ).hasAdministrativePrivileges( );
     List<String> args = request.getAvailabilityZoneSet( );
     String clusterName = c.getName( );
     reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
@@ -214,12 +214,12 @@ public class ClusterEndpoint implements Startable {
       LOG.info( val );
     }
     retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers", "" ) );
-    for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+    for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
       retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
       LOG.info( stage.describe( ) );
     }
     retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
+    for ( String val : Iterables.transform( Components.list( ), Components.Functions.componentToString( ) ) ) {
       retList.add( new ClusterInfoType( val, "" ) );
       LOG.trace( val );
     }
@@ -276,14 +276,16 @@ public class ClusterEndpoint implements Startable {
     return info;
   }
   
-  public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {
+  public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupService( "walrus" ).getUri( ).toASCIIString( ) ) );
+      reply.getRegionInfo( ).add( new RegionInfoType(
+                                                      "Walrus",
+                                                      Components.lookup( "walrus" ).lookupService( "walrus" ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
     return reply;
   }

@@ -60,7 +60,6 @@
  *******************************************************************************/
 package com.eucalyptus.ws.server;
 
-import java.security.GeneralSecurityException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -78,24 +77,16 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.HeartbeatHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
 
 @ComponentPart( Empyrean.class )
-public class HeartbeatPipeline extends FilteredPipeline {
-  private static Logger LOG = Logger.getLogger( HeartbeatPipeline.class );
+public class LegacyHBPipeline extends FilteredPipeline {
+  private static Logger LOG = Logger.getLogger( LegacyHBPipeline.class );
   
   @Override
   public boolean checkAccepts( HttpRequest message ) {
@@ -110,16 +101,6 @@ public class HeartbeatPipeline extends FilteredPipeline {
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
     pipeline.addLast( "hb-get-handler", new SimpleHeartbeatHandler( ) );
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( "msgs_eucalyptus_com" ) ) );
-    pipeline.addLast( "heartbeat", new HeartbeatHandler( ) );
     return pipeline;
   }
   
@@ -128,23 +109,31 @@ public class HeartbeatPipeline extends FilteredPipeline {
     
     @Override
     public void messageReceived( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-      if ( e.getMessage( ) instanceof MappingHttpRequest && HttpMethod.GET.equals( ( ( MappingHttpRequest ) e.getMessage( ) ).getMethod( ) ) ) {
+      if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest request = ( MappingHttpRequest ) e.getMessage( );
-        try {
-          HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-          String resp = "";
-          for ( Component c : Components.list( ) ) {
-            resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), c.isLocal( ),
-                                   c.isRunningLocally( ) );
+        HttpMethod method = request.getMethod( );
+        if( HttpMethod.GET.equals( method ) ) {
+          try {
+            HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
+            String resp = "";
+            for ( Component c : Components.list( ) ) {
+              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), !c.getComponentId( ).runLimitedServices( ), c.getLocalService( ) );
+            }
+            ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+            response.setContent( buf );
+            response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
+            response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+            ChannelFuture writeFuture = ctx.getChannel( ).write( response );
+            writeFuture.addListener( ChannelFutureListener.CLOSE );
+          } finally {
+            Contexts.clear( request.getCorrelationId( ) );
           }
-          ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
-          response.setContent( buf );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
-          response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-          ChannelFuture writeFuture = ctx.getChannel( ).write( response );
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        } finally {
-          Contexts.clear( request.getCorrelationId( ) );
+        } else {
+          try {
+            ctx.getChannel( ).write( new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.METHOD_NOT_ALLOWED ) ).addListener( ChannelFutureListener.CLOSE );
+          } finally {
+            Contexts.clear( request.getCorrelationId( ) );
+          }
         }
       } else {
         ctx.sendUpstream( e );

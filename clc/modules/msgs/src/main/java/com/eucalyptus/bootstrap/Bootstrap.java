@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Any;
@@ -444,14 +445,12 @@ public class Bootstrap {
     parents = ImmutableList.copyOf( rents );
   }
   
-  public static Boolean isChild( ) {
-    return childHost;
+  public static Boolean isCloudController( ) {
+    return !Bootstrap.isChild( ) || Bootstrap.shouldMergeDatabase( );
   }
   
-  public static Boolean isCloudLocal( ) {
-    return childHost
-      ? mergeDatabase
-      : true;
+  public static Boolean isChild( ) {
+    return childHost;
   }
   
   public static Boolean shouldMergeDatabase( ) {
@@ -502,9 +501,10 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
     Bootstrap.doDiscovery( );
     
-    LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.list( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+    LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
+    for ( ComponentId compId : ComponentIds.list( ) ) {
+      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName( ) );
+      Components.create( compId );
     }
     
     /**
@@ -512,12 +512,9 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
-                              + Bootstrap.isCloudLocal( ) ) );
-    List<Component> components = Components.list( );
-//    for ( Component comp : components ) {
-    Iterables.all( components, new Callback.Success<Component>( ) {
-      @Override
-      public void fire( Component comp ) {
+                              + Bootstrap.isCloudController( ) ) );
+    List<Component> components = Components.whichCanLoad( );
+    for ( Component comp : components ) {
       try {
         comp.initService( );
       } catch ( ServiceRegistrationException ex ) {
@@ -526,22 +523,29 @@ public class Bootstrap {
         LOG.error( ex, ex );
       }
     }
-    } );
+    
+    LOG.info( LogUtil.header( "Initializing component resources:" ) );
+    for ( Component c : Components.whichCanLoad( ) ) {
+      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+    }
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
     
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
+    for ( Component c : Components.list( ) ) {
+      LOG.info( c.toString( ) );
+    }
   }
   
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.checkTransition( transition ) ) {
+    if ( component.getLocalService( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getStateMachine( ).transition( transition );
+          component.getLocalService( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

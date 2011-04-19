@@ -7,8 +7,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.TransitionListener.Phases;
 import com.google.common.base.Function;
@@ -16,14 +16,14 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends TransitionAction<P> {
-  private static Logger                                       LOG       = Logger.getLogger( Transition.class );
+public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements TransitionAction<P> {
+  private static Logger                                       LOG       = Logger.getLogger( TransitionImpl.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
   private final ConcurrentMap<Integer, TransitionListener<P>> listeners = Maps.newConcurrentMap( );
   private final TransitionAction<P>                           action;
   
-  public Transition( final TransitionRule<S, T> transitionRule, final TransitionAction<P> action, TransitionListener<P>... listeners ) {
+  TransitionImpl( final TransitionRule<S, T> transitionRule, final TransitionAction<P> action, TransitionListener<P>... listeners ) {
     this.rule = transitionRule;
     this.action = action;
     for ( TransitionListener<P> listener : listeners ) {
@@ -43,15 +43,15 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
    * 
    * @param transitionListener
    */
-  public Transition<P, S, T> addListener( TransitionListener<P> listener ) {
-    if ( LogLevels.DEBUG ) EventRecord.here( Transition.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
+  public TransitionImpl<P, S, T> addListener( TransitionListener<P> listener ) {
+    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
   }
   
   private void removeListener( Integer key ) {
     TransitionListener<P> listener = this.listeners.remove( key );
-    if ( LogLevels.DEBUG ) EventRecord.here( Transition.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
+    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
   }
   
   /**
@@ -108,8 +108,8 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
       final TransitionListener<P> tl = entry.getValue( );
-      if ( LogLevels.TRACE ) {
-        EventRecord.here( Transition.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
+      if ( Logs.TRACE ) {
+        EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
                           entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
       }
       try {
@@ -247,7 +247,7 @@ public class Transition<P extends HasName<P>, S extends Enum<S>, T extends Enum<
     if ( this == obj ) return true;
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
-    Transition other = ( Transition ) obj;
+    TransitionImpl other = ( TransitionImpl ) obj;
     return this.rule.equals( other.rule );
   }
   

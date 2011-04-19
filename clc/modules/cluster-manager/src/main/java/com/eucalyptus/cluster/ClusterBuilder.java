@@ -35,7 +35,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+    if ( !Partitions.testPartitionCredentialsDirectory( partition ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
       return super.checkAdd( partition, name, host, port );
@@ -50,9 +50,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           Clusters.getInstance( ).register( newCluster );
@@ -115,7 +115,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Tearing down cluster: " + config );
     Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
     clusterInstance.stop( );
     super.fireStop( config );
@@ -132,9 +132,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           newCluster.start( );
@@ -157,9 +157,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Disabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );

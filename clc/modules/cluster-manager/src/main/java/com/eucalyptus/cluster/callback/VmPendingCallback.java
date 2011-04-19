@@ -25,7 +25,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       {
         regarding( );
         for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-          if ( vm.getPlacement( ).equals( VmPendingCallback.this.getSubject( ).getName( ) ) ) {
+          if ( vm.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) ) ) {
             if ( VmState.PENDING.equals( vm.getState( ) )
                  || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );

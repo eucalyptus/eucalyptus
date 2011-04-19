@@ -283,7 +283,7 @@ public class SystemConfiguration extends AbstractPersistent {
       if( cloudHost == null ) {
         cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
       }
-      return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
+      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
     } catch ( PersistenceException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
     }

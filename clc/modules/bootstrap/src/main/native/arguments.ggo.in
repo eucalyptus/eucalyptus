@@ -1,127 +1,3 @@
-                                                                                                               
- M  clc/modules/cloud/src/main/java/com/eucalyptus/keys/KeyPairUtil.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/address/Address.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/address/AddressManager.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/blockstorage/Snapshot.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/blockstorage/SnapshotManager.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/blockstorage/Volume.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/blockstorage/VolumeManager.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/cluster/Cluster.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/cluster/ClusterBuilder.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/cluster/callback/NetworkStateCallback.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/images/ImageManager.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/network/NetworkGroupManager.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/network/NetworkGroupUtil.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/sla/CreateVmInstances.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/sla/VmAdmissionControl.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/vm/SystemState.java
- M  clc/modules/cluster-manager/src/main/java/com/eucalyptus/vm/VmType.java
- M  clc/modules/configuration/src/main/java/com/eucalyptus/config/Configuration.java
- M  clc/modules/configuration/src/main/java/com/eucalyptus/config/ConfigurationMessages.groovy
- M  clc/modules/configuration/src/main/java/com/eucalyptus/config/PropertiesService.java
- M  clc/modules/configuration/src/main/java/com/eucalyptus/config/StorageControllerBuilder.java
-RM  clc/modules/configuration/src/main/java/com/eucalyptus/config/VMwareBrokerBuilder.java => clc/modules/vmware-broker/src/main/java/com/eucalyptus/broker/vmware/VMwareBrokerBuilder.java
- M  clc/modules/core/src/main/java/com/eucalyptus/util/BlockStorageUtil.java
- M  clc/modules/core/src/main/java/com/eucalyptus/util/StorageProperties.java
- M  clc/modules/core/src/main/java/edu/ucsb/eucalyptus/cloud/entities/GrantInfo.java
- M  clc/modules/core/src/main/resources/log4j.xml
- M  clc/modules/euare/src/main/java/com/eucalyptus/auth/euare/EuareService.java
- M  clc/modules/euare/src/main/resources/euare-model.xml
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/Accounts.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/login/Hmacv1LoginModule.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/login/Hmacv2LoginModule.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/AccessKey.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/Account.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/AccountFullName.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/Certificate.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/FakePrincipals.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/Group.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/HasId.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/ImageUserGroup.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/Policy.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/User.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/auth/principal/UserFullName.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/binding/Binding.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/binding/BindingGenerator.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/bootstrap/Bootstrap.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/bootstrap/SystemBootstrapper.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/Component.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/ComponentId.java
-RM  clc/modules/msgs/src/main/java/com/eucalyptus/component/ComponentState.java => clc/modules/msgs/src/main/java/com/eucalyptus/component/ServiceState.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/Components.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/DummyServiceBuilder.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/Hosts.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/Service.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/ServiceConfiguration.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/ServiceConfigurations.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/ServiceEndpoint.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Arbitrator.java
--D  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Cluster.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/ComponentService.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Database.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Dns.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Euare.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Eucalyptus.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/HttpService.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Ldap.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Notifications.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/Reporting.java
-RM  clc/modules/msgs/src/main/java/com/eucalyptus/component/id/VMwareBroker.java => clc/modules/vmware-broker/src/main/java/com/eucalyptus/broker/vmware/VMwareBroker.java
-RM  clc/modules/msgs/src/main/java/com/eucalyptus/config/ConfigurationEntities.groovy => clc/modules/msgs/src/main/java/com/eucalyptus/config/ComponentConfiguration.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/config/ConfigurationService.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/context/Context.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/context/ServiceBootstrapper.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/context/ServiceContext.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/context/ServiceContextManager.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/empyrean/Empyrean.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/entities/AccountMetadata.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/entities/BaseEntities.groovy
- M  clc/modules/msgs/src/main/java/com/eucalyptus/images/ImageInfo.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/records/EventType.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/util/async/AsyncRequest.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/util/async/AsyncRequestHandler.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/util/fsm/AtomicMarkedState.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/util/fsm/StateMachineBuilder.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/util/fsm/Transition.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/ws/handlers/MessageStackHandler.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/ws/handlers/RestfulMarshallingHandler.java
- M  clc/modules/msgs/src/main/java/com/eucalyptus/ws/protocol/BaseQueryBinding.java
- M  clc/modules/msgs/src/main/java/edu/ucsb/eucalyptus/cloud/Network.java
- M  clc/modules/msgs/src/main/java/edu/ucsb/eucalyptus/msgs/BaseMessage.java
- M  clc/modules/msgs/src/main/java/edu/ucsb/eucalyptus/msgs/Messages.groovy
-RM  clc/modules/msgs/src/main/java/edu/ucsb/eucalyptus/msgs/VMwareBroker.groovy => clc/modules/vmware-broker/src/main/java/com/eucalyptus/broker/vmware/VMwareBroker.groovy
- M  clc/modules/msgs/src/main/resources/aws-ebs-volumes.xml
- M  clc/modules/msgs/src/main/resources/aws-instances-09-10-31.xml
- M  clc/modules/msgs/src/main/resources/aws-instances.xml
- M  clc/modules/msgs/src/main/resources/aws-security.xml
- M  clc/modules/msgs/src/main/resources/vmware-broker-types.xml
- M  clc/modules/mysql/conf/scripts/after_database.groovy
- M  clc/modules/reporting/src/main/java/com/eucalyptus/reporting/instance/InstanceEventListener.java
- M  clc/modules/reporting/src/main/java/com/eucalyptus/reporting/instance/InstanceUsageSnapshot.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/bootstrap/VMwareBrokerBootstrapper.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/BrokerInstance.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/BrokerInstanceInfo.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/BrokerInstanceSet.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/BrokerInterface.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/BrokerVolumeInfo.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/VMwareClient.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/VMwareControl.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/VMwareInstance.java
- M  clc/modules/vmware-broker/src/main/java/com/eucalyptus/cloud/ws/VMwareInstanceSet.java
- M  clc/modules/vmware-broker/src/main/resources/vmware-broker-model.xml
- M  clc/modules/vmware-broker/src/test/java/com/eucalyptus/cloud/ws/BrokerInterfaceTest.java
- M  clc/modules/walrus/src/main/java/com/eucalyptus/auth/login/WalrusLoginModule.java
- M  clc/modules/walrus/src/main/java/edu/ucsb/eucalyptus/cloud/ws/WalrusImageManager.java
- M  clc/modules/walrus/src/main/java/edu/ucsb/eucalyptus/cloud/ws/WalrusManager.java
- M  clc/modules/wsstack/src/main/java/com/eucalyptus/ws/handlers/EucalyptusQueryBinding.java
- M  clc/modules/wsstack/src/main/java/com/eucalyptus/ws/handlers/WalrusPOSTAuthenticationHandler.java
- M  clc/modules/wsstack/src/main/java/com/eucalyptus/ws/handlers/WalrusRESTLoggerInbound.java
- M  clc/modules/wsstack/src/main/java/com/eucalyptus/ws/handlers/WalrusSoapUserAuthenticationHandler.java
- M  clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/server/EucalyptusWebBackendImpl.java
- M  clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/server/Webifier.java
- M  clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/server/X509Download.java
- M  clc/tools/src/euca_admin/local.py
- M  tools/euca_conf.in
 package "Eucalyptus"
 version "@EUCA_VERSION@"
 
@@ -130,9 +6,12 @@ version "@EUCA_VERSION@"
 section "Bootstrap Configuration"#                                                    #       #                         #                      #      #
 option "user"                  u   "User to drop privs to after starting."             string  typestr="USERNAME"        default="eucalyptus"    no
 option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@/"     no
-option "child"                 c   "This system is a child/secondary host."            flag                              off
-option "parent"                p   "Host address of parent(s) for bootstrap."          string  typestr="HOSTNAME"                              optional multiple dependon="child"
-option "merge-db"              m   "Attempt to merge the database from a parent."      flag                              off                            dependon="child"            
+
+option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." \
+                                                                                       flag                              off
+option "bind-addr"             b   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address." \
+                                                                                       string  typestr="IP_ADDRESS"                            optional multiple
+                                                                                       
 option "define"                D   "Set system properties."                            string                                                  optional multiple
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
@@ -153,8 +32,8 @@ option "err"                   e   "Redirect standard error to file."           
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Disable Features"       #                                                    #       #                         #                      #      #
-option "remote-dns"            -   "Eucalyptus will not try to bind port 53."          flag                              off
-option "disable-iscsi"         -   "Disable ISCSI support for dynamic block storage."  flag                              off
+option "remote-dns"            -   "eucalyptus-cloud will not try to bind port 53."    flag                              off                                   # TODO: this needs to be removed
+option "disable-iscsi"         -   "Disable ISCSI support for dynamic block storage."  flag                              off                                   # TODO: this needs to be removed
 option "disable-cloud"         -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-walrus"        -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-dns"           -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
@@ -169,6 +48,8 @@ option "jvm-args"              X   "Arguments to pass to the JVM."              
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
+######                   #       #                                                    #       #                         #                      #      #           
+######                   #       #                                                    #       #                         #                      #      #           
 ######                   #       #                                                    #       #                         #                      #      #           
 option "profile"               -   "Launch with jprofiler enabled."                    flag                              off                            hidden
 option "profiler-home"         -   "Set the home for jprofiler."                       string  typestr="DIRECTORY"       default="/opt/profile"  no     dependon="profile" hidden

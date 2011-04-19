@@ -82,8 +82,8 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -185,7 +185,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
             }
           } catch ( Exception e ) {
             LOG.debug( e );
-            if ( LogLevels.DEBUG ) {
+            if ( Logs.DEBUG ) {
               LOG.error( e, e );
             }
             throw e;

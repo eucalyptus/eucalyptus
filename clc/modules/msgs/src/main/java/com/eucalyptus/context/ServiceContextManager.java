@@ -92,9 +92,9 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Templates;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
@@ -260,10 +260,10 @@ public class ServiceContextManager implements EventListener<Event> {
   
   private static ConfigResource createConfigResource( Component component, String outString ) {
     ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
-    if ( LogLevels.EXTREME ) {
-      CONFIG_LOG.trace( "===================================" );
-      CONFIG_LOG.trace( outString );
-      CONFIG_LOG.trace( "===================================" );
+    if ( Logs.EXTREME ) {
+      Logs.exhaust( ).trace( "===================================" );
+      Logs.exhaust( ).trace( outString );
+      Logs.exhaust( ).trace( "===================================" );
     }
     ConfigResource configRsc = new ConfigResource( component.getComponentId( ).getServiceModelFileName( ), bis );
     return configRsc;
