@@ -4,7 +4,7 @@
 
   "ldap-service":{
 
-    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field should show the encrypted password. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety.",
+    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field can have both un-encrypted and encrypted password. Encrypted password has a format as {RSA/ECB/PKCS1Padding}xxxxxxxxxxxxx. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety.",
 
     "server-url":"ldap://localhost:7733",
     "auth-method":"simple",
@@ -20,6 +20,23 @@
     "enable":"true",
     "auto":"true",
     "interval":"900000",
+  },
+
+  "accounting-groups":{
+
+    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies the attribute name that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+
+    "base-dn":"ou=groups,dc=foo,dc=com",
+    "id-attribute":"cn",
+    "member-attribute":"member",
+    "selection":{
+
+        "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
+
+        "filter":"objectClass=accountingGroup",
+        "select":["cn=accountingToSelect,ou=Groups,dc=foo,dc=com"],
+        "not-select":["cn=accountingToIgnore,ou=Groups,dc=foo,dc=com"],
+    }
   },
 
   "groups-partition":{
@@ -42,8 +59,8 @@
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
 
         "filter":"objectClass=groupOfNames",
-        "select":["cn=groupToSelect,ou=Groups,dc=eucalyptus,dc=com"],
-        "not-select":["cn=groupToIgnore,ou=Groups,dc=eucalyptus,dc=com"],
+        "select":["cn=groupToSelect,ou=Groups,dc=foo,dc=com"],
+        "not-select":["cn=groupToIgnore,ou=Groups,dc=foo,dc=com"],
     }
   },
 
@@ -64,7 +81,7 @@
 
         "filter":"objectClass=inetOrgPersion",
         "select":["uid=john,ou=People,dc=foo,dc=com", "uid=jack,ou=People,dc=foo,dc=com"],
-        "not-select":["uid=tom,ou=People,dc=eucalyptus,dc=com"],
+        "not-select":["uid=tom,ou=People,dc=foo,dc=com"],
     }
   },
 }

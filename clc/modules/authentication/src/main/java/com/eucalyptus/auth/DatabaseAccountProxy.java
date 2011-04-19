@@ -325,7 +325,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );
@@ -359,7 +359,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );

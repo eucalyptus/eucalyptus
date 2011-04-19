@@ -346,7 +346,6 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
 int sem_mywait(int lockno);
 int sem_mypost(int lockno);
 
-int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int syncNetworkState();

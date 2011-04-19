@@ -33,10 +33,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
       this.eusureSystemAdminExist( );
       LdapSync.start( );
-    
-      // Remove once done.
-      //AuthTest.test( );
-    
     }
     return true;
   }
@@ -85,14 +81,12 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
       account.lookupUserByName( User.ACCOUNT_ADMIN );
     } catch ( AuthException e ) {
+      LOG.debug( "System admin does not exist. Adding it now." );
       // Order matters.
       Account system = Accounts.addSystemAccount( );
       User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
       admin.createKey( );
-      admin.createToken( );
-      admin.createConfirmationCode( );
       admin.createPassword( );
-      LOG.warn( "System admin does not exist. Adding it now.", e );
     }
   }
 }
