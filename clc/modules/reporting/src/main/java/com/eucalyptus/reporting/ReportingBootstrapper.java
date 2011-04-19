@@ -1,7 +1,6 @@
 package com.eucalyptus.reporting;
 
 import java.util.Timer;
-import java.util.TimerTask;
 
 import org.apache.log4j.Logger;
 
@@ -14,6 +13,7 @@ import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.reporting.queue.mq.QueueBroker;
+import com.eucalyptus.reporting.storage.StorageEventListener;
 import com.eucalyptus.reporting.storage.StorageEventPoller;
 
 @Provides(Reporting.class)
@@ -26,6 +26,7 @@ public class ReportingBootstrapper
 	private static long POLLER_DELAY_MS = 10000l;
 
 	private StorageEventPoller storagePoller;
+	private StorageEventListener storageListener;
 	private InstanceEventListener instanceListener;
 	private QueueFactory queueFactory;
 	private QueueBroker queueBroker;
@@ -82,9 +83,9 @@ public class ReportingBootstrapper
 
 			/* Start queue broker
 			 */
-			queueBroker = QueueBroker.getInstance();
-			queueBroker.startup();
-			log.info("Queue broker started");
+//			queueBroker = QueueBroker.getInstance();
+//			queueBroker.startup();
+//			log.info("Queue broker started");
 
 			queueFactory = QueueFactory.getInstance();
 			queueFactory.startup();
@@ -93,16 +94,24 @@ public class ReportingBootstrapper
 			 */
 			QueueReceiver storageReceiver =
 				queueFactory.getReceiver(QueueIdentifier.STORAGE);
-			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
-			this.storagePoller = poller;
-			timer = new Timer(true);
-			timer.schedule(new TimerTask() {
-				@Override
-				public void run()
-				{
-					poller.writeEvents();
-				}
-			}, 0, POLLER_DELAY_MS);
+			if (storageListener == null) {
+				storageListener = new StorageEventListener();
+				log.info("New storage listener instantiated");
+			} else {
+				log.info("Used existing storage listener");
+			}
+			storageReceiver.addEventListener(storageListener);
+
+//			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+//			this.storagePoller = poller;
+//			timer = new Timer(true);
+//			timer.schedule(new TimerTask() {
+//				@Override
+//				public void run()
+//				{
+//					poller.writeEvents();
+//				}
+//			}, 0, POLLER_DELAY_MS);
 			log.info("Storage queue poller started");
 
 			/* Start instance receiver and instance listener
