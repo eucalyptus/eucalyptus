@@ -84,22 +84,53 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 public class ServiceTransitions {
   private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
-  public static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
+  static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     final Service service = config.lookupService( );
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
     switch ( service.getState( ) ) {
+      case NOTREADY:
+      case DISABLED:
+      case ENABLED:
+        break;
+      case LOADED:
+      case STOPPED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.LOADED, Component.State.NOTREADY );
+        break;
+      case INITIALIZED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY );
+        break;
+      default:
+        throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
+    }
+    CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+    try {
+      transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+      transitionResult = Futures.predestinedFailedFuture( ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+      transitionResult = Futures.predestinedFailedFuture( ex );
+    }
+    return transitionResult;
+  }
+
+  static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
+    final Service service = config.lookupService( );
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
+    switch ( service.getState( ) ) {
+      case ENABLED:
+        break;
       case NOTREADY:
       case DISABLED:
         transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.DISABLED, Component.State.ENABLED );
         break;
       case LOADED:
       case STOPPED:
-        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
-        break;
-      case INITIALIZED:
         transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
         break;
-      case ENABLED:
+      case INITIALIZED:
+        transition = ServiceTransitions.newServiceTransitionCallable( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED, Component.State.ENABLED );
         break;
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );

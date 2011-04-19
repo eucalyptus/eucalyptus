@@ -328,85 +328,6 @@ public class Component implements HasName<Component> {
     }
   }
 
-  private CheckedListenableFuture<ServiceConfiguration> startService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_START, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
-    final Service service = this.lookupRegisteredService( config );
-    //TODO:GRZE: initial state setup happens here
-    service.setGoal( this.serviceRegistry.getServices( ).isEmpty( )
-      ? State.ENABLED
-      : State.DISABLED );
-    if ( service.getState( ).equals( State.LOADED ) ) {
-      final CheckedListenableFuture<ServiceConfiguration> future = Futures.newGenericFuture( );
-      try {
-        service.transition( Transition.STARTING ).addListener( new Callable<ServiceConfiguration>( ) {
-          @Override
-          public ServiceConfiguration call( ) {
-            try {
-              service.transition( State.DISABLED );
-              future.set( service.getServiceConfiguration( ) );
-            } catch ( Throwable ex ) {
-              future.setException( ex );
-              Exceptions.trace( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
-            }
-            return service.getServiceConfiguration( );
-          }
-        } );
-      } catch ( Throwable ex ) {
-        future.setException( new ServiceRegistrationException( "Failed to start service: " + config + " because of: " + ex.getMessage( ), ex ) );
-      }
-      return future;
-    } else if ( service.getState( ).equals( State.NOTREADY ) ) {
-      try {
-        return service.transition( State.DISABLED );
-      } catch ( Throwable ex ) {
-        final CheckedListenableFuture<ServiceConfiguration> future = Futures.newGenericFuture( );
-        future.setException( new ServiceRegistrationException( "Failed to mark service disabled: " + config + " because of: " + ex.getMessage( ), ex ) );
-        return future;
-      }
-    } else {
-      return Futures.predestinedFuture( service.getServiceConfiguration( ) );
-    }
-  }
-  
-  private CheckedListenableFuture<ServiceConfiguration> enableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_ENABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
-    final Service service = this.serviceRegistry.lookup( config );
-    service.setGoal( State.ENABLED );
-    if ( State.NOTREADY.equals( service.getState( ) ) ) {
-      final CheckedListenableFuture<ServiceConfiguration> future = new TransitionFuture<ServiceConfiguration>( );
-      try {
-        service.transition( Transition.READY_CHECK ).addListener( new Callable<ServiceConfiguration>( ) {
-          @Override
-          public ServiceConfiguration call( ) {
-            try {
-              service.transition( State.ENABLED );
-              future.set( service.getServiceConfiguration( ) );
-            } catch ( Throwable ex ) {
-              future.setException( ex );
-              Exceptions.trace( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
-            }
-            return service.getServiceConfiguration( );
-          }
-        } );
-      } catch ( Throwable ex ) {
-        future.setException( new ServiceRegistrationException( "Failed to perform ready-check for service: " + config + " because of: " + ex.getMessage( ),
-                                                               ex ) );
-      }
-      return future;
-    } else if ( State.DISABLED.equals( service.getState( ) ) ) {
-      try {
-        CheckedListenableFuture<ServiceConfiguration> ret = service.transition( State.ENABLED );
-        return ret;
-      } catch ( Throwable ex ) {
-        final CheckedListenableFuture<ServiceConfiguration> future = Futures.newGenericFuture( );
-        future.setException( new ServiceRegistrationException( "Failed to mark service enabled: " + config + " because of: " + ex.getMessage( ), ex ) );
-        return future;
-      }
-    } else {
-      return Futures.predestinedFuture( service.getServiceConfiguration( ) );
-    }
-  }
-  
   public CheckedListenableFuture<ServiceConfiguration> disableService( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DISABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
@@ -475,6 +396,7 @@ public class Component implements HasName<Component> {
     } else {
       service = this.serviceRegistry.register( configuration );
     }
+    service.setGoal( State.ENABLED );
     if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
       try {
         service.transition( State.INITIALIZED );
@@ -486,7 +408,29 @@ public class Component implements HasName<Component> {
     }
     return ServiceTransitions.enableTransitionChain( configuration );
   }
-  
+
+  public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+    Service service = null;
+    if( this.serviceRegistry.hasService( configuration ) ) {
+      service = this.serviceRegistry.lookup( configuration );
+    } else {
+      service = this.serviceRegistry.register( configuration );
+    }
+    service.setGoal( this.serviceRegistry.getServices( ).size( ) == 1
+                     ? State.ENABLED
+                     : State.DISABLED );
+    if( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
+      try {
+        service.transition( State.INITIALIZED );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+    return ServiceTransitions.enableTransitionChain( configuration );
+  }
+
   public NavigableSet<Service> getServices( ) {
     return this.lookupServices( );
   }
