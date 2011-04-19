@@ -22,6 +22,23 @@
     "interval":"900000",
   },
 
+  "accounting-groups":{
+
+    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies the attribute name that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+
+    "base-dn":"ou=groups,dc=foo,dc=com",
+    "id-attribute":"cn",
+    "member-attribute":"member",
+    "selection":{
+
+        "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
+
+        "filter":"objectClass=accountingGroup",
+        "select":["cn=accountingToSelect,ou=Groups,dc=foo,dc=com"],
+        "not-select":["cn=accountingToIgnore,ou=Groups,dc=foo,dc=com"],
+    }
+  },
+
   "groups-partition":{
 
     "_comment":"This section defines configurations for groups partitions. !!REMOVE!! this section if you have accounting groups and will use accounting groups to define accounts. Each field defines an account and gives the IDs of the groups for the account.",
