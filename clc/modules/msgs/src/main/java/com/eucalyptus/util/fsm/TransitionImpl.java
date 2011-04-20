@@ -161,7 +161,12 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
           return true;
         }
       }, parent );
-      this.action.leave( parent, transitionCallback );
+      try {
+        this.action.leave( parent, transitionCallback );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        transitionCallback.fireException( ex );
+      }
     }
   }
   

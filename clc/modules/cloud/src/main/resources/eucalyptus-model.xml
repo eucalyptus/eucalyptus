@@ -90,10 +90,6 @@
       <bridge-component/>
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="ShortBusWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" />
-        </filtering-router>
-        <filtering-router>
           <outbound-endpoint ref="StartVerifyWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType" />
         </filtering-router>
