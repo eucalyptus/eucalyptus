@@ -13,9 +13,8 @@ import com.eucalyptus.www.ExposedCommand;
  * fake starting and ending times, imaginary resource usage, fictitious
  * clusters, and non-existent accounts and users.
  * 
- * <p>FalseDataGenerator is meant to be called from the command-line tool,
- * <pre>clc/tools/runMethod.sh</pre>, specifying the class name and a method
- * below.
+ * <p>FalseDataGenerator is meant to be called from the
+ * <code>CommandServlet</code>
  * 
  * <p>False data should be deleted afterward by calling the
  * <pre>deleteFalseData</pre> method.
