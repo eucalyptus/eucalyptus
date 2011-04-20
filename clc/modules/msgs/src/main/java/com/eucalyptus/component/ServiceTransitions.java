@@ -239,7 +239,7 @@ public class ServiceTransitions {
                                                                                          try {
                                                                                           parent.lookupComponent( ).getBuilder( ).fireStart( parent );
                                                                                           transitionCallback.fire( );//TODO:GRZE: this is not complete.
-                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                        } catch ( Throwable ex ) {
                                                                                           LOG.error( "Transition failed on "
                                                                                                      + parent.lookupComponent( ).getName( )
                                                                                                      + " due to "
@@ -275,7 +275,7 @@ public class ServiceTransitions {
                                                                                          try {
                                                                                           parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
                                                                                           transitionCallback.fire( );//TODO:GRZE: this is not complete.
-                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                        } catch ( Throwable ex ) {
                                                                                           LOG.error( "Transition failed on "
                                                                                                      + parent.lookupComponent( ).getName( )
                                                                                                      + " due to "
@@ -307,7 +307,7 @@ public class ServiceTransitions {
                                                                                          try {
                                                                                           parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
                                                                                           transitionCallback.fire( );//TODO:GRZE: this is not complete.
-                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                        } catch ( Throwable ex ) {
                                                                                           LOG.error( "Transition failed on "
                                                                                                      + parent.lookupComponent( ).getName( )
                                                                                                      + " due to "
@@ -339,7 +339,7 @@ public class ServiceTransitions {
                                                                                          try {
                                                                                           parent.lookupComponent( ).getBuilder( ).fireStop( parent );
                                                                                           transitionCallback.fire( );//TODO:GRZE: this is not complete.
-                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                        } catch ( Throwable ex ) {
                                                                                           LOG.error( "Transition failed on "
                                                                                                      + parent.lookupComponent( ).getName( )
                                                                                                      + " due to "
@@ -395,7 +395,7 @@ public class ServiceTransitions {
                                                                                                if ( parent.lookupComponent( ).hasLocalService( ) ) {
                                                                                                  parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
                                                                                                }
-                                                                                             } catch ( ServiceRegistrationException ex1 ) {
+                                                                                             } catch ( Throwable ex1 ) {
                                                                                                LOG.error( "Transition failed on "
                                                                                                           + parent.lookupComponent( ).getName( )
                                                                                                           + " due to "
