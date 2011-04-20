@@ -3,6 +3,12 @@
 use strict;
 use Getopt::Long;
 
+my $EUCALYPTUS = $ENV{'EUCALYPTUS'};
+my $CERT = "$EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem";
+my $TEMPLATE = "$EUCALYPTUS/usr/share/eucalyptus/lic_template";
+my $FORMAT = "RSA/ECB/PKCS1Padding";
+my $PASS_LINE = qr/"auth-credentials"\s*:\s*"(.*)"/;
+
 my $USAGE = <<END;
 
 This is a tool to help create the LDAP integration configuration.
@@ -32,11 +38,28 @@ Examples:
 
 # create a LIC template with encrypted password and with comments removed
 \$ lictool.pl --password secret --out example.lic --nocomment
+
+# encrypt password in an existing LIC file and output the new file
+\$ lictool.pl --custom my.lic
+
+# encrypt password in an existing LIC file in place
+\$ lictool.pl --custom my.lic --out my.lic
 END
 
 sub print_usage {
-  print $USAGE."\n";
+  print STDERR $USAGE."\n";
   exit(1);
+}
+
+sub encrypt {
+  my($clear) = @_;
+  my $crypt = `echo -n $clear | openssl rsautl -encrypt -inkey $CERT -certin | openssl base64 | tr -d '\n'`;
+  if ($? != 0 or $crypt eq "") {
+    print STDERR "Failed to encrypt password";
+    exit(1);
+  }
+  $crypt = "{$FORMAT}".$crypt;
+  return $crypt;
 }
 
 my $password = "";
@@ -51,27 +74,23 @@ my $result = GetOptions("password=s" => \$password,
                         "custom=s"   => \$custom_template,
                         "nocomment"  => \$remove_comment);
 
-if ($password eq "" or not $result) {
+if (not $result) {
   print_usage;
 }
 
-my $EUCALYPTUS = $ENV{'EUCALYPTUS'};
+# password is either from command line or from user provided LIC
+if ($password eq "" and $custom_template eq "") {
+  print_usage;
+}
+
 if ($EUCALYPTUS eq "") {
   $EUCALYPTUS = "/";
 }
 
-my $FORMAT = "RSA/ECB/PKCS1Padding";
-my $CERT = "$EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem";
-my $encrypted = `echo -n $password | openssl rsautl -encrypt -inkey $CERT -certin | openssl base64 | tr -d '\n'`;
-$encrypted = "{$FORMAT}".$encrypted;
-
-if ($passonly) {
-  print $encrypted;
-  exit(0);
+my $encrypted = "";
+if ($password ne "") {
+  $encrypted = encrypt($password);
 }
-
-my $TEMPLATE = "$EUCALYPTUS/usr/share/eucalyptus/lic_template";
-my $PASS_LINE = qr/"auth-credentials"\s*:\s*".*"/;
 
 my $input_file;
 if ($custom_template eq "") {
@@ -83,6 +102,9 @@ my @lic = ();
 open TEMP, "<$input_file" or die "Can not open $input_file: $!";
 while (<TEMP>) {
   if (/$PASS_LINE/) {
+    if ($encrypted eq "") {
+      $encrypted = encrypt($1);
+    }
     s/$PASS_LINE/"auth-credentials":"$encrypted"/g;
   } elsif (/\"_comment\":/) {
     next if ($remove_comment);
@@ -90,6 +112,11 @@ while (<TEMP>) {
   push(@lic, $_);
 }
 close TEMP;
+
+if ($passonly) {
+  print $encrypted;
+  exit(0);
+}
 
 my $lic_out = join("", @lic);
 if ($outfile eq "") {
