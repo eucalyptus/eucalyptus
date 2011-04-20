@@ -114,11 +114,14 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Tearing down cluster: " + config );
-    Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
-    Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
-    clusterInstance.stop( );
+    try {
+      LOG.info( "Tearing down cluster: " + config );
+      Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+      cluster.stop( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
     super.fireStop( config );
   }
   
