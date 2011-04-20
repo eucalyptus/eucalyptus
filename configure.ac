@@ -102,10 +102,13 @@ if test -z "$APACHE2_MODULE_DIR"; then
 fi
 
 if test -z "$PYTHON_BIN"; then
-   for i in python2.5 python2.6 python2.7 python2.8 python2.9
+   for i in python2.9 python2.8 python2.7 python2.6 python2.5
    do
      AC_PATH_PROG(PYTHON_BIN, $i)
    done 
+fi
+if test -z "$PYTHON_BIN" ; then
+        AC_MSG_ERROR([cannot find python binary])
 fi
 
 # Fix the paths for includes and libraries
