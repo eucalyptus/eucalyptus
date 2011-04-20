@@ -74,6 +74,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -110,13 +111,9 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         }
       }
     }
-    LOG.trace( "Touching class: " + ServiceDispatcher.class );
-    boolean failed = false;
-    Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
-      if( !comp.hasLocalService( ) ) {
-        continue;
-      } else {
+      LOG.info( "load(): " + comp );
+      if( comp.hasLocalService( ) ) {
         LOG.info( "load(): " + comp );
         for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
           if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
@@ -128,6 +125,11 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
               Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
             }
           }
+        }
+      } else if( Bootstrap.isCloudController( ) && !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
+        for( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
+          LOG.info( "loadService(): " + config );
+          comp.loadService( config );
         }
       }
     }

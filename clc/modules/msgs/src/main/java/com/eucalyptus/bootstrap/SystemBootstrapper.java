@@ -358,12 +358,12 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
+      if ( c.hasLocalService( ) ) {
         ServiceConfiguration localConfig = c.getLocalService( ).getServiceConfiguration( );
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getLocalService( ).getState( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupService( ).getState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
