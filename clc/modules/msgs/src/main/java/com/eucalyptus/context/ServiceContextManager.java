@@ -70,6 +70,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -129,7 +130,7 @@ public class ServiceContextManager implements EventListener<Event> {
       doUpdate( );
     }
   }
-
+  
   private Future<?> doUpdate( ) {
     if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
       try {
@@ -145,11 +146,13 @@ public class ServiceContextManager implements EventListener<Event> {
               }
             }
           } );
-        } 
+        }
         if ( this.shouldReload( ) ) {
           this.pendingCount.incrementAndGet( );
         }
-        return ret != null ? ret : Futures.predestinedFuture( null );
+        return ret != null
+          ? ret
+          : Futures.predestinedFuture( null );
       } finally {
         this.canHasWrite.unlock( );
       }
@@ -171,18 +174,18 @@ public class ServiceContextManager implements EventListener<Event> {
       return false;
     }
   }
-
+  
   public static final void restartSync( ) {
     singleton.pendingCount.incrementAndGet( );
     try {
       singleton.doUpdate( ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
-
+  
   public static final void restart( ) {
     singleton.pendingCount.incrementAndGet( );
   }
@@ -297,6 +300,13 @@ public class ServiceContextManager implements EventListener<Event> {
     try {
       if ( this.context != null ) {
         try {
+          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+            }
+          }
           this.context.stop( );
           this.context.dispose( );
         } catch ( MuleException ex ) {

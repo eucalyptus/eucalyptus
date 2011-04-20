@@ -84,6 +84,7 @@ import com.eucalyptus.cluster.callback.ClusterLogMessageCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.cluster.callback.ServiceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.ComponentId;
@@ -147,7 +148,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public enum State {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
-    AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
+    AUTHENTICATING, CHECKING_SERVICE, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
     RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, /* available */
   }
   
@@ -160,6 +161,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
     INIT_CERTS, /* AUTHENTICATING -> STARTING */
+    INIT_SERVICES,
     INIT_RESOURCES,
     INIT_NET,
     INIT_VMS,
@@ -204,8 +206,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
         
         //on input INIT_CERTS when in state AUTHENTICATING transition to STARTING on success or DOWN on failure with the transition listeners specified
         on( Transition.INIT_CERTS )//
-        .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
+        .from( State.AUTHENTICATING ).to( State.CHECKING_SERVICE ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
+        on( Transition.INIT_SERVICES ).from( State.CHECKING_SERVICE ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
         on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
@@ -590,6 +593,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
           break;
         case AUTHENTICATING:
           this.stateMachine.startTransition( Transition.INIT_CERTS );
+          break;
+        case CHECKING_SERVICE:
+          this.stateMachine.startTransition( Transition.INIT_SERVICES );
           break;
         case STARTING:
           this.stateMachine.startTransition( Transition.INIT_RESOURCES );
