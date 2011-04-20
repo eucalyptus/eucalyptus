@@ -594,6 +594,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
         case AUTHENTICATING:
           this.stateMachine.startTransition( Transition.INIT_CERTS );
           break;
+        case CHECKING_SERVICE:
+          this.stateMachine.startTransition( Transition.INIT_SERVICES );
+          break;
         case STARTING:
           this.stateMachine.startTransition( Transition.INIT_RESOURCES );
           break;
