@@ -176,7 +176,7 @@ public class ClusterEndpoint implements Startable {
         } catch ( NoSuchElementException e ) {
           try {
             Cluster c = Clusters.getInstance( ).lookup( partitionName );
-            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args );
+            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
           } catch ( NoSuchElementException ex ) {
           }
         }
