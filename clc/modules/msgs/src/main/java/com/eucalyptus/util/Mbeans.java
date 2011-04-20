@@ -179,7 +179,7 @@ public class Mbeans {
       } );
       for ( GroovyMBean mbean : mbeans ) {
         LOG.info( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
-        LOG.info( "Exported MBean: " + mbean );
+        LOG.trace( "Exported MBean: " + mbean );
       }
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( "Exporting MBean failed: " + ex.getMessage( ), ex );

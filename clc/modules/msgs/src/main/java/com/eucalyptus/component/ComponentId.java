@@ -21,10 +21,10 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -91,7 +91,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        if ( LogLevels.EXTREME ) {
+        if ( Logs.EXTREME ) {
           LOG.trace( "Loaded model for: " + this );
           LOG.trace( outString );
         }
@@ -349,5 +349,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : ( this.isAlwaysLocal( ) ? Empyrean.INCOGNITO.name() : this.name( ) );
     }
     
+  }
+  
+  public boolean runLimitedServices( ) {
+    return false;
   }
 }

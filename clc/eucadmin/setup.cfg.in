@@ -1,0 +1,2 @@
+[install]
+install_scripts=@prefix@/usr/sbin

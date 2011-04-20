@@ -89,5 +89,11 @@ public class Dns extends ComponentId.Unpartioned {
       }
     };
   }
+
+  @Override
+  public boolean runLimitedServices( ) {
+    return System.getProperty( "euca.remote.dns" ) != null;
+  }
+
   
 }

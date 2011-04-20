@@ -73,6 +73,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.NoSuchComponentException;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -135,19 +137,18 @@ public class SnapshotManager {
     }
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol = db.recast( Volume.class ).getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
-    Service sc = null;
+    ServiceConfiguration sc = null;
     try {
-      sc = StorageUtil.getActiveSc( vol.getCluster( ) );
-    } catch ( NoSuchElementException e ) {
-      throw new EucalyptusCloudException( "Failed to find the storage controller information for volume: "
-                                          + vol.getDisplayName( ) + " at " + vol.getCluster( ), e );
+      sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    } catch ( NoSuchComponentException ex ) {
+      throw new EucalyptusCloudException( ex );
     }
     
     if ( !vol.isReady( ) ) {
       //temporary workaround to update the volume state.
       DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc.getServiceConfiguration( ) )
+        DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc )
                                                                        .send( descVols );
         if ( !volState.getVolumeSet( ).isEmpty( ) ) {
           vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
@@ -172,7 +173,7 @@ public class SnapshotManager {
       try {
         db.getUnique( Snapshot.named( newId ) );
       } catch ( EucalyptusCloudException e ) {
-        snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ) );
+        snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
         snap.setVolumeSize( vol.getSize( ) );
         db.add( snap );
         break;
@@ -182,9 +183,7 @@ public class SnapshotManager {
     CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), newId );
     CreateStorageSnapshotResponseType scReply = null;
     try {
-      scReply = sc.getDispatcher( ).send( scRequest );
-      snap.setCluster( sc.getServiceConfiguration().getName( ) );
-      snap.setPartition( sc.getServiceConfiguration( ). getPartition( ) );
+      scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
       snap.setMappedState( scReply.getStatus( ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
@@ -224,15 +223,16 @@ public class SnapshotManager {
       }
       db.delete( snap );
 //      db.getSession( ).flush( );
-      Service sc = null;
+      ServiceConfiguration sc = null;
       try {
-        sc = StorageUtil.getActiveSc( snap.getCluster( ) );
+        sc = Partitions.lookupService( Storage.class, snap.getVolumePartition( ) );
       } catch ( NoSuchElementException e ) {
+      } catch ( NoSuchComponentException ex ) {
         throw new EucalyptusCloudException( "Failed to find the storage controller information for volume: "
-                                            + snap.getDisplayName( ) + " at " + snap.getCluster( ), e );
+                                            + snap.getDisplayName( ) + " at " + snap.getVolumePartition( ) + " because of " + ex.getMessage( ), ex );
       }
 
-      DeleteStorageSnapshotResponseType scReply = sc.getDispatcher( ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+      DeleteStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
       if ( scReply.get_return( ) ) {
         StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
         db.commit( );
@@ -270,8 +270,8 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
           try {
-            Service sc = StorageUtil.getActiveSc( v.getCluster( ) );
-            DescribeStorageSnapshotsResponseType snapshotInfo = sc.getDispatcher( ).send( scRequest );
+            ServiceConfiguration sc = Partitions.lookupService( Storage.class, v.getPartition( ) );
+            DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               v.setMappedState( storageSnapshot.getStatus( ) );
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

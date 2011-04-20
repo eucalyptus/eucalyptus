@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.NavigableSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.entities.EntityWrapper;
@@ -86,7 +87,7 @@ public class Partitions {
 //      Partitions.remove( partitionName );
 //    }
   }
-  
+
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
     final String partitionName = config.getPartition( );
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
@@ -147,4 +148,13 @@ public class Partitions {
     }
   }
   
+  @Deprecated
+  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) throws NoSuchServiceException {
+    NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
+    if( services.isEmpty( ) ) {
+      throw new NoSuchServiceException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
+    } else {
+      return services.first( );
+    }
+  }
 }

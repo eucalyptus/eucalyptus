@@ -78,8 +78,8 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -121,14 +121,14 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   private EntityWrapper( String persistenceContext, boolean ignored ) {
     try {
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
+      if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), e.getMessage( ) ) );
+      if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), e.getMessage( ) ) );
       PersistenceErrorFilter.exceptionCaught( e );
       throw ( RuntimeException ) e;
     }
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ), Long.toString( this.tx.splitOperation( ) ),
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ), Long.toString( this.tx.splitOperation( ) ),
                                    this.tx.getTxUuid( ) ) );
   }
   
@@ -152,7 +152,7 @@ public class EntityWrapper<TYPE> {
   }  
   
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
     Object id = null;
     try {
       id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
@@ -316,34 +316,34 @@ public class EntityWrapper<TYPE> {
   }
   
   public void rollback( ) {
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.begin( ), this.tx.getTxUuid( ) ) );
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.begin( ), this.tx.getTxUuid( ) ) );
     try {
       this.tx.rollback( );
     } catch ( Throwable e ) {
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.fail( ), Long.toString( this.tx.splitOperation( ) ),
+      if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.fail( ), Long.toString( this.tx.splitOperation( ) ),
                                      this.tx.getTxUuid( ) ) );
       PersistenceErrorFilter.exceptionCaught( e );
     }
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.end( ), Long.toString( this.tx.splitOperation( ) ),
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.ROLLBACK.end( ), Long.toString( this.tx.splitOperation( ) ),
                                    this.tx.getTxUuid( ) ) );
   }
   
   public void commit( ) {
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), this.tx.getTxUuid( ) ) );
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), this.tx.getTxUuid( ) ) );
     try {
       this.tx.commit( );
     } catch ( RuntimeException e ) {
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
+      if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
                                      this.tx.getTxUuid( ) ) );
       PersistenceErrorFilter.exceptionCaught( e );
       throw e;
     } catch ( Throwable e ) {
-      if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
+      if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
                                      this.tx.getTxUuid( ) ) );
       PersistenceErrorFilter.exceptionCaught( e );
       throw new RuntimeException( e );
     }
-    if ( LogLevels.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( this.tx.splitOperation( ) ),
+    if ( Logs.EXTREME ) LOG.debug( Joiner.on(":").join(  EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( this.tx.splitOperation( ) ),
                                    this.tx.getTxUuid( ) ) );
   }
   
@@ -399,7 +399,7 @@ public class EntityWrapper<TYPE> {
     }
     
     public String getMessage( ) {
-      if ( LogLevels.TRACE ) {
+      if ( Logs.TRACE ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );
       } else {
         return "n.a";

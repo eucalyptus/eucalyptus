@@ -58,7 +58,7 @@ class Enable(object):
     def main(self):
         path = os.path.join(self.config['EUCALYPTUS'],
                             'var/lib/eucalyptus/services')
-        if os.path.exists(path):
+        if os.path.isfile(path):
             fp = open(path)
             s = fp.read()
             fp.close()

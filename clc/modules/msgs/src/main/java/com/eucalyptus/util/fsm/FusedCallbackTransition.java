@@ -8,7 +8,7 @@ import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 
-public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends TransitionAction<P> {
+public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> extends AbstractTransitionAction<P> {
   private final SubjectRemoteCallbackFactory<RemoteCallback, ServiceEndpoint> msgFactory;
   private final ChannelPipelineFactory                                        channelFactory;
   
