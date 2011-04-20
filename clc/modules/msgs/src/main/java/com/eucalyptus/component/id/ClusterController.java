@@ -24,6 +24,11 @@ public class ClusterController extends ComponentId {
   public String getUriPattern( ) {
     return "http://%s:%d/axis2/services/EucalyptusCC";
   }
+
+  @Override
+  public String getExternalUriPattern( ) {
+    return "http://%s:%d/axis2/services/EucalyptusCC";
+  }  
   
   @Override
   public Boolean hasDispatcher( ) {
