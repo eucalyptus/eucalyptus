@@ -689,7 +689,7 @@ public class Component implements HasName<Component> {
      */
     Service register( ServiceConfiguration config ) {
       Service service = Services.newServiceInstance( config );
-      if ( config.isLocal( ) ) {
+      if ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
         this.localService.set( service );
       }
       this.services.put( config.getFullName( ), service );

@@ -413,48 +413,8 @@ public class Bootstrap {
     return finished;
   }
   
-  private static Boolean                    childHost     = Boolean.FALSE;
-  private static Boolean                    mergeDatabase = Boolean.FALSE;
-  private static ImmutableList<InetAddress> parents;
-  
-  static {
-    /** initialize child status **/
-    List<InetAddress> rents = Lists.newArrayList( );
-    try {
-      Integer parentNum = Integer.parseInt( System.getProperty( "euca.child" ) );
-      childHost = ( parentNum >= 0 );
-      if ( childHost ) {
-        /** initialize whether should merge database **/
-        mergeDatabase = ( System.getProperty( "euca.merge.db" ) != null );
-        /** initialize the parent arguments **/
-        for ( int i = 0; i < parentNum; i++ ) {
-          String addr = System.getProperty( "euca.parent." + i );
-          try {
-            rents.add( InetAddress.getByName( addr ) );
-          } catch ( UnknownHostException ex ) {
-            LOG.error( "Ignoring specified parent address as it is not a valid address: addr=" + addr + " error=" + ex.getMessage( ) );
-          }
-        }
-        if ( rents.isEmpty( ) ) {
-          LOG.error( "Invalid parent addresses provided:  This is most likely an error!" );//GRZE:NOTIFY
-        }
-      }
-    } catch ( NumberFormatException ex1 ) {
-      LOG.error( ex1, ex1 );
-    }
-    parents = ImmutableList.copyOf( rents );
-  }
-  
   public static Boolean isCloudController( ) {
-    return !Bootstrap.isChild( ) || Bootstrap.shouldMergeDatabase( );
-  }
-  
-  public static Boolean isChild( ) {
-    return childHost;
-  }
-  
-  public static Boolean shouldMergeDatabase( ) {
-    return mergeDatabase;
+    return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
   
   /**
@@ -511,8 +471,7 @@ public class Bootstrap {
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
-                              + Bootstrap.isCloudController( ) ) );
+    LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + Bootstrap.isCloudController( ) ) );
     List<Component> components = Components.whichCanLoad( );
     for ( Component comp : components ) {
       try {

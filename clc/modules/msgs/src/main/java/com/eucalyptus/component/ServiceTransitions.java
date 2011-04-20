@@ -73,6 +73,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -145,7 +146,7 @@ public class ServiceTransitions {
       LOG.error( ex, ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex.getCause( ) , ex.getCause( ) );
+      LOG.error( ex.getCause( ), ex.getCause( ) );
       transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
     }
     return transitionResult;
@@ -155,7 +156,7 @@ public class ServiceTransitions {
     if ( toStates.length < 1 ) {
       throw new IllegalArgumentException( "At least one toState must be specified" );
     }
-    final Component.State toState = ( toStates.length == 0 )
+    final Component.State toState = ( toStates.length != 0 )
       ? toStates[0]
       : null;
     final Component.State nextFromState = toState;
@@ -203,156 +204,210 @@ public class ServiceTransitions {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).load( );
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
-//                                                                                            transitionCallback.fireException( ex );
+//TODO:GRZE: RESTORE THIS                                                                                            transitionCallback.fireException( ex );
                                                                                            transitionCallback.fire( );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
                                                                                        } else {
-                                                                                         //TODO:GRZE: do remote
+                                                                                         transitionCallback.fire( );
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> START_TRANSITION      = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( final ServiceConfiguration parent, final Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).start( );
                                                                                            if ( parent.lookupComponent( ).hasLocalService( ) ) {
-                                                                                             parent.lookupComponent( ).getBuilder( ).fireStart( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
+                                                                                             parent.lookupComponent( ).getBuilder( ).fireStart( parent );
                                                                                            }
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         try {
+                                                                                          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                          LOG.error( "Transition failed on "
+                                                                                                     + parent.lookupComponent( ).getName( )
+                                                                                                     + " due to "
+                                                                                                     + ex.toString( ),
+                                                                                                     ex );
+                                                                                          transitionCallback.fireException( ex );
+                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                        }
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> ENABLE_TRANSITION     = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
                                                                                              parent.lookupComponent( ).getBootstrapper( ).check( );
-                                                                                             if ( parent.lookupComponent( ).hasLocalService( ) ) {
-                                                                                               parent.lookupComponent( ).getBuilder( ).fireCheck( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
-                                                                                             }
+                                                                                             parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
                                                                                            }
                                                                                            parent.lookupComponent( ).getBootstrapper( ).enable( );
-                                                                                           if ( parent.lookupComponent( ).hasLocalService( ) ) {
-                                                                                             parent.lookupComponent( ).getBuilder( ).fireEnable( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
-                                                                                           }
+                                                                                           parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         try {
+                                                                                          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                          LOG.error( "Transition failed on "
+                                                                                                     + parent.lookupComponent( ).getName( )
+                                                                                                     + " due to "
+                                                                                                     + ex.toString( ),
+                                                                                                     ex );
+                                                                                          transitionCallback.fireException( ex );
+                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                        }
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> DISABLE_TRANSITION    = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).disable( );
-                                                                                           parent.lookupComponent( ).getBuilder( ).fireDisable( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
+                                                                                           parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         try {
+                                                                                          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                          LOG.error( "Transition failed on "
+                                                                                                     + parent.lookupComponent( ).getName( )
+                                                                                                     + " due to "
+                                                                                                     + ex.toString( ),
+                                                                                                     ex );
+                                                                                          transitionCallback.fireException( ex );
+                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                        }
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> STOP_TRANSITION       = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).stop( );
-                                                                                           if ( parent.lookupComponent( ).getLocalService( ) != null ) {
-                                                                                             parent.lookupComponent( ).getBuilder( ).fireStop( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
-                                                                                           }
+                                                                                           parent.lookupComponent( ).getBuilder( ).fireStop( parent );
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         try {
+                                                                                          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+                                                                                        } catch ( ServiceRegistrationException ex ) {
+                                                                                          LOG.error( "Transition failed on "
+                                                                                                     + parent.lookupComponent( ).getName( )
+                                                                                                     + " due to "
+                                                                                                     + ex.toString( ),
+                                                                                                     ex );
+                                                                                          transitionCallback.fireException( ex );
+                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                        }
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> DESTROY_TRANSITION    = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).destroy( );
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not complete.
                                                                                        }
                                                                                      }
                                                                                    };
   public static final TransitionAction<ServiceConfiguration> CHECK_TRANSITION      = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          try {
                                                                                            if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
                                                                                              parent.lookupComponent( ).getBootstrapper( ).check( );
                                                                                              if ( parent.lookupComponent( ).getLocalService( ) != null ) {
-                                                                                               parent.lookupComponent( ).getBuilder( ).fireCheck( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
+                                                                                               parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
                                                                                              }
                                                                                            }
                                                                                            transitionCallback.fire( );
                                                                                          } catch ( Throwable ex ) {
-                                                                                           ServiceState.LOG.error( "Transition failed on "
+                                                                                           LOG.error( "Transition failed on "
                                                                                                                    + parent.lookupComponent( ).getName( )
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ),
                                                                                                                    ex );
-                                                                                           if ( State.ENABLED.equals( parent.lookupComponent( ).getState( ) ) ) {
+                                                                                           if ( State.ENABLED.equals( parent.lookupService( ).getState( ) ) ) {
                                                                                              try {
                                                                                                parent.lookupComponent( ).getBootstrapper( ).disable( );
                                                                                                if ( parent.lookupComponent( ).hasLocalService( ) ) {
-                                                                                                 parent.lookupComponent( ).getBuilder( ).fireDisable( parent.lookupComponent( ).getLocalService( ).getServiceConfiguration( ) );
+                                                                                                 parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
                                                                                                }
                                                                                              } catch ( ServiceRegistrationException ex1 ) {
-                                                                                               ServiceState.LOG.error( ex1, ex1 );
+                                                                                               LOG.error( "Transition failed on "
+                                                                                                          + parent.lookupComponent( ).getName( )
+                                                                                                          + " due to "
+                                                                                                          + ex.toString( ),
+                                                                                                          ex );
                                                                                              }
                                                                                            }
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not complete.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -360,7 +415,7 @@ public class ServiceTransitions {
   static final Callback<ServiceConfiguration>                startEndpoint         = new Callback<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void fire( ServiceConfiguration parent ) {
-                                                                                       if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {
+                                                                                       if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {//TODO:GRZE:URGENT fix this brain-damaged corner case
                                                                                          try {
                                                                                            parent.lookupService( ).getEndpoint( ).start( );
                                                                                          } catch ( Exception ex ) {
@@ -386,7 +441,7 @@ public class ServiceTransitions {
   static final Callback<ServiceConfiguration>                restartServiceContext = new Callback<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void fire( ServiceConfiguration parent ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          ServiceContextManager.restartSync( );
                                                                                        }
                                                                                      }
@@ -395,7 +450,7 @@ public class ServiceTransitions {
   static final Callback<ServiceConfiguration>                addPipelines          = new Callback<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void fire( ServiceConfiguration parent ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          PipelineRegistry.getInstance( ).enable( parent.getComponentId( ) );
                                                                                        }
                                                                                      }
@@ -404,7 +459,7 @@ public class ServiceTransitions {
   static final Callback<ServiceConfiguration>                removePipelines       = new Callback<ServiceConfiguration>( ) {
                                                                                      @Override
                                                                                      public void fire( ServiceConfiguration parent ) {
-                                                                                       if ( parent.isLocal( ) ) {
+                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
                                                                                          PipelineRegistry.getInstance( ).disable( parent.getComponentId( ) );
                                                                                        }
                                                                                      }

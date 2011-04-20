@@ -109,7 +109,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     super( userFullName, displayName );
     this.size = size;
     this.scName = scName;
-    this.partition = partition;
+    this.partition = partitionName;
     this.parentSnapshot = parentSnapshot;
     super.setState( State.NIHIL );
     super.setCreationTime( new Date( ) );
