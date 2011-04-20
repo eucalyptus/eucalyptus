@@ -206,9 +206,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
         
         //on input INIT_CERTS when in state AUTHENTICATING transition to STARTING on success or DOWN on failure with the transition listeners specified
         on( Transition.INIT_CERTS )//
-        .from( State.AUTHENTICATING ).to( State.CHECKING_SERVICE ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
+        .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
-        on( Transition.INIT_SERVICES ).from( State.CHECKING_SERVICE ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
+//        on( Transition.INIT_SERVICES ).from( State.CHECKING_SERVICE ).to( State.STARTING ).error( State.STARTING ).run( newRefresh( ServiceStateCallback.class ) );
         on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
