@@ -27,7 +27,7 @@ all: euca_admin
 build: euca_admin
 
 euca_admin:
-	python setup.py build 
+	python2.5 setup.py build 
 
 install: euca_admin
 	python2.5 setup.py install

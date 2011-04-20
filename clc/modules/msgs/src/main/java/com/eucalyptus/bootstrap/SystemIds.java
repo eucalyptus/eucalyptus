@@ -80,13 +80,11 @@ public class SystemIds {
   }
   
   public static String createCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Crypto.getDigestBase64( "membership", Digest.SHA1, false ) );
+    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
   public static String cloudName( ) {
     return createCloudUniqueName( "cloud" );
-//    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), "cloud",
-//                                  Crypto.getDigestBase64( Hmacs.generateSystemToken( Eucalyptus.class.getSimpleName( ).getBytes( ) ), Digest.SHA1, false ) );
   }
   
   public static String membershipGroupName( ) {
