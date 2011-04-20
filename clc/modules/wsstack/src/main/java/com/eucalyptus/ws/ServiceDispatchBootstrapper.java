@@ -152,6 +152,12 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             } catch ( Throwable ex ) {
               Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
             }
+          } else if ( Bootstrap.isCloudController( ) && comp.lookupServiceConfigurations( ).size( ) == 1 ) {
+            try {
+              comp.enableTransition( s ).get( );
+            } catch ( Throwable ex ) {
+              Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+            }
           }
         }
       }

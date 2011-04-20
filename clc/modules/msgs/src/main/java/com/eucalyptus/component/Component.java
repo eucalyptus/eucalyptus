@@ -530,18 +530,30 @@ public class Component implements HasName<Component> {
         service.transition( State.INITIALIZED );
       } catch ( IllegalStateException ex ) {
         LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
       } catch ( ExistingTransitionException ex ) {
         LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Loading service " + config + " failed because of: " + ex.getMessage( ), ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
       }
     } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
     } else {
       service = this.serviceRegistry.register( config );
+      try {
+        service.transition( State.INITIALIZED );
+      } catch ( IllegalStateException ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
+      }
     }
     return service;
   }
