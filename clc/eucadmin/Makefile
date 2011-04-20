@@ -27,10 +27,10 @@ all: euca_admin
 build: euca_admin
 
 euca_admin:
-	python2.5 setup.py build 
+	$(PYTHON_BIN) setup.py build 
 
 install: euca_admin
-	python2.5 setup.py install
+	$(PYTHON_BIN) setup.py install
 
 clean:
 	@$(RM) -fr ./dist

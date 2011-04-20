@@ -101,6 +101,13 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
+if test -z "$PYTHON_BIN"; then
+   for i in python2.5 python2.6 python2.7 python2.8 python2.9
+   do
+     AC_PATH_PROG(PYTHON_BIN, $i)
+   done 
+fi
+
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
@@ -281,6 +288,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
+AC_SUBST(PYTHON_BIN)
 
 
 
