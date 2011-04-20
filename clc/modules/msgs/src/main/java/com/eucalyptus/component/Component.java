@@ -524,7 +524,7 @@ public class Component implements HasName<Component> {
   
   Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
     Service service = null;
-    if ( config.isLocal( ) && !this.serviceRegistry.hasLocalService( ) ) {
+    if ( ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
       try {
         service.transition( State.INITIALIZED );
