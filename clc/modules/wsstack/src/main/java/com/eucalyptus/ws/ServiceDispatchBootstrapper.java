@@ -146,15 +146,12 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         LOG.info( "start(): " + comp );
         EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
         for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-          if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
+          if( !comp.getComponentId( ).hasDispatcher( ) ) {
+            continue;
+          } else if ( Bootstrap.isCloudController( ) ) {
             try {
               comp.enableTransition( s ).get( );
-            } catch ( Throwable ex ) {
-              Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
-            }
-          } else if ( Bootstrap.isCloudController( ) && comp.lookupServiceConfigurations( ).size( ) == 1 ) {
-            try {
-              comp.enableTransition( s ).get( );
+              break;
             } catch ( Throwable ex ) {
               Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
             }
