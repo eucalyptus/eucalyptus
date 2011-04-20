@@ -145,10 +145,12 @@ public class ClusterEndpoint implements Startable {
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
     DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     List<String> args = request.getAvailabilityZoneSet( );
+    
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       for ( String keyword : describeKeywords.keySet( ) ) {
         if ( args.remove( keyword ) ) {
           reply.getAvailabilityZoneInfo( ).addAll( describeKeywords.get( keyword ).get( ) );
+          return reply;
         }
       }
     } else {
@@ -156,9 +158,7 @@ public class ClusterEndpoint implements Startable {
         args.remove( keyword );
       }
     }
-    for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-      reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-    }
+    
     if ( args.isEmpty( ) ) {
       for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
         reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
@@ -173,7 +173,13 @@ public class ClusterEndpoint implements Startable {
             }
           } );
           reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-        } catch ( NoSuchElementException e ) {}
+        } catch ( NoSuchElementException e ) {
+          try {
+            Cluster c = Clusters.getInstance( ).lookup( partitionName );
+            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args );
+          } catch ( NoSuchElementException ex ) {
+          }
+        }
       }
     }
     return reply;
