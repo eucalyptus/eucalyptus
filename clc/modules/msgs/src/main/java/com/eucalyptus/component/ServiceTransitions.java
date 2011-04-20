@@ -146,7 +146,7 @@ public class ServiceTransitions {
       LOG.error( ex, ex );
       transitionResult = Futures.predestinedFailedFuture( ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex.getCause( ) , ex.getCause( ) );
+      LOG.error( ex.getCause( ), ex.getCause( ) );
       transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
     }
     return transitionResult;
@@ -199,7 +199,7 @@ public class ServiceTransitions {
                                                                                      
                                                                                      @Override
                                                                                      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-                                                                                       if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+                                                                                       if ( parent.isLocal( ) ) {
                                                                                          try {
                                                                                            parent.lookupComponent( ).getBootstrapper( ).load( );
                                                                                            transitionCallback.fire( );
@@ -213,6 +213,7 @@ public class ServiceTransitions {
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
                                                                                        } else {
+                                                                                         transitionCallback.fire( );
                                                                                        }
                                                                                      }
                                                                                    };
@@ -234,6 +235,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -261,6 +264,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -280,6 +285,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -301,6 +308,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -319,6 +328,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
@@ -353,6 +364,8 @@ public class ServiceTransitions {
                                                                                            transitionCallback.fireException( ex );
                                                                                            parent.lookupComponent( ).submitError( ex );
                                                                                          }
+                                                                                       } else {
+                                                                                         transitionCallback.fire( );//TODO:GRZE: this is not right.
                                                                                        }
                                                                                      }
                                                                                    };
