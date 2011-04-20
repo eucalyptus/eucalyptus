@@ -91,10 +91,10 @@
   </servlet>
 
   <servlet>
-    <description>Generates false reporting data; used for testing</description>
-    <display-name>Report False Data Generator</display-name>
-    <servlet-name>ReportsGen</servlet-name>
-    <servlet-class>com.eucalyptus.www.ReportingFakeGenerator</servlet-class>
+    <description>Executes a command within Eucalyptus</description>
+    <display-name>Command Servlet</display-name>
+    <servlet-name>CommandServlet</servlet-name>
+    <servlet-class>com.eucalyptus.www.CommandServlet</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -130,6 +130,10 @@
     <url-pattern>/reports</url-pattern>
   </servlet-mapping>
 
+  <servlet-mapping>
+    <servlet-name>CommandServlet</servlet-name>
+    <url-pattern>/commandservlet</url-pattern>
+  </servlet-mapping>
 
   <servlet-mapping>
     <servlet-name>CloudRegistration</servlet-name>
