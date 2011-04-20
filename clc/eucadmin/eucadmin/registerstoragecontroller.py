@@ -37,7 +37,13 @@ class RegisterStorageController(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Register storage controllers'
-    Params = [Param(name='Host',
+    Params = [Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the storage controller'),
+              Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
@@ -49,13 +55,7 @@ class RegisterStorageController(AWSQueryRequest):
                     ptype='integer',
                     default=8773,
                     optional=True,
-                    doc='Port for the storage controller'),
-              Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=True,
-                    doc='Partition for the storage controller')]
+                    doc='Port for the storage controller')]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',

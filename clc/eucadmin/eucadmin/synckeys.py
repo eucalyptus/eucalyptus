@@ -39,7 +39,7 @@ SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
 class SyncKeys(object):
 
-    def __init__(self, src_dir, dst_dir, remote_host, file_names,
+    def __init__(self, src_dirs, dst_dir, remote_host, file_names,
                  use_rsync=True, use_scp=True, use_smb=False):
         self.src_dirs = mklist(src_dirs)
         self.src_dirs = [os.path.expanduser(sd) for sd in self.src_dirs]
@@ -98,7 +98,7 @@ class SyncKeys(object):
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
         cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
@@ -125,7 +125,7 @@ class SyncKeys(object):
         cmd = 'sudo -u %s scp ' % euca_user
         cmd += ' '.join(self.files)
         cmd += ' %s@%s:%s' % (euca_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True

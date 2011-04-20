@@ -101,6 +101,16 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
+if test -z "$PYTHON_BIN"; then
+   for i in python2.9 python2.8 python2.7 python2.6 python2.5
+   do
+     AC_PATH_PROG(PYTHON_BIN, $i)
+   done 
+fi
+if test -z "$PYTHON_BIN" ; then
+        AC_MSG_ERROR([cannot find python binary])
+fi
+
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
@@ -256,7 +266,8 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
-                 tools/euca_conf:tools/euca_conf.in
+		 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
+		 clc/eucadmin/setup.cfg:clc/eucadmin/setup.cfg.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in])
 
@@ -280,6 +291,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
+AC_SUBST(PYTHON_BIN)
 
 
 
