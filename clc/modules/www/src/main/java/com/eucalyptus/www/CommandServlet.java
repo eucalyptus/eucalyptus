@@ -1,6 +1,7 @@
 package com.eucalyptus.www;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
@@ -15,7 +16,7 @@ import org.apache.log4j.Logger;
  * arguments to be passed to the invoked method.
  * 
  * <p>Every method invoked from this servlet must be static, must take only
- * String paramaters, and must have the BLANK annotation.
+ * String paramaters, and must have the <code>ExposedCommand</code> annotation.
  * 
  * <p>CommandServlet has two purposes: 1) to allow testing of internal
  * Eucalyptus functionality; 2) to allow infrequently-used administration
@@ -72,13 +73,24 @@ public class CommandServlet
 			params[j] = String.class;
 		}
 
+		Method method = null;
 		try {
-			Class.forName(className)
-					.getDeclaredMethod(methodName, params)
-					.invoke(null, (Object[]) methodArgsArray);
+			method = Class.forName(className)
+					.getDeclaredMethod(methodName, params);
 		} catch (Exception ex) {
 			throw new ServletException(ex);
 		}
+
+		if (method.getAnnotation(ExposedCommand.class)==null) {
+			throw new ServletException("Method lacks ExposedCommand annotation");
+		}
+
+		try {
+			method.invoke(null, (Object[]) methodArgsArray);
+		} catch (Exception ex) {
+			throw new ServletException(ex);
+		}
+
 		res.setStatus(HttpServletResponse.SC_OK);
 	}
 }
