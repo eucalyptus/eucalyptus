@@ -140,21 +140,17 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
-      if ( !comp.hasLocalService( ) ) {
-        continue;
-      } else {
-        LOG.info( "start(): " + comp );
-        EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
-        for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-          if( !comp.getComponentId( ).hasDispatcher( ) ) {
-            continue;
-          } else if ( Bootstrap.isCloudController( ) ) {
-            try {
-              comp.enableTransition( s ).get( );
-              break;
-            } catch ( Throwable ex ) {
-              Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
-            }
+      LOG.info( "start(): " + comp );
+      EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
+      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+        if( !comp.getComponentId( ).hasDispatcher( ) ) {
+          continue;
+        } else if ( Bootstrap.isCloudController( ) ) {
+          try {
+            comp.enableTransition( s ).get( );
+            break;
+          } catch ( Throwable ex ) {
+            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
           }
         }
       }
