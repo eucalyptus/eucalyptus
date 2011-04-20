@@ -113,7 +113,12 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
     for ( final Component comp : Components.list( ) ) {
       LOG.info( "load(): " + comp );
-      if( comp.hasLocalService( ) ) {
+      if ( Bootstrap.isCloudController( ) && !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
+        for ( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
+          LOG.info( "loadService(): " + config );
+          comp.loadService( config );
+        }
+      } else if ( comp.hasLocalService( ) ) {
         LOG.info( "load(): " + comp );
         for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
           if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
@@ -126,11 +131,6 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
             }
           }
         }
-      } else if( Bootstrap.isCloudController( ) && !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
-        for( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
-          LOG.info( "loadService(): " + config );
-          comp.loadService( config );
-        }
       }
     }
     return true;
@@ -140,7 +140,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
-      if( !comp.hasLocalService( ) ) {
+      if ( !comp.hasLocalService( ) ) {
         continue;
       } else {
         LOG.info( "start(): " + comp );
