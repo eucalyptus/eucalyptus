@@ -37,7 +37,7 @@ class RegisterVMwareBroker(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Register VMware broker'
-    Params = Param(name='Partition',
+    Params = [Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
