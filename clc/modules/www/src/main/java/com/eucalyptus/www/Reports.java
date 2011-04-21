@@ -345,7 +345,7 @@ public class Reports extends HttpServlet {
       session = EucalyptusWebBackendImpl.verifySession( sessionId );
       User user = null;
       try {
-        user = Accounts.lookupUserById( session.getUserId( ) );
+        user = Accounts.lookupUserByName( session.getUserId( ) );
       } catch ( Exception e ) {
         throw new RuntimeException( "User does not exist" );
       }
