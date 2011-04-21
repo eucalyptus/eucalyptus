@@ -1,7 +1,6 @@
 package com.eucalyptus.www;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 import javax.servlet.ServletException;
@@ -28,7 +27,7 @@ import com.eucalyptus.util.ExposedCommand;
  * <p>CommandServlet is normally used by the <code>wget</code> shell
  * command with the appropriate URL. For example,
  * <code>wget --no-check-certificate
- * 'https://localhost:8443/command?className=Foo&methodName=Bar&args=one,two,three
+ * 'https://localhost:8443/commandservlet?className=Foo&methodName=Bar&args=one,two,three
  * ' </code>
  * 
  * <p>Any invoked command is presumed to be successful if it returns normally
@@ -91,6 +90,7 @@ public class CommandServlet
 		try {
 			method.invoke(null, (Object[]) methodArgsArray);
 		} catch (Exception ex) {
+			LOG.error("Invocation failed of method" + method, ex);
 			throw new ServletException(ex);
 		}
 
