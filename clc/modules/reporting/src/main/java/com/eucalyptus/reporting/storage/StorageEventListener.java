@@ -153,7 +153,7 @@ public class StorageEventListener
 	 * Used only for testing. Sets the poller into test mode and overrides the
 	 * actual timestamp with a false one.
 	 */
-	public void setCurrentTimeMillis(long testCurrentTimeMillis)
+	protected void setCurrentTimeMillis(long testCurrentTimeMillis)
 	{
 		this.testCurrentTimeMillis = new Long(testCurrentTimeMillis);
 	}
