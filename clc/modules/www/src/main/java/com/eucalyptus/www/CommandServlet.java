@@ -1,12 +1,15 @@
 package com.eucalyptus.www;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
 
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.util.ExposedCommand;
 
 /**
  * <p>CommandServlet invokes a single static method within a running Eucalyptus
@@ -22,7 +25,7 @@ import org.apache.log4j.Logger;
  * Eucalyptus functionality; 2) to allow infrequently-used administration
  * commands.
  * 
- * <p>CommandServlet is normally invoked using the <code>wget</code> shell
+ * <p>CommandServlet is normally used by the <code>wget</code> shell
  * command with the appropriate URL. For example,
  * <code>wget --no-check-certificate
  * 'https://localhost:8443/command?className=Foo&methodName=Bar&args=one,two,three
@@ -81,8 +84,8 @@ public class CommandServlet
 			throw new ServletException(ex);
 		}
 
-		if (method.getAnnotation(ExposedCommand.class)==null) {
-			throw new ServletException("Method lacks ExposedCommand annotation");
+		if (! method.isAnnotationPresent(ExposedCommand.class)) {
+			throw new ServletException("Method lacks ExposedCommand annotation");			
 		}
 
 		try {
