@@ -30,6 +30,7 @@ public class FalseDataGenerator
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
 		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.STORAGE);
+		queueReceiver.removeAllListeners(); //Remove non-test listeners set up by bootstrapper
 		queueReceiver.addEventListener(listener);
 	
 		

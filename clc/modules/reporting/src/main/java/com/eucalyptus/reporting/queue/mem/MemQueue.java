@@ -46,4 +46,10 @@ public class MemQueue
 	{
 		return linkedList.poll();
 	}
+
+	@Override
+	public void removeAllListeners()
+	{
+		listeners.clear();
+	}
 }

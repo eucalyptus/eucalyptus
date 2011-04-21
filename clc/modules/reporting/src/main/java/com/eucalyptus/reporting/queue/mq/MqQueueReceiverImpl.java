@@ -107,4 +107,10 @@ class MqQueueReceiverImpl
 			el.fireEvent(event);
 		}
 	}
+
+	@Override
+	public void removeAllListeners()
+	{
+		listeners.clear();
+	}
 }
