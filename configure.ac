@@ -101,14 +101,12 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
-if test -z "$PYTHON_BIN"; then
-   for i in python2.9 python2.8 python2.7 python2.6 python2.5
-   do
-     AC_PATH_PROG(PYTHON_BIN, $i)
-   done 
-fi
-if test -z "$PYTHON_BIN" ; then
-        AC_MSG_ERROR([cannot find python binary])
+AM_PATH_PYTHON([2.5])
+if ! echo "$PYTHON_VERSION" | grep -q '^2\.'; then
+        # We picked up python 3
+        echo "Found Python version $PYTHON_VERSION; expected version 2.x"
+        echo "Specify a path to Python 2 with the PYTHON environment variable."
+        exit 1
 fi
 
 # Fix the paths for includes and libraries
@@ -291,7 +289,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
-AC_SUBST(PYTHON_BIN)
+AC_SUBST(PYTHON)
 
 
 
