@@ -46,10 +46,12 @@ public class FalseDataGenerator
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
+		QueueSender	queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
+
+		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.INSTANCE);
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
-
-		QueueSender	queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
+		queueReceiver.addEventListener(listener);
 
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
