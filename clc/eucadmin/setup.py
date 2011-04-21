@@ -40,7 +40,7 @@ cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
 prefix = os.path.dirname(cfg.get('install', 'prefix'))
 install_scripts = cfg.get('install', 'install_scripts')
-path_header = 'import sys\nsys.path.append(\"%s/%s\")\n' % (prefix, get_python_lib())
+path_header = 'import sys\nsys.path.append(\"%s/%s\")\n' % (prefix, get_python_lib(prefix=prefix))
 
 binaries = ["bin/euca-add-user", "bin/euca-add-user-group",
         "bin/euca-delete-user", "bin/euca-delete-user-group",
