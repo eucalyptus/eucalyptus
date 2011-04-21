@@ -17,5 +17,15 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
   public void fire( DescribeServicesResponseType msg ) {
     LOG.debug( msg );
   }
+
+  @Override
+  public void initialize( DescribeServicesType request ) throws Exception {
+    LOG.debug( request );
+  }
+
+  @Override
+  public void fireException( Throwable t ) {
+    LOG.error( t, t );
+  }
   
 }
