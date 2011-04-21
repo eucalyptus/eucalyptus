@@ -128,6 +128,7 @@ public class StorageEventListener
 					entityWrapper.add(sus);
 				}
 
+				entityWrapper.commit();
 			} catch (Exception ex) {
 				entityWrapper.rollback();
 				LOG.error(ex);		
