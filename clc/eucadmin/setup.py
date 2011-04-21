@@ -45,7 +45,7 @@ path_header = 'import sys\nsys.path.append(\"%s/%s\")\n' % (prefix, get_python_l
 binaries = ["bin/euca-add-user", "bin/euca-add-user-group",
         "bin/euca-delete-user", "bin/euca-delete-user-group",
         "bin/euca-add-user", "bin/euca-add-user-group",
-        "bin/euca-delete-user",
+        "bin/euca_conf", "bin/euca-delete-user",
         "bin/euca-delete-user-group",
         "bin/euca-deregister-cluster",
         "bin/euca-deregister-storage-controller",
@@ -67,7 +67,6 @@ binaries = ["bin/euca-add-user", "bin/euca-add-user-group",
         "bin/euca-register-storage-controller",
         "bin/euca-register-walrus"]
 mangled = [ "%s/%s" % (install_scripts,os.path.basename(x)) for x in binaries ]
-binaries.append("bin/euca_conf")
 
 setup(name="eucadmin",
       version='0.1',
