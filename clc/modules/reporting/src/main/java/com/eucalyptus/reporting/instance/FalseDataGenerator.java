@@ -6,7 +6,7 @@ import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.www.ExposedCommand;
+import com.eucalyptus.util.ExposedCommand;
 
 /**
  * <p>FalseDataGenerator generates false data about instances. It generates

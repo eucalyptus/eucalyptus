@@ -6,7 +6,7 @@ import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.www.ExposedCommand;
+import com.eucalyptus.util.ExposedCommand;
 
 public class FalseDataGenerator
 {
