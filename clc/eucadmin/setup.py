@@ -38,7 +38,7 @@ import ConfigParser
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
-prefix = os.path.dirname(cfg.get('install', 'prefix'))
+prefix = cfg.get('install', 'prefix')
 install_scripts = cfg.get('install', 'install_scripts')
 path_header = 'import sys\nsys.path.append(\"%s\")\n' % (get_python_lib(prefix=prefix))
 
