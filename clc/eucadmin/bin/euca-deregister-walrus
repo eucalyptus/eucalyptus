@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 import eucadmin.deregisterwalrus
 
 if __name__ == "__main__":

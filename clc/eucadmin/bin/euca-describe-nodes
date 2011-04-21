@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 import eucadmin.describenodes
 
 if __name__ == "__main__":
