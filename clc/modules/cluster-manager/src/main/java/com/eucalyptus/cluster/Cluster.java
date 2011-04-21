@@ -171,6 +171,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     RUNNING_ADDRS,
     RUNNING_VMS,
     RUNNING_NET,
+    RUNNING_SERVICES,
     RUNNING_RSC, /* RUNNING -> RUNNING */
   }
   
@@ -208,7 +209,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.INIT_CERTS )//
         .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
-        on( Transition.INIT_SERVICES ).from( State.CHECKING_SERVICE ).to( State.STARTING ).error( State.STARTING ).run( newRefresh( ServiceStateCallback.class ) );
         on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
@@ -219,7 +219,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.RUNNING_RSC ).from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.RUNNING_NET ).from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.RUNNING_VMS ).from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
-        on( Transition.RUNNING_ADDRS ).from( State.RUNNING_VMS ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.RUNNING_ADDRS ).from( State.RUNNING_VMS ).to( State.CHECKING_SERVICE ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.RUNNING_SERVICES ).from( State.CHECKING_SERVICE ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
         
         on( Transition.ENABLE ).from( State.DISABLED ).to( State.DOWN ).noop( );
         
@@ -595,7 +596,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
           this.stateMachine.startTransition( Transition.INIT_CERTS );
           break;
         case CHECKING_SERVICE:
-          this.stateMachine.startTransition( Transition.INIT_SERVICES );
+          this.stateMachine.startTransition( Transition.RUNNING_SERVICES );
           break;
         case STARTING:
           this.stateMachine.startTransition( Transition.INIT_RESOURCES );
