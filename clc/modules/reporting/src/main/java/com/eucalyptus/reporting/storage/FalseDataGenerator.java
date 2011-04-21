@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
@@ -19,22 +20,23 @@ public class FalseDataGenerator
 	private static final int  TIME_USAGE_APART = 100000; //ms
 	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART) + START_TIME;
 
-	private static ReportingBootstrapper reportingBootstrapper;
-
 	@ExposedCommand
 	public static void generateFalseData()
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
-		StorageEventPoller storagePoller = reportingBootstrapper.getOverriddenStorageEventPoller();
-
 		QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.STORAGE);
-		
+
+		TestEventListener listener = new TestEventListener();
+		listener.setCurrentTimeMillis(START_TIME);
+		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.STORAGE);
+		queueReceiver.addEventListener(listener);
+	
 		
 		for (int i = 0; i < SNAPSHOTS_PER_USER; i++) {
 			
 			long timestampMs = (i * TIME_USAGE_APART) + START_TIME;
-			storagePoller.setTestTimestampMs(timestampMs);
+			listener.setCurrentTimeMillis(timestampMs);
 
 			for (int j = 0; j < NUM_USERS; j++) {
 				String userId = String.format("user-%d", j);
@@ -236,6 +238,27 @@ public class FalseDataGenerator
 			}
 		}
 
+	}
+
+	/**
+	 * TestEventListener provides fake times which you can modify.
+	 * 
+	 * @author twerges
+	 */
+	private static class TestEventListener
+		extends StorageEventListener
+	{
+		private long fakeCurrentTimeMillis = 0l;
+
+		protected void setCurrentTimeMillis(long currentTimeMillis)
+		{
+			this.fakeCurrentTimeMillis = currentTimeMillis;
+		}
+		
+		protected long getCurrentTimeMillis()
+		{
+			return fakeCurrentTimeMillis;
+		}
 	}
 
 }
