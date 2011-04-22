@@ -7385,7 +7385,7 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in clc/eucadmin/setup.cfg:clc/eucadmin/setup.cfg.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in"
+ac_config_files="$ac_config_files Makedefs tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-nc:tools/eucalyptus-nc.in clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in"
 
 
 cat >>confdefs.h <<_ACEOF
@@ -8105,7 +8105,7 @@ do
     "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
     "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;
     "clc/eucadmin/bin/euca_conf") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in" ;;
-    "clc/eucadmin/setup.cfg") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/setup.cfg:clc/eucadmin/setup.cfg.in" ;;
+    "clc/eucadmin/setup.cfg.template") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in" ;;
     "tools/eucalyptus-cloud") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cloud:tools/eucalyptus-cloud.in" ;;
     "clc/modules/bootstrap/src/main/native/arguments.ggo") CONFIG_FILES="$CONFIG_FILES clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in" ;;
 
