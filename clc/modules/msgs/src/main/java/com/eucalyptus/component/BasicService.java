@@ -89,7 +89,7 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.google.common.collect.Lists;
 
-public class BasicService extends AbstractService implements Service, EventListener {
+public class BasicService extends AbstractService implements Service {
   private static Logger              LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration serviceConfiguration;
   private final ServiceState         stateMachine;

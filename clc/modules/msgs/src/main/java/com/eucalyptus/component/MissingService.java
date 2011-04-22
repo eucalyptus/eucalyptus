@@ -245,5 +245,13 @@ public class MissingService extends AbstractService implements Service {
 
   @Override
   public void setGoal( State state ) {}
+
+  /**
+   * TODO: DOCUMENT
+   * @see com.eucalyptus.event.EventListener#fireEvent(com.eucalyptus.event.Event)
+   * @param event
+   */
+  @Override
+  public void fireEvent( Event event ) {}
   
 }
