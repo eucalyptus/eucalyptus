@@ -27,9 +27,11 @@ all: euca_admin
 build: euca_admin
 
 euca_admin:
+	@cat setup.cfg.template | sed "s:DESTDIR:$(DESTDIR):" > setup.cfg
 	$(PYTHON_BIN) setup.py build 
 
 install: euca_admin
+	@cat setup.cfg.template | sed "s:DESTDIR:$(DESTDIR):" > setup.cfg
 	$(PYTHON_BIN) setup.py install
 
 clean:
