@@ -19,23 +19,25 @@
 #  if you need additional information or have any questions.
 #
 ###############################################################################
-#  Author: Chris Grzegorczyk grze@eucalyptus.com
-###############################################################################
 include ../../Makedefs
+
+ifndef DESTDIR
+	DESTDIR := /
+endif
 
 all: euca_admin
 build: euca_admin
 
 euca_admin:
-	@cat setup.cfg.template | sed "s:DESTDIR:$(DESTDIR):" > setup.cfg
+	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
 	$(PYTHON) setup.py build
 
 install: euca_admin
-	@cat setup.cfg.template | sed "s:DESTDIR:$(DESTDIR):" > setup.cfg
-	$(PYTHON) setup.py install
+	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
+	$(PYTHON) setup.py install --root=$(DESTDIR)
 
 clean:
-	@$(RM) -fr ./dist
+	@$(RM) -fr ./dist ./build
 
 distclean: clean
 

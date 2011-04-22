@@ -41,7 +41,7 @@ prefix = cfg.get('install', 'prefix')
 class build_scripts_with_path_headers(build_scripts):
     def run(self):
         build_scripts.run(self)
-        self.path_header = get_python_lib(prefix=prefix)
+        self.path_header = get_python_lib(prefix=prefix).replace('dist-packages', 'site-packages')
         self.outfiles = [os.path.join(self.build_dir, os.path.basename(script))
                          for script in self.distribution.scripts]
         self.add_paths_to_scripts()
