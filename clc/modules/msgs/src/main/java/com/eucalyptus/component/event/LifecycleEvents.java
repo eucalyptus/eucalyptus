@@ -64,6 +64,7 @@
 package com.eucalyptus.component.event;
 
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
 public class LifecycleEvents {
   public static LifecycleEvent disable( ServiceConfiguration config ) {
@@ -80,5 +81,9 @@ public class LifecycleEvents {
   
   public static LifecycleEvent stop( ServiceConfiguration config ) {
     return new StopComponentEvent( config );
+  }
+  
+  public static ServiceStateEvent info( ServiceInfoType serviceInfo ) {
+    return new ServiceStateEvent( serviceInfo );
   }
 }

@@ -84,6 +84,11 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       StateMachineBuilder.this.addTransition( transition );
     }
     
+    public TransitionBuilder on( T transitionName ) {
+      this.name = transitionName;
+      return this;
+    }
+    
     public TransitionBuilder from( S fromState ) {
       this.fromState = fromState;
       return this;
@@ -179,7 +184,15 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
     };
   }
-  
+
+  protected TransitionBuilder from( final S input ) {
+    return new TransitionBuilder( ) {
+      {
+        fromState = input;
+      }
+    };
+  }
+
   protected StateMachineBuilder<P, S, T> addTransition( TransitionImpl<P, S, T> transition ) {
     if ( this.transitions.contains( transition ) ) {
       throw new IllegalArgumentException( "Duplicate transition named: " + transition.getName( ) );

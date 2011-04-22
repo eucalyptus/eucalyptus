@@ -182,8 +182,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    //TODO:GRZE: check pending error queue here
-    super.fireCheck( config );
+    Clusters.lookup( config ).check( );
   }
   
 }

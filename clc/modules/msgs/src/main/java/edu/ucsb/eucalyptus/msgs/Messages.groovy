@@ -266,6 +266,7 @@ public class EucalyptusData implements BaseData {
   public Object clone(){
     return super.clone();
   }
+
 }
 /** *******************************************************************************/
 public class DescribeResourcesType extends EucalyptusMessage {

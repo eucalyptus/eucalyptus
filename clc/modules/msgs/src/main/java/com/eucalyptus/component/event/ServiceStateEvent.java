@@ -53,64 +53,42 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+package com.eucalyptus.component.event;
+
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.event.AbstractNamedRegistry;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Services;
+import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.event.GenericEvent;
 
-public class Clusters extends AbstractNamedRegistry<Cluster> {
-  private static Clusters singleton = getInstance( );
-  private static Logger   LOG       = Logger.getLogger( Clusters.class );
+public class ServiceStateEvent extends GenericEvent<ServiceInfoType> {
+  private static Logger LOG = Logger.getLogger( ServiceStateEvent.class );
+  ServiceStateEvent( ServiceInfoType message ) {
+    super( message );
+  }
   
-  public static Clusters getInstance( ) {
-    synchronized ( Clusters.class ) {
-      if ( singleton == null ) singleton = new Clusters( );
+  public ServiceConfiguration getServiceConfiguration( ) throws NoSuchElementException {
+    try {
+      Component comp = Components.lookup( this.getMessage( ).getType( ) );
+      Service service = comp.lookupService( this.getMessage( ).getName( ) );
+      return service.getServiceConfiguration( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+      throw ex;
     }
-    return singleton;
   }
-    
-  public boolean hasNetworking( ) {
-    return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getState( ).getMode( ) == 1;
-      }
-    } );
-  }
-  
-  public List<RegisterClusterType> getClusters( ) {
-    List<RegisterClusterType> list = new ArrayList<RegisterClusterType>( );
-    for ( Cluster c : this.listValues( ) )
-      list.add( c.getWeb( ) );
-    return list;
-  }
-  
-  public List<String> getClusterAddresses( ) {
-    SortedSet<String> hostOrdered = new TreeSet<String>( );
-    for ( Cluster c : this.listValues( ) )
-      hostOrdered.add( c.getConfiguration( ).getHostName( ) );
-    return Lists.newArrayList( hostOrdered );
-  }
-  
-  public static Cluster lookup( ServiceConfiguration clusterConfig ) {
-    return Clusters.getInstance( ).lookup( clusterConfig.getName( ) );
-  }
-  
-  
+
 }

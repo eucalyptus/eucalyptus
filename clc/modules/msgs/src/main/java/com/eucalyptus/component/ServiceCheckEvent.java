@@ -53,64 +53,80 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.event.AbstractNamedRegistry;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+package com.eucalyptus.component;
 
-public class Clusters extends AbstractNamedRegistry<Cluster> {
-  private static Clusters singleton = getInstance( );
-  private static Logger   LOG       = Logger.getLogger( Clusters.class );
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.Exceptions;
+
+public class ServiceCheckEvent extends AbstractPersistent {
+  private final Severity severity;
+  private final String   message;
+  private final String   correlationId;
+  private final String   servicePartition;
+  private final String   serviceName;
+  private final String   serviceHost;
+  private final String   stackTrace;
   
-  public static Clusters getInstance( ) {
-    synchronized ( Clusters.class ) {
-      if ( singleton == null ) singleton = new Clusters( );
-    }
-    return singleton;
-  }
-    
-  public boolean hasNetworking( ) {
-    return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getState( ).getMode( ) == 1;
+  public ServiceCheckEvent( CheckException ex ) {
+    this( null, ex );
+  }  
+  
+  public ServiceCheckEvent( String correlationId, CheckException ex ) {
+    this.severity = ex.getSeverity( );
+    this.message = ex.getMessage( );
+    String tempCorrelationId = correlationId;
+    if( tempCorrelationId == null ) {
+      try {
+        tempCorrelationId = Contexts.lookup( ).getCorrelationId( );
+      } catch ( IllegalContextAccessException ex1 ) {
+        tempCorrelationId = Exceptions.string( new Exception( "Unknwon correlationId when constructing service check event" ) );
       }
-    } );
+    }
+    this.correlationId = tempCorrelationId;
+    this.stackTrace = Exceptions.string( ex );
+    this.servicePartition = ex.getConfig( ).getPartition( );
+    this.serviceName = ex.getConfig( ).getName( );
+    this.serviceHost = ex.getConfig( ).getHostName( );
   }
   
-  public List<RegisterClusterType> getClusters( ) {
-    List<RegisterClusterType> list = new ArrayList<RegisterClusterType>( );
-    for ( Cluster c : this.listValues( ) )
-      list.add( c.getWeb( ) );
-    return list;
+  public Severity getSeverity( ) {
+    return this.severity;
   }
   
-  public List<String> getClusterAddresses( ) {
-    SortedSet<String> hostOrdered = new TreeSet<String>( );
-    for ( Cluster c : this.listValues( ) )
-      hostOrdered.add( c.getConfiguration( ).getHostName( ) );
-    return Lists.newArrayList( hostOrdered );
+  public String getMessage( ) {
+    return this.message;
   }
   
-  public static Cluster lookup( ServiceConfiguration clusterConfig ) {
-    return Clusters.getInstance( ).lookup( clusterConfig.getName( ) );
+  public String getCorrelationId( ) {
+    return this.correlationId;
   }
   
+  public String getServicePartition( ) {
+    return this.servicePartition;
+  }
+  
+  public String getServiceName( ) {
+    return this.serviceName;
+  }
+  
+  public String getServiceHost( ) {
+    return this.serviceHost;
+  }
+  
+  public String getStackTrace( ) {
+    return this.stackTrace;
+  }
   
 }

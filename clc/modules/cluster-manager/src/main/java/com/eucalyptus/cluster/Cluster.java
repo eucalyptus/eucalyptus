@@ -95,6 +95,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.event.ServiceStateEvent;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -133,23 +134,23 @@ import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasName<Cluster>, EventListener {
-  private static Logger                                       LOG            = Logger.getLogger( Cluster.class );
+  private static Logger                                  LOG            = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
-  private final ClusterConfiguration                          configuration;
-  private final FullName                                      fullName;
-  private final ThreadFactory                                 threadFactory;
-  private final ConcurrentNavigableMap<String, NodeInfo>      nodeMap;
-  private final ClusterState                                  state;
-  private final ClusterNodeState                              nodeState;
-  private NodeLogInfo                                         lastLog        = new NodeLogInfo( );
-  private boolean                                             hasClusterCert = false;
-  private boolean                                             hasNodeCert    = false;
+  private final ClusterConfiguration                     configuration;
+  private final FullName                                 fullName;
+  private final ThreadFactory                            threadFactory;
+  private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
+  private final ClusterState                             state;
+  private final ClusterNodeState                         nodeState;
+  private NodeLogInfo                                    lastLog        = new NodeLogInfo( );
+  private boolean                                        hasClusterCert = false;
+  private boolean                                        hasNodeCert    = false;
   
   public enum State {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
-    AUTHENTICATING, CHECKING_SERVICE, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
-    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, /* available */
+    AUTHENTICATING, CHECK_SERVICE_READY, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
+    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, RUNNING_SERVICE_CHECK, /* available */
   }
   
   public enum Transition {
@@ -160,7 +161,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     //    IO_ERROR, /* any -> DOWN: error communicating with cluster */
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
-    INIT_CERTS, /* AUTHENTICATING -> STARTING */
+    INIT_CERTS, /* AUTHENTICATING -> INIT_SERVICES */
     INIT_SERVICES,
     INIT_RESOURCES,
     INIT_NET,
@@ -189,7 +190,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
         in( State.DOWN ).run( new Callback<Cluster>( ) {
           @Override
           public void fire( Cluster t ) {
-            Cluster.this.transitionIfSafe( Transition.START );
+            try {
+              Cluster.this.stateMachine.startTransitionTo( State.AUTHENTICATING );
+            } catch ( IllegalStateException ex ) {
+              LOG.error( ex , ex );
+            } catch ( ExistingTransitionException ex ) {
+              LOG.debug( ex.getMessage( ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
           }
         } );
         
@@ -197,17 +206,47 @@ public class Cluster implements HasName<Cluster>, EventListener {
         in( State.AUTHENTICATING ).run( new Callback<Cluster>( ) {
           @Override
           public void fire( Cluster t ) {
-            Cluster.this.transitionIfSafe( Transition.INIT_CERTS );
+            try {
+              Cluster.this.stateMachine.startTransitionTo( State.CHECK_SERVICE_READY );
+            } catch ( IllegalStateException ex ) {
+              LOG.error( ex , ex );
+            } catch ( ExistingTransitionException ex ) {
+              LOG.debug( ex.getMessage( ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        } );
+
+        //when entering state CHECK_SERVICE_READY
+        in( State.CHECK_SERVICE_READY ).run( new Callback<Cluster>( ) {
+          @Override
+          public void fire( Cluster t ) {
+            try {
+              Cluster.this.stateMachine.startTransitionTo( State.DISABLED );
+            } catch ( IllegalStateException ex ) {
+              LOG.error( ex , ex );
+            } catch ( ExistingTransitionException ex ) {
+              LOG.debug( ex.getMessage( ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
           }
         } );
         
         //on input START when in state DOWN transition to AUTHENTICATING and do nothing
-        on( Transition.START )//
-        .from( State.DOWN ).to( State.AUTHENTICATING ).noop( );
+        from( State.DOWN ).to( State.AUTHENTICATING ).on( Transition.START ).noop( );
         
         //on input INIT_CERTS when in state AUTHENTICATING transition to STARTING on success or DOWN on failure with the transition listeners specified
-        on( Transition.INIT_CERTS )//
-        .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
+        from( State.AUTHENTICATING ).to( State.CHECK_SERVICE_READY )//
+        .on( Transition.INIT_CERTS )//
+        .error( State.DOWN )//
+        .run( newRefresh( ClusterCertsCallback.class ) );
+        
+        from( State.CHECK_SERVICE_READY ).to( State.DISABLED )//
+        .on( Transition.INIT_SERVICES )//
+        .error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
+
         
         on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
@@ -219,8 +258,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.RUNNING_RSC ).from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.RUNNING_NET ).from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.RUNNING_VMS ).from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
-        on( Transition.RUNNING_ADDRS ).from( State.RUNNING_VMS ).to( State.CHECKING_SERVICE ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
-        on( Transition.RUNNING_SERVICES ).from( State.CHECKING_SERVICE ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
+        on( Transition.RUNNING_ADDRS ).from( State.RUNNING_VMS ).to( State.RUNNING_SERVICE_CHECK ).error( State.DOWN ).run( newRefresh( PublicAddressStateCallback.class ) );
+        on( Transition.RUNNING_SERVICES ).from( State.RUNNING_SERVICE_CHECK ).to( State.RUNNING_ADDRS ).error( State.DOWN ).run( newRefresh( ServiceStateCallback.class ) );
         
         on( Transition.ENABLE ).from( State.DISABLED ).to( State.DOWN ).noop( );
         
@@ -242,6 +281,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     } catch ( IllegalStateException ex ) {
       LOG.error( ex, ex );
     } catch ( ExistingTransitionException ex ) {
+      LOG.debug( ex.getMessage( ) );
     }
   }
   
@@ -249,7 +289,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     try {
       return Partitions.lookup( this.configuration ).getCertificate( );
     } catch ( ServiceRegistrationException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return null;
     }
   }
@@ -258,7 +298,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     try {
       return Partitions.lookup( this.configuration ).getNodeCertificate( );
     } catch ( ServiceRegistrationException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return null;
     }
   }
@@ -343,7 +383,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     int result = 1;
     result = prime * result + ( ( this.configuration == null )
       ? 0
-    : this.configuration.hashCode( ) );
+      : this.configuration.hashCode( ) );
     result = prime * result + ( ( this.state == null )
       ? 0
       : this.state.hashCode( ) );
@@ -488,7 +528,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   }
   
   private boolean checkCerts( X509Certificate realx509, X509Certificate msgx509 ) {
-    if( realx509 != null ) {
+    if ( realx509 != null ) {
       Boolean match = realx509.equals( msgx509 );
       EventRecord.here( Cluster.class, EventType.CLUSTER_CERT, this.getName( ), realx509.getSubjectX500Principal( ).getName( ), match.toString( ) ).info( );
       if ( !match ) {
@@ -539,7 +579,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
             ComponentId glId = ComponentIds.lookup( GatherLogService.class );
             ServiceConfiguration conf = parent.getConfiguration( );
             Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
-                     .sendSync(  ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ), glId.makeRemoteUri( conf.getHostName( ), conf.getPort() ) ) ); 
+                     .sendSync( ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
+                                                                       glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) ) );
           } else {
             Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getConfiguration( ) );
           }
@@ -571,6 +612,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
       } else if ( State.RUNNING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
         this.updateVolatiles( );
       }
+    } else if ( event instanceof ServiceStateEvent ) {
+      LOG.info( LogUtil.dumpObject( event ) );//TODO:GRZE: FINISH UP HERE.
     }
   }
   
@@ -636,6 +679,10 @@ public class Cluster implements HasName<Cluster>, EventListener {
     } catch ( ExistingTransitionException ex ) {
       LOG.debug( ex.getMessage( ) );
     }
+  }
+  
+  public void check( ) {
+
   }
   
 }

@@ -28,6 +28,10 @@ public class Exceptions {
     PrintWriter p = new PrintWriter( os );
     t.printStackTrace( p );
     p.flush( );
+    for( Throwable cause = t.getCause( ); cause != null; cause = cause.getCause( ) ) {
+      p.print( "Caused by: " );
+      cause.printStackTrace( p );
+    }
     p.close( );
     return os.toString( );
   }

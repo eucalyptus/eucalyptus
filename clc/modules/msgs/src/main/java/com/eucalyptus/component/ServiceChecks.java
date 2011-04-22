@@ -1,0 +1,216 @@
+/*******************************************************************************
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+
+package com.eucalyptus.component;
+
+import java.util.Iterator;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrapper;
+
+public class ServiceChecks {
+  
+  /**
+   * The possible actions are:
+   * - store: for later review, e.g., log analyzer
+   * - log: write to log files at the primary CLC
+   * - describe: make available in euca-describe-*
+   * - ui: notification is presented in the ui at next login (note: this is different than filtering
+   * check-exception history)
+   * - notify: basic notifcation is delivered (i.e., email)
+   * - alert: recurrent/urgent notification is delivered until disabled
+   * 
+   * TODO:GRZE: this behaviour should be @Configurable
+   */
+  public enum Actions {
+    STORE, LOG, DESCRIBE, UI, NOTIFY, ALERT
+  }
+  
+  /**
+   * Severity levels which can be used to express the system's reaction to exceptions thrown by
+   * either {@link Bootstrapper#check()} or {@link ServiceBuilder#fireCheck(ServiceConfiguration)}.
+   * The default severity used for unchecked exceptions is {@link Severity#ERROR}. Environmentally
+   * triggered changes to system topology are reported as {@link Severity#URGENT}.
+   * 
+   * Severity of the exception determines:
+   * 1. The way the system responds in terms of changing service state/system topology
+   * 2. The length of time for which the record is stored
+   * 3. The means used to deliver notifications to the admin
+   * 
+   * TODO:GRZE: this behaviour should be @Configurable
+   */
+  public enum Severity {
+    DEBUG, //default: store
+    INFO, //default: store, describe
+    WARNING, //default: store, describe, ui, notification
+    ERROR, //default: store, describe, ui, notification
+    URGENT, //default: store, describe, ui, notification, alert
+    FATAL
+  };
+  
+  public static CheckException fatal( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.FATAL, config, t );
+  }
+  
+  public static CheckException urgent( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.URGENT, config, t );
+  }
+  
+  public static CheckException error( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.ERROR, config, t );
+  }
+  
+  public static CheckException warning( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.WARNING, config, t );
+  }
+  
+  public static CheckException info( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.INFO, config, t );
+  }
+  
+  public static CheckException debug( ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( Severity.DEBUG, config, t );
+  }
+  
+  private static CheckException newServiceCheckException( Severity severity, ServiceConfiguration config, Throwable t ) {
+    if ( t instanceof Error ) {
+      return new CheckException( t, Severity.FATAL, config );
+    } else if ( Severity.WARNING.ordinal( ) > severity.ordinal( ) && t instanceof RuntimeException ) {
+      return new CheckException( t, Severity.WARNING, config );
+    } else if ( t instanceof CheckException ) {
+      return new CheckException( t, severity, config );
+    } else {
+      return new CheckException( t, Severity.DEBUG, config );
+    }
+  }
+  
+  static class CheckException extends Exception implements Iterable<CheckException> {
+    private static Logger              LOG = Logger.getLogger( CheckException.class );
+    private final Severity             severity;
+    private final ServiceConfiguration config;
+    private CheckException      other;
+    
+    CheckException( String message, Throwable cause, Severity severity, ServiceConfiguration config ) {
+      super( cause != null && cause.getMessage() != null ? message : ( ( message == null ? "" : message ) + cause.getMessage( ) ) );
+      if( cause != null && cause instanceof CheckException ) {
+        this.setStackTrace( cause.getStackTrace( ) );
+      } else {
+        this.initCause( cause );
+      }
+      this.severity = severity;
+      this.config = config;
+    }
+    
+    CheckException( String message, Severity severity, ServiceConfiguration config ) {
+      this( message, null, severity, config );
+    }
+    
+    CheckException( Throwable cause, Severity severity, ServiceConfiguration config ) {
+      this( cause.getMessage( ), cause, severity, config );
+    }
+    
+    protected Severity getSeverity( ) {
+      return this.severity;
+    }
+    
+    CheckException addOtherException( CheckException e ) {
+      if ( this.other != null ) {
+        this.other.addOtherException( e );
+        return this;
+      } else {
+        this.other = e;
+        return this;
+      }
+    }
+    
+    @Override
+    public Iterator<CheckException> iterator( ) {
+      return new Iterator<CheckException>( ) {
+        CheckException curr;
+        {
+          this.curr = CheckException.this.other;
+        }
+        
+        @Override
+        public boolean hasNext( ) {
+          return this.curr.other != null;
+        }
+        
+        @Override
+        public CheckException next( ) {
+          return this.curr.other;
+        }
+        
+        @Override
+        public void remove( ) {
+          LOG.error( "ServiceCheckException iterator does not support remove()" );
+        }
+      };
+    }
+
+    protected ServiceConfiguration getConfig( ) {
+      return this.config;
+    }
+    
+  }
+
+}
