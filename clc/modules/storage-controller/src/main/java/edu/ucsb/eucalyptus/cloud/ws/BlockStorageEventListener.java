@@ -65,7 +65,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.component.event.StartComponentEvent;
+import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -81,7 +81,7 @@ public class BlockStorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof StartComponentEvent) {			
+		if(event instanceof LifecycleEvents.Start) {			
 			//TODO: This needs to be moved to a Bootstrapper
 //			if(((StartComponentEvent) event).isLocal())
 //				try {
