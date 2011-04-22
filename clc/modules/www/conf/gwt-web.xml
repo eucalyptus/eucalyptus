@@ -74,6 +74,11 @@
     </user-data-constraint>
   </security-constraint>
 
+  <!-- Default page to serve -->
+  <welcome-file-list>
+    <welcome-file>EucalyptusWebInterface.html</welcome-file>
+  </welcome-file-list>
+
   <servlet>
     <description></description>
     <display-name>EuareService</display-name>
