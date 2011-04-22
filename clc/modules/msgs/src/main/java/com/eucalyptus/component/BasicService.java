@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.ClockTick;
@@ -88,7 +89,7 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.google.common.collect.Lists;
 
-public class BasicService implements Service, EventListener {
+public class BasicService extends AbstractService implements Service, EventListener {
   private static Logger              LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration serviceConfiguration;
   private final ServiceState         stateMachine;
@@ -257,8 +258,10 @@ public class BasicService implements Service, EventListener {
   }
   
   @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz ) {
+  public final void fireEvent( Event event ) {
+    if ( event instanceof LifecycleEvent ) {
+      super.fireLifecycleEvent( event );
+    } else if ( event instanceof Hertz ) {
       Component c = this.getComponent( );
       if ( c.hasLocalService( ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
         if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {

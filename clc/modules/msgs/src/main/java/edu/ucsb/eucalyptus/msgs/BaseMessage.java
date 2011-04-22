@@ -21,6 +21,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -40,9 +41,8 @@ public class BaseMessage {
   private String                     effectiveUserId;
   private Boolean                    _return      = true;
   private String                     statusMessage;
-  private Integer                    epoch        = currentEpoch++;
+  private Integer                    epoch        = Topology.epoch( );
   private ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
-  private static Integer             currentEpoch = 0;
   
   public BaseMessage( ) {
     super( );

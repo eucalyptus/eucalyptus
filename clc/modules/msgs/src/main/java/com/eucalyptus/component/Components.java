@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
@@ -293,6 +294,23 @@ public class Components {
         @Override
         public ServiceConfiguration apply( Service input ) {
           return input.getServiceConfiguration( );
+        }
+      };
+    }
+
+    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
+      return new Function<ServiceId, ServiceConfiguration>( ) {
+        
+        @Override
+        public ServiceConfiguration apply( ServiceId serviceId ) {
+          try {
+            Component comp = Components.lookup( serviceId.getType( ) );
+            Service service = comp.lookupService( serviceId.getType( ) );
+            return service.getServiceConfiguration( );
+          } catch ( NoSuchElementException ex ) {
+            LOG.error( ex , ex );
+            throw ex;
+          }
         }
       };
     }

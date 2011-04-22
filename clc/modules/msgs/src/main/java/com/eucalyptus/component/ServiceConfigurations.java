@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -17,7 +18,6 @@ public class ServiceConfigurations {
   public static ServiceConfigurationProvider getInstance( ) {
     return singleton;
   }
-
 
   public static ServiceConfiguration createEphemeral( ComponentId compId, String partition, String name, URI remoteUri ) {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );

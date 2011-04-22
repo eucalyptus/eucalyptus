@@ -63,63 +63,75 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetSocketAddress;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
+import java.util.Date;
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.Exceptions;
 
-public interface Service extends HasParent<Component>, HasFullName<Service>, EventListener<Event> {
+public class ServiceCheckRecord extends AbstractPersistent {
+  private final Severity severity;
+  private final String   uuid;
+  private final String   message;
+  private final String   correlationId;
+  private final String   servicePartition;
+  private final String   serviceName;
+  private final String   serviceHost;
+  private final String   stackTrace;
+  private final Date     timestamp;
   
-  public abstract Dispatcher getDispatcher( );
+  ServiceCheckRecord( CheckException ex ) {
+    this( ex.getCorrelationId( ), ex );
+  }
   
-  public abstract String toString( );
+  ServiceCheckRecord( String correlationId, CheckException ex ) {
+    this.uuid = ex.getUuid( );
+    this.timestamp = ex.getTimestamp( );
+    this.severity = ex.getSeverity( );
+    this.message = ex.getMessage( );
+    this.servicePartition = ex.getConfig( ).getPartition( );
+    this.serviceName = ex.getConfig( ).getName( );
+    this.serviceHost = ex.getConfig( ).getHostName( );
+    String tempCorrelationId = correlationId;
+    if ( tempCorrelationId == null ) {
+      try {
+        tempCorrelationId = Contexts.lookup( ).getCorrelationId( );
+      } catch ( IllegalContextAccessException ex1 ) {
+        tempCorrelationId = this.uuid;
+      }
+    }
+    this.correlationId = tempCorrelationId;
+    this.stackTrace = Exceptions.string( ex );
+  }
   
-  /** ASAP:FIXME:GRZE **/
-  public abstract List<String> getDetails( );
+  public Severity getSeverity( ) {
+    return this.severity;
+  }
   
-  public abstract void enqueue( Request request );
+  public String getMessage( ) {
+    return this.message;
+  }
   
-  public abstract State getState( );
+  public String getCorrelationId( ) {
+    return this.correlationId;
+  }
   
-  public abstract ServiceId getServiceId( );
+  public String getServicePartition( ) {
+    return this.servicePartition;
+  }
   
-  public abstract Boolean isLocal( );
+  public String getServiceName( ) {
+    return this.serviceName;
+  }
   
-  public abstract KeyPair getKeys( );
+  public String getServiceHost( ) {
+    return this.serviceHost;
+  }
   
-  public abstract X509Certificate getCertificate( );
+  public String getStackTrace( ) {
+    return this.stackTrace;
+  }
   
-  public abstract ServiceConfiguration getServiceConfiguration( );
-  
-  public abstract Component getComponent( );
-  
-  public abstract ComponentId getComponentId( );
-  
-  public abstract boolean checkTransition( Transition transition );
-  
-  public abstract State getGoal( );
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transitionSelf( );
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
-  InetSocketAddress getSocketAddress( );
-  
-  public abstract void setGoal( State state );
-
-  ServiceEndpoint getEndpoint( );
-
 }

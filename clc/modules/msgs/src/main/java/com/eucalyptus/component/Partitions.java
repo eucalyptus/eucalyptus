@@ -89,18 +89,22 @@ public class Partitions {
   }
 
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    final String partitionName = config.getPartition( );
-    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
-    Partition p = null;
-    try {
-      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
-      db.commit( );
-    } catch ( EucalyptusCloudException ex1 ) {
-      db.rollback( );
-      LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
-      p = Partitions.generatePartition( config );
+    if ( config.getComponentId( ).isPartitioned( ) ) {
+      final String partitionName = config.getPartition( );
+      EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+      Partition p = null;
+      try {
+        p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+        db.commit( );
+      } catch ( EucalyptusCloudException ex1 ) {
+        db.rollback( );
+        LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
+        p = Partitions.generatePartition( config );
+      }
+      return p;
+    } else {
+      return Partition.fakePartition( config.getComponentId( ) );
     }
-    return p;
   }
   
   private static Partition generatePartition( ServiceConfiguration config ) throws ServiceRegistrationException {

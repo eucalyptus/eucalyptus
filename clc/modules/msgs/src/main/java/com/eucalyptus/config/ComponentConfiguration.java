@@ -73,10 +73,18 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DummyServiceBuilder;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceChecks;
+import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.event.LifecycleEvents;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -84,19 +92,19 @@ import com.eucalyptus.util.Internets;
 
 @MappedSuperclass
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
-  @Column( name = "config_component_partition", nullable=false )
-  private String partition;
-  @Column( name = "config_component_name", unique=true, nullable=false )
-  private String name;
-  @Column( name = "config_component_hostname", nullable=false )
-  private String hostName;
+  @Column( name = "config_component_partition", nullable = false )
+  private String  partition;
+  @Column( name = "config_component_name", unique = true, nullable = false )
+  private String  name;
+  @Column( name = "config_component_hostname", nullable = false )
+  private String  hostName;
   @Column( name = "config_component_port" )
   private Integer port;
   @Column( name = "config_component_service_path" )
-  private String servicePath;
+  private String  servicePath;
   
   public ComponentConfiguration( ) {
-    
+
   }
   
   public ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
@@ -106,6 +114,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.hostName = hostName;
     this.servicePath = servicePath;
   }
+  
   public ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
     this.partition = partition;
     this.name = name;
@@ -118,62 +127,62 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
   }
   
-  public URI getUri() {
+  public URI getUri( ) {
     return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
   
-  public URI getInternalUri() {
+  public URI getInternalUri( ) {
     return this.getComponentId( ).makeRemoteUri( this.getHostName( ), this.getPort( ) );
   }
-
-  public String getName() {
+  
+  public String getName( ) {
     return name;
   }
   
-
   @Deprecated
-  public final ComponentId getComponentId() {
-    return lookupComponentId();
+  public final ComponentId getComponentId( ) {
+    return lookupComponentId( );
   }
   
-  public ComponentId lookupComponentId() {
-    if( !Ats.from( this ).has( ComponentPart.class ) ) {
+  public ComponentId lookupComponentId( ) {
+    if ( !Ats.from( this ).has( ComponentPart.class ) ) {
       throw new RuntimeException( "BUG: A component configuration must have the @ComponentPart(ComponentId.class) annotation" );
     } else {
       return ComponentIds.lookup( Ats.from( this ).get( ComponentPart.class ).value( ) );
     }
   }
   
-  public final Component lookupComponent() {
-    return Components.lookup( this.lookupComponentId() );
+  public final Component lookupComponent( ) {
+    return Components.lookup( this.lookupComponentId( ) );
   }
   
-  public final Service lookupService() {
-    return Components.lookup( this.getComponentId() ).lookupService( this );
+  public final Service lookupService( ) {
+    return Components.lookup( this.getComponentId( ) ).lookupService( this );
   }
   
-  public Boolean isLocal() {
+  public Boolean isLocal( ) {
     try {
-      return this.port == -1 ? true : Internets.testLocal( this.getHostName( ) );
+      return this.port == -1
+        ? true
+        : Internets.testLocal( this.getHostName( ) );
     } catch ( Exception e ) {
       return false;
     }
   }
   
   public final FullName getFullName( ) {
-    return this.getComponentId().makeFullName( this );
+    return this.getComponentId( ).makeFullName( this );
   }
   
-  
-  public int compareTo(ServiceConfiguration that) {
+  public int compareTo( ServiceConfiguration that ) {
     //ASAP: FIXME: GRZE useful ordering here plox.
-    return (partition + name).compareTo( that.getPartition( ) + that.getName( ) );
+    return ( partition + name ).compareTo( that.getPartition( ) + that.getName( ) );
   }
   
   @Override
   public String toString( ) {
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s hostName=%s port=%s servicePath=%s",
-    this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
+                          this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
   }
   
   @Override
@@ -197,46 +206,90 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     } else if ( !name.equals( other.name ) ) return false;
     return true;
   }
-
+  
   public String getPartition( ) {
     return this.partition;
   }
-
+  
   public void setPartition( String partition ) {
     this.partition = partition;
   }
-
+  
   public String getHostName( ) {
     return this.hostName;
   }
-
+  
   public void setHostName( String hostName ) {
     this.hostName = hostName;
   }
-
+  
   public Integer getPort( ) {
     return this.port;
   }
-
+  
   public void setPort( Integer port ) {
     this.port = port;
   }
-
+  
   public String getServicePath( ) {
     return this.servicePath;
   }
-
+  
   public void setServicePath( String servicePath ) {
     this.servicePath = servicePath;
   }
-
+  
   public void setName( String name ) {
     this.name = name;
   }
-
+  
   @Override
   public ServiceBuilder lookupBuilder( ) {
     return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
   }
-}
   
+  @Override
+  public Partition lookupPartition( ) {
+    try {
+      return Partitions.lookup( this );
+    } catch ( ServiceRegistrationException ex ) {
+      return Partition.fakePartition( this.getComponentId( ) );
+    }
+  }
+  
+  @Override
+  public void error( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.error( this, t ) );
+  }
+  
+  @Override
+  public void error( String correlationId, Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.error( correlationId, this, t ) );
+  }
+  
+  @Override
+  public void info( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.info( this, t ) ) );
+  }
+  
+  @Override
+  public void fatal( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.fatal( this, t ) ) );
+  }
+  
+  @Override
+  public void urgent( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.urgent( this, t ) ) );
+  }
+  
+  @Override
+  public void warning( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.warning( this, t ) ) );
+  }
+  
+  @Override
+  public void debug( Throwable t ) {
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.debug( this, t ) ) );
+  }
+  
+}

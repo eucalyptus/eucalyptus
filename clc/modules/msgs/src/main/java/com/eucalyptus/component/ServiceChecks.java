@@ -63,9 +63,16 @@
 
 package com.eucalyptus.component;
 
+import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.empyrean.ServiceStatusType;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 public class ServiceChecks {
   
@@ -131,41 +138,113 @@ public class ServiceChecks {
     return newServiceCheckException( Severity.DEBUG, config, t );
   }
   
+  public static class Functions {
+    private static final Function<CheckException, ServiceCheckRecord> CHECK_EX_TO_RECORD = new Function<CheckException, ServiceCheckRecord>( ) {
+                                                                                           
+                                                                                           @Override
+                                                                                           public ServiceCheckRecord apply( CheckException input ) {
+                                                                                             return new ServiceCheckRecord( input );
+                                                                                           }
+                                                                                           
+                                                                                         };
+    
+    public static Function<ServiceStatusType, List<CheckException>> statusToCheckExceptions( final String correlationId ) {
+      return new Function<ServiceStatusType, List<CheckException>>( ) {
+        @Override
+        public List<CheckException> apply( ServiceStatusType input ) {
+          List<CheckException> exs = Lists.newArrayList( );
+          for ( String detail : input.getDetails( ) ) {
+            ServiceConfiguration config = Components.Functions.serviceIdToServiceConfiguration( ).apply( input.getServiceId( ) );
+            CheckException ex = newServiceCheckException( correlationId, Severity.ERROR, config, new ServiceStateException( detail ) );
+            exs.add( ex );
+          }
+          return exs;
+        }
+      };
+    }
+    
+    public static Function<CheckException, ServiceCheckRecord> checkExToRecord( ) {
+      return CHECK_EX_TO_RECORD;
+    }
+    
+    public static Function<ServiceStatusType, List<ServiceCheckRecord>> statusToEvents( final String correlationId ) {
+      return new Function<ServiceStatusType, List<ServiceCheckRecord>>( ) {
+        
+        @Override
+        public List<ServiceCheckRecord> apply( ServiceStatusType input ) {
+          List<ServiceCheckRecord> events = Lists.newArrayList( );
+          for ( CheckException ex : statusToCheckExceptions( correlationId ).apply( input ) ) {
+            events.add( new ServiceCheckRecord( ex ) );
+          }
+          return events;
+        }
+      };
+    }
+    
+  }
+  
+  public static ServiceCheckRecord newEventRecord( ServiceConfiguration config, Throwable t ) {
+    return newEventRecord( config, t );
+  }
+  
+  public static ServiceCheckRecord newEventRecord( String correlationId, ServiceConfiguration config, Throwable t ) {
+    //TODO:GRZE: exception filtering here
+    return new ServiceCheckRecord( correlationId, error( config, t ) );
+  }
+  
   private static CheckException newServiceCheckException( Severity severity, ServiceConfiguration config, Throwable t ) {
+    return newServiceCheckException( null, severity, config, t );
+  }
+  
+  private static CheckException newServiceCheckException( String correlationId, Severity severity, ServiceConfiguration config, Throwable t ) {
     if ( t instanceof Error ) {
-      return new CheckException( t, Severity.FATAL, config );
+      return new CheckException( correlationId, t.getMessage( ), t, Severity.FATAL, config );
     } else if ( Severity.WARNING.ordinal( ) > severity.ordinal( ) && t instanceof RuntimeException ) {
-      return new CheckException( t, Severity.WARNING, config );
+      return new CheckException( correlationId, t.getMessage( ), t, Severity.WARNING, config );
     } else if ( t instanceof CheckException ) {
-      return new CheckException( t, severity, config );
+      return new CheckException( correlationId, t.getMessage( ), t, severity, config );
     } else {
-      return new CheckException( t, Severity.DEBUG, config );
+      return new CheckException( correlationId, t.getMessage( ), t, Severity.DEBUG, config );
     }
   }
   
-  static class CheckException extends Exception implements Iterable<CheckException> {
+  public static class CheckException extends Exception implements Iterable<CheckException> {
     private static Logger              LOG = Logger.getLogger( CheckException.class );
     private final Severity             severity;
     private final ServiceConfiguration config;
-    private CheckException      other;
+    private final Date                 timestamp;
+    private final String               uuid;
+    private final String               correlationId;
+    private final int                  eventEpoch;
+    private final Component.State      eventState;
+    private CheckException             other;
     
-    CheckException( String message, Throwable cause, Severity severity, ServiceConfiguration config ) {
-      super( cause != null && cause.getMessage() != null ? message : ( ( message == null ? "" : message ) + cause.getMessage( ) ) );
-      if( cause != null && cause instanceof CheckException ) {
+    private CheckException( String correlationId, String message, Throwable cause, Severity severity, ServiceConfiguration config ) {
+      super( uuid( cause ) + " " + message + ( cause != null && cause.getMessage( ) != null
+        ? ": " + cause.getMessage( )
+        : "" ) );
+      if ( cause != null && cause instanceof CheckException ) {
         this.setStackTrace( cause.getStackTrace( ) );
       } else {
         this.initCause( cause );
       }
       this.severity = severity;
       this.config = config;
+      this.uuid = this.getMessage( ).substring( 0, 36 );
+      this.correlationId = ( correlationId == null
+        ? this.uuid
+        : correlationId );
+      this.timestamp = new Date( );
+      this.eventState = config.lookupService( ).getState( );
+      this.eventEpoch = Topology.epoch( );
     }
     
-    CheckException( String message, Severity severity, ServiceConfiguration config ) {
-      this( message, null, severity, config );
-    }
-    
-    CheckException( Throwable cause, Severity severity, ServiceConfiguration config ) {
-      this( cause.getMessage( ), cause, severity, config );
+    private static String uuid( Throwable cause ) {
+      if ( cause != null && cause instanceof CheckException ) {
+        return ( ( CheckException ) cause ).getUuid( );
+      } else {
+        return UUID.randomUUID( ).toString( );
+      }
     }
     
     protected Severity getSeverity( ) {
@@ -206,11 +285,23 @@ public class ServiceChecks {
         }
       };
     }
-
+    
     protected ServiceConfiguration getConfig( ) {
       return this.config;
     }
     
+    public Date getTimestamp( ) {
+      return this.timestamp;
+    }
+    
+    public String getUuid( ) {
+      return this.uuid;
+    }
+    
+    public String getCorrelationId( ) {
+      return this.correlationId;
+    }
+    
   }
-
+  
 }

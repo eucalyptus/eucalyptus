@@ -63,27 +63,157 @@
 
 package com.eucalyptus.component.event;
 
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceCheckRecord;
+import com.eucalyptus.component.ServiceChecks;
+import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.event.GenericEvent;
+import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class LifecycleEvents {
+  private static Logger LOG = Logger.getLogger( LifecycleEvents.class );
+  
+  public static class Enable extends AbstractLifecycleEvent {
+    public Enable( ServiceConfiguration configuration ) {
+      super( configuration );
+    }
+  }
+  
+  public static class Disable extends AbstractLifecycleEvent {
+    public Disable( ServiceConfiguration configuration ) {
+      super( configuration );
+    }
+  }
+  
+  public static class Start extends AbstractLifecycleEvent {
+    public Start( ServiceConfiguration configuration ) {
+      super( configuration );
+    }
+  }
+  
+  public static class Stop extends AbstractLifecycleEvent {
+    public Stop( ServiceConfiguration configuration ) {
+      super( configuration );
+    }
+  }
+  
+  public static class AbstractServiceEvent extends GenericEvent<ServiceStatusType> implements LifecycleEvent {
+    private final ServiceConfiguration     serviceConfiguration;
+    private final List<ServiceCheckRecord> details;
+    private final Date                     timestamp;
+    private final String                   uuid;
+    
+    public AbstractServiceEvent( ServiceConfiguration serviceConfiguration, ServiceCheckRecord... details ) {
+      this( serviceConfiguration, Arrays.asList( details ) );
+    }
+    
+    public AbstractServiceEvent( ServiceConfiguration serviceConfiguration, List<ServiceCheckRecord> details ) {
+      super( );
+      this.uuid = UUID.randomUUID( ).toString( );
+      this.timestamp = new Date( );
+      this.serviceConfiguration = serviceConfiguration;
+      this.details = Lists.newArrayList( details );
+    }
+    
+    public ServiceConfiguration getServiceConfiguration( ) {
+      return this.serviceConfiguration;
+    }
+    
+    public List<ServiceCheckRecord> getDetails( ) {
+      return this.details;
+    }
+    
+    public String getUuid( ) {
+      return this.uuid;
+    }
+    
+    public Date getTimestamp( ) {
+      return this.timestamp;
+    }
+    
+    @Override
+    public ServiceConfiguration getReference( ) {
+      return this.serviceConfiguration;
+    }
+    
+  }
+  
+  public static class ServiceErrorEvent extends AbstractServiceEvent {
+    ServiceErrorEvent( ServiceConfiguration serviceConfiguration, ServiceCheckRecord event ) {
+      super( serviceConfiguration, event );
+    }
+    
+  }
+  
+  public static class ServiceStateEvent extends AbstractServiceEvent implements LifecycleEvent {
+    private final int             serviceEpoch;
+    private final Component.State serviceState;
+    
+    ServiceStateEvent( ServiceConfiguration config, CheckException... exs ) {
+      this( Topology.epoch( ), config.lookupService( ).getState( ).toString( ), config, exs );
+    }
+    
+    ServiceStateEvent( int serviceEpoch, String serviceState, ServiceConfiguration config, CheckException... exs ) {
+      super( config, Lists.transform( Arrays.asList( exs ), ServiceChecks.Functions.checkExToRecord( ) ) );
+      this.serviceEpoch = serviceEpoch;
+      Component.State tempState = Component.State.NOTREADY;
+      try {
+        tempState = Component.State.valueOf( serviceState );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      this.serviceState = tempState;
+    }
+    
+    public int getServiceEpoch( ) {
+      return this.serviceEpoch;
+    }
+    
+    public Component.State getServiceState( ) {
+      return this.serviceState;
+    }
+    
+  }
+  
+  public static LifecycleEvent error( ServiceConfiguration config, Throwable t ) {
+    return error( null, config, t );
+  }
+  
+  public static LifecycleEvent error( String correlationId, ServiceConfiguration config, Throwable t ) {
+    return new ServiceErrorEvent( config, ServiceChecks.newEventRecord( correlationId, config, t ) );
+  }
+  
+  public static ServiceStateEvent info( ServiceConfiguration config, CheckException... exs ) {
+    return new ServiceStateEvent( config, exs );
+  }
+  
+  public static ServiceStateEvent info( String correlationId, int serviceEpoch, String serviceState, ServiceConfiguration config, CheckException... e ) {
+    return new ServiceStateEvent( serviceEpoch, serviceState, config, e );
+  }
+  
   public static LifecycleEvent disable( ServiceConfiguration config ) {
-    return new DisableComponentEvent( config );
+    return new Disable( config );
   }
   
   public static LifecycleEvent enable( ServiceConfiguration config ) {
-    return new EnableComponentEvent( config );
+    return new Enable( config );
   }
   
   public static LifecycleEvent start( ServiceConfiguration config ) {
-    return new StartComponentEvent( config );
+    return new Start( config );
   }
   
   public static LifecycleEvent stop( ServiceConfiguration config ) {
-    return new StopComponentEvent( config );
+    return new Stop( config );
   }
   
-  public static ServiceStateEvent info( ServiceInfoType serviceInfo ) {
-    return new ServiceStateEvent( serviceInfo );
-  }
 }

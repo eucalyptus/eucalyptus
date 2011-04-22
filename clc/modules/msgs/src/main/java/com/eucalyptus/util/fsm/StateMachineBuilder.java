@@ -3,6 +3,7 @@ package com.eucalyptus.util.fsm;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
@@ -133,6 +134,21 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       this.commit( );
     }
     
+    public void run( final Callback<P> callable ) {
+      TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
+        @Override
+        public void leave( P parent, Callback.Completion transitionCallback ) {
+          try {
+            callable.fire( parent );
+            transitionCallback.fire( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex );
+            transitionCallback.fireException( ex );
+          }
+        }
+      };
+    }
+
     public void run( TransitionAction<P> action ) {
       this.init( action );
       this.commit( );

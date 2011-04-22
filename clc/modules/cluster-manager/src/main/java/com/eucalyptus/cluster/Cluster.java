@@ -95,7 +95,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.event.ServiceStateEvent;
+import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -218,6 +218,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
           }
         } );
 
+//        from( State.CHECK_SERVICE_READY ).to( State.DISABLED ).error( State.CHECK_SERVICE_READY ).run( null )
         //when entering state CHECK_SERVICE_READY
         in( State.CHECK_SERVICE_READY ).run( new Callback<Cluster>( ) {
           @Override
@@ -546,6 +547,48 @@ public class Cluster implements HasName<Cluster>, EventListener {
    * @param nextState
    * @return
    */
+  private AbstractTransitionAction<Cluster> newLogRefresh( final Class msgClass ) {
+    return new AbstractTransitionAction<Cluster>( ) {
+      private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
+      
+      @Override
+      public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
+        Callback.Completion cb = new Callback.Completion( ) {
+          
+          @Override
+          public void fire( ) {
+            transitionCallback.fire( );
+          }
+          
+          @Override
+          public void fireException( Throwable t ) {
+            if ( !( t instanceof FailedRequestException ) ) {
+              LOG.trace( t, t );
+            }
+            transitionCallback.fireException( t );
+          }
+        };
+        try {
+          ComponentId glId = ComponentIds.lookup( GatherLogService.class );
+          ServiceConfiguration conf = parent.getConfiguration( );
+          Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
+                   .sendSync( ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
+                                                                     glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) ) );
+        } catch ( ExecutionException e ) {
+          if ( e.getCause( ) instanceof FailedRequestException ) {
+            LOG.error( e.getCause( ).getMessage( ) );
+          } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
+            
+            //REVIEW: this is LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) ); 
+          } else {
+            LOG.error( e, e );
+          }
+        } catch ( InterruptedException e ) {
+          LOG.error( e, e );
+        }
+      }
+    };
+  }
   private AbstractTransitionAction<Cluster> newRefresh( final Class msgClass ) {
     return new AbstractTransitionAction<Cluster>( ) {
       private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
@@ -612,7 +655,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
       } else if ( State.RUNNING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
         this.updateVolatiles( );
       }
-    } else if ( event instanceof ServiceStateEvent ) {
+    } else if ( event instanceof LifecycleEvent ) {
       LOG.info( LogUtil.dumpObject( event ) );//TODO:GRZE: FINISH UP HERE.
     }
   }
@@ -638,7 +681,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         case AUTHENTICATING:
           this.stateMachine.startTransition( Transition.INIT_CERTS );
           break;
-        case CHECKING_SERVICE:
+        case RUNNING_SERVICE_CHECK:
           this.stateMachine.startTransition( Transition.RUNNING_SERVICES );
           break;
         case STARTING:

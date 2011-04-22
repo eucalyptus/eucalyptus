@@ -5,11 +5,10 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 
 public class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
@@ -21,26 +20,22 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
   
   @Override
   public void fire( DescribeServicesResponseType msg ) {
-  }
-
-  @Override
-  public void initialize( DescribeServicesType request ) throws Exception {
-    List<ServiceInfoType> serviceInfos = request.getServices( );
-    if( serviceInfos.isEmpty( ) ) {
+    List<ServiceStatusType> serviceStatuses = msg.getServiceStatuses( );
+    if ( serviceStatuses.isEmpty( ) ) {
       throw new NoSuchElementException( "Failed to find service info for cluster: " + this.getSubject( ).getConfiguration( ) );
     } else {
       ServiceConfiguration config = this.getSubject( ).getConfiguration( );
-      for( ServiceInfoType serviceInfo : serviceInfos ) {
-        if( config.getName( ).equals( serviceInfo.getName( ) ) ) {
-          LOG.debug( "Found service info: " + serviceInfo );
-          this.getSubject( ).fireEvent( LifecycleEvents.info( serviceInfo ) );
+      for ( ServiceStatusType status : serviceStatuses ) {
+        if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+          LOG.debug( "Found service info: " + status );
+          this.getSubject( ).fireEvent( LifecycleEvents.info( this.getRequest( ).getCorrelationId( ), status ) );
         } else {
-          LOG.error( "Found information for unknown service: " + serviceInfo );
+          LOG.error( "Found information for unknown service: " + status );
         }
       }
     }
   }
-
+  
   @Override
   public void fireException( Throwable t ) {
     LOG.error( t, t );

@@ -63,70 +63,39 @@
 
 package com.eucalyptus.component;
 
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.util.Exceptions;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.empyrean.ServiceInfoType;
 
-public class ServiceCheckEvent extends AbstractPersistent {
-  private final Severity severity;
-  private final String   message;
-  private final String   correlationId;
-  private final String   servicePartition;
-  private final String   serviceName;
-  private final String   serviceHost;
-  private final String   stackTrace;
-  
-  public ServiceCheckEvent( CheckException ex ) {
-    this( null, ex );
-  }  
-  
-  public ServiceCheckEvent( String correlationId, CheckException ex ) {
-    this.severity = ex.getSeverity( );
-    this.message = ex.getMessage( );
-    String tempCorrelationId = correlationId;
-    if( tempCorrelationId == null ) {
-      try {
-        tempCorrelationId = Contexts.lookup( ).getCorrelationId( );
-      } catch ( IllegalContextAccessException ex1 ) {
-        tempCorrelationId = Exceptions.string( new Exception( "Unknwon correlationId when constructing service check event" ) );
+public class Topology {
+  private static Integer             currentEpoch = 0;
+  public static int epoch( ) {
+    return currentEpoch;
+  }
+
+  public static List<ServiceInfoType> relativeView( final Partition partition, InetAddress localAddr ) {
+    final String localhostAddr = localAddr.getHostAddress( );
+    List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
+      {
+        addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
+        addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
+        for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
+          if ( partition.getName( ).equals( s.getPartition( ) ) ) {
+            add( s );
+          }
+        }
+        for ( ServiceInfoType s : Components.lookup( ClusterController.class ).getServiceSnapshot( localhostAddr ) ) {
+          if ( partition.getName( ).equals( s.getPartition( ) ) ) {
+            add( s );
+          }
+        }
       }
-    }
-    this.correlationId = tempCorrelationId;
-    this.stackTrace = Exceptions.string( ex );
-    this.servicePartition = ex.getConfig( ).getPartition( );
-    this.serviceName = ex.getConfig( ).getName( );
-    this.serviceHost = ex.getConfig( ).getHostName( );
+    };
+    return serviceInfos;
   }
-  
-  public Severity getSeverity( ) {
-    return this.severity;
-  }
-  
-  public String getMessage( ) {
-    return this.message;
-  }
-  
-  public String getCorrelationId( ) {
-    return this.correlationId;
-  }
-  
-  public String getServicePartition( ) {
-    return this.servicePartition;
-  }
-  
-  public String getServiceName( ) {
-    return this.serviceName;
-  }
-  
-  public String getServiceHost( ) {
-    return this.serviceHost;
-  }
-  
-  public String getStackTrace( ) {
-    return this.stackTrace;
-  }
-  
 }

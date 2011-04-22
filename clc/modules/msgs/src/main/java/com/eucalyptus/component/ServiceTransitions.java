@@ -68,6 +68,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
@@ -210,7 +211,7 @@ public class ServiceTransitions {
                                                                                                                    + ex.toString( ), ex );
 //TODO:GRZE: RESTORE THIS                                                                                            transitionCallback.fireException( ex );
                                                                                            transitionCallback.fire( );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          transitionCallback.fire( );
@@ -233,7 +234,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          try {
@@ -246,7 +247,7 @@ public class ServiceTransitions {
                                                                                                      + ex.toString( ),
                                                                                                      ex );
                                                                                           transitionCallback.fireException( ex );
-                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                          parent.error( ex );
                                                                                         }
                                                                                        }
                                                                                      }
@@ -269,7 +270,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          try {
@@ -282,7 +283,7 @@ public class ServiceTransitions {
                                                                                                      + ex.toString( ),
                                                                                                      ex );
                                                                                           transitionCallback.fireException( ex );
-                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                          parent.error( ex );
                                                                                         }
                                                                                        }
                                                                                      }
@@ -301,7 +302,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          try {
@@ -314,7 +315,7 @@ public class ServiceTransitions {
                                                                                                      + ex.toString( ),
                                                                                                      ex );
                                                                                           transitionCallback.fireException( ex );
-                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                          parent.error( ex );
                                                                                         }
                                                                                        }
                                                                                      }
@@ -333,7 +334,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          try {
@@ -346,7 +347,7 @@ public class ServiceTransitions {
                                                                                                      + ex.toString( ),
                                                                                                      ex );
                                                                                           transitionCallback.fireException( ex );
-                                                                                          parent.lookupComponent( ).submitError( ex );
+                                                                                          parent.error( ex );
                                                                                         }
                                                                                        }
                                                                                      }
@@ -364,7 +365,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ), ex );
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.
@@ -404,7 +405,7 @@ public class ServiceTransitions {
                                                                                              }
                                                                                            }
                                                                                            transitionCallback.fireException( ex );
-                                                                                           parent.lookupComponent( ).submitError( ex );
+                                                                                           parent.error( ex );
                                                                                          }
                                                                                        } else {
                                                                                          transitionCallback.fire( );//TODO:GRZE: this is not complete.

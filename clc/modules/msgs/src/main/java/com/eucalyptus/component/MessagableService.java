@@ -72,6 +72,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
@@ -81,7 +82,7 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class MessagableService implements Service {
+public class MessagableService extends AbstractService implements Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final ServiceEndpoint endpoint;
   private final Dispatcher      localDispatcher;
@@ -244,6 +245,11 @@ public class MessagableService implements Service {
   @Override
   public ServiceEndpoint getEndpoint( ) {
     return this.endpoint;
+  }
+
+  @Override
+  public void fireEvent( Event event ) {
+    this.serviceDelegate.fireEvent( event );
   }
   
 }

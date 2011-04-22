@@ -88,7 +88,7 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public class MissingService implements Service {
+public class MissingService extends AbstractService implements Service {
   private static Logger              LOG  = Logger.getLogger( MissingService.class );
   private final ServiceConfiguration serviceConfiguration;
   

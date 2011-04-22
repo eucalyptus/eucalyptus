@@ -61,34 +61,64 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.event;
+package com.eucalyptus.component;
 
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Services;
-import com.eucalyptus.empyrean.ServiceInfoType;
-import com.eucalyptus.event.GenericEvent;
+import com.eucalyptus.component.event.LifecycleEvent;
+import com.eucalyptus.component.event.LifecycleEvents;
+import com.eucalyptus.component.event.LifecycleEvents.Disable;
+import com.eucalyptus.component.event.LifecycleEvents.Enable;
+import com.eucalyptus.component.event.LifecycleEvents.ServiceErrorEvent;
+import com.eucalyptus.component.event.LifecycleEvents.ServiceStateEvent;
+import com.eucalyptus.component.event.LifecycleEvents.Start;
+import com.eucalyptus.component.event.LifecycleEvents.Stop;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.system.Threads;
 
-public class ServiceStateEvent extends GenericEvent<ServiceInfoType> {
-  private static Logger LOG = Logger.getLogger( ServiceStateEvent.class );
-  ServiceStateEvent( ServiceInfoType message ) {
-    super( message );
-  }
+public class AbstractService {
+  private static Logger LOG = Logger.getLogger( AbstractService.class );
   
-  public ServiceConfiguration getServiceConfiguration( ) throws NoSuchElementException {
-    try {
-      Component comp = Components.lookup( this.getMessage( ).getType( ) );
-      Service service = comp.lookupService( this.getMessage( ).getName( ) );
-      return service.getServiceConfiguration( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-      throw ex;
+  public void fireLifecycleEvent( Event event ) {
+    if ( event instanceof LifecycleEvents.Start ) {
+      this.doStart( ( LifecycleEvents.Start ) event );
+    } else if ( event instanceof LifecycleEvents.Stop ) {
+      this.doStop( ( LifecycleEvents.Stop ) event );
+    } else if ( event instanceof LifecycleEvents.Enable ) {
+      this.doEnable( ( LifecycleEvents.Enable ) event );
+    } else if ( event instanceof LifecycleEvents.Disable ) {
+      this.doDisable( ( LifecycleEvents.Disable ) event );
+    } else if ( event instanceof LifecycleEvents.ServiceErrorEvent ) {
+      this.doState( ( LifecycleEvents.ServiceErrorEvent ) event );
+    } else if ( event instanceof LifecycleEvents.ServiceStateEvent ) {
+      this.doError( ( LifecycleEvents.ServiceStateEvent ) event );
     }
   }
-
+  
+  protected void doStart( Start event ) {
+    LOG.debug( event );
+  }
+  
+  protected void doStop( Stop event ) {
+    LOG.debug( event );
+  }
+  
+  protected void doEnable( Enable event ) {
+    LOG.debug( event );
+  }
+  
+  protected void doDisable( Disable event ) {
+    LOG.debug( event );
+  }
+  
+  protected void doState( ServiceErrorEvent event ) {
+    LOG.debug( event );
+  }
+  
+  protected void doError( ServiceStateEvent event ) {
+    LOG.debug( event );
+  }
+  
 }

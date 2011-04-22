@@ -73,7 +73,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ServiceEvents.ServiceEvent;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -442,19 +441,13 @@ public class Component implements HasName<Component> {
   }
   
   NavigableSet<ServiceConfiguration> enabledPartitionServices( final String partitionName ) {
-    Iterable<Service> services = Iterables.filter( this.serviceRegistry.getServices( ), Predicates.and( Components.Predicates.enabledService( ), Components.Predicates.serviceInPartition( partitionName ) ) );
-    return Sets.newTreeSet( Iterables.transform( services, Components.Functions.serviceToServiceConfiguration() ) );
+    Iterable<Service> services = Iterables.filter( this.serviceRegistry.getServices( ),
+                                                   Predicates.and( Components.Predicates.enabledService( ),
+                                                                   Components.Predicates.serviceInPartition( partitionName ) ) );
+    return Sets.newTreeSet( Iterables.transform( services, Components.Functions.serviceToServiceConfiguration( ) ) );
   }
   
-  private ConcurrentNavigableMap<String, ServiceEvents.ServiceEvent> errors = new ConcurrentSkipListMap<String, ServiceEvents.ServiceEvent>( );
-  
-  public void submitError( Throwable t ) {
-    ServiceConfiguration config = this.hasLocalService( )
-      ? this.getLocalService( ).getServiceConfiguration( )
-      : ServiceConfigurations.createEphemeral( this, Internets.localhostAddress( ) );
-    ServiceEvent e = ServiceEvents.createError( this.getLocalService( ).getServiceConfiguration( ), t );
-    this.errors.put( e.getUuid( ), e );
-  }
+  private ConcurrentNavigableMap<String, ServiceCheckRecord> errors = new ConcurrentSkipListMap<String, ServiceCheckRecord>( );
   
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
