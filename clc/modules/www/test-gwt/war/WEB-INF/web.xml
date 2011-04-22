@@ -7,13 +7,13 @@
   
   <!-- Servlets -->
   <servlet>
-    <servlet-name>EucalyptusWebBackendImpl</servlet-name>
-    <servlet-class>edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl</servlet-class>
+    <servlet-name>EuareServiceImpl</servlet-name>
+    <servlet-class>com.eucalyptus.webui.server.EuareServiceImpl</servlet-class>
   </servlet>
 
   <servlet-mapping>
-	<servlet-name>EucalyptusWebBackendImpl</servlet-name>
-	<url-pattern>/edu.ucsb.eucalyptus.admin.EucalyptusWebInterface/EucalyptusWebBackend</url-pattern>
+	<servlet-name>EuareServiceImpl</servlet-name>
+	<url-pattern>/webui/euare</url-pattern>
   </servlet-mapping>
 
   <!-- Default page to serve -->
