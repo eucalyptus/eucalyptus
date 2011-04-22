@@ -47,7 +47,7 @@ ANT		= @ANT@ -e
 WSDL2C		= @WSDL2C@
 JAVA_HOME       = @JAVA_HOME@
 RM		= @RM@
-PYTHON_BIN	= @PYTHON_BIN@
+PYTHON		= @PYTHON@
 
 # compile time configurations
 euca_theme	= @INTERFACE_THEME@

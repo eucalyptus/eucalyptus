@@ -101,13 +101,13 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
-if test -z "$PYTHON_BIN"; then
+if test -z "$PYTHON"; then
    for i in python2.9 python2.8 python2.7 python2.6 python2.5
    do
-     AC_PATH_PROG(PYTHON_BIN, $i)
+     AC_PATH_PROG(PYTHON, $i)
    done 
 fi
-if test -z "$PYTHON_BIN" ; then
+if test -z "$PYTHON" ; then
         AC_MSG_ERROR([cannot find python binary])
 fi
 
@@ -291,7 +291,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
-AC_SUBST(PYTHON_BIN)
+AC_SUBST(PYTHON)
 
 
 

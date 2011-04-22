@@ -620,7 +620,7 @@ INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
 AWK
-PYTHON_BIN
+PYTHON
 build_os
 build_vendor
 build_cpu
@@ -3657,19 +3657,19 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
-if test -z "$PYTHON_BIN"; then
+if test -z "$PYTHON"; then
    for i in python2.9 python2.8 python2.7 python2.6 python2.5
    do
      # Extract the first word of "$i", so it can be a program name with args.
 set dummy $i; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_PYTHON_BIN+set}" = set; then :
+if test "${ac_cv_path_PYTHON+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  case $PYTHON_BIN in
+  case $PYTHON in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_PYTHON_BIN="$PYTHON_BIN" # Let the user override the test with a path.
+  ac_cv_path_PYTHON="$PYTHON" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -3679,7 +3679,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_PYTHON_BIN="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_PYTHON="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -3690,10 +3690,10 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-PYTHON_BIN=$ac_cv_path_PYTHON_BIN
-if test -n "$PYTHON_BIN"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_BIN" >&5
-$as_echo "$PYTHON_BIN" >&6; }
+PYTHON=$ac_cv_path_PYTHON
+if test -n "$PYTHON"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON" >&5
+$as_echo "$PYTHON" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -3702,7 +3702,7 @@ fi
 
    done
 fi
-if test -z "$PYTHON_BIN" ; then
+if test -z "$PYTHON" ; then
         as_fn_error "cannot find python binary" "$LINENO" 5
 fi
 
