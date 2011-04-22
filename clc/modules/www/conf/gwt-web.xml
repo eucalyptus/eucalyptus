@@ -107,7 +107,7 @@
 
   <servlet-mapping>
     <servlet-name>EuareServiceImpl</servlet-name>
-    <url-pattern>/webui/euare</url-pattern>
+    <url-pattern>/euare</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
