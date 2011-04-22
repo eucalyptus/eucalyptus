@@ -1,3 +1,4 @@
 [install]
-install_scripts=DESTDIR/@prefix@/usr/sbin
-prefix=DESTDIR/@prefix@/usr
+install_scripts=@prefix@/usr/sbin
+prefix=@prefix@/usr
+root=/DESTDIR
