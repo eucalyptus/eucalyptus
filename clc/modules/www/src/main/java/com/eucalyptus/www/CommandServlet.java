@@ -8,7 +8,6 @@ import javax.servlet.http.*;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.ExposedCommand;
 import com.google.gwt.user.client.rpc.SerializableException;
 
@@ -17,10 +16,10 @@ import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
 /**
  * <p>CommandServlet invokes a single static method within a running Eucalyptus
  * system. It accepts the following params: className, methodName, methodArgs,
- * and adminPw. The <code>args</code> param may be omitted, but if it's present,
+ * and sessionId. The <code>args</code> param may be omitted, but if it's present,
  * it must be a comma-delimited list of String arguments to be passed to the
- * invoked method. The <code>adminPw</code> param must contain the password of
- * the user "admin" or this servlet will return an error code.
+ * invoked method. The <code>sessionId</code> param must contain a session id
+ * of the administrator, gathered through the <code>LoginServlet</code>
  * 
  * <p>Every method invoked from this servlet must be static, must take only
  * String paramaters, and must have the <code>ExposedCommand</code> annotation.
@@ -54,7 +53,7 @@ public class CommandServlet
 		final String className  = req.getParameter("className");
 		final String methodName = req.getParameter("methodName");
 		final String methodArgs = req.getParameter("methodArgs");
-		final String adminPw    = req.getParameter("adminPw");
+		final String sessionId    = req.getParameter("sessionId");
 
 		final String[] methodArgsArray;
 		if (methodArgs == null) {
@@ -63,9 +62,9 @@ public class CommandServlet
 			methodArgsArray = methodArgs.split(",");
 		}
 
-		if (className == null || methodName == null || adminPw == null) {
+		if (className == null || methodName == null || sessionId == null) {
 			throw new ServletException(
-					"className, methodName, adminPw params must be present");
+					"className, methodName, sessionId params must be present");
 		}
 
 		LOG.info(String.format(
@@ -73,14 +72,15 @@ public class CommandServlet
 				methodName, methodArgs));
 
 
-		/* Verify admin pw */
+		/* Verify session id */
 		try {
-			new EucalyptusWebBackendImpl().getNewSessionID("admin", adminPw);
-		} catch (SerializableException e) {
-			LOG.error(e);
-			throw new ServletException("Incorrect admin password");
+			if (EucalyptusWebBackendImpl.verifySession(sessionId) == null) {
+				throw new ServletException("Invalid session id");
+			}
+		} catch (SerializableException ex) {
+			LOG.error(ex);
+			throw new ServletException(ex);
 		}
-
 
 		// (Only get methods which have n String params corresponding to passed args)
 		Class[] params = new Class[methodArgsArray.length];
