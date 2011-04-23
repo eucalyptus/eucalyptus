@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -105,7 +106,7 @@ public class ServiceState {
       {
         in( State.ENABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.addPipelines )/*.run( ServiceTransitions.startEndpoint )*/;
         in( State.DISABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.removePipelines )/*.run( ServiceTransitions.stopEndpoint )*/;
-        on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
+        on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).run( ( Callback<ServiceConfiguration> ) Transitions.noop( ) );
         on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( ServiceTransitions.LOAD_TRANSITION );
         on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( ServiceTransitions.START_TRANSITION );
         on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( ServiceTransitions.ENABLE_TRANSITION );

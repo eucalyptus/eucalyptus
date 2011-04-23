@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -124,16 +125,6 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       this.commit( );
     }
 
-    public void oob( ) {
-      this.init( AbstractTransitionAction.OUTOFBAND );
-      this.commit( );
-    }
-    
-    public void noop( ) {
-      this.init( AbstractTransitionAction.NOOP );
-      this.commit( );
-    }
-    
     public void run( final Callback<P> callable ) {
       TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
         @Override
@@ -147,6 +138,11 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
           }
         }
       };
+    }
+
+    public void run( Function<P,TransitionAction<P>> function ) {
+      this.init( function.apply( parent ) );
+      this.commit( );
     }
 
     public void run( TransitionAction<P> action ) {
@@ -182,7 +178,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
         public void leave( P parent, Callback.Completion transitionCallback ) {
           try {
             if( !predicate.apply( parent ) ) {
-              transitionCallback.fireException( Transitions )
+              transitionCallback.fireException( Transitions.conditionFailed( "Transition failed " + TransitionBuilder.this.fromState + " -> " + TransitionBuilder.this.toState + " for " + parent.getName( ), predicate ) );
             }
             transitionCallback.fire( );
           } catch ( Throwable ex ) {

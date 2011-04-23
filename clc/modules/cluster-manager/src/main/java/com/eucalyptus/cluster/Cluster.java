@@ -81,12 +81,14 @@ import com.eucalyptus.cluster.Cluster.State;
 import com.eucalyptus.cluster.Cluster.Transition;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.ClusterLogMessageCallback;
+import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.ServiceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -125,8 +127,12 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.AbstractTransitionAction;
+import com.eucalyptus.util.fsm.TransitionAction;
+import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.vm.VmType;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -147,22 +153,15 @@ public class Cluster implements HasName<Cluster>, EventListener {
   private boolean                                        hasNodeCert    = false;
   
   public enum State {
-    BROKEN, /* cannot establish initial contact with cluster because of CLC side errors */
-    DOWN, /* Component.State.NOTREADY: cluster unreachable */
+    BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
+    STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
+    NOTREADY, /** Component.State.NOTREADY: reported state is NOTREADY **/
     AUTHENTICATING, CHECK_SERVICE_READY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
-    DISABLED, /**
-     * Component.State.DISABLED -> Component.State.DISABLED: service ready, not current
-     * primary
-     **/
-    STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS, /**
-     * 
-     * 
-     * 
-     * 
-     * Component.State.DISABLED -> Component.State.ENABLED
-     **/
-    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, RUNNING_SERVICE_CHECK,
+    DISABLED, /** Component.State.DISABLED -> Component.State.DISABLED: service ready, not current primary **/
+    /** Component.State.DISABLED -> Component.State.ENABLED **/
+    ENABLING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
+    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, RUNNING_SERVICE_CHECK,
   }
   
   public enum Transition {
@@ -185,6 +184,79 @@ public class Cluster implements HasName<Cluster>, EventListener {
     RUNNING_RSC,
   }
   
+  enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
+    LOGS( LogDataCallback.class ),
+    CERTS( ClusterCertsCallback.class );
+    Class refresh;
+    
+    private LogRefresh( Class refresh ) {
+      this.refresh = refresh;
+    }
+    
+    @Override
+    public TransitionAction<Cluster> apply( Cluster cluster ) {
+      final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( refresh, cluster );
+      return new AbstractTransitionAction<Cluster>( ) {
+        
+        @Override
+        public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
+          try {
+            Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback )
+                     .sendSync( parent.getLogServiceConfiguration( ) );
+          } catch ( ExecutionException e ) {
+            if ( e.getCause( ) instanceof FailedRequestException ) {
+              LOG.error( e.getCause( ).getMessage( ) );
+            } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
+              LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
+            } else {
+              LOG.error( e, e );
+            }
+          } catch ( InterruptedException e ) {
+            LOG.error( e, e );
+          }
+        }
+      };
+    }
+  }
+  
+  enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
+    RESOURCES( ResourceStateCallback.class ),
+    NETWORKS( NetworkStateCallback.class ),
+    INSTANCES( VmStateCallback.class ),
+    ADDRESSES( PublicAddressStateCallback.class ),
+    SERVICESTATE( ServiceStateCallback.class );
+    Class refresh;
+    
+    private Refresh( Class refresh ) {
+      this.refresh = refresh;
+    }
+    
+    @Override
+    public TransitionAction<Cluster> apply( Cluster cluster ) {
+      final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( refresh, cluster );
+      return new AbstractTransitionAction<Cluster>( ) {
+        
+        @Override
+        public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
+          try {
+            Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+          } catch ( ExecutionException e ) {
+            if ( e.getCause( ) instanceof FailedRequestException ) {
+              LOG.error( e.getCause( ).getMessage( ) );
+            } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
+              LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
+            } else {
+              LOG.error( e, e );
+            }
+          } catch ( InterruptedException e ) {
+            LOG.error( e, e );
+          }
+        }
+      };
+    }
+    
+  }
+  
   public Cluster( ClusterConfiguration configuration ) {
     super( );
     this.configuration = configuration;
@@ -193,73 +265,60 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.threadFactory = Threads.lookup( com.eucalyptus.component.id.ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
-    this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
+    this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.STOPPED ) {
       {
-        //when entering state AUTHENTICATING
-        in( State.AUTHENTICATING ).run( new Callback<Cluster>( ) {
+        Predicate<Cluster> COMPONENT_IS_ENABLED = new Predicate<Cluster>( ) {
+          
           @Override
-          public void fire( Cluster t ) {
-            try {
-              Cluster.this.stateMachine.startTransitionTo( State.CHECK_SERVICE_READY );
-            } catch ( IllegalStateException ex ) {
-              LOG.error( ex, ex );
-            } catch ( ExistingTransitionException ex ) {
-              LOG.debug( ex.getMessage( ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
+          public boolean apply( Cluster input ) {
+            return Component.State.ENABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
           }
-        } );
-        
-        from( State.CHECK_SERVICE_READY ).to( State.DISABLED ).error( State.CHECK_SERVICE_READY ).noop( );
-        from( State.DISABLED ).to( State.STARTING ).error( State.CHECK_SERVICE_READY ).on( Transition.ENABLE );
-        //when entering state CHECK_SERVICE_READY
-        in( State.CHECK_SERVICE_READY ).run( new Callback<Cluster>( ) {
+        };
+        Predicate<Cluster> COMPONENT_IS_STARTED = new Predicate<Cluster>( ) {
+          
           @Override
-          public void fire( Cluster t ) {
-            try {
-              Cluster.this.stateMachine.startTransitionTo( State.DISABLED );
-            } catch ( IllegalStateException ex ) {
-              LOG.error( ex, ex );
-            } catch ( ExistingTransitionException ex ) {
-              LOG.debug( ex.getMessage( ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
+          public boolean apply( Cluster input ) {
+            return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupService( ).getState( ).ordinal( );
           }
-        } );
-        
+        };
         //on input START when in state DOWN transition to AUTHENTICATING and do nothing
-        from( State.DOWN ).to( State.AUTHENTICATING ).on( Transition.START ).noop( );
+        from( State.STOPPED ).to( State.AUTHENTICATING )
+                             .error( State.STOPPED )
+                             .on( Transition.START )
+                             .condition( COMPONENT_IS_STARTED );
         
-        //on input INIT_CERTS when in state AUTHENTICATING transition to STARTING on success or DOWN on failure with the transition listeners specified
         from( State.AUTHENTICATING ).to( State.CHECK_SERVICE_READY )
-                                    .error( State.DOWN )
+                                    .error( State.STOPPED )
                                     .on( Transition.INIT_CERTS )
-                                    .run( newRefresh( ClusterCertsCallback.class ) );
+                                    .run( LogRefresh.CERTS );
         
-        from( State.CHECK_SERVICE_READY ).to( State.DISABLED )
-                                         .error( State.DOWN )
+        from( State.CHECK_SERVICE_READY ).to( State.NOTREADY )
+                                         .error( State.STOPPED )
                                          .on( Transition.INIT_SERVICES )
-                                         .run( newRefresh( ServiceStateCallback.class ) );
-        
-        from( State.DISABLED ).to( State.STARTING )
-                                         .error( State.DISABLED )
+                                         .run( Refresh.SERVICESTATE );
+
+        from( State.NOTREADY ).to( State.DISABLED )
+                                         .error( State.STOPPED )
                                          .on( Transition.INIT_SERVICES )
-                                         .condition( );
+                                         .run( Refresh.SERVICESTATE );
         
-        from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).on( Transition.INIT_RESOURCES ).run( newRefresh( ResourceStateCallback.class ) );
-        from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).on( Transition.INIT_NET ).run( newRefresh( NetworkStateCallback.class ) );
-        from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).on( Transition.INIT_VMS ).run( newRefresh( VmStateCallback.class ) );
-        from( State.STARTING_VMS ).to( State.STARTING_ADDRS ).error( State.DOWN ).on( Transition.INIT_ADDRS ).run( newRefresh( PublicAddressStateCallback.class ) );
-        from( State.STARTING_ADDRS ).to( State.STARTING_VMS2 ).error( State.DOWN ).on( Transition.INIT_VMS2 ).run( newRefresh( VmStateCallback.class ) );
-        from( State.STARTING_VMS2 ).to( State.RUNNING_ADDRS ).error( State.DOWN ).on( Transition.INIT_ADDRS2 ).run( newRefresh( PublicAddressStateCallback.class ) );
+        from( State.DISABLED ).to( State.ENABLING )
+                                         .error( State.NOTREADY )
+                                         .on( Transition.INIT_SERVICES )
+                                         .condition( COMPONENT_IS_ENABLED );
         
-        from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.DOWN ).on( Transition.RUNNING_RSC ).run( newRefresh( ResourceStateCallback.class ) );
-        from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.DOWN ).on( Transition.RUNNING_NET ).run( newRefresh( NetworkStateCallback.class ) );
-        from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.DOWN ).on( Transition.RUNNING_VMS ).run( newRefresh( VmStateCallback.class ) );
-        from( State.RUNNING_VMS ).to( State.RUNNING_SERVICE_CHECK ).error( State.DOWN ).on( Transition.RUNNING_ADDRS ).run( newRefresh( PublicAddressStateCallback.class ) );
-        from( State.RUNNING_SERVICE_CHECK ).to( State.RUNNING_ADDRS ).error( State.DOWN ).on( Transition.RUNNING_SERVICES ).run( newRefresh( ServiceStateCallback.class ) );
+        from( State.ENABLING ).to( State.STARTING_RESOURCES ).error( State.STOPPED ).on( Transition.INIT_RESOURCES ).run( Refresh.RESOURCES );
+        from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.STOPPED ).on( Transition.INIT_NET ).run( Refresh.NETWORKS );
+        from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.STOPPED ).on( Transition.INIT_VMS ).run( Refresh.INSTANCES );
+        from( State.STARTING_VMS ).to( State.STARTING_ADDRS ).error( State.STOPPED ).on( Transition.INIT_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.STARTING_ADDRS ).to( State.STARTING_VMS2 ).error( State.STOPPED ).on( Transition.INIT_VMS2 ).run( Refresh.INSTANCES );
+        from( State.STARTING_VMS2 ).to( State.RUNNING_ADDRS ).error( State.STOPPED ).on( Transition.INIT_ADDRS2 ).run( Refresh.ADDRESSES );
+        
+        from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.NOTREADY ).on( Transition.RUNNING_RSC ).run( Refresh.RESOURCES );
+        from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.NOTREADY ).on( Transition.RUNNING_NET ).run( Refresh.NETWORKS );
+        from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.NOTREADY ).on( Transition.RUNNING_VMS ).run( Refresh.INSTANCES );
+        from( State.RUNNING_VMS ).to( State.RUNNING_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.RUNNING_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.RUNNING_SERVICE_CHECK ).to( State.RUNNING_ADDRS ).error( State.NOTREADY ).on( Transition.RUNNING_SERVICES ).run( Refresh.SERVICESTATE );
         
       }
     }.newAtomicMarkedState( );
@@ -539,44 +598,21 @@ public class Cluster implements HasName<Cluster>, EventListener {
     }
   }
   
-  /**
-   * @param msgClass
-   * @param nextState
-   * @return
-   */
   private AbstractTransitionAction<Cluster> newLogRefresh( final Class msgClass ) {
+    final Cluster cluster = this;
+    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, cluster );
     return new AbstractTransitionAction<Cluster>( ) {
-      private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
       
       @Override
       public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-        Callback.Completion cb = new Callback.Completion( ) {
-          
-          @Override
-          public void fire( ) {
-            transitionCallback.fire( );
-          }
-          
-          @Override
-          public void fireException( Throwable t ) {
-            if ( !( t instanceof FailedRequestException ) ) {
-              LOG.trace( t, t );
-            }
-            transitionCallback.fireException( t );
-          }
-        };
         try {
-          ComponentId glId = ComponentIds.lookup( GatherLogService.class );
-          ServiceConfiguration conf = parent.getConfiguration( );
-          Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
-                   .sendSync( ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
-                                                                     glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) ) );
+          Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback )
+                   .sendSync( parent.getLogServiceConfiguration( ) );
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {
             LOG.error( e.getCause( ).getMessage( ) );
           } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
-
-            //REVIEW: this is LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) ); 
+            LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
           } else {
             LOG.error( e, e );
           }
@@ -587,57 +623,11 @@ public class Cluster implements HasName<Cluster>, EventListener {
     };
   }
   
-  private AbstractTransitionAction<Cluster> newRefresh( final Class msgClass ) {
-    return new AbstractTransitionAction<Cluster>( ) {
-      private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
-      
-      @Override
-      public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-        Callback.Completion cb = new Callback.Completion( ) {
-          
-          @Override
-          public void fire( ) {
-            transitionCallback.fire( );
-          }
-          
-          @Override
-          public void fireException( Throwable t ) {
-            if ( t instanceof FailedRequestException ) {
-              if ( Cluster.this.getState( ).hasPublicAddressing( ) && PublicAddressStateCallback.class.isAssignableFrom( msgClass ) ) {
-                transitionCallback.fire( );
-              } else {
-                transitionCallback.fireException( t );
-              }
-            } else {
-              LOG.trace( t, t );
-              transitionCallback.fireException( t );
-            }
-          }
-        };
-        //TODO: retry.
-        try {
-          if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
-            ComponentId glId = ComponentIds.lookup( GatherLogService.class );
-            ServiceConfiguration conf = parent.getConfiguration( );
-            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
-                     .sendSync( ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
-                                                                       glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) ) );
-          } else {
-            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getConfiguration( ) );
-          }
-        } catch ( ExecutionException e ) {
-          if ( e.getCause( ) instanceof FailedRequestException ) {
-            LOG.error( e.getCause( ).getMessage( ) );
-          } else if ( e.getCause( ) instanceof ConnectionException || e.getCause( ) instanceof IOException ) {
-            //REVIEW: this is LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) ); 
-          } else {
-            LOG.error( e, e );
-          }
-        } catch ( InterruptedException e ) {
-          LOG.error( e, e );
-        }
-      }
-    };
+  protected ServiceConfiguration getLogServiceConfiguration( ) {
+    ComponentId glId = ComponentIds.lookup( GatherLogService.class );
+    ServiceConfiguration conf = this.getConfiguration( );
+    return ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
+                                                  glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) );
   }
   
   @Override
@@ -673,16 +663,16 @@ public class Cluster implements HasName<Cluster>, EventListener {
   private void nextState( ) {
     try {
       switch ( this.stateMachine.getState( ) ) {
-        case DOWN:
+        case STOPPED:
           this.stateMachine.startTransitionTo( State.AUTHENTICATING );
           break;
         case AUTHENTICATING:
           this.stateMachine.startTransitionTo( State.CHECK_SERVICE_READY );
           break;
         case CHECK_SERVICE_READY:
-          this.stateMachine.startTransitionTo( State.STARTING );
+          this.stateMachine.startTransitionTo( State.ENABLING );
           break;
-        case STARTING:
+        case ENABLING:
           this.stateMachine.startTransitionTo( State.STARTING_RESOURCES );
           break;
         case STARTING_RESOURCES:
