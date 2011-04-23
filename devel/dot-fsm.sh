@@ -1,7 +1,7 @@
 echo 'digraph bootstrap {
   size="80,80";
-  ranksep=.4;
-  nodesep=.4;
+  ranksep=.8;
+  nodesep=.8;
   clusterrank="local";'
 sed 's/)\./)\n/g;s/^ *//g;s/State\.//g;s/Transition\.//g;s/\.class//g;s/run( *\(.*\));$/run:\1/g' | \
 awk '
