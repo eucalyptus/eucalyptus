@@ -86,6 +86,7 @@ import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -111,7 +112,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
       LOG.error( e, e );
-      throw new ServiceTransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
+      throw new TransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );

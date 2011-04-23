@@ -9,7 +9,6 @@ import com.google.common.base.Predicate;
 public class Transitions {
   private static Logger                        LOG  = Logger.getLogger( Transitions.class );
                                                     
-  
   public static <P extends HasName<P>> TransitionListener<P> createListener( final Predicate<P> p ) {
     return new TransitionListener<P>() {
 

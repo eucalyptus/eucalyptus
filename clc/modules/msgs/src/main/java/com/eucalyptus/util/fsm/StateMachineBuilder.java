@@ -175,6 +175,23 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
       return this;
     }
+
+    public void condition( final Predicate<P> predicate ) {
+      TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
+        @Override
+        public void leave( P parent, Callback.Completion transitionCallback ) {
+          try {
+            if( !predicate.apply( parent ) ) {
+              transitionCallback.fireException( Transitions )
+            }
+            transitionCallback.fire( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex );
+            transitionCallback.fireException( ex );
+          }
+        }
+      };
+    }
   }
   
   protected InStateBuilder in( final S input ) {
