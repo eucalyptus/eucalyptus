@@ -16,6 +16,9 @@ import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
  * with the CommandServlet which expects such an ID. This expects one param:
  * <code>adminPw</code>.
  * 
+ * <p>NOTE: This servlet is <b>NOT</b> used for the regular eucalyptus login!
+ * It's only used for the <code>CommandServlet</code>.
+ * 
  * @author tom.werges
  */
 public class LoginServlet
