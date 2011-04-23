@@ -99,6 +99,14 @@
   </servlet>
 
   <servlet>
+    <description>Logs into eucalyptus and returns a session id</description>
+    <display-name>Login Servlet</display-name>
+    <servlet-name>LoginServlet</servlet-name>
+    <servlet-class>com.eucalyptus.www.LoginServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet>
     <description></description>
     <display-name>X509Downloader</display-name>
     <servlet-name>X509Download</servlet-name>
@@ -133,6 +141,11 @@
   <servlet-mapping>
     <servlet-name>CommandServlet</servlet-name>
     <url-pattern>/commandservlet</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>LoginServlet</servlet-name>
+    <url-pattern>/loginservlet</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
