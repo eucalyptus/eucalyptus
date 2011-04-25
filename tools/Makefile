@@ -56,7 +56,7 @@ install: build
 	@$(INSTALL) -m 644 libvirt-kvm-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 libvirt-xen-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 755 getstats.pl $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 lictool.pl $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 euca-lictool $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus
 
@@ -83,4 +83,4 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_vmware
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
-	@$(RM) -f $(DESTDIR)$(sbindir)/lictool.pl
+	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool

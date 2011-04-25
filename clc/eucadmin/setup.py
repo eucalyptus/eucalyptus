@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -tt
 # Copyright (c) 2011, Eucalyptus Systems, Inc.
-# All rights reserved.
 #
 # Redistribution and use of this software in source and binary forms, with or
 # without modification, are permitted provided that the following conditions
@@ -26,11 +25,10 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-#
-# Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 import sys
 import os
+from distutils.command.build_scripts import build_scripts
 from distutils.core import setup
 from distutils.sysconfig import get_python_lib
 import fileinput
@@ -39,42 +37,61 @@ import ConfigParser
 cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
 prefix = cfg.get('install', 'prefix')
-install_scripts = cfg.get('install', 'install_scripts')
-path_header = 'import sys\nsys.path.append(\"%s\")\n' % (get_python_lib(prefix=prefix))
 
-binaries = ["bin/euca-add-user", "bin/euca-add-user-group",
-        "bin/euca-delete-user", "bin/euca-delete-user-group",
-        "bin/euca-add-user", "bin/euca-add-user-group",
-        "bin/euca_conf", "bin/euca-delete-user",
-        "bin/euca-delete-user-group",
-        "bin/euca-deregister-cluster",
-        "bin/euca-deregister-storage-controller",
-        "bin/euca-deregister-walrus",
-        "bin/euca-describe-clusters",
-        "bin/euca-describe-components",
-        "bin/euca-describe-properties",
-        "bin/euca-describe-services",
-        "bin/euca-describe-storage-controllers",
-        "bin/euca-describe-user-groups",
-        "bin/euca-describe-users",
-        "bin/euca-describe-walruses",
-        "bin/euca-get-credentials",
-        "bin/euca-modify-cluster",
-        "bin/euca-modify-property",
-        "bin/euca-modify-storage-controller",
-        "bin/euca-modify-walrus",
-        "bin/euca-register-cluster",
-        "bin/euca-register-storage-controller",
-        "bin/euca-register-walrus"]
-mangled = [ "%s/%s" % (install_scripts,os.path.basename(x)) for x in binaries ]
+class build_scripts_with_path_headers(build_scripts):
+    def run(self):
+        build_scripts.run(self)
+        self.path_header = get_python_lib(prefix=prefix).replace('dist-packages', 'site-packages')
+        self.outfiles = [os.path.join(self.build_dir, os.path.basename(script))
+                         for script in self.distribution.scripts]
+        self.add_paths_to_scripts()
+
+    def add_paths_to_scripts(self):
+        print 'adding path %s to scripts' % self.path_header
+        for line in fileinput.input(self.outfiles, inplace=1, backup=None):
+            if fileinput.isfirstline():
+                print line.rstrip()
+                print 'import sys'
+                print 'sys.path.append("%s")' % self.path_header
+            elif line.strip() == 'import sys':
+                pass
+            elif line.strip().startswith('sys.path.append'):
+                pass
+            else:
+                print line.rstrip()
+
+admin_scripts = ["bin/euca-add-user",
+                 "bin/euca-add-user-group",
+                 "bin/euca_conf",
+                 "bin/euca-delete-user",
+                 "bin/euca-delete-user-group",
+                 "bin/euca-deregister-cluster",
+                 "bin/euca-deregister-storage-controller",
+                 "bin/euca-deregister-walrus",
+                 "bin/euca-describe-clusters",
+                 "bin/euca-describe-components",
+                 "bin/euca-describe-properties",
+                 "bin/euca-describe-services",
+                 "bin/euca-describe-storage-controllers",
+                 "bin/euca-describe-user-groups",
+                 "bin/euca-describe-users",
+                 "bin/euca-describe-walruses",
+                 "bin/euca-get-credentials",
+                 "bin/euca-modify-cluster",
+                 "bin/euca-modify-property",
+                 "bin/euca-modify-storage-controller",
+                 "bin/euca-modify-walrus",
+                 "bin/euca-register-cluster",
+                 "bin/euca-register-storage-controller",
+                 "bin/euca-register-walrus",
+                ]
 
 setup(name="eucadmin",
-      version='0.1',
+      version='3.0.0',
       description="Eucalyptus Admin Tools",
       long_description="CLI tools to help administer Eucalyptus",
       author="Mitch Garnaat",
       author_email="mgarnaat@eucalyptus.com",
-      scripts=binaries,
       url="http://eucalyptus.com/",
       packages=['eucadmin'],
       license='BSD',
@@ -85,16 +102,6 @@ setup(name="eucadmin",
                       'Operating System :: OS Independent',
                       'Topic :: Internet',
                       ],
+      cmdclass={'build_scripts': build_scripts_with_path_headers},
+      scripts=admin_scripts,
       )
-
-if 'install' in sys.argv[1:]:
-  for line in fileinput.input(mangled, inplace=1,backup=None):
-    if fileinput.isfirstline():
-      print line,
-      print path_header,
-    elif line == 'import sys\n':
-      continue
-    elif line.startswith('sys.path.append'):
-      continue
-    else:
-      print line,
