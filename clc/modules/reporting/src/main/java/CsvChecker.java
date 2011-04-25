@@ -1,4 +1,7 @@
 
+import java.io.*;
+import java.util.*;
+
 /**
  * <p>CsvChecker
  * 
@@ -7,10 +10,77 @@
 public class CsvChecker
 {
 	public static void main(String[] args)
+		throws Exception
 	{
 		if ( args.length !=3 ) {
 			printHelp();
 			System.exit(-1);
+		}
+		
+		final double errorMargin = Double.parseDouble(args[0]);
+		final File checkedFile = new File(args[1]);
+		final File referenceFile = new File(args[2]);
+		
+		final BufferedReader checkedReader = new BufferedReader(new FileReader(checkedFile));
+		final BufferedReader refReader = new BufferedReader(new FileReader(referenceFile));
+		
+		final List<ReferenceLine> refLines = new ArrayList<ReferenceLine>();
+		
+		for (String line=refReader.readLine(); line!= null; line=refReader.readLine()) {
+			refLines.add(ReferenceLine.parseLine(line));
+		}
+		
+		boolean passed = true;
+		
+		String[] fields;
+		int lineCnt = 0;
+		int refLineNum = 0;
+		for (String line=checkedReader.readLine(); line!= null; line=checkedReader.readLine()) {
+			fields = line.split(",");
+			refLineNum = 0;
+			for (ReferenceLine refLine: refLines) {
+				passed = passed && (refLine.shouldMatch(fields) && refLine.doesMatch(fields));
+				if (!passed) {
+					System.err.printf("Failed checkLine:%d refLine:%d\n", lineCnt, refLineNum);
+					break;
+				}
+				refLineNum++;
+			}
+			lineCnt++;
+		}
+		
+		checkedReader.close();
+		refReader.close();
+		
+		System.exit(passed ? 0 : 1);
+	}
+
+	private static class ReferenceLine
+	{
+		private final int doublePlusFieldInd;
+		private final String[] fields;
+		private final double errorMargin;
+		
+		ReferenceLine(int doublePlusFieldInd, String[] fields, double errorMargin)
+		{
+			this.doublePlusFieldInd = doublePlusFieldInd;
+			this.fields = fields;
+			this.errorMargin = errorMargin;
+		}
+		
+		static ReferenceLine parseLine(String line)
+		{
+			return null;
+		}
+		
+		boolean shouldMatch(String[] fields)
+		{
+			return false;
+		}
+		
+		boolean doesMatch(String[] fields)
+		{
+			return false;			
 		}
 	}
 	
