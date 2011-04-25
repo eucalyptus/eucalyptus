@@ -60,11 +60,7 @@ class build_scripts_with_path_headers(build_scripts):
             else:
                 print line.rstrip()
 
-admin_scripts = ["bin/euca-add-user",
-                 "bin/euca-add-user-group",
-                 "bin/euca_conf",
-                 "bin/euca-delete-user",
-                 "bin/euca-delete-user-group",
+admin_scripts = ["bin/euca_conf",
                  "bin/euca-deregister-cluster",
                  "bin/euca-deregister-storage-controller",
                  "bin/euca-deregister-walrus",
@@ -73,8 +69,6 @@ admin_scripts = ["bin/euca-add-user",
                  "bin/euca-describe-properties",
                  "bin/euca-describe-services",
                  "bin/euca-describe-storage-controllers",
-                 "bin/euca-describe-user-groups",
-                 "bin/euca-describe-users",
                  "bin/euca-describe-walruses",
                  "bin/euca-get-credentials",
                  "bin/euca-modify-cluster",
