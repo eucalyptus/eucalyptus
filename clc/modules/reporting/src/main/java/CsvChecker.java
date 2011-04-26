@@ -3,7 +3,10 @@ import java.io.*;
 import java.util.*;
 
 /**
- * <p>CsvChecker
+ * <p>CsvChecker verifies the contents of a CSV file against a reference CSV
+ * file. CsvChecker is run from the command-line. See the method
+ * <code>printHelp</code> or run from the command-line with no arguments
+ * to get a full description of its usage.
  * 
  * @author tom.werges
  */
@@ -20,8 +23,6 @@ public class CsvChecker
 		final double errorMargin = Double.parseDouble(args[0]);
 		final File checkedFile = new File(args[1]);
 		final File referenceFile = new File(args[2]);
-		
-		final List<ReferenceLine> refLines = new ArrayList<ReferenceLine>();
 
 		boolean passed = true;
 
@@ -31,31 +32,52 @@ public class CsvChecker
 			checkedReader = new BufferedReader(new FileReader(checkedFile));
 			refReader = new BufferedReader(new FileReader(referenceFile));
 
+			final List<ReferenceLine> refLines = new ArrayList<ReferenceLine>();
+			int refLineNum = 0;
 			for (String line = refReader.readLine(); line != null; line = refReader
 					.readLine()) {
-				refLines.add(ReferenceLine.parseLine(line));
+				if (line.length()==0) {
+					continue;
+				}
+				ReferenceLine refLine = null;
+				try {
+					refLine = ReferenceLine.parseLine(line);
+				} catch (ParseException pe) {
+					System.err.println("Parse failed in reference file, line " + refLineNum);
+					pe.printStackTrace(System.err);
+					System.exit(-1);
+				}
+				if (refLine != null) refLines.add(refLine);
+				refLineNum++;
 			}
 
 			String[] fields;
 			int lineCnt = 0;
-			int refLineNum = 0;
+			refLineNum = 0;
+
+			outerLoop:   //There's NOTHING wrong with labels...
 			for (String line = checkedReader.readLine(); line != null; line = checkedReader
 					.readLine()) {
 				fields = line.split(",");
 				refLineNum = 0;
 				for (ReferenceLine refLine : refLines) {
-					passed = passed && (refLine.shouldMatch(fields) &&
-										refLine.doesMatch(fields, errorMargin));
+					//System.err.println("ShouldMatch:" + refLine.shouldMatch(fields));
+					//System.err.println("DoesMatch:" + refLine.doesMatch(fields, errorMargin));
+					passed = passed
+							&& (refLine.shouldMatch(fields)
+									? refLine.doesMatch(fields, errorMargin)
+									: true);
+					
 					if (!passed) {
 						System.err.printf("Failed checkLine:%d refLine:%d\n",
 								lineCnt, refLineNum);
-						break;
+						break outerLoop;
 					}
 					refLineNum++;
 				}
 				lineCnt++;
 			}
-		} catch (IOException iox) {
+		} finally {
 			if (checkedReader != null) checkedReader.close();
 			if (refReader != null) refReader.close();			
 		}
@@ -77,8 +99,9 @@ public class CsvChecker
 		}
 
 		static ReferenceLine parseLine(String line)
+			throws ParseException
 		{
-			int doublePlusInd=0;
+			int doublePlusInd=-1;
 			String[] fields = line.split(",");
 			for (int i=0; i<fields.length; i++) {
 				if (fields[i].startsWith(DOUBLE_PLUS_FIELD_PREFIX)) {
@@ -86,16 +109,25 @@ public class CsvChecker
 					fields[i]=fields[i].substring(2);
 				}
 			}
+			if (doublePlusInd==-1) {
+				throw new ParseException("Line lacks ++ field");
+			}
 			return new ReferenceLine(doublePlusInd, fields);
 		}
 
 		boolean shouldMatch(String[] otherFields)
 		{
-			return otherFields[doublePlusFieldInd].matches(fields[doublePlusFieldInd]);
+			if (otherFields.length < doublePlusFieldInd) {
+				return false;
+			} else {
+				return otherFields[doublePlusFieldInd].matches(fields[doublePlusFieldInd]);
+			}
 		}
 
 		boolean doesMatch(String[] otherFields, double errorMargin)
 		{
+			if (! (fields.length == otherFields.length))
+				return false;
 			for (int i=0; i < fields.length; i++) {
 				if (i==doublePlusFieldInd) continue;
 				if (! fieldMatches(fields[i], otherFields[i], errorMargin))
@@ -124,10 +156,16 @@ public class CsvChecker
 		}
 	}
 	
+	private static class ParseException
+		extends Exception
+	{
+		ParseException(String msg) { super(msg); }
+	}
+	
 	private static void printHelp()
 	{
 		System.out.println(
-"CsvChecker verifies that the values in a CSV (comma-separated values) file\n"
+"\nCsvChecker verifies that the values in a CSV (comma-separated values) file\n"
 + "are correct, by comparing those values against a reference CSV file.\n"
 + "CsvChecker can compare both numeric values and Strings (using regex\n"
 + "expressions).  CsvChecker can tolerate an error percentage for numeric\n"
@@ -171,6 +209,7 @@ public class CsvChecker
 + "In this way, CsvChecker can verify that any lines in a checked file which\n"
 + "match a pattern, have specified values. This is used to verify the\n"
 + "correctness of various kinds of CSV reports, for testing.\n"
++ "\n"
 + "Author: T Werges\n"
 		);
 	}
