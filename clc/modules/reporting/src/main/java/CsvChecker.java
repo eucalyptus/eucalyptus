@@ -21,66 +21,107 @@ public class CsvChecker
 		final File checkedFile = new File(args[1]);
 		final File referenceFile = new File(args[2]);
 		
-		final BufferedReader checkedReader = new BufferedReader(new FileReader(checkedFile));
-		final BufferedReader refReader = new BufferedReader(new FileReader(referenceFile));
-		
 		final List<ReferenceLine> refLines = new ArrayList<ReferenceLine>();
-		
-		for (String line=refReader.readLine(); line!= null; line=refReader.readLine()) {
-			refLines.add(ReferenceLine.parseLine(line));
-		}
-		
+
 		boolean passed = true;
-		
-		String[] fields;
-		int lineCnt = 0;
-		int refLineNum = 0;
-		for (String line=checkedReader.readLine(); line!= null; line=checkedReader.readLine()) {
-			fields = line.split(",");
-			refLineNum = 0;
-			for (ReferenceLine refLine: refLines) {
-				passed = passed && (refLine.shouldMatch(fields) && refLine.doesMatch(fields));
-				if (!passed) {
-					System.err.printf("Failed checkLine:%d refLine:%d\n", lineCnt, refLineNum);
-					break;
-				}
-				refLineNum++;
+
+		BufferedReader checkedReader = null;
+		BufferedReader refReader = null;
+		try {
+			checkedReader = new BufferedReader(new FileReader(checkedFile));
+			refReader = new BufferedReader(new FileReader(referenceFile));
+
+			for (String line = refReader.readLine(); line != null; line = refReader
+					.readLine()) {
+				refLines.add(ReferenceLine.parseLine(line));
 			}
-			lineCnt++;
+
+			String[] fields;
+			int lineCnt = 0;
+			int refLineNum = 0;
+			for (String line = checkedReader.readLine(); line != null; line = checkedReader
+					.readLine()) {
+				fields = line.split(",");
+				refLineNum = 0;
+				for (ReferenceLine refLine : refLines) {
+					passed = passed
+							&& (refLine.shouldMatch(fields) && refLine
+									.doesMatch(fields, errorMargin));
+					if (!passed) {
+						System.err.printf("Failed checkLine:%d refLine:%d\n",
+								lineCnt, refLineNum);
+						break;
+					}
+					refLineNum++;
+				}
+				lineCnt++;
+			}
+		} catch (IOException iox) {
+			if (checkedReader != null) checkedReader.close();
+			if (refReader != null) refReader.close();			
 		}
-		
-		checkedReader.close();
-		refReader.close();
 		
 		System.exit(passed ? 0 : 1);
 	}
 
 	private static class ReferenceLine
 	{
+		private static final String DOUBLE_PLUS_FIELD_PREFIX="++";
+		
 		private final int doublePlusFieldInd;
 		private final String[] fields;
-		private final double errorMargin;
-		
-		ReferenceLine(int doublePlusFieldInd, String[] fields, double errorMargin)
+
+		ReferenceLine(int doublePlusFieldInd, String[] fields)
 		{
 			this.doublePlusFieldInd = doublePlusFieldInd;
 			this.fields = fields;
-			this.errorMargin = errorMargin;
 		}
-		
+
 		static ReferenceLine parseLine(String line)
 		{
-			return null;
+			int doublePlusInd=0;
+			String[] fields = line.split(",");
+			for (int i=0; i<fields.length; i++) {
+				if (fields[i].startsWith(DOUBLE_PLUS_FIELD_PREFIX)) {
+					doublePlusInd=i;
+					fields[i]=fields[i].substring(2);
+				}
+			}
+			return new ReferenceLine(doublePlusInd, fields);
+		}
+
+		boolean shouldMatch(String[] otherFields)
+		{
+			return otherFields[doublePlusFieldInd].matches(fields[doublePlusFieldInd]);
+		}
+
+		boolean doesMatch(String[] otherFields, double errorMargin)
+		{
+			for (int i=0; i < fields.length; i++) {
+				if (i==doublePlusFieldInd) continue;
+				if (! fieldMatches(fields[i], otherFields[i], errorMargin))
+					return false;
+			}
+			return true;
+		}
+
+		private static boolean fieldMatches(String refField, String checkField,
+				double errorMargin)
+		{
+			try {
+				double refVal   = Double.parseDouble(refField);
+				double checkVal = Double.parseDouble(checkField);
+				return isWithinError(checkVal, refVal, errorMargin);
+			} catch (NumberFormatException nfe) {
+				return checkField.matches(refField);
+			}
 		}
 		
-		boolean shouldMatch(String[] fields)
+		private static boolean isWithinError(double val, double correctVal,
+				double errorPercent)
 		{
-			return false;
-		}
-		
-		boolean doesMatch(String[] fields)
-		{
-			return false;			
+			return correctVal * (1-errorPercent) < val
+					&& val < correctVal * (1+errorPercent);
 		}
 	}
 	
@@ -91,18 +132,18 @@ public class CsvChecker
 + "are correct, by comparing those values against a reference CSV file.\n"
 + "CsvChecker can compare both numeric values and Strings (using regex\n"
 + "expressions).  CsvChecker can tolerate an error percentage for numeric\n"
-+ "values, specified as a parameter.\n"
++ "values, specified as a parameter. \n"
 + "\n"
 + "Usage: CsvChecker errorMargin checkedFile referenceFile\n"
 + "\n"
-+ "The errorMargin should be a floating point value between 0 and 1. The\n"
-+ "reference file is also a CSV file, and the checked file is checked against\n"
-+ "it, according to an algorithm specified below.\n"
++ "Paramters should have the following format.  The errorMargin should be a\n"
++ "floating point value between 0 and 1. The reference file must be a CSV file.\n"
 + "\n"
-+ "Each line in the checked file is verified against one or more lines in the\n"
-+ "reference file. If the fields from the line of the checked file, match all\n"
-+ "of the fields in the corresponding line of the reference file, then\n"
-+ "CsvChecker proceeds to the next line in the checked file; otherwise\n"
++ "The checked file is checked against the reference file, according to the\n"
++ "following algorithm.  Each line in the checked file is verified against one or\n"
++ "more lines in the reference file. If the fields from the line of the checked\n"
++ "file, match all of the fields in the corresponding line of the reference file,\n"
++ "then CsvChecker proceeds to the next line in the checked file; otherwise\n"
 + "CsvChecker returns failure (-1) right away.\n"
 + "\n"
 + "Each line in the reference file specifies which lines in the checked file\n"
