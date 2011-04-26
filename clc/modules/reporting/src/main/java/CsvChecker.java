@@ -44,9 +44,8 @@ public class CsvChecker
 				fields = line.split(",");
 				refLineNum = 0;
 				for (ReferenceLine refLine : refLines) {
-					passed = passed
-							&& (refLine.shouldMatch(fields) && refLine
-									.doesMatch(fields, errorMargin));
+					passed = passed && (refLine.shouldMatch(fields) &&
+										refLine.doesMatch(fields, errorMargin));
 					if (!passed) {
 						System.err.printf("Failed checkLine:%d refLine:%d\n",
 								lineCnt, refLineNum);
