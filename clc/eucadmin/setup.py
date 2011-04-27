@@ -42,7 +42,6 @@ class build_scripts_with_path_headers(build_scripts):
     def run(self):
         build_scripts.run(self)
         self.path_header = get_python_lib(prefix=prefix).replace('dist-packages', 'site-packages')
-#        self.path_header = self.path_header
         self.outfiles = [os.path.join(self.build_dir, os.path.basename(script))
                          for script in self.distribution.scripts]
         self.add_paths_to_scripts()
@@ -61,11 +60,7 @@ class build_scripts_with_path_headers(build_scripts):
             else:
                 print line.rstrip()
 
-admin_scripts = ["bin/euca-add-user",
-                 "bin/euca-add-user-group",
-                 "bin/euca_conf",
-                 "bin/euca-delete-user",
-                 "bin/euca-delete-user-group",
+admin_scripts = ["bin/euca_conf",
                  "bin/euca-deregister-cluster",
                  "bin/euca-deregister-storage-controller",
                  "bin/euca-deregister-walrus",
@@ -74,8 +69,6 @@ admin_scripts = ["bin/euca-add-user",
                  "bin/euca-describe-properties",
                  "bin/euca-describe-services",
                  "bin/euca-describe-storage-controllers",
-                 "bin/euca-describe-user-groups",
-                 "bin/euca-describe-users",
                  "bin/euca-describe-walruses",
                  "bin/euca-get-credentials",
                  "bin/euca-modify-cluster",
