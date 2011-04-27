@@ -120,9 +120,9 @@ int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
       if (path) free(path);
       return(1);
     }
-
     helpers_path[i] = strdup(file);
     free(path);
+    logprintfl (EUCAINFO, "found helper '%s' at '%s'\n", helpers[i], helpers_path[i]);
   }
 
   return(0);
@@ -149,6 +149,31 @@ int timeread(int fd, void *buf, size_t bytes, int timeout) {
   }
   rc = read(fd, buf, bytes);
   return(rc);
+}
+
+int add_euca_to_path (const char * euca_home_supplied) 
+{
+    const char * euca_home;
+    if (euca_home_supplied && strlen (euca_home_supplied)) {
+        euca_home = euca_home_supplied;
+    } else if (getenv(EUCALYPTUS_ENV_VAR_NAME) && strlen (getenv(EUCALYPTUS_ENV_VAR_NAME))) {
+        euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    } else { // we'll assume root
+        euca_home = "";
+    }
+
+    char * old_path = getenv ("PATH");
+    if (old_path==NULL) old_path = "";
+
+    char new_path [4098];
+    snprintf (new_path, sizeof (new_path), 
+              "%s/usr/share/eucalyptus:" // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
+              "%s/usr/sbin:" // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+              "%s/usr/lib/eucalyptus:" // (rootwrap, mountwrap)
+              "%s",
+              euca_home, euca_home, euca_home,
+              old_path);
+    return setenv ("PATH", new_path, TRUE);
 }
 
 pid_t timewait(pid_t pid, int *status, int timeout) {
@@ -1207,7 +1232,7 @@ char * file2str (const char * path)
 
     int bytes;
     int bytes_total = 0;
-    int to_read = (SSIZE_MAX)<file_size?(SSIZE_MAX):file_size;
+    int to_read = ((SSIZE_MAX)<file_size)?(SSIZE_MAX):file_size;
     char * p = content;
     while ( (bytes = read (fp, p, to_read)) > 0) {
         bytes_total += bytes;
@@ -1771,30 +1796,31 @@ int hash_b64enc_string(const char *in, char **out) {
 // and frees 'original'
 char * strdupcat (char * original, char * new)
 {
-        int len = 0;
-        int olen = 0;
+    int len = 0;
+    int olen = 0;
 
+    if (original) {
+        olen = strlen (original);
+        len += olen;
+    }
+        
+    if (new) {
+        len += strlen (new);
+    }
+        
+    char * ret = calloc (len + 1, sizeof (char));
+    if ( ret ) {
         if (original) {
-                olen = strlen (original);
-                len += olen;
+            strncat (ret, original, len);
+            free (original);
         }
-        
+
         if (new) {
-                len += strlen (new);
+            strncat (ret, new, len-olen);
         }
+    }
         
-        char * ret = calloc (len + 1, sizeof (char));
-        if ( ret ) {
-                if (original) {
-                        strncat (ret, original, len);
-                        free (original);
-                }
-                if (new) {
-                        strncat (ret, new, len-olen);
-                }
-        }
-        
-        return ret;
+    return ret;
 }
 
 // returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
@@ -1828,4 +1854,53 @@ char * file2md5str (const char * path)
 
     close (fd);
     return md5string;
+}
+
+// given path=A/B/C and only A existing, create A/B and, unless
+// is_file_path==1, also create A/B/C directory
+// returns: 0 = path already existed, 1 = created OK, -1 = error
+int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
+{
+    int len = strlen (path);
+    char * path_copy = NULL;
+    int ret = 0;
+    int i;
+
+    if (len>0)
+        path_copy = strdup (path);
+
+    if (path_copy==NULL)
+        return -1;
+
+    for (i=0; i<len; i++) {
+        struct stat buf;
+        int try_dir = 0;
+
+        if (path[i]=='/' && i>0) { // dir path, not root
+            path_copy[i] = '\0';
+            try_dir = 1;
+
+        } else if (path[i]!='/' && i+1==len) { // last one
+            if (!is_file_path)
+                try_dir = 1;
+        }
+
+        if ( try_dir ) {
+            if ( stat (path_copy, &buf) == -1 ) {
+                logprintfl (EUCAINFO, "creating path %s\n", path_copy);
+
+                if ( mkdir (path_copy, mode) == -1) {
+                    logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
+
+                    free (path_copy);
+                    return -1;
+                }
+                ret = 1; // we created a directory
+            }
+            path_copy[i] = '/'; // restore the slash
+        }
+    }
+
+    free (path_copy);
+    return ret;
 }

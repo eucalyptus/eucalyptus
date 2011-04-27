@@ -63,6 +63,7 @@ permission notice:
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h> // ssize_t
+#include <sys/types.h> // mode_t
 #include <linux/limits.h>
 
 typedef unsigned char boolean;
@@ -195,6 +196,7 @@ int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
+int add_euca_to_path (const char * euca_home_supplied);
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
 int maxint(int a, int b);
 int minint(int a, int b);
@@ -207,5 +209,6 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int hash_b64enc_string(const char *in, char **out);
 char * strdupcat (char * original, char * new);
 char * file2md5str (const char *path);
+int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
 
 #endif

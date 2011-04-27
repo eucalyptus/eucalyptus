@@ -57,6 +57,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+
 #ifndef INCLUDE_DATA_H
 #define INCLUDE_DATA_H
 
@@ -95,6 +96,20 @@ typedef struct ncMetadata_t {
     int servicesLen;
 } ncMetadata;
 
+typedef enum _hypervisorCapabilityType { // TODO: make bit field?
+    HYPERVISOR_UNKNOWN = 0,
+    HYPERVISOR_XEN_PARAVIRTUALIZED,
+    HYPERVISOR_HARDWARE,
+    HYPERVISOR_XEN_AND_HARDWARE
+} hypervisorCapabilityType;
+
+static char * hypervsorCapabilityTypeNames [] = {
+    "unknown",
+    "xen",
+    "hw",
+    "xen+hw"
+};
+
 typedef enum _livirtDevType {
     DEV_TYPE_DISK = 0,
     DEV_TYPE_FLOPPY,
@@ -111,7 +126,8 @@ typedef enum _libvirtBusType {
     BUS_TYPE_IDE = 0,
     BUS_TYPE_SCSI,
     BUS_TYPE_VIRTIO,
-    BUS_TYPE_XEN
+    BUS_TYPE_XEN,
+    BUS_TYPES_TOTAL,
 } libvirtBusType;
 
 static char * libvirtBusTypeNames [] = {
@@ -159,22 +175,24 @@ typedef enum _ncResourceFormatType {
 } ncResourceFormatType;
 
 typedef struct virtualBootRecord_t {
-    // first six fields come in RunInstance request
-    char resourceLocation[CHAR_BUFFER_SIZE];
-    char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];
-    int size;
-    char formatName[SMALL_CHAR_BUFFER_SIZE];
-    char id [SMALL_CHAR_BUFFER_SIZE];
-    char typeName [SMALL_CHAR_BUFFER_SIZE];
+    // first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
+    char resourceLocation[CHAR_BUFFER_SIZE]; // http|walrus|cloud|sc|iqn|aoe://... or none
+    char guestDeviceName[SMALL_CHAR_BUFFER_SIZE]; // x?[vhsf]d[a-z]?[1-9]*
+    long long size; // in bytes
+    char formatName[SMALL_CHAR_BUFFER_SIZE]; // ext2|ext3|swap|none
+    char id [SMALL_CHAR_BUFFER_SIZE]; // emi|eki|eri|vol|none
+    char typeName [SMALL_CHAR_BUFFER_SIZE]; // machine|kernel|ramdisk|ephemeral|ebs
 
     // the remaining fields are set by NC
-    ncResourceType type;
-    ncResourceLocationType locationType;
-    ncResourceFormatType format;
-    libvirtDevType guestDeviceType;
-    libvirtBusType guestDeviceBus;
-    libvirtSourceType backingType;
-    char backingPath [CHAR_BUFFER_SIZE];
+    ncResourceType type; // NC_RESOURCE_{IMAGE|RAMDISK|...}
+    ncResourceLocationType locationType; // NC_LOCATION_{URL|WALRUS...}
+    ncResourceFormatType format; // NC_FORMAT_{NONE|EXT2|EXT3|SWAP}
+    int diskNumber; // 0 = [sh]da or fd0, 1 = [sh]db or fd1, etc.
+    int partitionNumber; // 0 = whole disk, 1 = partition 1, etc.
+    libvirtDevType guestDeviceType; // DEV_TYPE_{DISK|FLOPPY|CDROM}
+    libvirtBusType guestDeviceBus; // BUS_TYPE_{IDE|SCSI|VIRTIO|XEN}
+    libvirtSourceType backingType; // SOURCE_TYPE_{FILE|BLOCK}
+    char backingPath [CHAR_BUFFER_SIZE]; // path to file or block device that backs the resource
     char preparedResourceLocation[CHAR_BUFFER_SIZE]; // e.g., URL + resourceLocation for Walrus downloads
 } virtualBootRecord;
 
@@ -244,6 +262,15 @@ typedef struct ncInstance_t {
     virtualMachine params;
     netConfig ncnet;
     pthread_t tcb;
+    char instancePath [CHAR_BUFFER_SIZE];
+
+    // information needed for generating libvirt XML
+    char xmlFilePath [CHAR_BUFFER_SIZE];
+    char libvirtFilePath [CHAR_BUFFER_SIZE];
+    char consoleFilePath [CHAR_BUFFER_SIZE];
+    char hypervisorType [SMALL_CHAR_BUFFER_SIZE];
+    hypervisorCapabilityType hypervisorCapability;
+    int combinePartitions; // hypervisor works only with disks (all except Xen)
 
     // passed into NC via runInstances for safekeeping
     char userData[CHAR_BUFFER_SIZE*10];
