@@ -2,6 +2,66 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*
+  Copyright (c) 2009  Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, only version 3 of the License.
+
+  This file is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  Please contact Eucalyptus Systems, Inc., 130 Castilian
+  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+  if you need additional information or have any questions.
+
+  This file may incorporate work covered under the following copyright and
+  permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+  Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
+
+/*
  * blobstore.c
  */
 
@@ -23,6 +83,7 @@
 #include <pthread.h>
 #include "blobstore.h"
 #include "diskutil.h"
+#include "misc.h" // ensure_...
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_DEFAULT_UMASK 0700
@@ -32,12 +93,11 @@
 #define BLOBSTORE_NO_TIMEOUT -1L
 #define DM_PATH "/dev/mapper/"
 #define DM_FORMAT DM_PATH "%s" // TODO: do not hardcode?
-#define DMSETUP "/sbin/dmsetup" // TODO: do not hardcode?
 #define MIN_BLOCKS_SNAPSHOT 32 // otherwise dmsetup fails with 
+                               // device-mapper: reload ioctl failed: Cannot allocate memory OR
+                               // device-mapper: reload ioctl failed: Input/output error
 #define EUCA_ZERO "euca-zero"
-#define EUCA_ZERO_SIZE "2199023255552" // is one a petabyte enough?
-// device-mapper: reload ioctl failed: Cannot allocate memory OR
-// device-mapper: reload ioctl failed: Input/output error
+#define EUCA_ZERO_SIZE "2199023255552" // is one petabyte enough?
 
 typedef enum { // paths to files containing... 
     BLOCKBLOB_PATH_NONE = 0, // sentinel for identifying files that are not blockblob related
@@ -73,10 +133,27 @@ typedef struct _blobstore_filelock {
 } blobstore_filelock;
 
 __thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK; // thread-local errno
+static void (* err_fn) (const char * msg) = NULL; 
 static unsigned char _do_print_errors = 1;
+static unsigned char _do_print_trace = 0;
 static pthread_mutex_t _blobstore_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 static blobstore_filelock * locks_list = NULL; // process-global LL head (TODO: replace this with a hash table)
 static char zero_buf [1] = "\0";
+
+static void myprintf (const char * format, ...)
+{
+    char buf [1024];
+
+    va_list ap;
+    va_start (ap, format);
+    vsnprintf (buf, sizeof (buf), format, ap);
+    va_end (ap);
+
+    if (err_fn) 
+        err_fn (buf);
+    else
+        puts (buf);
+}
 
 static void print_trace (void)
 {
@@ -89,7 +166,7 @@ static void print_trace (void)
     strings = backtrace_symbols (array, size);
     
     for (i = 0; i < size; i++)
-        printf ("\t%s\n", strings[i]);
+        myprintf ("\t%s\n", strings[i]);
     
     free (strings);
 }
@@ -110,18 +187,12 @@ static void err (blobstore_error_t error, const char * custom_msg)
         msg = blobstore_get_error_str (error);
     }
     if (_do_print_errors) {
-        printf ("error: %s\n", msg); // TODO: add logging hooks
-        //print_trace ();
+        myprintf ("error: %s\n", msg);
+        if (_do_print_trace)
+            print_trace ();
     }
     _blobstore_errno = error;
 }
-
-/*
-static void logg (unsigned int level, const char * msg)
-{
-    printf ("%s\n", msg);
-}
-*/
 
 __INLINE__ static void propagate_system_errno (blobstore_error_t default_errno)
 {
@@ -134,10 +205,15 @@ __INLINE__ static void propagate_system_errno (blobstore_error_t default_errno)
     case ENOSPC: _blobstore_errno = BLOBSTORE_ERROR_NOSPC; break;
     case EAGAIN: _blobstore_errno = BLOBSTORE_ERROR_AGAIN; break;
     default:
-        perror ("blobstore"); // TODO: remove?
+        //perror ("blobstore");
         _blobstore_errno = default_errno;
     }
     err (_blobstore_errno, NULL); // print the message
+}
+
+void blobstore_set_error_function ( void (* fn) (const char * msg) )
+{
+    err_fn = fn;
 }
 
 static void gen_id (char * str, unsigned int size)
@@ -458,13 +534,37 @@ static int write_store_metadata (blobstore * bs)
     return 0;
 }
 
+enum { 
+    DMSETUP,
+    ROOTWRAP, 
+    LASTHELPER
+};
+
+static char * helpers [LASTHELPER] = {
+    "dmsetup",
+    "euca_rootwrap", 
+};
+
+static char * helpers_path [LASTHELPER];
+static int initialized = 0;
+
 static int blobstore_init (void)
 {
-    logfile (NULL, EUCAWARN);
-    int ret = diskutil_init(); 
-    if (ret) {
-        err (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize blobstore library");
+    int ret = 0;
+
+    if (!initialized) {
+        ret = diskutil_init(); 
+        if (ret) {
+            err (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize diskutil library");
+        } else {
+            ret = verify_helpers (helpers, helpers_path, LASTHELPER);
+            if (ret) {
+                err (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize blobstore library");
+            }
+        }
+        initialized = 1;
     }
+
     return ret;
 }
 
@@ -913,55 +1013,6 @@ static int delete_blockblob_files (const blobstore * bs, const char * bb_id)
     return count;
 }
 
-// given path=A/B/C and only A existing, create A/B and, unless
-// is_file_path==1, also create A/B/C directory
-// returns: 0 = path already existed, 1 = created OK, -1 = error
-static int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
-{
-    int len = strlen (path);
-    char * path_copy = NULL;
-    int ret = 0;
-    int i;
-
-    if (len>0)
-        path_copy = strdup (path);
-
-    if (path_copy==NULL)
-        return -1;
-
-    for (i=0; i<len; i++) {
-        struct stat buf;
-        int try_dir = 0;
-
-        if (path[i]=='/' && i>0) { // dir path, not root
-            path_copy[i] = '\0';
-            try_dir = 1;
-
-        } else if (path[i]!='/' && i+1==len) { // last one
-            if (!is_file_path)
-                try_dir = 1;
-        }
-
-        if ( try_dir ) {
-            if ( stat (path_copy, &buf) == -1 ) {
-                logprintfl (EUCAINFO, "creating path %s\n", path_copy);
-
-                if ( mkdir (path_copy, mode) == -1) {
-                    logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
-
-                    free (path_copy);
-                    return -1;
-                }
-                ret = 1; // we created a directory
-            }
-            path_copy[i] = '/'; // restore the slash
-        }
-    }
-
-    free (path_copy);
-    return ret;
-}
-
 // helper for ensuring a directory required by blob exists
 // returns: 0 = already existed, 1 = created OK, -1 = error
 static int ensure_blockblob_metadata_path (const blobstore * bs, const char * bb_id) 
@@ -1080,10 +1131,10 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         strncpy (bb->id, blob_id, sizeof(bb->id));
         strncpy (bb->blocks_path, entry_path, sizeof(bb->blocks_path));
         set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
-        bb->size_blocks = (sb.st_size/512);
+        bb->size_bytes = sb.st_size;
         bb->last_accessed = sb.st_atime;
         bb->last_modified = sb.st_mtime;
-        bb->snapshot_type = BLOBSTORE_FORMAT_ANY;
+        bb->snapshot_type = BLOBSTORE_FORMAT_ANY; // it is not necessary to know whether this is a snapshot
         bb->in_use = check_in_use (bs, bb->id, 0);
     }
 
@@ -1135,8 +1186,8 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
             bb = bb_array [i];
             if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) {
                 if (delete_blockblob_files (bs, bb->id)>0) {
-                    purged += bb->size_blocks;
-                    printf ("purged from blobstore %s blockblob %s of size %lld (total purged in this sweep %lld)\n", bs->id, bb->id, bb->size_blocks, purged);
+                    purged += round_up_sec (bb->size_bytes) / 512;
+                    myprintf ("purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
                 }
             }
             if (purged>=need_blocks)
@@ -1150,11 +1201,13 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
 
 blockblob * blockblob_open ( blobstore * bs,
                              const char * id, // can be NULL if creating, in which case blobstore will pick a random ID
-                             unsigned long long size_blocks, // on create: reserve this size; on open: verify the size, unless set to 0
+                             unsigned long long size_bytes, // on create: reserve this size; on open: verify the size, unless set to 0
                              unsigned int flags, // BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL - same semantcs as for open() flags
                              const char * sig, // if non-NULL, on create sig is recorded, on open it is verified
                              unsigned long long timeout ) // maximum wait, in milliseconds
 {
+    long long size_blocks = round_up_sec (size_bytes) / 512;
+
     if (flags & ~(BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL)) {
         err (BLOBSTORE_ERROR_INVAL, "only _CREAT and _EXCL flags are allowed");
         return NULL;
@@ -1169,7 +1222,7 @@ blockblob * blockblob_open ( blobstore * bs,
     }
     if (size_blocks!=0 && (flags & BLOBSTORE_FLAG_CREAT) && (size_blocks > bs->limit_blocks)) {
         err (BLOBSTORE_ERROR_NOSPC, NULL);
- return NULL;
+        return NULL;
     }
 
     blockblob * bbs = NULL; // a temp LL of blockblobs, used for computing free space and for purging
@@ -1185,7 +1238,7 @@ blockblob * blockblob_open ( blobstore * bs,
     } else {
         gen_id (bb->id, sizeof(bb->id));
     }
-    bb->size_blocks = size_blocks;
+    bb->size_bytes = size_bytes;
     set_blockblob_metadata_path (BLOCKBLOB_PATH_BLOCKS, bs, bb->id, bb->blocks_path, sizeof (bb->blocks_path));
 
     if (blobstore_lock(bs, timeout)==-1) { // lock it so we can traverse it (TODO: move this into creation-only section?)
@@ -1224,23 +1277,24 @@ blockblob * blockblob_open ( blobstore * bs,
             long long blocks_inuse = 0;
             unsigned int blobs_total = 0;
             for (blockblob * abb = bbs; abb; abb=abb->next) {
+                long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
                 if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
-                    blocks_inuse += abb->size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+                    blocks_inuse += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
                 } else {
-                    blocks_allocated += abb->size_blocks; // these can be purged
+                    blocks_allocated += abb_size_blocks; // these can be purged
                 }
                 blobs_total++;
             }
 
             long long blocks_free = bs->limit_blocks - (blocks_allocated + blocks_inuse);
-            if (blocks_free < bb->size_blocks) {
+            if (blocks_free < size_blocks) {
                 if (!(bs->revocation_policy==BLOBSTORE_REVOCATION_LRU) // not allowed to purge
                     ||
-                    (blocks_free+blocks_allocated) < bb->size_blocks) { // not enough purgeable material
+                    (blocks_free+blocks_allocated) < size_blocks) { // not enough purgeable material
                     err (BLOBSTORE_ERROR_NOSPC, NULL);
                     goto clean;
                 } 
-                long long blocks_needed = bb->size_blocks-blocks_free;
+                long long blocks_needed = size_blocks-blocks_free;
                 _err_off(); // do not care about errors duing purging
                 long long blocks_freed = purge_blockblobs_lru (bs, bbs, blocks_needed);
                 _err_on();
@@ -1250,27 +1304,39 @@ blockblob * blockblob_open ( blobstore * bs,
                 }
             }
             
-            if (lseek (bb->fd, (bb->size_blocks*512)-1, SEEK_CUR)==(off_t) -1) { // create a file with a hole
+            if (lseek (bb->fd, size_bytes - 1, SEEK_CUR) == (off_t)-1) { // create a file with a hole
                 propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
                 goto clean;
             }
-            if (write (bb->fd, zero_buf, 1)!=(ssize_t)1) {
+            if (write (bb->fd, zero_buf, 1) != (ssize_t)1) {
                 propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
                 goto clean;
             }
             if (sig)
                 if (write_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, sig))
                     goto clean; 
+            bb->snapshot_type = BLOBSTORE_SNAPSHOT_NONE; // just created, so not a snapshot
 
         } else { // blob existed
 
             char buf [1024];
-            if (bb->size_blocks==0) {
-                bb->size_blocks = (sb.st_size/512);
-            } else if (bb->size_blocks != (sb.st_size/512)) { // check the size
-                err (BLOBSTORE_ERROR_INVAL, "size of the existing blockblob does not match");
+
+            if (bb->size_bytes==0) { // find out the size from the file size
+                bb->size_bytes = sb.st_size;
+            } else if (bb->size_bytes != sb.st_size) { // verify the size specified by the user
+                err (BLOBSTORE_ERROR_SIGNATURE, "size of the existing blockblob does not match");
                 goto clean;
             }
+
+            // determine whether this blob is a map of another,
+            // in which case the blocks are backing and should
+            // not be accessed directly
+            if (read_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bs, bb->id, buf, sizeof (buf)) > 0) {
+                bb->snapshot_type = BLOBSTORE_SNAPSHOT_DM;
+            } else {
+                bb->snapshot_type = BLOBSTORE_SNAPSHOT_NONE;
+            }
+
             if (sig) { // check the signature, if there
                 int sig_size;
                 if ((sig_size=read_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof (buf)))!=strlen(sig)
@@ -1395,13 +1461,13 @@ static int dm_suspend_resume (const char * dev_name)
 {
     char cmd [1024];
 
-    snprintf (cmd, sizeof (cmd), "%s suspend %s", DMSETUP, dev_name);
+    snprintf (cmd, sizeof (cmd), "%s %s suspend %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
     int status = system (cmd);
     if (status == -1 || WEXITSTATUS(status) != 0) {
         err (BLOBSTORE_ERROR_UNKNOWN, "failed to suspend device with 'dmsetup'");
         return -1;
     }
-    snprintf (cmd, sizeof (cmd), "%s resume %s", DMSETUP, dev_name);
+    snprintf (cmd, sizeof (cmd), "%s %s resume %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
     status = system (cmd);
     if (status == -1 || WEXITSTATUS(status) != 0) {
         err (BLOBSTORE_ERROR_UNKNOWN, "failed to resume device with 'dmsetup'");
@@ -1440,7 +1506,7 @@ static int dm_delete_devices (char * dev_names[], int size)
         char cmd [1024];
         int retries = 1;
     try_again:
-        snprintf (cmd, sizeof (cmd), "%s remove %s", DMSETUP, dev_names_removable [i]);
+        snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names_removable [i]);
         int status = system (cmd);
         if (status == -1 || WEXITSTATUS(status) != 0) {
             if (retries--) {
@@ -1462,7 +1528,8 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
 
     for (i=0; i<size; i++) {    
         int pipefds [2];
-        
+        myprintf ("creating device %s\n", dev_names [i]);
+
         if (pipe (pipefds) == -1) {
             propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
@@ -1480,18 +1547,13 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
                 _exit (1);
             }
-            _exit (execl (DMSETUP, DMSETUP, "create", dev_names[i], NULL));
+            _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
 
         } else { // parent
             close (pipefds [0]);
             write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
             close (pipefds [1]);
-            /*
-            printf ("%s create %s\n===\n", DMSETUP, dev_names[i]);
-            write (1, dm_tables [i], strlen (dm_tables [i]));
-            printf ("===\n");
-            fsync (1);
-            */
+
             int status;
             if (waitpid (cpid, &status, 0) == -1) {
                 propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
@@ -1499,6 +1561,8 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
             }
             if (WEXITSTATUS(status) != 0) {
                 err (BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
+                myprintf ("command: %s %s create %s\n", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names[i]);
+                myprintf ("input: %s", dm_tables [i]);
                 goto cleanup;
             }
 
@@ -1646,6 +1710,81 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     return ret;
 }
 
+static int verify_bb ( const blockblob * bb, unsigned long long min_size_bytes ) 
+{
+    if (bb->fd==-1) {
+        err (BLOBSTORE_ERROR_INVAL, "blockblob involved in operation is not open");
+        return -1;
+    }
+    struct stat sb;
+    if (fstat (bb->fd, &sb)==-1) {
+        propagate_system_errno (BLOBSTORE_ERROR_NOENT);
+        return -1;
+    }
+    if (sb.st_size < bb->size_bytes) {
+        err (BLOBSTORE_ERROR_UNKNOWN, "blockblob involved in operation has backing of unexpected size");
+        return -1;
+    }
+    if (sb.st_size < min_size_bytes) {
+        err (BLOBSTORE_ERROR_INVAL, "blockblob involved in operation has backing that is too small");
+        return -1;
+    }
+    if (stat (bb->device_path, &sb)==-1) {
+        propagate_system_errno (BLOBSTORE_ERROR_NOENT);
+        return -1;
+    }
+    if (!S_ISBLK(sb.st_mode)) {
+        err (BLOBSTORE_ERROR_INVAL, "blockblob involved in operation is missing a loopback block device");
+        return -1;
+    }
+    return 0;
+}
+
+int blockblob_copy ( blockblob * src_bb, // source blob to copy data from
+                     unsigned long long src_offset_bytes, // start offset in source
+                     blockblob * dst_bb, // destination blob to copy data to
+                     unsigned long long dst_offset_bytes, // start offset in destination
+                     unsigned long long len_bytes) // 0 = copy until EOF of source
+{
+    int ret = 0;
+
+    if (src_bb==NULL || dst_bb==NULL) {
+        err (BLOBSTORE_ERROR_INVAL, "blockblob pointer is NULL");
+        return -1;
+    }
+
+    long long copy_len_bytes = len_bytes;
+    if (copy_len_bytes==0) {
+        copy_len_bytes = src_bb->size_bytes - src_offset_bytes;
+    }
+    if (copy_len_bytes<1) {
+        err (BLOBSTORE_ERROR_INVAL, "copy source offset outside of range");
+        return -1;
+    }
+
+    // make sure both source and destination blobs are in good shape and big enough
+    if (verify_bb (src_bb, src_offset_bytes + copy_len_bytes) ||
+        verify_bb (dst_bb, dst_offset_bytes + copy_len_bytes)) {
+        return -1;
+    }
+
+    // determine the largest acceptable block size for dd, all the way down to a byte possibly
+    int granularity = 4096;
+    while (src_offset_bytes % granularity || dst_offset_bytes % granularity || copy_len_bytes % granularity) {
+        granularity /= 2;
+    }
+    
+    // do the copy (with block devices dd will silently omit to copy bytes outside the block boundary, so we use paths for uncloned blobs)
+    const char * src_path = (src_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (src_bb)):(blockblob_get_file (src_bb));
+    const char * dst_path = (dst_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (dst_bb)):(blockblob_get_file (dst_bb));
+    if (diskutil_dd2 (src_path, dst_path, granularity, copy_len_bytes/granularity, dst_offset_bytes/granularity, src_offset_bytes/granularity)) {
+        err (BLOBSTORE_ERROR_INVAL, "failed to copy a section");
+        return -1;
+    }    
+
+    return ret;
+}
+
 int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be used as backing
                       const blockmap * map, // map of blocks from other blobs/devices to be copied/mapped/snapshotted
                       unsigned int map_size ) // size of the map []
@@ -1660,6 +1799,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
         err (BLOBSTORE_ERROR_INVAL, "invalid blockbmap or its size");
         return -1;
     }
+    long long bb_size_blocks = round_down_sec (bb->size_bytes) / 512; // dmsetup will not map partial blocks, so we conservatively round down
 
     // verify dependencies (block devices present, blob sizes make sense, zero device present)
     char * zero_dev = NULL;
@@ -1695,36 +1835,20 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 err (BLOBSTORE_ERROR_INVAL, "one of the source blockblob pointers is NULL");
                 return -1;
             }
-            if (sbb->fd==-1) {
-                err (BLOBSTORE_ERROR_INVAL, "one of the source blockblobs is not open");
+            long long sbb_size_blocks = round_down_sec (sbb->size_bytes) / 512; // dmsetup will not map partial blocks, so we conservatively round down
+            if (verify_bb (sbb, sbb_size_blocks)) {
                 return -1;
             }
-            struct stat sb;
-            if (fstat (sbb->fd, &sb)==-1) {
-                propagate_system_errno (BLOBSTORE_ERROR_NOENT);
-                return -1;
-            }
-            if (sb.st_size/512 < sbb->size_blocks) {
-                err (BLOBSTORE_ERROR_INVAL, "one of the source blockblobs has backing that is too small");
-                return -1;
-            }
-            if (stat (sbb->device_path, &sb)==-1) {
-                propagate_system_errno (BLOBSTORE_ERROR_NOENT);
-                return -1;
-            }
-            if (!S_ISBLK(sb.st_mode)) {
-                err (BLOBSTORE_ERROR_INVAL, "one of the source blockblobs is missing a loopback block device");
-                return -1;
-            }
-            if (sbb->size_blocks < (m->first_block_src + m->len_blocks)) {
+            if (sbb_size_blocks < (m->first_block_src + m->len_blocks)) {
                 err (BLOBSTORE_ERROR_INVAL, "one of the source blockblobs is too small for the map");
                 return -1;
             }
-            if (bb->size_blocks < (m->first_block_dst + m->len_blocks)) {
+            if (bb_size_blocks < (m->first_block_dst + m->len_blocks)) {
                 err (BLOBSTORE_ERROR_INVAL, "the destination blockblob is too small for the map");
                 return -1;
             }
             if (m->relation_type==BLOBSTORE_SNAPSHOT && m->len_blocks < MIN_BLOCKS_SNAPSHOT) {
+                printf ("len_blocks = %lld\n", m->len_blocks);
                 err (BLOBSTORE_ERROR_INVAL, "snapshot size is too small");
                 return -1;
             }
@@ -1872,7 +1996,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             ret = -1;
             goto cleanup;
         }
-        
+        bb->snapshot_type = BLOBSTORE_SNAPSHOT_DM; // remember that blobstore uses device mapper
+
         // update .refs on dependencies and create .deps for this blob
         char my_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
         snprintf (my_ref, sizeof (my_ref), "%s %s", bb->store->path, bb->id); // TODO: use store ID to proof against moving blobstore?
@@ -1929,28 +2054,38 @@ const char * blockblob_get_dev ( blockblob * bb )
     return bb->device_path;
 }
 
-// returns a path to the file containg the blob, but only if snapshot_type={ANY|NONE}
+// returns a path to the file containg the blob, but only if snapshot_type!=DM
 const char * blockblob_get_file ( blockblob * bb )
 {
     if (bb==NULL) {
         err (BLOBSTORE_ERROR_INVAL,NULL);
         return NULL;
     }
-    if (bb->snapshot_type!=BLOBSTORE_SNAPSHOT_ANY && bb->snapshot_type!=BLOBSTORE_SNAPSHOT_DM) {
-        err (BLOBSTORE_ERROR_INVAL,"device paths only supported for blockblobs with snapshots");
+    if (bb->snapshot_type==BLOBSTORE_SNAPSHOT_DM) {
+        err (BLOBSTORE_ERROR_INVAL, "file access only supported for uncloned blockblobs");
         return NULL;
     }
     return bb->blocks_path;
 }
 
 // size of blob in blocks
-unsigned long long blockblob_get_size ( blockblob * bb)
+unsigned long long blockblob_get_size_blocks ( blockblob * bb)
 {
     if (bb==NULL) {
         err (BLOBSTORE_ERROR_INVAL,NULL);
         return 0;
     }
-    return bb->size_blocks;
+    return round_up_sec (bb->size_bytes) / 512;
+}
+
+// size of blob in bytes
+unsigned long long blockblob_get_size_bytes ( blockblob * bb)
+{
+    if (bb==NULL) {
+        err (BLOBSTORE_ERROR_INVAL,NULL);
+        return 0;
+    }
+    return bb->size_bytes;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -1989,13 +2124,23 @@ unsigned long long blockblob_get_size ( blockblob * bb)
 #define _CBB BLOBSTORE_FLAG_CREAT|BLOBSTORE_FLAG_EXCL
 
 #define B1 "BLOCKBLOB-01"
-#define B2 "FOO/BLOCKBLOB-02"
-#define B3 "FOO/BAR/BLOCKBLOB-03"
-#define B4 "FOO/BAR/BAZ/BLOCKBLOB-04"
+#define B2 "BLOCKBLOB-02"
+#define B3 "BLOCKBLOB-03"
+#define B4 "BLOCKBLOB-04"
+//#define B2 "FOO/BLOCKBLOB-02"
+//#define B3 "FOO/BAR/BLOCKBLOB-03"
+//#define B4 "FOO/BAR/BAZ/BLOCKBLOB-04"
 #define B5 "BLOCKBLOB-05"
 #define B6 "BLOCKBLOB-06"
 
 #define _OPENBB(BB,ID,SI,SG,FL,TI,RE) _blobstore_errno=0;               \
+    printf ("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), (ID==NULL)?("null"):(ID), SI, FL, TI); \
+    BB=blockblob_open (bs, ID, (SI)*512, FL, SG, TI);                   \
+    printf ("=%s errno=%d '%s'\n", (BB==NULL)?("NULL"):("OK"), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+    if ((BB==NULL) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
+    else if ((RE==-1 && BB!=NULL) || (RE==0 && BB==NULL)) _UNEXPECTED;
+// same as _OPENBB but accepts bytes rather than blocks
+#define _OPENBBb(BB,ID,SI,SG,FL,TI,RE) _blobstore_errno=0;               \
     printf ("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), (ID==NULL)?("null"):(ID), SI, FL, TI); \
     BB=blockblob_open (bs, ID, SI, FL, SG, TI); \
     printf ("=%s errno=%d '%s'\n", (BB==NULL)?("NULL"):("OK"), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
@@ -2015,31 +2160,50 @@ unsigned long long blockblob_get_size ( blockblob * bb)
     printf ("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
     if ((ret==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
     else if (RE!=ret) _UNEXPECTED;
-    
+
+#define _COPYBB(SBB,SO,DBB,DO,LEN,RE) _blobstore_errno=0; \
+    printf ("%d: bb_copy (%s to %s)", getpid(), SBB->id, DBB->id); \
+    ret=blockblob_copy(SBB,SO,DBB,DO,LEN); \
+    printf ("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+    if ((ret==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
+    else if (RE!=ret) _UNEXPECTED;
+
 #define BS_SIZE 30
 #define BB_SIZE 10
 #define CBB_SIZE 32
-#define STRESS_BS_SIZE 1000000
+#define STRESS_BS_SIZE 100000
 #define STRESS_MIN_BB  64
-#define STRESS_BLOBS   80
+#define STRESS_BLOBS   10
 
-static void _fill_blob (blockblob * bb, char c)
+static void _fill_blob (blockblob * bb, char c, int use_file)
 {
-    const char * path = blockblob_get_dev (bb);
+    const char * path;
+    if (use_file) {
+        path = blockblob_get_file (bb);
+    } else {
+        path = blockblob_get_dev (bb);
+    }
+
     char buf [1];
     buf [0] = c;
 
+    printf ("filling out with dummy data %s\n", path);
     int fd = open (path, O_WRONLY);
+    int failed_bytes = 0;
     if (fd!=-1) {
-        for (int i=0; i<bb->size_blocks*512; i++) {
-            write (fd, buf, 1);
+        for (int i=0; i<bb->size_bytes; i++) {
+            if (write (fd, buf, 1)!=1)
+                failed_bytes++;
         }
+    }
+    if (failed_bytes) {
+        printf ("WARNING: failed to fill %d byte(s) to path %s\n", failed_bytes, path);
     }
     fsync (fd);
     close (fd);
 }
 
-static blobstore * create_teststore (int size, const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
+static blobstore * create_teststore (int size_blocks, const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
 {
     static int ts = 0;
     static int counter = 0;
@@ -2056,7 +2220,7 @@ static blobstore * create_teststore (int size, const char * base, const char * n
         return NULL;
     }
     printf ("created %s\n", bs_path);
-    blobstore * bs = blobstore_open (bs_path, size, format, revocation, snapshot);
+    blobstore * bs = blobstore_open (bs_path, size_blocks, format, revocation, snapshot);
     if (bs==NULL) {
         printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
         return NULL;
@@ -2169,7 +2333,7 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
     // fill the stores
     for (int i=0; i<STRESS_BLOBS; i++) {
 #define _OPENERR(BS,BB,BBSIZE)                                          \
-        BB = blockblob_open (BS, NULL, BBSIZE, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000); \
+        BB = blockblob_open (BS, NULL, BBSIZE*512, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000); \
         if (BB == NULL) {                                               \
             printf ("ERROR: failed to create blockblob i=%d\n", i);       \
             errors++;                                                   \
@@ -2270,35 +2434,9 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
     return errors;
 }
 
-static int do_clone_test (const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
+static int check_destination (blockblob * bb4, char * op)
 {
-    int ret;
     int errors = 0;
-    printf ("commencing cloning test\n");
-
-    blobstore * bs = create_teststore (CBB_SIZE*6, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
-    if (bs==NULL) { errors++; goto done; }
-
-    blockblob * bb1, * bb2, * bb3, * bb4, * bb5, * bb6;
-
-    // these are to be mapped to others
-    _OPENBB(bb1,B1,CBB_SIZE,NULL,_CBB,0,0); // bs size: 1
-    _fill_blob (bb1, '1');
-    _OPENBB(bb2,B2,CBB_SIZE,NULL,_CBB,0,0); // bs size: 2
-    _fill_blob (bb2, '2');
-    _OPENBB(bb3,B3,CBB_SIZE,NULL,_CBB,0,0); // bs size: 3
-    _fill_blob (bb3, '3');
-
-    // these are to be clones
-    _OPENBB(bb4,B4,CBB_SIZE*3,NULL,_CBB,0,0); // bs size: 6
-    blockmap bm1 [] = { 
-        {BLOBSTORE_MAP, BLOBSTORE_BLOCKBLOB, {blob:bb1}, 0, 0, CBB_SIZE},
-        {BLOBSTORE_COPY, BLOBSTORE_BLOCKBLOB, {blob:bb2}, 0, CBB_SIZE, CBB_SIZE},
-        {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:bb3}, 0, CBB_SIZE*2, CBB_SIZE},
-    };
-    _CLONBB(bb4,B4,bm1,0);
-
-    // see if cloning worked
     const char * dev = blockblob_get_dev (bb4);
     if (dev!=NULL) {
         int fd = open (dev, O_RDONLY);
@@ -2322,13 +2460,92 @@ static int do_clone_test (const char * base, const char * name, blobstore_format
         stop_comparing:
             close (fd);
         } else {
-            printf ("ERROR: failed to open block device %s for the clone\n", dev);
+            printf ("ERROR: failed to open block device %s for the %s\n", dev, op);
             errors++;
         }
     } else {
-        printf ("ERROR: failed to get a block device for the clone\n");
+        printf ("ERROR: failed to get a block device for the %s\n", op);
         errors++;
     }
+
+    return errors;
+}
+
+static int do_copy_test (const char * base, const char * name)
+{
+    int ret;
+    int errors = 0;
+    printf ("commencing copy test\n");
+
+    blobstore * bs = create_teststore (CBB_SIZE*7, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+    if (bs==NULL) { errors++; goto done; }
+
+    blockblob * bb1, * bb2, * bb3, * bb4;
+
+    // these are to be copied to another
+    _OPENBBb(bb1,B1,CBB_SIZE*512*7+1,NULL,_CBB,0,-1); // too big for bs
+    if (errors) goto done;
+    _OPENBBb(bb1,B1,CBB_SIZE*512,NULL,_CBB,0,0); // bs size: 1
+    _fill_blob (bb1, '1', TRUE);
+    _OPENBBb(bb2,B2,CBB_SIZE*512+1,NULL,_CBB,0,0); // bs size: 3
+    _fill_blob (bb2, '2', TRUE);
+    _OPENBBb(bb3,B3,CBB_SIZE*512-2,NULL,_CBB,0,0); // bs size: 4
+    _fill_blob (bb3, '3', TRUE);
+
+    // this is to be the destination of the copy
+    _OPENBB(bb4,B4,CBB_SIZE*3,NULL,_CBB,0,0); // bs size: 7
+    _COPYBB(bb1,0,bb4,0,0,0);  // check that len=0 works and that right block size is chosen
+    _COPYBB(bb2,0,bb4,CBB_SIZE*512,CBB_SIZE*512+1,0);
+    _COPYBB(bb3,0,bb4,CBB_SIZE*512*2,CBB_SIZE*512-2,0);
+    _COPYBB(bb3,0,bb4,CBB_SIZE*512*3-2,2,0);
+    _COPYBB(bb3,0,bb4,CBB_SIZE*512*2,CBB_SIZE*512,-1); // source is too small
+    _COPYBB(bb3,2,bb4,CBB_SIZE*512*2,CBB_SIZE*512,-1); // source is too small
+    _COPYBB(bb3,0,bb4,CBB_SIZE*512*3-1,2,-1); // destination is too small
+
+    // see if copy worked
+    errors += check_destination (bb4, "copy");
+
+    _DELEBB(bb1,B1,0);
+    _DELEBB(bb2,B2,0);
+    _DELEBB(bb3,B3,0);
+    _DELEBB(bb4,B4,0);
+    blobstore_close (bs);
+
+    printf ("completed copy test\n");
+ done:
+    return errors;
+}
+
+static int do_clone_test (const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
+{
+    int ret;
+    int errors = 0;
+    printf ("commencing cloning test\n");
+
+    blobstore * bs = create_teststore (CBB_SIZE*6, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+    if (bs==NULL) { errors++; goto done; }
+
+    blockblob * bb1, * bb2, * bb3, * bb4, * bb5, * bb6;
+
+    // these are to be mapped to others
+    _OPENBB(bb1,B1,CBB_SIZE,NULL,_CBB,0,0); // bs size: 1
+    _fill_blob (bb1, '1', FALSE);
+    _OPENBB(bb2,B2,CBB_SIZE,NULL,_CBB,0,0); // bs size: 2
+    _fill_blob (bb2, '2', FALSE);
+    _OPENBB(bb3,B3,CBB_SIZE,NULL,_CBB,0,0); // bs size: 3
+    _fill_blob (bb3, '3', FALSE);
+
+    // these are to be clones
+    _OPENBB(bb4,B4,CBB_SIZE*3,NULL,_CBB,0,0); // bs size: 6
+    blockmap bm1 [] = { 
+        {BLOBSTORE_MAP, BLOBSTORE_BLOCKBLOB, {blob:bb1}, 0, 0, CBB_SIZE},
+        {BLOBSTORE_COPY, BLOBSTORE_BLOCKBLOB, {blob:bb2}, 0, CBB_SIZE, CBB_SIZE},
+        {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:bb3}, 0, CBB_SIZE*2, CBB_SIZE},
+    };
+    _CLONBB(bb4,B4,bm1,0);
+
+    // see if cloning worked
+    errors += check_destination (bb4, "clone");
 
     _DELEBB(bb1,B1,-1); // referenced, not deletable
     _DELEBB(bb2,B2,0); // not referenced, deletable
@@ -2347,7 +2564,7 @@ static int do_clone_test (const char * base, const char * name, blobstore_format
         errors++; 
         goto done; 
     }
-    bb5 = blockblob_open (bs2, B5, CBB_SIZE*3, BLOBSTORE_FLAG_CREAT, NULL, 0);
+    bb5 = blockblob_open (bs2, B5, CBB_SIZE*3*512, BLOBSTORE_FLAG_CREAT, NULL, 0);
     if (bb5==NULL) {
         errors++;
         goto done;
@@ -2674,25 +2891,35 @@ int do_file_lock_test (void)
 int main (int argc, char ** argv)
 {
     int errors = 0;
+    char cwd [1024];
+    getcwd (cwd, sizeof (cwd));
 
     printf ("testing blobstore.c\n");
 
     errors += do_file_lock_test ();
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
-    char cwd [1024];
-    getcwd (cwd, sizeof (cwd));
-
     errors += do_metadata_test (cwd, "directory-meta");
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
     errors += do_blobstore_test (cwd, "directory-norevoc", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_NONE);
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
+
     errors += do_blobstore_test (cwd, "lru-directory", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_LRU);
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
+
     errors += do_blobstore_test (cwd, "lru-visible", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_LRU);
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
+
+    errors += do_copy_test (cwd, "copy");
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
 
     errors += do_clone_test (cwd, "clone", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
 
     errors += do_clone_stresstest (cwd, "clonestress", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
+    if (errors) goto done; // no point in doing blobstore test if above isn't working
+
  done:
     printf ("done testing blobstore.c (errors=%d)\n", errors);
     blobstore_cleanup();

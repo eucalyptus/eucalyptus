@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -78,7 +78,6 @@
 #include "eucalyptus.h"
 #include "misc.h"
 #include "walrus.h"
-#include <http.h>
 
 #define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
 #define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
@@ -99,7 +98,7 @@ static void zerr (int ret, char * where);
 #endif
 
 struct request {
-    FILE * fp; /* output file pointer to be used by curl WRITERs */
+    int fd; /* output file descriptor to be used by curl WRITERs */
     long long total_wrote; /* bytes written during the operation */
     long long total_calls; /* write calls made during the operation */
 #if defined (CAN_GZIP)
@@ -139,8 +138,8 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         return code;
     }
 
-    FILE * fp = fopen64 (outfile, "w");
-    if (fp==NULL) {
+    int fd = open (outfile, O_CREAT | O_WRONLY); // we do not truncate the file
+    if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "walrus_request(): failed to open %s for writing\n", outfile);
         return code;
     }
@@ -150,7 +149,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     curl = curl_easy_init ();
     if (curl==NULL) {
         logprintfl (EUCAERROR, "walrus_request(): could not initialize libcurl\n");
-        fclose(fp);
+        close(fd);
         return code;
     }
 
@@ -165,7 +164,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         /* TODO: HEAD isn't very useful atm since we don't look at headers */
         curl_easy_setopt (curl, CURLOPT_NOBODY, 1L);
     } else {
-        fclose(fp);
+        close(fd);
         logprintfl (EUCAERROR, "walrus_request(): invalid HTTP verb %s\n", verb);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
@@ -173,7 +172,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     /* set up the default write function, but possibly override
      * it below, if compression is desired and possible */
     struct request params;
-    params.fp = fp;
+    params.fd = fd;
     curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
     curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
 #if defined(CAN_GZIP)
@@ -194,7 +193,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     time_t t = time(NULL);
     char date_str [26];
     if (ctime_r(&t, date_str)==NULL) {
-        fclose(fp);
+        close(fd);
         return ERROR;
     }
     assert (strlen(date_str)+7<=STRSIZE);
@@ -206,7 +205,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
     char * cert_str = euca_get_cert (0); /* read the cloud-wide cert */
     if (cert_str==NULL) {
-        fclose(fp);
+        close(fd);
         return ERROR;
     }
     char * cert64_str = base64_enc ((unsigned char *)cert_str, strlen(cert_str));
@@ -220,7 +219,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
     char * sig_str = euca_sign_url (verb, date_str, url_path); /* create Walrus-compliant sig */
     if (sig_str==NULL) {
-        fclose(fp);
+        close(fd);
         return ERROR;
     }
     assert (strlen(sig_str)+16<=BUFSIZE);
@@ -294,13 +293,13 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         if (code!=OK && retries>0) {
             logprintfl (EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
             sleep (timeout);
-            fseek (fp, 0L, SEEK_SET);
+            lseek (fd, 0L, SEEK_SET);
             timeout <<= 1;
         }
 
         retries--;
     } while (code!=OK && retries>0);
-    fclose (fp);
+    close (fd);
 
     if ( code != OK ) {
         logprintfl (EUCAINFO, "walrus_request(): due to error, removing %s\n", outfile);
@@ -344,29 +343,54 @@ int walrus_image_by_manifest_path (const char * manifest_path, const char * outf
     return walrus_image_by_manifest_url (url, outfile, do_compress);
 }
 
-/* downloads a digest of an image and compare it to file at digest_path
+// downloads a digest and returns it as a new string (or NULL if error)
+// that the caller must free
+char * walrus_get_digest (const char * url)
+{
+    char * digest_str = NULL;
+    char * digest_path = strdup ("/tmp/walrus-digest-XXXXXX");
+    int tmp_fd = mkstemp (digest_path);
+    if (tmp_fd<0) {
+        logprintfl (EUCAERROR, "error: failed to create a digest file %s\n", digest_path);
+    } else {
+        close (tmp_fd); // walrus_ routine will reopen the file
+
+        // download a fresh digest
+        if (walrus_object_by_url (url, digest_path, 0) != 0 ) {
+            logprintfl (EUCAERROR, "error: failed to download digest to %s\n", digest_path);
+        } else {
+            digest_str = file2strn (digest_path, 100000);
+        }
+        unlink (digest_path);
+    }
+    return digest_str;
+}
+
+/* downloads a digest of an image and compares it to file at old_digest_path
  * returns 0 if same, -N if different, N if error */
-int walrus_verify_digest (const char * url, const char * old_digest)
+int walrus_verify_digest (const char * url, const char * old_digest_path)
 {
     int e = ERROR;
-    char * new_digest = strdup ("/tmp/walrus-digest-XXXXXX");
-    int tmp_fd = mkstemp (new_digest);
-    if (tmp_fd<0) {
-        logprintfl (EUCAERROR, "error: failed to create a digest file %s\n", new_digest);
-    } else {
-        close (tmp_fd); /* walrus routine will reopen the file */
 
-        /* download a fresh digest */
-        if ( (e=walrus_object_by_url (url, new_digest, 0)) != 0 ) {
-            logprintfl (EUCAERROR, "error: failed to download digest to %s\n", new_digest);
-
-        } else {
-            /* compare the two */
-            e = diff (new_digest, old_digest);
-        }
+    char * new_digest;
+    char * old_digest = file2strn (old_digest_path, 100000);
+    if (old_digest == NULL) {
+        logprintfl (EUCAERROR, "error: failed to read old digest %s\n", old_digest_path);
+        return e;
     }
-    unlink (new_digest);
-    free (new_digest);
+
+    if ((new_digest=walrus_get_digest (url)) != NULL) {
+        // compare the two
+        if (strcmp (new_digest, old_digest)) {
+            e = -1;
+        } else {
+            e = 0;
+        }
+
+        free (new_digest);
+    }
+    free (old_digest);
+
     return e;
 }
 
@@ -381,8 +405,8 @@ static size_t write_header (void *buffer, size_t size, size_t nmemb, void *param
 static size_t write_data (void *buffer, size_t size, size_t nmemb, void *params)
 {
     assert (params !=NULL);
-    FILE * fp = ((struct request *)params)->fp;
-    int wrote = fwrite (buffer, size, nmemb, fp);
+    int fd = ((struct request *)params)->fd;
+    int wrote = write (fd, buffer, size * nmemb);
     ((struct request *)params)->total_wrote += wrote;
     ((struct request *)params)->total_calls++;
 
@@ -432,7 +456,7 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 {
     assert (params !=NULL);
     z_stream * strm = &(((struct request *)params)->strm);
-    FILE * fp = ((struct request *)params)->fp;
+    int fd = ((struct request *)params)->fd;
     unsigned char out [CHUNK];
     int wrote = 0;
     int ret;
@@ -456,7 +480,7 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
         }
 
         unsigned have = CHUNK - strm->avail_out;
-        if (fwrite (out, 1, have, fp) != have || ferror(fp)) {
+        if (write (fd, out, have) != have) {
             logprintfl (EUCAERROR, "error: write_data_zlib(): failed to write\n");
             inflateEnd(strm);
             return Z_ERRNO;
