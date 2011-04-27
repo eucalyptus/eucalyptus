@@ -5,7 +5,7 @@ version "eee-3.0.0"
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Bootstrap Configuration"#                                                    #       #                         #                      #      #
 option "user"                  u   "User to drop privs to after starting."             string  typestr="USERNAME"        default="eucalyptus"    no
-option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="/opt/eucalyptus/nurmi_eee_mergetest-root/"     no
+option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="/home/dmitrii/branches/eee-dev-ha/"     no
 
 option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." flag                              off
 option "bind-addr"             b   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address."  string  typestr="IP_ADDRESS"                            optional multiple
@@ -13,7 +13,7 @@ option "bind-addr"             b   "Specifying this option causes eucalyptus-clo
 option "define"                D   "Set system properties."                            string                                                  optional multiple
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
-option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="/opt/eucalyptus/nurmi_eee_mergetest-root/var/run/eucalyptus-cloud.pid" no
+option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="/home/dmitrii/branches/eee-dev-ha/var/run/eucalyptus-cloud.pid" no
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #
@@ -40,7 +40,7 @@ option "disable-vmwarebroker"	 -   "DEPRECATED DO NOT USE. IT DOES NOTHING."    
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Java Options"   #       #                                                    #       #                         #                      #      #           
-option "java-home"             j   "Alternative way to specify JAVA_HOME."             string  typestr="DIRECTORY"       default="/opt/eucalyptus/nurmi_eee_mergetest-root/packages/jdk/"   no
+option "java-home"             j   "Alternative way to specify JAVA_HOME."             string  typestr="DIRECTORY"       default="/usr/lib/jvm/java-1.6.0-openjdk"   no
 option "jvm-name"              -   "Which JVM type to run (see jvm.cfg)."              string  typestr="JVMNAME"         default="-server"       no     hidden
 option "jvm-args"              X   "Arguments to pass to the JVM."                     string                                                  optional multiple
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off

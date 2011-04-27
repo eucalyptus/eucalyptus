@@ -119,23 +119,24 @@
 		<ant dir="modules/www" inheritall="false" target="builder" />
 	</target>
 	<target name="build-test">
-		<ant dir="." inheritall="false" target="build-test-all" />
+		<ant dir="." inheritall="false" target="build-all-test" />
 		<ant dir="." inheritall="false" target="jar" />
 	</target>
-	<target name="build-test-all">
-		<ant dir="." inheritall="false" target="build-test-nogwt" />
-		<ant dir="." inheritall="false" target="build-test-gwt" />
+	<target name="build-all-test">
+		<ant dir="." inheritall="false" target="build-nowww-test" />
+		<ant dir="." inheritall="false" target="build-www-test" />
 	</target>
-	<target name="build-test-nogwt">
+	<target name="build-nowww-test">
 		<ant dir="modules/msgs" inheritall="false" target="builder-test" />
+		<ant dir="modules/euare-common" inheritall="false" target="builder-test" />
 		<ant dir="modules/mysql" inheritall="false" target="builder-test" />
 		<ant dir="modules/authentication" inheritall="false" target="builder-test" />
 		<ant dir="modules/configuration" inheritall="false" target="builder-test" />
 		<ant dir="modules/core" inheritall="false" target="builder-test" />
 		<ant dir="modules/wsstack" inheritall="false" target="builder-test" />
+		<ant dir="modules/euare" inheritall="false" target="builder-test" />
 		<ant dir="modules/component" inheritall="false" target="builder-test" />
 		<ant dir="modules/cloud" inheritall="false" target="builder-test" />
-		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder-test" />
 		<ant dir="modules/notifications" inheritall="false" target="builder-test" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder-test" />
@@ -143,11 +144,10 @@
 		<ant dir="modules/storage-controller" inheritall="false" target="builder-test" />
 		<ant dir="modules/storage-san" inheritall="false" target="builder-test" />
 		<ant dir="modules/dns" inheritall="false" target="builder-test" />
-		<ant dir="modules/www" inheritall="false" target="builder-test" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder-test" />
 		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
 	</target>
-	<target name="build-test-gwt">
+	<target name="build-www-test">
 		<ant dir="modules/www" inheritall="false" target="builder-test" />
 	</target>
 	<target name="jar" depends="build-bind">
