@@ -33,7 +33,7 @@ public class Hmacv1LoginModule extends BaseLoginModule<HmacCredentials> {
     SecurityContext.enqueueSignature( sig );
     AccessKey accessKey = Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
     User user = accessKey.getUser( );
-    String secretKey = accessKey.getKey( );
+    String secretKey = accessKey.getSecretKey( );
 
     String canonicalString = this.makeSubjectString( credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );

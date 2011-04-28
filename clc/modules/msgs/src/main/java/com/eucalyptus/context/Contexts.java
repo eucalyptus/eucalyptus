@@ -20,6 +20,10 @@ public class Contexts {
   private static ConcurrentMap<String, Context>  uuidContexts    = new ConcurrentHashMap<String, Context>( MAX, THRESHOLD, CONCUR );
   private static ConcurrentMap<Channel, Context> channelContexts = new ConcurrentHashMap<Channel, Context>( MAX, THRESHOLD, CONCUR );
   
+  static boolean hasOutstandingRequests( ) {
+    return uuidContexts.keySet( ).size( ) > 0;
+  }
+  
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );

@@ -87,7 +87,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.Cluster;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
@@ -606,7 +606,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
                                                                                                                                                this.getName( ) );
   }
   

@@ -63,25 +63,25 @@
 
 package com.eucalyptus.empyrean;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Any;
 import com.google.common.collect.Lists;
 
-
 public class Empyrean extends ComponentId.Unpartioned {
   
-  public static final Empyrean INCOGNITO = new Empyrean( );//NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-
+  public static final Empyrean INCOGNITO = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+                                                            
   @Override
   public String getPartition( ) {
     return this.name( );
   }
-
+  
   public Empyrean( ) {
     super( "Bootstrap" );
   }
-
+  
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-bootstrap.xml";
@@ -96,9 +96,9 @@ public class Empyrean extends ComponentId.Unpartioned {
   public Boolean hasCredentials( ) {
     return true;
   }
-
+  
   @Override
-  public List<Class<Any>> serviceDependencies( ) {
-    return Lists.newArrayList( Any.class );
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList() {{ add( Any.class ); }};
   }
-}
+ }

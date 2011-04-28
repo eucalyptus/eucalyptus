@@ -47,7 +47,7 @@ public class NetworkGroupManager {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup();
     User requestUser = ctx.getUser( );
-    Account account = Permissions.getAccountByUserId( requestUser.getId( ) );
+    Account account = Permissions.getAccountByUserId( requestUser.getUserId( ) );
     
     NetworkGroupUtil.makeDefault( ctx.getUserFullName( ) );
     

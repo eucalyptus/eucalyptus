@@ -21,8 +21,7 @@ public class ImageUserGroup implements Group {
   }
 
   @Override
-  public String getId( ) {
-    // TODO Auto-generated method stub
+  public String getGroupId( ) {
     return null;
   }
 

@@ -7,6 +7,7 @@ import java.security.cert.X509Certificate;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.crypto.util.B64.url;
 
 public class X509CertHelper {
   

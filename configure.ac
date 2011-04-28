@@ -101,6 +101,14 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
+AM_PATH_PYTHON([2.5])
+if ! echo "$PYTHON_VERSION" | grep -q '^2\.'; then
+        # We picked up python 3
+        echo "Found Python version $PYTHON_VERSION; expected version 2.x"
+        echo "Specify a path to Python 2 with the PYTHON environment variable."
+        exit 1
+fi
+
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
@@ -256,7 +264,8 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
-                 tools/euca_conf:tools/euca_conf.in
+		 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
+		 clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in])
 
@@ -280,6 +289,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
+AC_SUBST(PYTHON)
 
 
 

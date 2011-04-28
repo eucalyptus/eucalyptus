@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Any;
@@ -412,50 +413,8 @@ public class Bootstrap {
     return finished;
   }
   
-  private static Boolean                    childHost     = Boolean.FALSE;
-  private static Boolean                    mergeDatabase = Boolean.FALSE;
-  private static ImmutableList<InetAddress> parents;
-  
-  static {
-    /** initialize child status **/
-    List<InetAddress> rents = Lists.newArrayList( );
-    try {
-      Integer parentNum = Integer.parseInt( System.getProperty( "euca.child" ) );
-      childHost = ( parentNum >= 0 );
-      if ( childHost ) {
-        /** initialize whether should merge database **/
-        mergeDatabase = ( System.getProperty( "euca.merge.db" ) != null );
-        /** initialize the parent arguments **/
-        for ( int i = 0; i < parentNum; i++ ) {
-          String addr = System.getProperty( "euca.parent." + i );
-          try {
-            rents.add( InetAddress.getByName( addr ) );
-          } catch ( UnknownHostException ex ) {
-            LOG.error( "Ignoring specified parent address as it is not a valid address: addr=" + addr + " error=" + ex.getMessage( ) );
-          }
-        }
-        if ( rents.isEmpty( ) ) {
-          LOG.error( "Invalid parent addresses provided:  This is most likely an error!" );//GRZE:NOTIFY
-        }
-      }
-    } catch ( NumberFormatException ex1 ) {
-      LOG.error( ex1, ex1 );
-    }
-    parents = ImmutableList.copyOf( rents );
-  }
-  
-  public static Boolean isChild( ) {
-    return childHost;
-  }
-  
-  public static Boolean isCloudLocal( ) {
-    return childHost
-      ? mergeDatabase
-      : true;
-  }
-  
-  public static Boolean shouldMergeDatabase( ) {
-    return mergeDatabase;
+  public static Boolean isCloudController( ) {
+    return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
   
   /**
@@ -502,22 +461,19 @@ public class Bootstrap {
     LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
     Bootstrap.doDiscovery( );
     
-    LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.list( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+    LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
+    for ( ComponentId compId : ComponentIds.list( ) ) {
+      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName( ) );
+      Components.create( compId );
     }
     
     /**
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services: child=" + Bootstrap.childHost + " merge=" + Bootstrap.mergeDatabase + " cloudLocal="
-                              + Bootstrap.isCloudLocal( ) ) );
-    List<Component> components = Components.list( );
-//    for ( Component comp : components ) {
-    Iterables.all( components, new Callback.Success<Component>( ) {
-      @Override
-      public void fire( Component comp ) {
+    LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + Bootstrap.isCloudController( ) ) );
+    List<Component> components = Components.whichCanLoad( );
+    for ( Component comp : components ) {
       try {
         comp.initService( );
       } catch ( ServiceRegistrationException ex ) {
@@ -526,22 +482,29 @@ public class Bootstrap {
         LOG.error( ex, ex );
       }
     }
-    } );
+    
+    LOG.info( LogUtil.header( "Initializing component resources:" ) );
+    for ( Component c : Components.whichCanLoad( ) ) {
+      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+    }
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
     
     LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
+    for ( Component c : Components.list( ) ) {
+      LOG.info( c.toString( ) );
+    }
   }
   
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getStateMachine( ).checkTransition( transition ) ) {
+    if ( component.getLocalService( ).checkTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getStateMachine( ).transition( transition );
+          component.getLocalService( ).transition( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

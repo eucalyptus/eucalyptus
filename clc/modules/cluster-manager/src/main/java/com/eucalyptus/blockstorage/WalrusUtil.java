@@ -89,9 +89,9 @@ import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.NoSuchImageException;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
@@ -167,7 +167,7 @@ public class WalrusUtil {
       if ( reply == null || reply.getBase64Data( ) == null ) {
         throw new EucalyptusCloudException( "No data: " + imageLocation );
       } else {
-        if ( LogLevels.DEBUG ) {
+        if ( Logs.DEBUG ) {
           LOG.debug( "Got the manifest to verify: " );
           LOG.debug( Hashes.base64decode( reply.getBase64Data( ) ) );
         }

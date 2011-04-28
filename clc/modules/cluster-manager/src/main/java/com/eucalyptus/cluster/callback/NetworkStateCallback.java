@@ -52,13 +52,17 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
           netToken = net.addTokenIfAbsent( netToken );
         }
       } catch ( NoSuchElementException e1 ) {
-        AccountFullName accountFn = Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) );
-        if( accountFn != null ) {
-          net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
-          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-            netToken = net.addTokenIfAbsent( netToken );
+        try {
+          AccountFullName accountFn = Accounts.lookupAccountFullNameById( netInfo.getAccountId( ) );
+          if( accountFn != null ) {
+            net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
+            if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
+              NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+              netToken = net.addTokenIfAbsent( netToken );
+            }
           }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
         }
       }
     }

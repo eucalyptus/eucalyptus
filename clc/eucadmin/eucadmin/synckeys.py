@@ -33,7 +33,7 @@ import sys
 import socket
 import shutil
 from boto.utils import mklist
-import command
+from eucadmin.command import Command
 
 SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
@@ -73,11 +73,11 @@ class SyncKeys(object):
             self.warning("Can't find %s in %s" % (not_found, self.src_dirs))
 
     def check_local(self):
-        if remote_host == '127.0.0.1':
+        if self.remote_host == '127.0.0.1':
             self.is_remote = True
-        elif remote_host == 'localhost':
+        elif self.remote_host == 'localhost':
             self.is_remote = True
-        elif remote_host == socket.gethostname():
+        elif self.remote_host == socket.gethostname():
             self.is_remote = True
 
     def sync_local(self):
@@ -97,8 +97,8 @@ class SyncKeys(object):
         print 'Trying rsync to sync keys with %s' % self.remote_host
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
-        cmd += ' %s:%s/' % (self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
@@ -110,7 +110,7 @@ class SyncKeys(object):
         euca_user = os.environ.get('EUCA_USER', None)
         if not euca_user:
             try:
-                pwd.getpwname('eucalyptus')
+                pwd.getpwnam('eucalyptus')
                 euca_user = 'eucalyptus'
             except KeyError:
                 self.error('EUCA_USER is not defined!')
@@ -125,7 +125,7 @@ class SyncKeys(object):
         cmd = 'sudo -u %s scp ' % euca_user
         cmd += ' '.join(self.files)
         cmd += ' %s@%s:%s' % (euca_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
@@ -134,11 +134,12 @@ class SyncKeys(object):
             return False
 
     def sync(self):
-        if self.local:
+        self.get_file_list()
+        if self.check_local():
             self.sync_local()
             return True
         else:
-            if self.use_rysync and self.sync_rsync():
+            if self.use_rsync and self.sync_rsync():
                 return True
             if self.use_scp and self.sync_scp():
                 return True

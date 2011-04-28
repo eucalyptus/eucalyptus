@@ -220,7 +220,7 @@ public class SystemState {
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }
@@ -406,7 +406,7 @@ public class SystemState {
   public static Long countByAccount( String accountId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getId( ).equals( accountId ) ) {
+      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getAccountNumber( ).equals( accountId ) ) {
         vmNum++;
       }
     }

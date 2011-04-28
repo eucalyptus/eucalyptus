@@ -12,10 +12,12 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
@@ -33,6 +35,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
+
+  // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_group_id_external" )
+  String groupId;
 
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
@@ -77,12 +83,19 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.userGroup = userGroup;
   }
 
-  public static GroupEntity newInstanceWithId( final String id ) {
+  public static GroupEntity newInstanceWithGroupId( final String id ) {
     GroupEntity g = new GroupEntity( );
-    g.setId( id );
+    g.groupId = id;
     return g;
   }
 
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.groupId == null ) {
+      this.groupId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );
+    }
+  }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -144,6 +157,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   
   public List<UserEntity> getUsers( ) {
     return this.users;
+  }
+
+  public String getGroupId( ) {
+    return this.groupId;
   }
   
 }

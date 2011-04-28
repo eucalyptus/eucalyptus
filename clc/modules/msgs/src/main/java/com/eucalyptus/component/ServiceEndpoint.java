@@ -76,13 +76,13 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.HasParent;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.Request;
@@ -90,11 +90,11 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<Service> {
+public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<MessagableService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
   private static final int                   offerInterval = 2000;
   private static final int                   pollInterval  = 2000;
-  private final Service                      parent;
+  private final MessagableService                      parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -102,7 +102,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
   public static Integer                      NUM_WORKERS   = 8;                                        //ASAP: restore configurability
   private ThreadPool                         workers;
   
-  public ServiceEndpoint( Service parent, Boolean local, URI uri ) {
+  public ServiceEndpoint( MessagableService parent, Boolean local, URI uri ) {
     super( uri );
     this.parent = parent;
     this.local = local;
@@ -111,11 +111,11 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
       LOG.error( e, e );
-      System.exit( -1 );
+      throw new ServiceTransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getParent( ).getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = Threads.lookup( parent.getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -139,7 +139,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if ( LogLevels.TRACE ) {
+          if ( Logs.TRACE ) {
             Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {
@@ -161,7 +161,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
             EventRecord.here( ServiceEndpointWorker.class, EventType.DEQUEUE, event.getCallback( ).getClass( ).getSimpleName( ),
                               event.getRequest( ).getRequest( ).toSimpleString( ) ).debug( );
             final long start = System.nanoTime( );
-            event.getRequest( ).sendSync( ServiceEndpoint.this );
+            event.getRequest( ).sendSync( ServiceEndpoint.this.getParent( ).getServiceConfiguration( ) );
             EventRecord.here( ServiceEndpointWorker.class, EventType.QUEUE, ServiceEndpoint.this.getParent( ).getName( ) )//
             .append( event.getCallback( ).getClass( ).getSimpleName( ) )//
             .append( EventType.QUEUE_TIME.name( ), Long.toString( start - event.getStartTime( ) ) )//
@@ -188,7 +188,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
     this.workers.shutdownNow( );
   }
   
-  public Service getParent( ) {
+  public MessagableService getParent( ) {
     return this.parent;
   }
   
@@ -297,10 +297,6 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<S
       } );
     }
     return false;
-  }
-  
-  public ChannelPipelineFactory getPipelineFactory( ) {
-    return this.getParent( ).getParent( ).getComponentId( ).getClientPipeline( );    
   }
   
 }

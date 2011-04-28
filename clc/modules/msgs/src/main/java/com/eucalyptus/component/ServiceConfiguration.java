@@ -1,15 +1,18 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import com.eucalyptus.util.HasFullName;
 
 public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration> {
-  public abstract String getId( );
   
   public abstract void setName( String name );
   
   public abstract void setPartition( String partition );
-  
+
+  public InetSocketAddress getSocketAddress( );
+
   public abstract String getHostName( );
   
   public abstract void setHostName( String hostName );
@@ -22,7 +25,7 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract void setServicePath( String servicePath );
   
-  public abstract String getUri( );
+  public abstract URI getUri( );
   
   public abstract Boolean isLocal( );
   
@@ -31,5 +34,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public abstract ComponentId getComponentId( );
   
   public abstract Service lookupService( );
-  
+
+  public abstract ServiceBuilder lookupBuilder( );
 }

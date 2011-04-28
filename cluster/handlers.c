@@ -118,6 +118,7 @@ void doInitCC(void) {
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig) {
   int i, j, rc, start = 0, stop = 0, ret=0, timeout, done;
+  char internalWalrusURL[MAX_PATH], theWalrusURL[MAX_PATH];
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
@@ -136,6 +137,21 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   if (!instanceId) {
     logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
     return(1);
+  }
+
+  // get internal walrus IP
+  done=0;
+  internalWalrusURL[0] = '\0';
+  for (i=0; i<16 && !done; i++) {
+    if (!strcmp(config->services[i].type, "walrus")) {
+      snprintf(internalWalrusURL, MAX_PATH, "%s", config->services[i].uris[0]);
+      done++;
+    }
+  }
+  if (done) {
+    snprintf(theWalrusURL, MAX_PATH, "%s", internalWalrusURL);
+  } else {
+    strncpy(theWalrusURL, walrusURL, strlen(walrusURL)+1);
   }
 
   sem_mywait(RESCACHE);
@@ -158,7 +174,7 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   done=0;
   for (j=start; j<stop && !done; j++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncBundleInstance", instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncBundleInstance", instanceId, bucketName, filePrefix, theWalrusURL, userPublicKey, S3Policy, S3PolicySig);
     if (rc) {
       ret = 1;
     } else {
@@ -4020,29 +4036,6 @@ void shawn() {
   if (config) msync(config, sizeof(ccConfig), MS_ASYNC);
   if (vnetconfig) msync(vnetconfig, sizeof(vnetConfig), MS_ASYNC);
 
-}
-
-int timeread(int fd, void *buf, size_t bytes, int timeout) {
-  int rc;
-  fd_set rfds;
-  struct timeval tv;
-
-  if (timeout <= 0) timeout = 1;
-
-  FD_ZERO(&rfds);
-  FD_SET(fd, &rfds);
-  
-  tv.tv_sec = timeout;
-  tv.tv_usec = 0;
-  
-  rc = select(fd+1, &rfds, NULL, NULL, &tv);
-  if (rc <= 0) {
-    // timeout
-    logprintfl(EUCAERROR, "timeread(): select() timed out for read: timeout=%d\n", timeout);
-    return(-1);
-  }
-  rc = read(fd, buf, bytes);
-  return(rc);
 }
 
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart) {

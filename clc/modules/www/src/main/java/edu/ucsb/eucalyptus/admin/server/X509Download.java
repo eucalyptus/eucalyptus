@@ -78,11 +78,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -163,14 +166,14 @@ public class X509Download extends HttpServlet {
     try {
       for ( AccessKey k : u.getKeys( ) ) {
         if ( k.isActive( ) ) {
-          userAccessKey = k.getId( );
-          userSecretKey = k.getKey( );
+          userAccessKey = k.getAccessKey( );
+          userSecretKey = k.getSecretKey( );
         }
       }
       if ( userAccessKey == null ) {
-        AccessKey k = u.addKey( Hmacs.generateSecretKey( u.getName( ) ) );
-        userAccessKey = k.getId( );
-        userSecretKey = k.getKey( );
+        AccessKey k = u.createKey( );
+        userAccessKey = k.getAccessKey( );
+        userSecretKey = k.getSecretKey( );
       }
       keyPair = Certs.generateKeyPair( );
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
@@ -189,17 +192,15 @@ public class X509Download extends HttpServlet {
       
       zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
       StringBuilder sb = new StringBuilder( );
-      
-      BigInteger number = u.getNumber( );
-      String userNumber = null;
-      if ( number != null ) {
-	    userNumber = number.toString( );
-      }
+      //TODO:GRZE:FIXME velocity
+      String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      
-      try {
-        sb.append( "\nexport S3_URL=" + SystemConfiguration.getWalrusUrl( ) );
-      } catch ( Throwable e ) {
+      if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
+        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( ).getServiceConfiguration( );
+        String uri = walrusConfig.getUri( ).toASCIIString( );
+        LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
+        sb.append( "\nexport S3_URL=" + uri );
+      } else {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
       sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
@@ -209,14 +210,13 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
+      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
-      if ( userNumber != null ) {
-        sb.append( "\n# This is a bogus value; Eucalyptus does not need this but client tools do.\nexport EC2_USER_ID='" + userNumber + "'" );
-        sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
+      sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
+      sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
                  + " --ec2cert ${EUCALYPTUS_CERT}\"" );
-      }
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
       zipOut.putNextEntry( new ZipEntry( "eucarc" ) );

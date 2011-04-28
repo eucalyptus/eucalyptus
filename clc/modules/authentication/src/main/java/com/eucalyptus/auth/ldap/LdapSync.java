@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -64,6 +65,10 @@ public class LdapSync {
     
   }
   
+  public static synchronized boolean inSync( ) {
+    return inSync;
+  }
+  
   public static synchronized void start( ) {
     if ( lic.isSyncEnabled( ) ) {
       if ( lic.isAutoSync( ) ) {
@@ -118,8 +123,10 @@ public class LdapSync {
     }
   }
   
-  private static synchronized void setSyncCompleted( ) {
-    inSync = false;
+  private static synchronized boolean getAndSetSync( boolean newValue ) {
+    boolean old = inSync;
+    inSync = newValue;
+    return old;
   }
   
   private static synchronized void periodicSync( ) {
@@ -135,8 +142,7 @@ public class LdapSync {
     LOG.debug( "A new sync initiated." );
     
     timeTillNextSync = lic.getSyncInterval( );
-    if ( !inSync ) {
-      inSync = true;
+    if ( !getAndSetSync( true ) ) {
       
       Threads.newThread( new Runnable( ) {
         
@@ -144,7 +150,7 @@ public class LdapSync {
         public void run( ) {
           LOG.debug( "Sync started" );
           sync( lic );
-          setSyncCompleted( );
+          getAndSetSync( false );
           LOG.debug( "Sync ended" );
         }
         
@@ -165,13 +171,15 @@ public class LdapSync {
                                               lic.getAccountingGroupBaseDn( ),
                                               lic.getAccountingGroupIdAttribute( ),
                                               lic.getGroupsAttribute( ),
-                                              lic.getGroupIdAttribute( ) );
+                                              lic.getGroupIdAttribute( ),
+                                              lic.getAccountingGroupsSelection( ) );
       }
       groups = loadLdapGroupType( ldap,
                                   lic.getGroupBaseDn( ),
                                   lic.getGroupIdAttribute( ),
                                   lic.getUsersAttribute( ),
-                                  lic.getUserIdAttribute( ) );
+                                  lic.getUserIdAttribute( ),
+                                  lic.getGroupsSelection( ) );
       users = loadLdapUsers( ldap, lic );
     } catch ( Throwable e ) {
       LOG.error( e, e );
@@ -501,16 +509,37 @@ public class LdapSync {
     }
   }
   
-  private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, String idAttrName, String memberAttrName, String memberIdAttrName ) throws LdapException {
-    String[] attrNames = new String[]{ idAttrName, memberAttrName };
+  private static List<Attributes> retrieveSelection( LdapClient ldap, String baseDn, Selection selection, String[] attrNames ) throws LdapException {
     if ( VERBOSE ) {
-      LOG.debug( "Search users by: baseDn=" + lic.getUserBaseDn( ) + ", attributes=" + attrNames );
+      LOG.debug( "Search users by: baseDn=" + baseDn + ", attributes=" + attrNames + ", selection=" + selection );
     }
-    NamingEnumeration<SearchResult> results = ldap.search( baseDn, WILDCARD_FILTER, attrNames );
+    List<Attributes> attrsList = Lists.newArrayList( );
+    try {
+      // Search by filter first.
+      NamingEnumeration<SearchResult> results = ldap.search( baseDn, selection.getSearchFilter( ), attrNames );
+      while ( results.hasMore( ) ) {
+        SearchResult res = results.next( );
+        if ( !selection.getNotSelected( ).contains( res.getNameInNamespace( ) ) ) {
+          attrsList.add( res.getAttributes( ) );
+        }
+      }
+      // Get one-off DNs
+      for ( String dn : selection.getSelected( ) ) {
+        attrsList.add( ldap.getContext( ).getAttributes( dn, attrNames ) );
+      }
+    } catch ( NamingException e ) {
+      LOG.error( e, e );
+      throw new LdapException( e );
+    }
+    return attrsList;
+  }
+  
+  private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, String idAttrName, String memberAttrName, String memberIdAttrName, Selection selection ) throws LdapException {
+    String[] attrNames = new String[]{ idAttrName, memberAttrName };
+    List<Attributes> attrsList = retrieveSelection( ldap, baseDn, selection, attrNames );
     try {
       Map<String, Set<String>> groupMap = Maps.newHashMap( );
-      while ( results.hasMore( ) ) {
-        Attributes attrs = results.next( ).getAttributes( );
+      for ( Attributes attrs : attrsList ) {
         if ( VERBOSE ) {
           LOG.debug( "Retrieved group: " + attrs );
         }
@@ -527,27 +556,21 @@ public class LdapSync {
   private static Map<String, Map<String, String>> loadLdapUsers( LdapClient ldap, LdapIntegrationConfiguration lic ) throws LdapException {
     // Prepare the list of attributes to retrieve
     List<String> attrNames = Lists.newArrayList( );
-    attrNames.addAll( lic.getUserInfoAttributes( ) );
-    if ( !lic.getUserInfoAttributes( ).contains( lic.getUserIdAttribute( ) ) ) {
+    attrNames.addAll( lic.getUserInfoAttributes( ).keySet( ) );
+    if ( !lic.getUserInfoAttributes( ).keySet( ).contains( lic.getUserIdAttribute( ) ) ) {
       attrNames.add( lic.getUserIdAttribute( ) );
     }
     // Retrieving from LDAP using a search
-    if ( VERBOSE ) {
-      LOG.debug( "Search users by: baseDn=" + lic.getUserBaseDn( ) + ", attributes=" + attrNames );
-    }
-    NamingEnumeration<SearchResult> results = ldap.search( lic.getUserBaseDn( ),
-                                                           WILDCARD_FILTER,
-                                                           attrNames.toArray( new String[0] ) );
+    List<Attributes> attrsList = retrieveSelection( ldap, lic.getUserBaseDn( ), lic.getUsersSelection( ), attrNames.toArray( new String[0] ) );
     try {
       Map<String, Map<String, String>> userMap = Maps.newHashMap( );
-      while ( results.hasMore( ) ) {
-        Attributes attrs = results.next( ).getAttributes( );
+      for ( Attributes attrs : attrsList ) {
         if ( VERBOSE ) {
           LOG.debug( "Retrieved user: " + attrs );
         }
         Map<String, String> infoMap = Maps.newHashMap( );
-        for ( String attr : lic.getUserInfoAttributes( ) ) {
-          infoMap.put( attr, ( String ) attrs.get( attr ).get( ) );
+        for ( String attr : lic.getUserInfoAttributes( ).keySet( ) ) {
+          infoMap.put( lic.getUserInfoAttributes( ).get( attr ), ( String ) attrs.get( attr ).get( ) );
         }
         userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
       }
