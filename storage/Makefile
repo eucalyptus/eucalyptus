@@ -11,7 +11,7 @@ IMAGER_WRAPPER=euca_imager
 IMAGER=_euca_imager
 #EFENCE=-lefence
 
-all: storage.o storage-windows.o walrus.o Wclient $(IMAGER) test_blobstore
+all: backing.o storage.o storage-windows.o walrus.o Wclient $(IMAGER) test_blobstore
 #all: storage.o storage-windows.o walrus.o test_blobstore
 
 build: all
