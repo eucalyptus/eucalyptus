@@ -343,8 +343,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
             if ( Component.State.ENABLED.apply( this.configuration ) ) {
-              Automata.chainedTransition( this, State.ENABLED, State.ENABLED_ADDRS, State.ENABLED_RSC, State.ENABLED_NET, State.ENABLED_VMS,
-                                          State.ENABLED_SERVICE_CHECK ).call( );
+              Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC, State.ENABLED_NET, State.ENABLED_VMS ).call( );
             } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
               this.stateMachine.transition( State.DISABLED );
             }
