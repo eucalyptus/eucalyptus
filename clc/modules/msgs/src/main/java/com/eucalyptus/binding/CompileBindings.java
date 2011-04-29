@@ -163,7 +163,7 @@ public class CompileBindings extends Task {
       AntClassLoader loader = this.getProject( ).createClassLoader( path );
       BindingGenerator.MSG_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
       BindingGenerator.DATA_TYPE = loader.forceLoadClass( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
-      Compile compiler = new Compile( false, false, false, false, false, false );
+      Compile compiler = new Compile( false, false, true, false, false, false );
       compiler.compile( paths( ), bindings() );
     } catch ( ClassNotFoundException e1 ) {
       e1.printStackTrace( );

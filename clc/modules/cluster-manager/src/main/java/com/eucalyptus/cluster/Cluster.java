@@ -448,10 +448,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     try {
       Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       this.configuration.error( ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       this.configuration.error( ex );
     }
   }
@@ -461,9 +461,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     try {
       Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   
@@ -638,7 +638,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     }
   }
   
-  private AbstractTransitionAction<Cluster> newLogRefresh( final Class msgClass ) {
+  private AbstractTransitionAction<Cluster> newLogRefresh( final Class msgClass ) {//TODO:GRZE:REMOVE
     final Cluster cluster = this;
     final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, cluster );
     return new AbstractTransitionAction<Cluster>( ) {
@@ -676,14 +676,16 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
-      if ( tick.isAsserted( 10 ) && State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+      boolean mod10 = tick.isAsserted( 10l );
+      boolean mod3 = tick.isAsserted( 3l );
+      if ( mod10 && State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         this.nextState( );
-      } else if ( tick.isAsserted( 3 ) && State.ENABLED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
+      } else if ( mod3 && State.ENABLED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
         this.updateVolatiles( );
       }
     } else if ( event instanceof LifecycleEvent ) {
       LifecycleEvent lifecycleEvent = ( LifecycleEvent ) event;
-      if( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
+      if ( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
         LOG.info( event );
 //TODO:GRZE:come back and decide.
 //        switch ( ( ( LifecycleEvent ) event ).getLifecycleEventType( ) ) {

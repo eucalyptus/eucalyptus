@@ -287,13 +287,6 @@
 			</fileset>
 		</copy>
 		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
-		<!--copy admin tools 
-		<copy todir="${DESTDIR}${euca.bin.dir}" overwrite="true">
-			<fileset dir="${tools.dir}">
-				<include name="**/*" />
-			</fileset>
-		</copy>
-		-->
 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
 			<include name="**/euca-*" />
 		</chmod>
