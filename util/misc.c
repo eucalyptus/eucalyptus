@@ -382,6 +382,7 @@ int check_file_newer_than(char *file, time_t mtime) {
   return(1);
 }
 
+// returns 0 if file is a readable regular file, 1 otherwise
 int check_file(char *file) {
   int rc;
   struct stat mystat;
@@ -392,6 +393,22 @@ int check_file(char *file) {
   
   rc = lstat(file, &mystat);
   if (rc < 0 || !S_ISREG(mystat.st_mode)) {
+    return(1);
+  }
+  return(0);
+}
+
+// return 0 if path exists
+int check_path(char *path) {
+  int rc;
+  struct stat mystat;
+  
+  if (!path) {
+    return(1);
+  }
+  
+  rc = lstat(path, &mystat);
+  if (rc < 0) {
     return(1);
   }
   return(0);

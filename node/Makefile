@@ -15,6 +15,7 @@ CLIENT=NCclient
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o
+BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[revno `bzr revno`, built `date --rfc-3339='sec'`]"\"
 
 all: server client clientlib test_nc test
 
@@ -36,7 +37,7 @@ generated/stubs: $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
+	$(CC) $(BUILD_ID) -c $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 

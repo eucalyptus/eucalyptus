@@ -63,6 +63,9 @@
 
 #include "data.h" // ncInstance
 
+#define BACKING_FILE_UMASK 0660
+#define BACKING_DIRECTORY_UMASK 0771
+
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb);
 int create_instance_backing (ncInstance * instance);
 int save_instance_struct (const ncInstance * instance);

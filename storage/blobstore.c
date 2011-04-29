@@ -86,7 +86,8 @@
 #include "misc.h" // ensure_...
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
-#define BLOBSTORE_DEFAULT_UMASK 0700
+#define BLOBSTORE_DIRECTORY_UMASK 0771 // the '1' is there so libvirt/KVM on Maverick do not stumble on permissions
+#define BLOBSTORE_FILE_UMASK 0660
 #define BLOBSTORE_METADATA_TIMEOUT_MS 999
 #define BLOBSTORE_SLEEP_INTERVAL_MS 99
 #define BLOBSTORE_MAX_CONCURRENT 99
@@ -594,7 +595,7 @@ blobstore * blobstore_open ( const char * path,
 
     _blobstore_errno = BLOBSTORE_ERROR_OK;
     _err_off();
-    bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, 0, 0600);
+    bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, 0, BLOBSTORE_FILE_UMASK);
     _err_on();
     if (bs->fd != -1) { // managed to create blobstore metadata file and got exclusive lock
 
@@ -616,7 +617,7 @@ blobstore * blobstore_open ( const char * path,
     }
     
     // now (re)open, with a shared read lock
-    bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_MS, 0);
+    bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_MS, BLOBSTORE_FILE_UMASK);
     if (bs->fd == -1) {
         goto free;
     }
@@ -676,7 +677,7 @@ int blobstore_lock ( blobstore * bs, long long timeout_usec)
     char meta_path [PATH_MAX];
     snprintf (meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
-    int fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDWR, timeout_usec, 0);
+    int fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_UMASK);
     if (fd!=-1)
         bs->fd = fd;
     return fd;
@@ -754,7 +755,9 @@ static int write_blockblob_metadata_path (blockblob_path_t path_t, const blobsto
     char path [PATH_MAX];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
+    mode_t old_umask = umask (~BLOBSTORE_FILE_UMASK);
     FILE * FH = fopen (path, "w");
+    umask (old_umask);
     if (FH) {
         fprintf (FH, "%s", str);
         fclose (FH);
@@ -796,7 +799,9 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
+    mode_t old_umask = umask (~BLOBSTORE_FILE_UMASK);
     FILE * fp = fopen (path, "w+");
+    umask (old_umask);
     if (fp == NULL) {
         propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
         return -1;
@@ -1019,7 +1024,7 @@ static int ensure_blockblob_metadata_path (const blobstore * bs, const char * bb
 {
     char base [PATH_MAX];
     snprintf (base, sizeof (base), "%s/%s", bs->path, bb_id);
-    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), BLOBSTORE_DEFAULT_UMASK);
+    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), BLOBSTORE_DIRECTORY_UMASK);
 }
 
 static void free_bbs ( blockblob * bbs )
@@ -1039,7 +1044,7 @@ static unsigned int check_in_use ( blobstore * bs, const char * bb_id, long long
     set_blockblob_metadata_path (BLOCKBLOB_PATH_BLOCKS, bs, bb_id, buf, sizeof (buf));
 
     _err_off(); // do not care if blocks file does not exist
-    int fd = open_and_lock (buf, BLOBSTORE_FLAG_RDWR, timeout_usec, timeout_usec); // try opening to see what happens
+    int fd = open_and_lock (buf, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_UMASK); // try opening to see what happens
     if (fd != -1) {
         close_and_unlock (fd); 
     } else {
@@ -1252,7 +1257,7 @@ blockblob * blockblob_open ( blobstore * bs,
     }
 
     int created_blob = 0;
-    bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout, 0600); // blobs are always opened with exclusive write access
+    bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout, BLOBSTORE_FILE_UMASK); // blobs are always opened with exclusive write access
     if (bb->fd != -1) { 
         struct stat sb;
         if (fstat (bb->fd, &sb)==-1) {
@@ -1476,6 +1481,26 @@ static int dm_suspend_resume (const char * dev_name)
     return 0;
 }
 
+static int dm_delete_device (const char * dev_name)
+{
+    int retries = 1;
+    char cmd [1024];
+    int ret = 0;
+
+ try_again:
+    snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
+    int status = system (cmd);
+    if (status == -1 || WEXITSTATUS(status) != 0) {
+        if (retries--) {
+            usleep (100);
+            goto try_again;
+        }
+        err (BLOBSTORE_ERROR_UNKNOWN, "failed to remove device mapper device with 'dmsetup'");
+        ret = -1;
+    }
+    return ret;
+}
+
 static int dm_delete_devices (char * dev_names[], int size)
 {
     if (size<1) return 0;
@@ -1502,20 +1527,25 @@ static int dm_delete_devices (char * dev_names[], int size)
         }
     }
 
+    // run through devices and remove them
     for (int i=0; i<devices; i++) {
-        char cmd [1024];
-        int retries = 1;
-    try_again:
-        snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names_removable [i]);
-        int status = system (cmd);
-        if (status == -1 || WEXITSTATUS(status) != 0) {
-            if (retries--) {
-                usleep (100);
-                goto try_again;
+
+        // some of these devices may have children devices that were created
+        // by GNU parted for each of the partitions inside; here we look for
+        // those devices and remove them so the main device is not 'busy'.
+        for (int j=1; j<10; j++) {
+            char name_p [1024]; // device mapper name of a potential partition entry
+            char path_p [1024]; // path to the device mapper file
+            // just append 'pN' to the name, e.g., sda -> sdap1
+            snprintf (name_p, sizeof (name_p), "%sp%d", dev_names_removable [i], j);
+            snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
+            myprintf ("checking for existance of %s\n", path_p);
+            if (check_path(path_p)==0) {
+                myprintf ("trying to remove %s\n", name_p);
+                dm_delete_device (name_p);
             }
-            err (BLOBSTORE_ERROR_UNKNOWN, "failed to remove device mapper device with 'dmsetup'");
-            ret = -1;
         }
+        ret = dm_delete_device (dev_names_removable [i]);
     }
     free (dev_names_removable);
 
@@ -2103,7 +2133,7 @@ unsigned long long blockblob_get_size_bytes ( blockblob * bb)
 
 #define _OPEN(FD,FI,FL,TI,RE) _blobstore_errno=0;                       \
     printf ("%d: open (" FI " flags=%d timeout=%d)", getpid(), FL, TI); \
-    FD=open_and_lock(FI,FL,TI,0600);                                    \
+    FD=open_and_lock(FI,FL,TI,BLOBSTORE_FILE_UMASK);                    \
     printf ("=%d errno=%d '%s'\n", FD, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
     if ((FD==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
     else if ((RE==-1 && FD!=-1) || (RE==0 && FD<0)) _UNEXPECTED;
@@ -2215,7 +2245,7 @@ static blobstore * create_teststore (int size_blocks, const char * base, const c
 
     char bs_path [PATH_MAX];
     snprintf (bs_path, sizeof (bs_path), "%s/test_blobstore_%05d_%s_%03d", base, ts, name, counter++);
-    if (mkdir (bs_path, BLOBSTORE_DEFAULT_UMASK) == -1) {
+    if (mkdir (bs_path, BLOBSTORE_DIRECTORY_UMASK) == -1) {
         printf ("failed to create %s\n", bs_path);
         return NULL;
     }
@@ -2804,7 +2834,7 @@ int do_file_lock_test (void)
         printf ("opening maximum number of descriptors\n");
         int fd [BLOBSTORE_MAX_CONCURRENT];
         for (int j=0; j<BLOBSTORE_MAX_CONCURRENT; j++) {
-            fd [j] = open_and_lock (F3, _R, 0, 0);
+            fd [j] = open_and_lock (F3, _R, 0, BLOBSTORE_FILE_UMASK);
             if (fd [j] == -1) {
                 _UNEXPECTED;
                 printf ("opened %d descriptors (max is %d)\n", j+1, BLOBSTORE_MAX_CONCURRENT);

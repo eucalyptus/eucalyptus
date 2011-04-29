@@ -66,6 +66,8 @@
 #define __USE_GNU
 #include <string.h> // strlen, strcpy
 #include <time.h>
+#include <sys/types.h> // umask
+#include <sys/stat.h> // umask
 #include <libxml/xmlmemory.h>
 #include <libxml/debugXML.h>
 #include <libxml/HTMLtree.h>
@@ -78,6 +80,7 @@
 #include <libxslt/xsltutils.h>
 
 #include "eucalyptus-config.h"
+#include "backing.h" // umask
 #include "handlers.h" // nc_state
 #include "data.h"
 #include "misc.h"
@@ -165,7 +168,11 @@ int gen_instance_xml (const ncInstance * instance)
         }
     }
 
+    mode_t old_umask = umask (~BACKING_FILE_UMASK); // ensure the generated XML file has the right perms
+    chmod (instance->xmlFilePath, BACKING_FILE_UMASK); // ensure perms in case when XML file exists
     xmlSaveFormatFileEnc (instance->xmlFilePath, doc, "UTF-8", 1);
+    umask (old_umask);
+
     logprintfl (EUCAINFO, "wrote instanceNode XML to %s\n", instance->xmlFilePath);
     xmlFreeDoc(doc);
 

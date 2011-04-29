@@ -92,6 +92,12 @@ permission notice:
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
 
+#ifdef EUCA_COMPILE_TIMESTAMP
+static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
+#else
+static char * compile_timestamp_str = "";
+#endif
+
 /* used by lower level handlers */
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
@@ -572,7 +578,7 @@ void *startup_thread (void * arg)
       dom = virDomainCreateLinux (nc_state.conn, xml, 0);
       sem_v (hyp_sem);
     }
-    if (xml) free(xml);
+
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
@@ -724,6 +730,7 @@ static int init (void)
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
 	logfile(log, EUCADEBUG);
+        logprintfl (EUCAINFO, "Eucalyptus node controller initializing %s\n", compile_timestamp_str);
 
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
