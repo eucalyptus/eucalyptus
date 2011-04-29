@@ -327,12 +327,14 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             break;
           case NOTREADY:
             transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
+            break;
           case DISABLED:
             if ( Component.State.ENABLED.apply( this.configuration ) ) {
               transition = Automata.chainedTransition( this, State.DISABLED, State.ENABLING );
             } else if ( Component.State.DISABLED.apply( this.configuration ) ) {
               transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
             }
+            break;
           case ENABLING:
 //          case ENABLING_RESOURCES:
 //          case ENABLING_NET:
@@ -350,6 +352,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
               transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
             }
+            break;
 //          case ENABLED_ADDRS:
 //          case ENABLED_RSC:
 //          case ENABLED_NET:
