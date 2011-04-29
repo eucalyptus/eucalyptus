@@ -16,7 +16,7 @@ public class CsvChecker
 	public static void main(String[] args)
 		throws Exception
 	{
-		if ( args.length !=3 ) {
+		if ( args.length < 3 ) {
 			printHelp();
 			System.exit(-1);
 		}
@@ -24,6 +24,7 @@ public class CsvChecker
 		final double errorMargin = Double.parseDouble(args[0]);
 		final File referenceFile = new File(args[1]);
 		final File checkedFile = new File(args[2]);
+		final boolean debug = (args.length > 3 && args[3].equals("debug"));
 
 		boolean passed = true;
 
@@ -62,8 +63,8 @@ public class CsvChecker
 				fields = line.split(",");
 				refLineNum = 0;
 				for (ReferenceLine refLine : refLines) {
-					//System.err.println("ShouldMatch:" + refLine.shouldMatch(fields));
-					//System.err.println("DoesMatch:" + refLine.doesMatch(fields, errorMargin));
+					if (debug) System.err.println("ShouldMatch:" + refLine.shouldMatch(fields));
+					if (debug) System.err.println("DoesMatch:" + refLine.doesMatch(fields, errorMargin));
 					passed = passed
 							&& (refLine.shouldMatch(fields)
 									? refLine.doesMatch(fields, errorMargin)
@@ -92,11 +93,13 @@ public class CsvChecker
 		
 		private final int doublePlusFieldInd;
 		private final String[] fields;
+		private final boolean debug;
 
-		ReferenceLine(int doublePlusFieldInd, String[] fields)
+		ReferenceLine(int doublePlusFieldInd, String[] fields, boolean debug)
 		{
 			this.doublePlusFieldInd = doublePlusFieldInd;
 			this.fields = fields;
+			this.debug = debug;
 		}
 
 		static ReferenceLine parseLine(String line)
@@ -133,6 +136,8 @@ public class CsvChecker
 				if (i==doublePlusFieldInd) continue;
 				if (fields[i].trim().length()==0) continue; //ignore empty ref fields
 				if (! fieldMatches(fields[i], otherFields[i], errorMargin))
+					if (debug) System.out.printf("Field %d doesn't match, field:%s other:%s\n",
+						i, fields[i], otherFields[i]);
 					return false;
 			}
 			return true;
