@@ -3,6 +3,8 @@ package com.eucalyptus.component;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -11,12 +13,12 @@ import com.google.common.collect.Maps;
  */
 public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfiguration> {
   private Map<String, ServiceConfiguration> services = Maps.newConcurrentMap( );
-  private final Component component;
+  private final Component                   component;
   
   DummyServiceBuilder( Component component ) {
     this.component = component;
   }
-
+  
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     return this.services.containsKey( name );
@@ -69,10 +71,11 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( ex );
     }
-    if( service.getPartition( ).equals( partition ) ) {
+    if ( service.getPartition( ).equals( partition ) ) {
       return service.getServiceConfiguration( );
     } else {
-      throw new ServiceRegistrationException( "No service found matching partition: " + partition+ " and name: " + name + " for component: " + this.getComponent( ).getName( ) );
+      throw new ServiceRegistrationException( "No service found matching partition: " + partition + " and name: " + name + " for component: "
+                                              + this.getComponent( ).getName( ) );
     }
   }
   
@@ -86,5 +89,30 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   protected ServiceConfiguration newInstance( ) {
     ComponentId compId = this.getComponent( ).getComponentId( );
     return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.getLocalEndpointUri( ) );
+  }
+  
+  @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+  }
+  
+  @Override
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+  }
+  
+  @Override
+  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+  }
+  
+  @Override
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+  }
+  
+  @Override
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_CHECK, config.getFullName( ).toString( ), config.toString( ) ).debug( );
   }
 }

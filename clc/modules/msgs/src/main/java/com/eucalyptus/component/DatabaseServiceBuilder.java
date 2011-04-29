@@ -1,4 +1,5 @@
 package com.eucalyptus.component;
+
 /*******************************************************************************
  *Copyright (c) 2009 Eucalyptus Systems, Inc.
  * 
@@ -68,9 +69,26 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
-public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> extends AbstractServiceBuilder<T> {
+public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
-    
+  
+  public abstract T newInstance( String partition, String name, String host, Integer port );
+  
+  protected abstract T newInstance( );
+  
+  @Override
+  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
+    try {
+      this.lookupByName( name );
+      return true;
+    } catch ( ServiceRegistrationException e ) {
+      throw e;
+    } catch ( Throwable e ) {
+      LOG.error( e, e );
+      return false;
+    }
+  }
+  
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
     return ServiceConfigurations.getInstance( ).list( this.newInstance( ) );
@@ -83,7 +101,6 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
     conf.setPartition( partition );
     return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
   }
-
   
   @Override
   public T lookupByName( String name ) throws ServiceRegistrationException {
@@ -125,25 +142,25 @@ public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> ext
     } catch ( ServiceRegistrationException ex1 ) {
       LOG.trace( "Failed to find existing component registration for host: " + host );
     }
-    if( existingName != null && existingHost != null ) {
+    if ( existingName != null && existingHost != null ) {
       return false;
     } else if ( existingName == null && existingHost == null ) {
       return true;
     } else if ( existingName != null ) {
-      throw new ServiceRegistrationException( "Component with name=" + name + " already exists with host=" + existingName.getHostName( ) );      
+      throw new ServiceRegistrationException( "Component with name=" + name + " already exists with host=" + existingName.getHostName( ) );
     } else if ( existingHost != null ) {
       throw new ServiceRegistrationException( "Component with host=" + host + " already exists with name=" + existingHost.getName( ) );
     } else {
       throw new ServiceRegistrationException( "BUG: This is a logical impossibility." );
     }
   }
-
+  
   @Override
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( partition, name, host, port );
     return ( T ) ServiceConfigurations.getInstance( ).store( config );
   }
-
+  
   @Override
   public T remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     T removeConf = this.lookupByName( config.getName( ) );
