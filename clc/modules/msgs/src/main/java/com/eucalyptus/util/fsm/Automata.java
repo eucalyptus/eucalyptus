@@ -73,6 +73,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 
@@ -120,9 +121,9 @@ public class Automata {
       public CheckedListenableFuture<ServiceConfiguration> call( ) throws Exception {
         StateMachine serviceStateMachine = config.getStateMachine( );
         if ( !fromState.equals( serviceStateMachine.getState( ) ) ) {
-          throw new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in "
+          return Futures.predestinedFailedFuture( new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in "
                                            + serviceStateMachine.getState( )
-                                           + " for " + config.toString( ) );
+                                           + " for " + config.toString( ) ) );
         } else {
           EventRecord.here( Automata.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), fromState.toString( ),
                             toState.toString( ), config.getFullName( ).toString( ) ).debug( );
@@ -136,7 +137,7 @@ public class Automata {
             }
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
-            throw ex;
+            return Futures.predestinedFailedFuture( ex );
           }
         }
       }
