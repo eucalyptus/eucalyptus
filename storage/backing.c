@@ -106,9 +106,9 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         return ERROR;
     }
     char cache_path [MAX_PATH]; snprintf (cache_path, sizeof (cache_path), "%s/cache", instances_path);
-    if (ensure_directories_exist (cache_path, 0, BACKING_DIRECTORY_UMASK) == -1) return ERROR;
+    if (ensure_directories_exist (cache_path, 0, BACKING_DIRECTORY_PERM) == -1) return ERROR;
     char work_path [MAX_PATH];  snprintf (work_path,  sizeof (work_path),  "%s/work", instances_path);
-    if (ensure_directories_exist (work_path, 0, BACKING_DIRECTORY_UMASK) == -1) return ERROR;
+    if (ensure_directories_exist (work_path, 0, BACKING_DIRECTORY_PERM) == -1) return ERROR;
     unsigned long long cache_limit_blocks = conf_cache_size_mb * 2048; // convert MB to blocks
     unsigned long long work_limit_blocks  = conf_work_size_mb * 2048;
     if (work_limit_blocks==0) { // we take 0 as unlimited
@@ -582,7 +582,7 @@ int create_instance_backing (ncInstance * instance)
 
     char instance_path [MAX_PATH];
     set_path (instance_path, sizeof (instance_path), instance, NULL);
-    ensure_directories_exist (instance_path, 0, BACKING_DIRECTORY_UMASK);
+    ensure_directories_exist (instance_path, 0, BACKING_DIRECTORY_PERM);
 
     // sort vbrs into prereqs[] and parts[] so they can be approached in the right order
     // (first the prereqs, then disks and partitions, in increasing order)
@@ -661,7 +661,7 @@ int destroy_instance_backing (ncInstance * instance)
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
     set_path (path, sizeof (path), instance, "*");
-    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_UMASK)) {
+    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
         logprintfl (EUCAWARN, "Error: failed to chown files before cleanup for instance %s\n", instance->instanceId);
     }
     
@@ -733,7 +733,7 @@ int save_instance_struct (const ncInstance * instance)
     set_path (checkpoint_path, sizeof (checkpoint_path), instance, "instance.checkpoint");
 
     int fd;
-    if ((fd = open (checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_UMASK)) < 0) {
+    if ((fd = open (checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
 	    logprintfl(EUCADEBUG, "save_instance_struct: failed to create instance checkpoint at %s\n", checkpoint_path);
         return ERROR;
     }

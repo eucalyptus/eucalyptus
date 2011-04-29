@@ -1913,6 +1913,7 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
                     return -1;
                 }
                 ret = 1; // we created a directory
+                chmod (path_copy, mode); // ensure perms are right despite mask
             }
             path_copy[i] = '/'; // restore the slash
         }

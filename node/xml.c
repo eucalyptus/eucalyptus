@@ -1,3 +1,4 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                                               // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                               
 /*
   Copyright (c) 2010  Eucalyptus Systems, Inc.	
 
@@ -110,7 +111,9 @@ static void init (void)
 }
 
 // Encodes instance metadata (contained in ncInstance struct) in XML
-// and writes it to file instance->xmlFilePath
+// and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
+// That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
+// to produce /path/to/instance/libvirt.xml file that is passed to libvirt create.
 int gen_instance_xml (const ncInstance * instance)
 {
     INIT();
@@ -142,7 +145,7 @@ int gen_instance_xml (const ncInstance * instance)
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(nc_state.config_use_virtio_net));
     }
 
-    /*
+    /* TODO: implement 'features' section with ACPI (et al?)
     {
         xmlNodePtr features = _NODE(instanceNode, "features");
         _NODE(features, "acpi");
@@ -168,8 +171,16 @@ int gen_instance_xml (const ncInstance * instance)
         }
     }
 
-    mode_t old_umask = umask (~BACKING_FILE_UMASK); // ensure the generated XML file has the right perms
-    chmod (instance->xmlFilePath, BACKING_FILE_UMASK); // ensure perms in case when XML file exists
+    if (instance->params.nicType!=NIC_TYPE_NONE) { // NIC specification
+        xmlNodePtr nics = _NODE(instanceNode, "nics");
+        xmlNodePtr nic =  _NODE(nics, "nic");
+        _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+        _ATTRIBUTE(nic, "mac", instance->ncnet.privateMac);
+        _ATTRIBUTE(nic, "modelType", libvirtNicTypeNames[instance->params.nicType]);
+    }
+
+    mode_t old_umask = umask (~BACKING_FILE_PERM); // ensure the generated XML file has the right perms
+    chmod (instance->xmlFilePath, BACKING_FILE_PERM); // ensure perms in case when XML file exists
     xmlSaveFormatFileEnc (instance->xmlFilePath, doc, "UTF-8", 1);
     umask (old_umask);
 

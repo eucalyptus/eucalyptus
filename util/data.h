@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                              
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -147,6 +150,20 @@ static char * libvirtSourceTypeNames [] = {
     "block"
 };
 
+typedef enum _libvirtNicType {
+    NIC_TYPE_NONE,
+    NIC_TYPE_LINUX,
+    NIC_TYPE_WINDOWS,
+    NIC_TYPE_VIRTIO
+} libvirtNicType;
+
+static char * libvirtNicTypeNames [] = {
+    "none",
+    "e1000",
+    "rtl8139",
+    "virtio"
+};
+
 typedef enum _ncResourceType {
     NC_RESOURCE_IMAGE,
     NC_RESOURCE_RAMDISK,
@@ -206,6 +223,8 @@ typedef struct virtualMachine_t {
     virtualBootRecord * ephemeral0;
     virtualBootRecord virtualBootRecord[EUCA_MAX_VBRS];
     int virtualBootRecordLen;
+    libvirtNicType nicType;
+    char guestNicDeviceName[64];
 } virtualMachine;
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in);

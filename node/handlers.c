@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -527,19 +530,29 @@ void *startup_thread (void * arg)
         goto free;
     }
     
+    // set up networking
     error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
-    if ( error ) {
+    if (error) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
     error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
     if (error) {
-      logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
-      change_state(instance, SHUTOFF);
-      goto free;
+        logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        goto free;
     }
-
+    strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+    if (nc_state.config_use_virtio_net) {
+        instance->params.nicType = NIC_TYPE_VIRTIO;
+    } else {
+        if (strstr(instance->platform, "windows")) {
+            instance->params.nicType = NIC_TYPE_WINDOWS;
+        } else {
+            instance->params.nicType = NIC_TYPE_LINUX;
+        }
+    }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
 
     strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
