@@ -13,6 +13,8 @@ import java.util.*;
  */
 public class CsvChecker
 {
+	public static boolean debug = false;
+
 	public static void main(String[] args)
 		throws Exception
 	{
@@ -24,7 +26,7 @@ public class CsvChecker
 		final double errorMargin = Double.parseDouble(args[0]);
 		final File referenceFile = new File(args[1]);
 		final File checkedFile = new File(args[2]);
-		final boolean debug = (args.length > 3 && args[3].equals("debug"));
+		debug = (args.length > 3 && args[3].equals("debug"));
 
 		boolean passed = true;
 
@@ -63,12 +65,15 @@ public class CsvChecker
 				fields = line.split(",");
 				refLineNum = 0;
 				for (ReferenceLine refLine : refLines) {
-					if (debug) System.err.println("ShouldMatch:" + refLine.shouldMatch(fields));
-					if (debug) System.err.println("DoesMatch:" + refLine.doesMatch(fields, errorMargin));
-					passed = passed
-							&& (refLine.shouldMatch(fields)
-									? refLine.doesMatch(fields, errorMargin)
-									: true);
+
+					final boolean shouldMatch = refLine.shouldMatch(fields);
+					final boolean doesMatch =
+						( shouldMatch ? refLine.doesMatch(fields, errorMargin) : false);
+
+					if (debug) System.err.printf("refLine:%d line:%d shouldMatch:%s doesMatch:%s\n",
+								refLineNum, lineCnt, shouldMatch, doesMatch);
+
+					passed = passed && ( shouldMatch ? doesMatch : true );
 					
 					if (!passed) {
 						System.err.printf("Failed checkLine:%d refLine:%d\n",
@@ -93,13 +98,11 @@ public class CsvChecker
 		
 		private final int doublePlusFieldInd;
 		private final String[] fields;
-		private final boolean debug;
 
-		ReferenceLine(int doublePlusFieldInd, String[] fields, boolean debug)
+		ReferenceLine(int doublePlusFieldInd, String[] fields)
 		{
 			this.doublePlusFieldInd = doublePlusFieldInd;
 			this.fields = fields;
-			this.debug = debug;
 		}
 
 		static ReferenceLine parseLine(String line)
@@ -130,15 +133,19 @@ public class CsvChecker
 
 		boolean doesMatch(String[] otherFields, double errorMargin)
 		{
-			if (! (fields.length == otherFields.length))
+			if (! (fields.length == otherFields.length)) {
+				if (debug) System.err.printf("Field counts differ, %d %d\n",
+					fields.length, otherFields.length);
 				return false;
+			}
 			for (int i=0; i < fields.length; i++) {
 				if (i==doublePlusFieldInd) continue;
 				if (fields[i].trim().length()==0) continue; //ignore empty ref fields
-				if (! fieldMatches(fields[i], otherFields[i], errorMargin))
-					if (debug) System.out.printf("Field %d doesn't match, field:%s other:%s\n",
+				if (! fieldMatches(fields[i], otherFields[i], errorMargin)) {
+					if (debug) System.err.printf("Field %d doesn't match, field:%s other:%s\n",
 						i, fields[i], otherFields[i]);
 					return false;
+				}
 			}
 			return true;
 		}
@@ -158,8 +165,12 @@ public class CsvChecker
 		private static boolean isWithinError(double val, double correctVal,
 				double errorPercent)
 		{
-			return correctVal * (1-errorPercent) < val
-					&& val < correctVal * (1+errorPercent);
+			if (val == correctVal) {
+				return true;
+			} else {
+				return correctVal * (1 - errorPercent) < val
+						&& val < correctVal * (1 + errorPercent);
+			}
 		}
 	}
 	
@@ -178,7 +189,7 @@ public class CsvChecker
 + "expressions).  CsvChecker can tolerate an error percentage for numeric\n"
 + "values, specified as a parameter. \n"
 + "\n"
-+ "Usage: CsvChecker errorMargin referenceFile checkFile\n"
++ "Usage: CsvChecker errorMargin referenceFile checkFile [debug]\n"
 + "\n"
 + "Paramters should have the following format.  The errorMargin should be a\n"
 + "floating point value between 0 and 1. The reference file must be a CSV file.\n"
