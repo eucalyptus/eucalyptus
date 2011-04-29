@@ -1486,10 +1486,13 @@ static int dm_delete_device (const char * dev_name)
     int retries = 1;
     char cmd [1024];
     int ret = 0;
+    int status;
+
+    myprintf ("removing device %s\n", dev_name);
+    snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
 
  try_again:
-    snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
-    int status = system (cmd);
+    status = system (cmd);
     if (status == -1 || WEXITSTATUS(status) != 0) {
         if (retries--) {
             usleep (100);
@@ -1539,9 +1542,7 @@ static int dm_delete_devices (char * dev_names[], int size)
             // just append 'pN' to the name, e.g., sda -> sdap1
             snprintf (name_p, sizeof (name_p), "%sp%d", dev_names_removable [i], j);
             snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
-            myprintf ("checking for existance of %s\n", path_p);
             if (check_path(path_p)==0) {
-                myprintf ("trying to remove %s\n", name_p);
                 dm_delete_device (name_p);
             }
         }
