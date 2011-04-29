@@ -16,7 +16,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements TransitionAction<P> {
+public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> implements TransitionAction<P>, TransitionHandler<P, S, T>, TransitionRule<S, T> {
   private static Logger                                       LOG       = Logger.getLogger( TransitionImpl.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
@@ -43,7 +43,8 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
    * 
    * @param transitionListener
    */
-  public TransitionImpl<P, S, T> addListener( TransitionListener<P> listener ) {
+  @Override
+  public TransitionHandler<P, S, T> addListener( TransitionListener<P> listener ) {
     if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
@@ -57,6 +58,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   /**
    * @see com.eucalyptus.util.fsm.TransitionRule#getName()
    */
+  @Override
   public T getName( ) {
     return this.rule.getName( );
   }
@@ -224,13 +226,13 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   /**
    * @return the rule
    */
+  @Override
   public TransitionRule<S, T> getRule( ) {
     return this.rule;
   }
   
   /**
    * @see java.lang.Object#hashCode()
-   * @return
    */
   @Override
   public int hashCode( ) {
@@ -244,8 +246,6 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   
   /**
    * @see java.lang.Object#equals(java.lang.Object)
-   * @param obj
-   * @return
    */
   @Override
   public boolean equals( Object obj ) {
@@ -259,8 +259,17 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   /**
    * @return the action
    */
+  @Override
   public TransitionAction<P> getAction( ) {
     return this.action;
+  }
+
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( TransitionRule<S, T> that ) {
+    return this.getName( ).compareTo( that.getName( ) );
   }
   
 }

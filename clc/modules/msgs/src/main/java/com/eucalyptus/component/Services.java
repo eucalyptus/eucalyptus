@@ -68,7 +68,7 @@ public class Services {
     if( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
       return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );
     } else if( config.isLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
-      return new MissingService( config );
+      return new BasicService.Broken( config );
     } else /**if( !config.isLocal() )**/ {
       return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );//TODO:GRZE:fix this up.
     }

@@ -75,6 +75,7 @@ import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
@@ -174,13 +175,19 @@ public class EmpyreanService {
   public DescribeServicesResponseType describeService( DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
     for( Component comp : Components.list( ) ) {
-      if( comp.isEnabledLocally( ) ) {
+      if( comp.hasLocalService( ) ) {
         final Service localService = comp.getLocalService( );
         reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
           setServiceId( localService.getServiceId( ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
           setLocalState( localService.getState( ).toString( ) );
           getDetails( ).addAll( localService.getDetails( ) );
+        }} );
+      } else {
+        reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
+          setServiceId( new ServiceId() );
+          setLocalEpoch( reply.getBaseEpoch( ) );
+          setLocalState( "UNAVAILABLE" );
         }} );
       }
     }

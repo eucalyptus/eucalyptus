@@ -87,9 +87,12 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.util.fsm.TransitionHandler;
+import com.google.common.collect.ImmutableList;
 
 public class MissingService extends AbstractService implements Service {
-  private static Logger              LOG  = Logger.getLogger( MissingService.class );
+  private static Logger              LOG = Logger.getLogger( MissingService.class );
   private final ServiceConfiguration serviceConfiguration;
   
   MissingService( ServiceConfiguration serviceConfiguration ) {
@@ -141,16 +144,8 @@ public class MissingService extends AbstractService implements Service {
    * @return
    */
   @Override
-  public int compareTo( Service that ) {
-    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
-        return this.getName( ).compareTo( that.getName( ) );
-      } else {
-        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
-      }
-    } else {
-      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
-    }
+  public int compareTo( ServiceConfiguration that ) {
+    return this.serviceConfiguration.compareTo( that );
   }
   
   /**
@@ -194,20 +189,19 @@ public class MissingService extends AbstractService implements Service {
   
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
   public List<String> getDetails( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
-
   @Override
   public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
-
+  
   @Override
   public void enqueue( Request request ) {
     LOG.error( "Discarding request submitted to a basic service: " + request );
@@ -224,7 +218,7 @@ public class MissingService extends AbstractService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     return Futures.predestinedFuture( this.serviceConfiguration );
   }
   
@@ -234,24 +228,41 @@ public class MissingService extends AbstractService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return Futures.predestinedFuture( this.serviceConfiguration );
+  public InetSocketAddress getSocketAddress( ) {
+    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
-  public InetSocketAddress getSocketAddress( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
-  }
-
-  @Override
   public void setGoal( State state ) {}
-
-  /**
-   * TODO: DOCUMENT
-   * @see com.eucalyptus.event.EventListener#fireEvent(com.eucalyptus.event.Event)
-   * @param event
-   */
+  
   @Override
-  public void fireEvent( Event event ) {}
+  public void fireEvent( Event event ) {
+    LOG.debug( "MissingService " + this.serviceConfiguration + "ignored the event: " + event );
+  }
+  
+  @Override
+  public ImmutableList<State> getStates( ) {
+    return ImmutableList.of( );
+  }
+  
+  @Override
+  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
+    return ImmutableList.of( );
+  }
+  
+  @Override
+  public boolean isLegalTransition( Transition transitionName ) {
+    return false;
+  }
+  
+  @Override
+  public boolean isBusy( ) {
+    return false;
+  }
+  
+  @Override
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return null;
+  }
   
 }

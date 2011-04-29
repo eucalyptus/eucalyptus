@@ -78,8 +78,10 @@ import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.HasStateMachine;
+import com.eucalyptus.util.fsm.StateMachine;
 
-public interface Service extends HasParent<Component>, HasFullName<Service>, EventListener<Event> {
+public interface Service extends HasParent<Component>, HasFullName<ServiceConfiguration>, EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition>, StateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
   public abstract Dispatcher getDispatcher( );
   
@@ -110,16 +112,10 @@ public interface Service extends HasParent<Component>, HasFullName<Service>, Eve
   
   public abstract State getGoal( );
   
-  public abstract CheckedListenableFuture<ServiceConfiguration> transitionSelf( );
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
-  public abstract CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
-  
   InetSocketAddress getSocketAddress( );
   
   public abstract void setGoal( State state );
-
+  
   ServiceEndpoint getEndpoint( );
-
+  
 }

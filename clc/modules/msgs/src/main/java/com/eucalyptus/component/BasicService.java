@@ -87,15 +87,18 @@ import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.util.fsm.TransitionHandler;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public class BasicService extends AbstractService implements Service {
-  private static Logger              LOG  = Logger.getLogger( BasicService.class );
-  private final ServiceConfiguration serviceConfiguration;
-  private final ServiceState         stateMachine;
-  private final Runnable             checker;
-  private State                      goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
-                                                                                    
+  private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
+  private final ServiceConfiguration                                                      serviceConfiguration;
+  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
+  private final Runnable                                                                  checker;
+  private State                                                                           goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
+                                                                                                                                         
   BasicService( ServiceConfiguration serviceConfiguration ) {
     super( );
     this.serviceConfiguration = serviceConfiguration;
@@ -105,7 +108,7 @@ public class BasicService extends AbstractService implements Service {
       public void run( ) {
         try {
           if ( BasicService.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transitionSelf( );
+            BasicService.this.stateMachine.transition( BasicService.this.getState( ) );
           }
         } catch ( Throwable ex ) {
           LOG.debug( "CheckRunner caught an exception: " + ex );
@@ -114,6 +117,22 @@ public class BasicService extends AbstractService implements Service {
     };
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
+  
+  static class Broken extends BasicService {
+    
+    Broken( ServiceConfiguration serviceConfiguration ) {
+      super( serviceConfiguration );
+      super.setGoal( Component.State.BROKEN );
+      try {
+        super.getStateMachine( ).transition( Component.State.BROKEN );
+      } catch ( IllegalStateException ex ) {
+        LOG.error( ex, ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    
   }
   
   @Override
@@ -156,24 +175,6 @@ public class BasicService extends AbstractService implements Service {
   }
   
   /**
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   * @param that
-   * @return
-   */
-  @Override
-  public int compareTo( Service that ) {
-    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
-        return this.getName( ).compareTo( that.getName( ) );
-      } else {
-        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
-      }
-    } else {
-      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
-    }
-  }
-  
-  /**
    * @return the service configuration
    */
   @Override
@@ -192,19 +193,9 @@ public class BasicService extends AbstractService implements Service {
   }
   
   @Override
-  public FullName getFullName( ) {
-    return this.serviceConfiguration.getFullName( );
-  }
-  
-  @Override
   public String toString( ) {
     return String.format( "Service %s name=%s serviceConfiguration=%s\n",
                           this.getComponentId( ), this.getName( ), this.getServiceConfiguration( ) );
-  }
-  
-  @Override
-  public String getPartition( ) {
-    return this.serviceConfiguration.getPartition( );
   }
   
   @Override
@@ -219,7 +210,7 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public List<String> getDetails( ) {
-    return Lists.newArrayList( );
+    return Lists.newArrayList( );//TODO:GRZE:OMGFIXME
   }
   
   @Override
@@ -234,27 +225,12 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public boolean checkTransition( Transition transition ) {
-    return this.stateMachine.checkTransition( transition );
+    return this.stateMachine.isLegalTransition( transition );
   }
   
   @Override
   public Component.State getGoal( ) {
     return this.goal;
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( transition );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( state );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return this.stateMachine.transitionSelf( );
   }
   
   @Override
@@ -313,6 +289,53 @@ public class BasicService extends AbstractService implements Service {
       return false;
     }
     return true;
+  }
+  
+  public boolean isBusy( ) {
+    return this.stateMachine.isBusy( );
+  }
+  
+  public String getPartition( ) {
+    return this.serviceConfiguration.getPartition( );
+  }
+  
+  public FullName getFullName( ) {
+    return this.serviceConfiguration.getFullName( );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( State nextState ) throws IllegalStateException, ExistingTransitionException {
+    return this.stateMachine.transition( nextState );
+  }
+  
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.stateMachine.transitionByName( transition );
+  }
+  
+  @Override
+  public ImmutableList<State> getStates( ) {
+    return this.stateMachine.getStates( );
+  }
+  
+  @Override
+  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
+    return this.stateMachine.getTransitions( );
+  }
+  
+  @Override
+  public boolean isLegalTransition( Transition transitionName ) {
+    return this.stateMachine.isLegalTransition( transitionName );
+  }
+  
+  @Override
+  public int compareTo( ServiceConfiguration that ) {
+    return this.serviceConfiguration.compareTo( that );
+  }
+  
+  @Override
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return this.stateMachine;
   }
   
 }

@@ -7,8 +7,9 @@ import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceChecks.Severity;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.fsm.HasStateMachine;
 
-public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration> {
+public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
   public abstract void setName( String name );
   

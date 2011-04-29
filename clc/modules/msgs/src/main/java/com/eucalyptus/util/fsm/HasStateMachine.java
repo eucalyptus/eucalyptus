@@ -61,58 +61,11 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util;
+package com.eucalyptus.util.fsm;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.concurrent.Callable;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.HasName;
 
-public class Classes {
-  public static Class findAncestor( Object o, Predicate<Class> condition ) {
-    return Iterables.find( ancestry( o ), condition );
-  }
-  public static List<Class> ancestry( Object o ) {
-    Function<Class, Class> parent = new Function<Class, Class>( ) {
-      @Override
-      public Class apply( Class arg0 ) {
-        return arg0.getSuperclass( );
-      }
-    };
-    List<Class> ret = Lists.newArrayList( );
-    for ( Class t = ( o instanceof Class
-      ? ( Class ) o
-      : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
-    return ret;
-  }
-  
-  public static List<Class> genericsToClasses( Object o ) {
-    List<Class> ret = Lists.newArrayList( );
-    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
-    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericInterfaces( ) ) );
-    return ret;
-  }
-  
-  private static List<Class> processTypeForGenerics( Type... types ) {
-    List<Class> ret = Lists.newArrayList( );
-    for ( Type t : types ) {
-      if ( t instanceof ParameterizedType ) {
-        ParameterizedType pt = ( ParameterizedType ) t;
-        for ( Type ptType : pt.getActualTypeArguments( ) ) {
-          if( ptType instanceof Class ) {
-            ret.add( (Class) ptType );
-          }
-        }
-      }
-      if( t instanceof Class ) {
-        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericSuperclass( ) ) );
-        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericInterfaces( ) ) );
-      }
-    }
-    return ret;
-  }
+public interface HasStateMachine<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> extends HasFullName<P> {
+  public abstract StateMachine<P, S, T> getStateMachine( );
 }

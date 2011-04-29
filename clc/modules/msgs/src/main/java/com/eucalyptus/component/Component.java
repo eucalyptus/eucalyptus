@@ -84,7 +84,9 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -100,12 +102,17 @@ public class Component implements HasName<Component> {
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
   
-  public enum State {
+  public enum State implements Automata.State<State>, Predicate<HasStateMachine<?, State, ?>> {
     MISSING, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
+    
+    @Override
+    public boolean apply( HasStateMachine<?, State, ?> arg0 ) {
+      return this.equals( arg0.getStateMachine( ).getState( ) );
+    }
   }
   
-  public enum Transition {
-    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING;
+  public enum Transition implements Automata.Transition<Transition> {
+    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE;
   }
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
@@ -318,7 +325,7 @@ public class Component implements HasName<Component> {
     Service service = this.lookupRegisteredService( config );
     if ( State.INITIALIZED.equals( service.getState( ) ) ) {
       try {
-        return service.transition( Transition.LOADING );
+        return service.transitionByName( Transition.LOADING );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -381,7 +388,7 @@ public class Component implements HasName<Component> {
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ),
                             service.getServiceConfiguration( ).getUri( ).toString( ) ).info( );
-        return this.getLocalService( ).transition( Transition.DESTROYING );
+        return this.getLocalService( ).transitionByName( Transition.DESTROYING );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -515,7 +522,7 @@ public class Component implements HasName<Component> {
     return true;
   }
   
-  Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
+  public Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
     Service service = null;
     if ( ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );

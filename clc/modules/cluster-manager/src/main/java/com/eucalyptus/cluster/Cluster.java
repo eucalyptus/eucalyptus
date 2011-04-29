@@ -62,12 +62,10 @@ package com.eucalyptus.cluster;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -75,12 +73,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cluster.Cluster.State;
-import com.eucalyptus.cluster.Cluster.Transition;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
-import com.eucalyptus.cluster.callback.ClusterLogMessageCallback;
 import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
@@ -91,14 +85,11 @@ import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.LifecycleEvent;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
@@ -115,7 +106,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
@@ -123,24 +114,25 @@ import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
+import com.eucalyptus.util.fsm.AbstractTransitionAction;
+import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
-import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
-public class Cluster implements HasName<Cluster>, EventListener {
-  private static Logger                                  LOG            = Logger.getLogger( Cluster.class );
+public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
+  private static Logger                                  LOG                   = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
@@ -148,41 +140,30 @@ public class Cluster implements HasName<Cluster>, EventListener {
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
-  private NodeLogInfo                                    lastLog        = new NodeLogInfo( );
-  private boolean                                        hasClusterCert = false;
-  private boolean                                        hasNodeCert    = false;
-  
-  public enum State {
-    BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
-    STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
-    NOTREADY, /** Component.State.NOTREADY: reported state is NOTREADY **/
-    AUTHENTICATING, CHECK_SERVICE_READY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
-    DISABLED, /** Component.State.DISABLED -> Component.State.DISABLED: service ready, not current primary **/
-    /** Component.State.DISABLED -> Component.State.ENABLED **/
-    ENABLING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
-    /** Component.State.ENABLED -> Component.State.ENABLED **/
-    RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, RUNNING_SERVICE_CHECK,
-  }
-  
-  public enum Transition {
-    START,
-    STOP,
-    DISABLE,
-    ENABLE,
-    INIT_CERTS,
-    INIT_SERVICES,
-    INIT_RESOURCES,
-    INIT_NET,
-    INIT_VMS,
-    INIT_ADDRS,
-    INIT_VMS2,
-    INIT_ADDRS2,
-    RUNNING_ADDRS,
-    RUNNING_VMS,
-    RUNNING_NET,
-    RUNNING_SERVICES,
-    RUNNING_RSC,
-  }
+  private NodeLogInfo                                    lastLog               = new NodeLogInfo( );
+  private boolean                                        hasClusterCert        = false;
+  private boolean                                        hasNodeCert           = false;
+  private final Predicate<Cluster>                       COMPONENT_IS_DISABLED = new Predicate<Cluster>( ) {
+                                                                                 
+                                                                                 @Override
+                                                                                 public boolean apply( Cluster input ) {
+                                                                                   return Component.State.DISABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
+                                                                                 }
+                                                                               };
+  private final Predicate<Cluster>                       COMPONENT_IS_ENABLED  = new Predicate<Cluster>( ) {
+                                                                                 
+                                                                                 @Override
+                                                                                 public boolean apply( Cluster input ) {
+                                                                                   return Component.State.ENABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
+                                                                                 }
+                                                                               };
+  private final Predicate<Cluster>                       COMPONENT_IS_STARTED  = new Predicate<Cluster>( ) {
+                                                                                 
+                                                                                 @Override
+                                                                                 public boolean apply( Cluster input ) {
+                                                                                   return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupService( ).getState( ).ordinal( );
+                                                                                 }
+                                                                               };
   
   enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
     LOGS( LogDataCallback.class ),
@@ -224,7 +205,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
-    SERVICESTATE( ServiceStateCallback.class );
+    SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
     
     private Refresh( Class refresh ) {
@@ -257,6 +238,35 @@ public class Cluster implements HasName<Cluster>, EventListener {
     
   }
   
+  public enum State implements Automata.State<State> {
+    BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
+    STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
+    PENDING, /** Component.State.NOTREADY: cluster unreachable **/
+    STARTING_NOTREADY, /** Component.State.NOTREADY: reported state is NOTREADY **/
+    STARTING_AUTHENTICATING, /** Component.State.NOTREADY:enter() **/
+    NOTREADY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
+    DISABLED, /** Component.State.DISABLED -> DISABLED: service ready, not current primary **/
+    /** Component.State.DISABLED -> Component.State.ENABLED **/
+    ENABLING, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
+    /** Component.State.ENABLED -> Component.State.ENABLED **/
+    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK,
+  }
+  
+  public enum Transition implements Automata.Transition<Transition> {
+    RESTART_BROKEN,
+    /** pending setup **/
+    START, STARTING_CERTS, STARTING_SERVICES,
+    NOTREADYCHECK,
+    ENABLE, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
+
+    ENABLED_ADDRS, ENABLED_VMS, ENABLED_NET, ENABLED_SERVICES, ENABLED_RSC,
+
+    DISABLE, DISABLEDCHECK,
+
+    STOP,
+    
+  }
+  
   public Cluster( ClusterConfiguration configuration ) {
     super( );
     this.configuration = configuration;
@@ -265,81 +275,93 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.threadFactory = Threads.lookup( com.eucalyptus.component.id.ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
-    this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.STOPPED ) {
+    this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
-        Predicate<Cluster> COMPONENT_IS_ENABLED = new Predicate<Cluster>( ) {
-          
-          @Override
-          public boolean apply( Cluster input ) {
-            return Component.State.ENABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
-          }
-        };
-        Predicate<Cluster> COMPONENT_IS_STARTED = new Predicate<Cluster>( ) {
-          
-          @Override
-          public boolean apply( Cluster input ) {
-            return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupService( ).getState( ).ordinal( );
-          }
-        };
-        //on input START when in state DOWN transition to AUTHENTICATING and do nothing
-        from( State.STOPPED ).to( State.AUTHENTICATING )
-                             .error( State.STOPPED )
-                             .on( Transition.START )
-                             .condition( COMPONENT_IS_STARTED );
+        from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( COMPONENT_IS_STARTED );
         
-        from( State.AUTHENTICATING ).to( State.CHECK_SERVICE_READY )
-                                    .error( State.STOPPED )
-                                    .on( Transition.INIT_CERTS )
-                                    .run( LogRefresh.CERTS );
+        from( State.PENDING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
+        from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( LogRefresh.CERTS );
+        from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
-        from( State.CHECK_SERVICE_READY ).to( State.NOTREADY )
-                                         .error( State.STOPPED )
-                                         .on( Transition.INIT_SERVICES )
-                                         .run( Refresh.SERVICESTATE );
-
-        from( State.NOTREADY ).to( State.DISABLED )
-                                         .error( State.STOPPED )
-                                         .on( Transition.INIT_SERVICES )
-                                         .run( Refresh.SERVICESTATE );
+        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
-        from( State.DISABLED ).to( State.ENABLING )
-                                         .error( State.NOTREADY )
-                                         .on( Transition.INIT_SERVICES )
-                                         .condition( COMPONENT_IS_ENABLED );
+        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
+        from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( COMPONENT_IS_ENABLED );
         
-        from( State.ENABLING ).to( State.STARTING_RESOURCES ).error( State.STOPPED ).on( Transition.INIT_RESOURCES ).run( Refresh.RESOURCES );
-        from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.STOPPED ).on( Transition.INIT_NET ).run( Refresh.NETWORKS );
-        from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.STOPPED ).on( Transition.INIT_VMS ).run( Refresh.INSTANCES );
-        from( State.STARTING_VMS ).to( State.STARTING_ADDRS ).error( State.STOPPED ).on( Transition.INIT_ADDRS ).run( Refresh.ADDRESSES );
-        from( State.STARTING_ADDRS ).to( State.STARTING_VMS2 ).error( State.STOPPED ).on( Transition.INIT_VMS2 ).run( Refresh.INSTANCES );
-        from( State.STARTING_VMS2 ).to( State.RUNNING_ADDRS ).error( State.STOPPED ).on( Transition.INIT_ADDRS2 ).run( Refresh.ADDRESSES );
+        from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
+        from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
+        from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
+        from( State.ENABLING_VMS ).to( State.ENABLING_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
+        from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLED_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
         
-        from( State.RUNNING_ADDRS ).to( State.RUNNING_RSC ).error( State.NOTREADY ).on( Transition.RUNNING_RSC ).run( Refresh.RESOURCES );
-        from( State.RUNNING_RSC ).to( State.RUNNING_NET ).error( State.NOTREADY ).on( Transition.RUNNING_NET ).run( Refresh.NETWORKS );
-        from( State.RUNNING_NET ).to( State.RUNNING_VMS ).error( State.NOTREADY ).on( Transition.RUNNING_VMS ).run( Refresh.INSTANCES );
-        from( State.RUNNING_VMS ).to( State.RUNNING_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.RUNNING_ADDRS ).run( Refresh.ADDRESSES );
-        from( State.RUNNING_SERVICE_CHECK ).to( State.RUNNING_ADDRS ).error( State.NOTREADY ).on( Transition.RUNNING_SERVICES ).run( Refresh.SERVICESTATE );
+        from( State.ENABLED_ADDRS ).to( State.ENABLED_RSC ).error( State.NOTREADY ).on( Transition.ENABLED_RSC ).run( Refresh.RESOURCES );
+        from( State.ENABLED_RSC ).to( State.ENABLED_NET ).error( State.NOTREADY ).on( Transition.ENABLED_NET ).run( Refresh.NETWORKS );
+        from( State.ENABLED_NET ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
+        from( State.ENABLED_VMS ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.ENABLED_SERVICE_CHECK ).to( State.ENABLED_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
         
       }
     }.newAtomicMarkedState( );
   }
   
-  private FullName getFullName( ) {
-    return this.fullName;
+  private void nextState( ) {
+    try {
+      if ( this.stateMachine.isBusy( ) ) {
+        return;
+      } else {
+        switch ( this.stateMachine.getState( ) ) {
+          case PENDING:
+          case STARTING_AUTHENTICATING:
+          case STARTING_NOTREADY:
+            Automata.chainedTransition( this, State.PENDING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY ).call( );
+            break;
+          case NOTREADY:
+            Automata.chainedTransition( this, State.NOTREADY, State.DISABLED ).call( );
+          case DISABLED:
+            if ( Component.State.ENABLED.apply( this.configuration ) ) {
+              Automata.chainedTransition( this, State.DISABLED, State.ENABLING ).call( );
+            } else if ( Component.State.DISABLED.apply( this.configuration ) ) {
+              Automata.chainedTransition( this, State.DISABLED, State.DISABLED ).call( );
+            }
+          case ENABLING:
+          case ENABLING_RESOURCES:
+          case ENABLING_NET:
+          case ENABLING_VMS:
+          case ENABLING_ADDRS:
+          case ENABLING_VMS_PASS_TWO:
+          case ENABLING_ADDRS_PASS_TWO:
+            Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS, State.ENABLING_ADDRS,
+                                        State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+            break;
+          case ENABLED:
+          case ENABLED_ADDRS:
+          case ENABLED_RSC:
+          case ENABLED_NET:
+          case ENABLED_VMS:
+          case ENABLED_SERVICE_CHECK:
+            if ( Component.State.ENABLED.apply( this.configuration ) ) {
+              Automata.chainedTransition( this, State.ENABLED, State.ENABLED_ADDRS, State.ENABLED_RSC, State.ENABLED_NET, State.ENABLED_VMS,
+                                          State.ENABLED_SERVICE_CHECK ).call( );
+            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
+              this.stateMachine.transition( State.DISABLED );
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    } catch ( IllegalStateException ex ) {
+      Exceptions.trace( ex );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.debug( ex.getMessage( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
   }
   
   public Boolean isReady( ) {
     return this.hasClusterCert && this.hasNodeCert && Bootstrap.isFinished( );
-  }
-  
-  public void transitionIfSafe( Transition transition ) {
-    try {
-      this.stateMachine.startTransition( transition );
-    } catch ( IllegalStateException ex ) {
-      LOG.error( ex, ex );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.debug( ex.getMessage( ) );
-    }
   }
   
   public X509Certificate getClusterCertificate( ) {
@@ -638,9 +660,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
       this.nextState( );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
-      if ( State.RUNNING_ADDRS.ordinal( ) >= this.stateMachine.getState( ).ordinal( ) ) {
+      if ( State.ENABLED_ADDRS.ordinal( ) >= this.stateMachine.getState( ).ordinal( ) ) {
         this.nextState( );
-      } else if ( State.RUNNING_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
+      } else if ( State.ENABLED_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
         this.updateVolatiles( );
       }
     } else if ( event instanceof LifecycleEvent ) {
@@ -660,63 +682,23 @@ public class Cluster implements HasName<Cluster>, EventListener {
     }
   }
   
-  private void nextState( ) {
-    try {
-      switch ( this.stateMachine.getState( ) ) {
-        case STOPPED:
-          this.stateMachine.startTransitionTo( State.AUTHENTICATING );
-          break;
-        case AUTHENTICATING:
-          this.stateMachine.startTransitionTo( State.CHECK_SERVICE_READY );
-          break;
-        case CHECK_SERVICE_READY:
-          this.stateMachine.startTransitionTo( State.ENABLING );
-          break;
-        case ENABLING:
-          this.stateMachine.startTransitionTo( State.STARTING_RESOURCES );
-          break;
-        case STARTING_RESOURCES:
-          this.stateMachine.startTransitionTo( State.STARTING_NET );
-          break;
-        case STARTING_NET:
-          this.stateMachine.startTransitionTo( State.STARTING_VMS );
-          break;
-        case STARTING_VMS:
-          this.stateMachine.startTransition( Transition.INIT_ADDRS );
-          break;
-        case STARTING_ADDRS:
-          this.stateMachine.startTransition( Transition.INIT_VMS2 );
-          break;
-        case STARTING_VMS2:
-          this.stateMachine.startTransition( Transition.INIT_ADDRS2 );
-          break;
-        case RUNNING_ADDRS:
-          this.stateMachine.startTransition( Transition.RUNNING_RSC );
-          break;
-        case RUNNING_RSC:
-          this.stateMachine.startTransition( Transition.RUNNING_NET );
-          break;
-        case RUNNING_NET:
-          this.stateMachine.startTransition( Transition.RUNNING_VMS );
-          break;
-        case RUNNING_VMS:
-          this.stateMachine.startTransition( Transition.RUNNING_ADDRS );
-          break;
-        case RUNNING_SERVICE_CHECK:
-          this.stateMachine.startTransition( Transition.RUNNING_SERVICES );
-          break;
-        default:
-          break;
-      }
-    } catch ( IllegalStateException ex ) {
-      Exceptions.trace( ex );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.debug( ex.getMessage( ) );
-    }
+  public void check( ) {
+    //TODO:GRZE:OMGDOIT
   }
   
-  public void check( ) {
-
+  @Override
+  public String getPartition( ) {
+    return this.configuration.getPartition( );
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return this.configuration.getFullName( );
+  }
+  
+  @Override
+  public StateMachine<Cluster, State, Transition> getStateMachine( ) {
+    return this.stateMachine;
   }
   
 }

@@ -79,7 +79,10 @@ import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.util.fsm.TransitionHandler;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.collect.ImmutableList;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class MessagableService extends AbstractService implements Service {
@@ -145,11 +148,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public final String getName( ) {
-    return this.serviceDelegate.getName( );
-  }
-  
-  @Override
   public State getState( ) {
     return this.serviceDelegate.getState( );
   }
@@ -175,11 +173,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public int compareTo( Service that ) {
-    return this.serviceDelegate.compareTo( that );
-  }
-  
-  @Override
   public ServiceConfiguration getServiceConfiguration( ) {
     return this.serviceDelegate.getServiceConfiguration( );
   }
@@ -192,16 +185,6 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public ComponentId getComponentId( ) {
     return this.serviceDelegate.getComponentId( );
-  }
-  
-  @Override
-  public FullName getFullName( ) {
-    return this.serviceDelegate.getFullName( );
-  }
-  
-  @Override
-  public String getPartition( ) {
-    return this.serviceDelegate.getPartition( );
   }
   
   @Override
@@ -220,20 +203,15 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.transition( transition );
+  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+    return this.serviceDelegate.getStateMachine( ).transitionByName( transition );
   }
   
   @Override
   public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.transition( state );
+    return this.serviceDelegate.getStateMachine( ).transition( state );
   }
   
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return this.serviceDelegate.transitionSelf( );
-  }
-
   public void setGoal( State state ) {
     this.serviceDelegate.setGoal( state );
   }
@@ -250,6 +228,42 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public void fireEvent( Event event ) {
     this.serviceDelegate.fireEvent( event );
+  }
+
+  public String getName( ) {
+    return this.serviceDelegate.getName( );
+  }
+
+  public String getPartition( ) {
+    return this.serviceDelegate.getPartition( );
+  }
+
+  public FullName getFullName( ) {
+    return this.serviceDelegate.getFullName( );
+  }
+
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return this.serviceDelegate.getStateMachine( );
+  }
+
+  public ImmutableList<State> getStates( ) {
+    return this.serviceDelegate.getStates( );
+  }
+
+  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
+    return this.serviceDelegate.getTransitions( );
+  }
+
+  public int compareTo( ServiceConfiguration o ) {
+    return this.serviceDelegate.compareTo( o );
+  }
+
+  public boolean isLegalTransition( Transition transitionName ) {
+    return this.serviceDelegate.isLegalTransition( transitionName );
+  }
+
+  public boolean isBusy( ) {
+    return this.serviceDelegate.isBusy( );
   }
   
 }

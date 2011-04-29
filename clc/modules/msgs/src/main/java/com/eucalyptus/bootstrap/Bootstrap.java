@@ -504,7 +504,7 @@ public class Bootstrap {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getLocalService( ).transition( transition );
+          component.getLocalService( ).transitionByName( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

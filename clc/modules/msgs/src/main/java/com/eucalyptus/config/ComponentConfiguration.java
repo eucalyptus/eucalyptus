@@ -68,6 +68,8 @@ import java.net.URI;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
@@ -89,6 +91,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.fsm.StateMachine;
 
 @MappedSuperclass
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
@@ -290,6 +293,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Override
   public void debug( Throwable t ) {
     this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.debug( this, t ) ) );
+  }
+
+  @Override
+  public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
+    return this.lookupService( ).getStateMachine( );
   }
   
 }
