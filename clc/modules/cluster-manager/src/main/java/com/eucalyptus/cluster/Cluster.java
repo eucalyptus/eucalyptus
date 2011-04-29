@@ -280,11 +280,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         TransitionAction<Cluster> noop = Transitions.noop( );
-        from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( COMPONENT_IS_STARTED );
+        from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         from( State.PENDING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
-        from( State.STARTING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
-        from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( LogRefresh.CERTS );
+        from( State.STARTING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( LogRefresh.CERTS );
+        from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( Refresh.SERVICEREADY );
         from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
         from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
@@ -322,20 +322,28 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
-            transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
+            if( !this.stateMachine.isBusy( ) ) {
+              transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
+            }
             break;
           case NOTREADY:
-            transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
+            if( !this.stateMachine.isBusy( ) ) {
+              transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
+            }
             break;
           case DISABLED:
-            transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
+            if( !this.stateMachine.isBusy( ) ) {
+              transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
+            }
             break;
           case ENABLED:
-            if ( Component.State.ENABLED.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-                                                       State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
+            if( !this.stateMachine.isBusy( ) ) {
+              if ( Component.State.ENABLED.apply( this.configuration ) ) {
+                transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+                                                         State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+              } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
+                transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
+              }
             }
             break;
           default:
@@ -448,35 +456,21 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
                                                                                                      State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                      State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-    this.runTransition( transition );
+    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
   }
   
   public void disable( ) throws ServiceRegistrationException {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
-    this.runTransition( transition );
+    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
   }
   
   public void stop( ) throws ServiceRegistrationException {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.DISABLED, State.PENDING );
-    this.runTransition( transition );
+    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
     this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     Clusters.getInstance( ).registerDisabled( this );
-    
-  }
-  
-  private void runTransition( Callable<CheckedListenableFuture<ServiceConfiguration>> transition ) throws ServiceRegistrationException {
-    try {
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex, ex );
-      this.configuration.error( ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-      this.configuration.error( ex.getCause( ) );
-      throw new ServiceRegistrationException( ex.getCause( ) );
-    }
   }
   
   @Override
