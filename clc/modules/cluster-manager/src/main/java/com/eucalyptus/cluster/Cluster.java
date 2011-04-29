@@ -66,6 +66,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -90,6 +91,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.LifecycleEvent;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
@@ -110,6 +112,7 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
@@ -312,19 +315,20 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       if ( this.stateMachine.isBusy( ) ) {
         return;
       } else {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
           case STARTING_AUTHENTICATING:
           case STARTING_NOTREADY:
-            Automata.chainedTransition( this, State.PENDING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY ).call( );
+            transition = Automata.chainedTransition( this, State.PENDING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
             break;
           case NOTREADY:
-            Automata.chainedTransition( this, State.NOTREADY, State.DISABLED ).call( );
+            transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
           case DISABLED:
             if ( Component.State.ENABLED.apply( this.configuration ) ) {
-              Automata.chainedTransition( this, State.DISABLED, State.ENABLING ).call( );
+              transition = Automata.chainedTransition( this, State.DISABLED, State.ENABLING );
             } else if ( Component.State.DISABLED.apply( this.configuration ) ) {
-              Automata.chainedTransition( this, State.DISABLED, State.DISABLED ).call( );
+              transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
             }
           case ENABLING:
           case ENABLING_RESOURCES:
@@ -333,29 +337,35 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           case ENABLING_ADDRS:
           case ENABLING_VMS_PASS_TWO:
           case ENABLING_ADDRS_PASS_TWO:
-            Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS, State.ENABLING_ADDRS,
-                                        State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+            transition = Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
+                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
             break;
           case ENABLED:
+            if ( Component.State.ENABLED.apply( this.configuration ) ) {
+              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+                                                       State.ENABLED_NET, State.ENABLED_VMS );
+            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
+              transition = Automata.chainedTransition( this, this.stateMachine.getState( ), State.DISABLED );
+            }
           case ENABLED_ADDRS:
           case ENABLED_RSC:
           case ENABLED_NET:
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
             if ( Component.State.ENABLED.apply( this.configuration ) ) {
-              Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC, State.ENABLED_NET, State.ENABLED_VMS ).call( );
-            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
-              this.stateMachine.transition( State.DISABLED );
+              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+                                                       State.ENABLED_NET, State.ENABLED_VMS );
             }
             break;
           default:
             break;
         }
+        if( transition != null ) {
+          Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+        }
       }
     } catch ( IllegalStateException ex ) {
       Exceptions.trace( ex );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.debug( ex.getMessage( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
