@@ -6,10 +6,12 @@ FILE=${1}
 # NOTE: change clusterrank to "local" to enable clustering
 HEADER='digraph bootstrap {
   size="160,80";
-  ranksep=.4;
-  nodesep=.2;
+  ranksep=.1;
+  nodesep=.4;
+  color="gray";
   overlap="prism";
   clusterrank="global";
+  center="true";
   rankdir="BT";'
 FOOTER="}"
 TRANS="$(cat ${FILE} | sed 's/)\./)\n/g;
@@ -29,13 +31,13 @@ awk '
 	states[from]=from;
 	labelProps="fontsize=\"8.0\"";
 	action=gensub("(.*run.|.*condition\\()","","g",$0);
-	if(from) printf("\t%s -> %s [style=\"bold\",wieght=\"2\",label=\"%s\\\\n%s\",%s];\n",from,to,on,action,labelProps);
+	if(from) printf("\t%s -> %s [style=\"bold\",wieght=\"2\",label=<<FONT POINT-SIZE=\"12\">%s</FONT><BR/><FONT POINT-SIZE=\"12\">%s</FONT>>,%s];\n",from,to,on,action,labelProps);
 	if(err) printf("\t%s -> %s [style=\"dashed\",wieght=\"0.5\",color=\"red\",label=\"%s\",%s];\n", to, err, on, labelProps)
 }
 END{
-#	print "\tsubgraph cluster_all{\n\t\trank=max;"
-#	for( i in states ) if(index(i,"_")==0) print "\t\t"i";"
-#	print "\t}"
+	print "\tsubgraph cluster_all{\n\t\trank=max;"
+	for( i in states ) if(index(i,"_")==0) print "\t\t"i" [shape=\"doublecircle\",weight=\"2.0\",label=<<FONT POINT-SIZE=\"18\">"i"</FONT>>];"
+	print "\t}"
 }
 ' | sed 's/\./=/g')"
 
@@ -47,17 +49,17 @@ awk '
 }
 END{
 	subgraphFormat="\tsubgraph cluster_%1$s{\n" \
-  "\t\tlabel=\"%1$s\";\n" \
-  "\t\trank=min;\n" \
-  "\t\trankdir=\"LR\";\n" \
-	"\t\t%2$s\n" \
+  "\t\tstyle=rounded;\n" \
+  "\t\trankdir=\"BT\";\n" \
+  "\t\t%1$s [shape=\"doublecircle\",weight=\"2.0\",label=<<FONT POINT-SIZE=\"18\">%1$s</FONT>>]\n" \
+  "\t\t%2$s\n" \
 	"\t}\n"
 	for(i in trans) printf(subgraphFormat, i, trans[i]); 
 }' | \
-sed 's/\([^_]*\)_\([^#]*\)#/\1_\2 [label="\1_\2"];\n\t\t/g;s/#}/\n\t}/g'
+sed 's/\([^_]*\)_\([^#]*\)#/\1_\2  [label=<<FONT POINT-SIZE="10">\1_\2</FONT>>];\n\t\t/g;s/#}/\n\t}/g'
 )
 
 echo "${HEADER}"
-echo "${TRANS}"
 echo "${SUBGRAPHS}"
+echo "${TRANS}"
 echo "${FOOTER}"

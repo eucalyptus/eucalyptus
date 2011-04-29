@@ -245,14 +245,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
     STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
     PENDING, /** Component.State.NOTREADY: cluster unreachable **/
-    STARTING_NOTREADY, /** Component.State.NOTREADY: reported state is NOTREADY **/
-    STARTING_AUTHENTICATING, /** Component.State.NOTREADY:enter() **/
+    STARTING, STARTING_AUTHENTICATING, STARTING_NOTREADY, /** Component.State.NOTREADY:enter() **/
     NOTREADY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
     DISABLED, /** Component.State.DISABLED -> DISABLED: service ready, not current primary **/
     /** Component.State.DISABLED -> Component.State.ENABLED **/
     ENABLING, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
-    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK,
+    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK, 
   }
   
   public enum Transition implements Automata.Transition<Transition> {
@@ -283,7 +282,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         TransitionAction<Cluster> noop = Transitions.noop( );
         from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( COMPONENT_IS_STARTED );
         
-        from( State.PENDING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
+        from( State.PENDING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
+        from( State.STARTING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( COMPONENT_IS_STARTED );
         from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( LogRefresh.CERTS );
         from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
@@ -291,6 +291,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         
         from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
         from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( COMPONENT_IS_ENABLED );
+        from( State.DISABLED ).to( State.PENDING ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
         from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Refresh.SERVICEREADY );
         
@@ -321,7 +322,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
-            transition = Automata.chainedTransition( this, State.PENDING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
+            transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
             break;
           case NOTREADY:
             transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
@@ -433,45 +434,49 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     return this.nodeState;
   }
   
-  public void start( ) {
+  public void start( ) throws ServiceRegistrationException {
     Clusters.getInstance( ).register( this );
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
-  public void enable( ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES,
+  public void enable( ) throws ServiceRegistrationException {
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING,
+                                                                                                     State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED,
+                                                                                                     State.ENABLING, State.ENABLING_RESOURCES,
                                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
                                                                                                      State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                      State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-    try {
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex, ex );
-      this.configuration.error( ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-      this.configuration.error( ex );
-    }
+    this.runTransition( transition );
   }
   
-  public void disable( ) {
+  public void disable( ) throws ServiceRegistrationException {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
-    try {
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex, ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-    }
+    this.runTransition( transition );
   }
   
-  public void stop( ) {
+  public void stop( ) throws ServiceRegistrationException {
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.DISABLED, State.PENDING );
+    this.runTransition( transition );
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
     this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     Clusters.getInstance( ).registerDisabled( this );
+    
+  }
+  
+  private void runTransition( Callable<CheckedListenableFuture<ServiceConfiguration>> transition ) throws ServiceRegistrationException {
+    try {
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex, ex );
+      this.configuration.error( ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex, ex );
+      this.configuration.error( ex.getCause( ) );
+      throw new ServiceRegistrationException( ex.getCause( ) );
+    }
   }
   
   @Override

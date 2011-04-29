@@ -36,35 +36,6 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     }
   }
   
-  /**
-   * @see com.eucalyptus.component.AbstractServiceBuilder#fireStart(com.eucalyptus.component.ServiceConfiguration)
-   * @param config
-   * @throws ServiceRegistrationException
-   */
-  @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
-    try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
-          Clusters.getInstance( ).register( newCluster );
-          newCluster.start( );
-        } else {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.start( );
-          }
-        }
-      }
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-  
   @Override
   public ClusterConfiguration newInstance( ) {
     return new ClusterConfiguration( );
@@ -98,23 +69,6 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     }
     return config;
   }
-
-  @Override
-  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
-    return super.checkRemove( partition, name );
-  }
-  
-  @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    try {
-      LOG.info( "Tearing down cluster: " + config );
-      Cluster cluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
-      cluster.stop( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-    }
-  }
   
   @Override
   public ClusterConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
@@ -125,21 +79,44 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   }
   
   @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
+    LOG.info( "Starting up cluster: " + config );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+    try {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
+        if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
+          Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+          Clusters.getInstance( ).registerDisabled( newCluster );
+          newCluster.start( );
+        } else {
+          try {
+            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+            newCluster.start( );
+          } catch ( NoSuchElementException ex ) {
+            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+            Clusters.getInstance( ).disable( config.getName( ) );
+            newCluster.start( );
+          }
+        }
+      }
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
+    }
+  }
+  
+  @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+        try {
+          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+          Clusters.getInstance( ).enable( config.getName( ) );
           newCluster.enable( );
-        } else {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.enable( );
-          }
+        } catch ( NoSuchElementException ex ) {
+          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+          newCluster.enable( );
         }
       }
     } catch ( NoSuchElementException ex ) {
@@ -166,6 +143,20 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
         }
       }
     } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
+    }
+  }
+  
+  @Override
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+    try {
+      LOG.info( "Tearing down cluster: " + config );
+      Cluster cluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+      cluster.stop( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    } catch ( Throwable ex ) {
       LOG.error( ex, ex );
     }
   }

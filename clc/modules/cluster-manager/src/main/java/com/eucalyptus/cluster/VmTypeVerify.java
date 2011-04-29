@@ -95,7 +95,7 @@ public class VmTypeVerify {
         throw new EucalyptusCloudException( "Failed to lookup context for correlationId=" + vmAllocInfo.getCorrelationId( ), ex );
       }
     }
-    Account account = Accounts.lookupAccount( ctx.getUser( ) );
+    User user = ctx.getUser( );
     RunInstancesType request = vmAllocInfo.getRequest( );
     String instanceType = request.getInstanceType( );
     VmType v = VmTypes.getVmType( ( instanceType == null ) ? "m1.small" : instanceType );
@@ -103,7 +103,7 @@ public class VmTypeVerify {
       throw new EucalyptusCloudException( "instance type does not exist: " + request.getInstanceType( ) );
     }
     String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, account, action, ctx.getUser( ) ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, Accounts.lookupAccount( user ), action, user ) ) {
       throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
     }
     vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
