@@ -131,6 +131,7 @@ public class CsvChecker
 				return false;
 			for (int i=0; i < fields.length; i++) {
 				if (i==doublePlusFieldInd) continue;
+				if (fields[i].trim().length()==0) continue; //ignore empty ref fields
 				if (! fieldMatches(fields[i], otherFields[i], errorMargin))
 					return false;
 			}
