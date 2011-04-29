@@ -17,7 +17,7 @@ wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservl
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.instance.FalseDataGenerator&methodName=generateFalseData"
 
 # Generate instance report, based upon data generated above
-wget -O /tmp/report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_vms&type=csv&page=0&flush=false&start=1302915187213&end=1303519987213&criterionId=2&groupById=0"
+wget -O /tmp/report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_vms&type=csv&page=0&flush=false&start=1104566400000&end=1304566400000&criterionId=2&groupById=0"
 
 # Verify that the report is correct, using the CsvChecker tool.
 java -jar CsvChecker.jar 0.2 instanceChecked.csv instanceReference.csv
