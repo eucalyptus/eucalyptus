@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Copyright (c) 2011, Eucalyptus Systems, Inc.
 # All rights reserved.
 #
@@ -34,11 +34,12 @@ import inspect
 import os
 import sys
 import boto.utils
+import boto.exception
 import eucadmin.configfile
 
 DefaultEucaDir = '@prefix@'
 DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
-    
+
 class EucaConf(object):
 
     # list of services which can be checked
@@ -138,7 +139,7 @@ class EucaConf(object):
                                metavar='<dir>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'EUCALYPTUS'},
                                help='point EUCALYPTUS to <dir>')
-        self.parser.add_option('--cc-port', action='callback', type='int', 
+        self.parser.add_option('--cc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'CC_PORT'},
                                help='set CC port', default=8774)
@@ -261,6 +262,7 @@ class EucaConf(object):
                 self.config[key] = self.specified_options[key]
 
     def main(self):
+        status = 0
         self.update_config_file()
         if self.options.debug:
             self.debug = 2
@@ -268,10 +270,13 @@ class EucaConf(object):
             for name, method in inspect.getmembers(self):
                 if name.startswith('do_') and inspect.ismethod(method):
                     method()
+        except boto.exception.BotoClientError, e:
+            print e.reason
+            status = 1
         except Exception, e:
             print e.message
-            sys.exit(1)
-            
+            status = 1
+        sys.exit(status)
 
     def do_get_credentials(self):
         if self.options.get_credentials:
@@ -295,7 +300,7 @@ class EucaConf(object):
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
             req.main()
-                
+
     def do_enable(self):
         if self.options.enable_what:
             if self.options.enable_what not in self.EnabledServices:
@@ -304,7 +309,7 @@ class EucaConf(object):
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
             req = cls(self.config, self.options.enable_what, True)
             req.main()
-                
+
     def do_disable(self):
         if self.options.disable_what:
             if self.options.disable_what not in self.EnabledServices:
@@ -313,13 +318,13 @@ class EucaConf(object):
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
             req = cls(self.config, self.options.disable_what, False)
             req.main()
-                
+
     def do_heartbeat(self):
         if self.options.heartbeat:
             cls = boto.utils.find_class('eucadmin.heartbeat', 'Heartbeat')
             req = cls(self.options.heartbeat)
             req.cli_formatter()
-            
+
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
@@ -367,7 +372,7 @@ class EucaConf(object):
         data = req.main(partition=partition, name=cluster_name,
                         port=port, host=host)
         req.cli_formatter(data)
-            
+
     def do_register_cluster(self):
         args = getattr(self.options, 'reg_clusters')
         if args:
@@ -383,7 +388,7 @@ class EucaConf(object):
                            'cluster-pk.pem', 'node-pk.pem',
                            'vtunpass', 'cloud-cert.pem'])
                 req.sync()
-            
+
     def do_register_walrus(self):
         args = getattr(self.options, 'reg_walruses')
         if args:
@@ -395,7 +400,7 @@ class EucaConf(object):
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path], path, args[2], ['euca.p12'])
                 req.sync()
-            
+
     def do_register_sc(self):
         args = getattr(self.options, 'reg_scs')
         if args:
@@ -407,7 +412,7 @@ class EucaConf(object):
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path], path, args[2], ['euca.p12'])
                 req.sync()
-            
+
     def _do_deregister(self, option_name, module_name, class_name):
         args = getattr(self.options, option_name)
         if args:
@@ -417,7 +422,7 @@ class EucaConf(object):
             req = cls(debug=self.debug)
             data = req.main(partition=partition, name=cluster_name)
             req.cli_formatter(data)
-            
+
     def do_deregister_cluster(self):
         self._do_deregister('dereg_clusters',
                             'eucadmin.deregistercluster',
@@ -433,7 +438,7 @@ class EucaConf(object):
                             'var/lib/eucalyptus/keys')
         # probably need to look in partition directory
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-        files = ['node-cert.pem', 'cluster-cert.pem',
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
                  'node-pk.pem', 'cluster-pk.pem']
         req = cls([path], path, node, files)
         return req.sync()

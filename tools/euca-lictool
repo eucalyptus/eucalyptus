@@ -13,7 +13,7 @@ my $USAGE = <<END;
 
 This is a tool to help create the LDAP integration configuration.
 
-Usage: lictool.pl <options>
+Usage: euca-lictool <options>
 
 Options:
   --password <password>      : set the password for result LIC
@@ -25,25 +25,25 @@ Options:
 Examples:
 
 # create a LIC template with encrypted password, print to STDOUT
-\$ lictool.pl --password secret > example.lic
+\$ euca-lictool --password secret > example.lic
 
 # create a LIC template with encrypted password, print to a file
-\$ lictool.pl --password secret --out example.lic
+\$ euca-lictool --password secret --out example.lic
 
 # only print the encrypted password
-\$ lictool.pl --password secret --passonly
+\$ euca-lictool --password secret --passonly
 
 # use an existing LIC and replace the credential field with encrypted password
-\$ lictool.pl --password secret --custom my.lic --out mynew.lic
+\$ euca-lictool --password secret --custom my.lic --out mynew.lic
 
 # create a LIC template with encrypted password and with comments removed
-\$ lictool.pl --password secret --out example.lic --nocomment
+\$ euca-lictool --password secret --out example.lic --nocomment
 
 # encrypt password in an existing LIC file and output the new file
-\$ lictool.pl --custom my.lic
+\$ euca-lictool --custom my.lic
 
 # encrypt password in an existing LIC file in place
-\$ lictool.pl --custom my.lic --out my.lic
+\$ euca-lictool --custom my.lic --out my.lic
 END
 
 sub print_usage {
