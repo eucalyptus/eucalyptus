@@ -677,9 +677,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       this.nextState( );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
-      if ( State.ENABLED_ADDRS.ordinal( ) >= this.stateMachine.getState( ).ordinal( ) ) {
+      if ( tick.isAsserted( 5 ) && State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
         this.nextState( );
-      } else if ( State.ENABLED_ADDRS.ordinal( ) < this.stateMachine.getState( ).ordinal( ) && tick.isAsserted( 3 ) ) {
+      } else if ( tick.isAsserted( 3 ) && State.ENABLED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
         this.updateVolatiles( );
       }
     } else if ( event instanceof LifecycleEvent ) {
