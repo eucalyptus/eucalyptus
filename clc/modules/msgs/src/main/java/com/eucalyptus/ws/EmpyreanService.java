@@ -183,12 +183,6 @@ public class EmpyreanService {
           setLocalState( localService.getState( ).toString( ) );
           getDetails( ).addAll( localService.getDetails( ) );
         }} );
-      } else {
-        reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
-          setServiceId( new ServiceId() );
-          setLocalEpoch( reply.getBaseEpoch( ) );
-          setLocalState( "UNAVAILABLE" );
-        }} );
       }
     }
     return reply;
