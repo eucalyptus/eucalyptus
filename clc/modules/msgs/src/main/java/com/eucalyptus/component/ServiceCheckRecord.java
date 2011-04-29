@@ -76,7 +76,7 @@ public class ServiceCheckRecord extends AbstractPersistent {
   private final String   uuid;
   private final String   message;
   private final String   correlationId;
-  private final String   servicePartition;
+  private final String   serviceFullName;
   private final String   serviceName;
   private final String   serviceHost;
   private final String   stackTrace;
@@ -91,7 +91,7 @@ public class ServiceCheckRecord extends AbstractPersistent {
     this.timestamp = ex.getTimestamp( );
     this.severity = ex.getSeverity( );
     this.message = ex.getMessage( );
-    this.servicePartition = ex.getConfig( ).getPartition( );
+    this.serviceFullName = ex.getConfig( ).getFullName( ).toString( );
     this.serviceName = ex.getConfig( ).getName( );
     this.serviceHost = ex.getConfig( ).getHostName( );
     String tempCorrelationId = correlationId;
@@ -118,10 +118,6 @@ public class ServiceCheckRecord extends AbstractPersistent {
     return this.correlationId;
   }
   
-  public String getServicePartition( ) {
-    return this.servicePartition;
-  }
-  
   public String getServiceName( ) {
     return this.serviceName;
   }
@@ -132,6 +128,33 @@ public class ServiceCheckRecord extends AbstractPersistent {
   
   public String getStackTrace( ) {
     return this.stackTrace;
+  }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "ServiceCheckRecord " ).append( this.severity )
+           .append( " " ).append( this.serviceFullName )
+           .append( " name=" ).append( this.serviceName )
+           .append( " host=" ).append( this.serviceHost )
+           .append( " uuid=" ).append( this.uuid )
+           .append( " correlationId=" ).append( this.correlationId )
+           .append( " timestamp=" ).append( this.timestamp )
+           .append( " message=" ).append( this.message )
+           .append( " stackTrace=" ).append( this.stackTrace );
+    return builder.toString( );
+  }
+  
+  public String getUuid( ) {
+    return this.uuid;
+  }
+  
+  public String getServiceFullName( ) {
+    return this.serviceFullName;
+  }
+  
+  public Date getTimestamp( ) {
+    return this.timestamp;
   }
   
 }

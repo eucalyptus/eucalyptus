@@ -69,12 +69,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
-public abstract class DatabaseServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
-  private static Logger LOG = Logger.getLogger( DatabaseServiceBuilder.class );
-  
-  public abstract T newInstance( String partition, String name, String host, Integer port );
-  
-  protected abstract T newInstance( );
+public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
+  private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
   
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {

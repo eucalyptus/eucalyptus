@@ -5,8 +5,8 @@ fi
 FILE=${1}
 # NOTE: change clusterrank to "local" to enable clustering
 HEADER='digraph bootstrap {
-  size="80,160";
-  ranksep=.1;
+  size="160,80";
+  ranksep=.4;
   nodesep=.2;
   overlap="prism";
   clusterrank="global";

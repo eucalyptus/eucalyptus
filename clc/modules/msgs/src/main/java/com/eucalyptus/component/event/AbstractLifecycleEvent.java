@@ -6,9 +6,11 @@ import com.eucalyptus.event.Event;
 
 public class AbstractLifecycleEvent implements LifecycleEvent {
   private final ServiceConfiguration configuration;
+  private final LifecycleEvent.Type  lifecycleEventType;
   
-  public AbstractLifecycleEvent( ServiceConfiguration configuration ) {
+  public AbstractLifecycleEvent( LifecycleEvent.Type lifecycleEventType, ServiceConfiguration configuration ) {
     this.configuration = configuration;
+    this.lifecycleEventType = lifecycleEventType;
   }
   
   public ServiceConfiguration getReference( ) {
@@ -18,6 +20,11 @@ public class AbstractLifecycleEvent implements LifecycleEvent {
   @Override
   public String toString( ) {
     return String.format( "%s:%s", this.getClass( ).getSimpleName( ), configuration );
+  }
+  
+  @Override
+  public Type getLifecycleEventType( ) {
+    return this.lifecycleEventType;
   }
   
 }

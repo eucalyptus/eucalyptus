@@ -11,7 +11,7 @@ import com.google.common.collect.Maps;
 /**
  * Formerly known as {@link DefaultServiceBuilder}
  */
-public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfiguration> {
+public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration> {
   private Map<String, ServiceConfiguration> services = Maps.newConcurrentMap( );
   private final Component                   component;
   
@@ -86,7 +86,7 @@ public class DummyServiceBuilder extends AbstractServiceBuilder<ServiceConfigura
   }
   
   @Override
-  protected ServiceConfiguration newInstance( ) {
+  public ServiceConfiguration newInstance( ) {
     ComponentId compId = this.getComponent( ).getComponentId( );
     return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.getLocalEndpointUri( ) );
   }

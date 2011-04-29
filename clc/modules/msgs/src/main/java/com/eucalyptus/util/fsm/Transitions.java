@@ -6,6 +6,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
 import com.google.common.util.concurrent.Callables;
 
@@ -16,7 +17,7 @@ public class Transitions {
     return new TransitionException( "Transition rejected because constraint check is false: " + message + " for class " + p.getClass( ).getCanonicalName( ) );
   }
   
-  public static <P extends HasName<P>> TransitionListener<P> predicateAsListener( final Predicate<P> p ) {
+  public static <P extends HasName<P>> TransitionListener<P> callbackAsListener( final Callback<P> p ) {
     return new TransitionListener<P>( ) {
       
       @Override
@@ -27,7 +28,7 @@ public class Transitions {
       @Override
       public void leave( P parent ) {
         try {
-          p.apply( parent );
+          p.fire( parent );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
         }
@@ -88,12 +89,31 @@ public class Transitions {
     return SimpleTransitions.NOOP;
   }
   
-  public static <P extends HasName<P>> TransitionAction<P> callbackAsAction( final Callback<P> callable ) {
+  public static <P extends HasName<P>> TransitionListener<P> predicateAsBeforeListener( final Predicate<P> predicate ) {
+    TransitionListener<P> listener = new TransitionListener<P>( ) {
+      @Override
+      public boolean before( P parent ) {
+        return predicate.apply( parent );
+      }
+      
+      @Override
+      public void leave( P parent ) {}
+      
+      @Override
+      public void enter( P parent ) {}
+      
+      @Override
+      public void after( P parent ) {}
+    };
+    return listener;
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> callbackAsAction( final Callback<P> callback ) {
     TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
       @Override
       public void leave( P parent, Callback.Completion transitionCallback ) {
         try {
-          callable.fire( parent );
+          callback.fire( parent );
           transitionCallback.fire( );
         } catch ( Throwable ex ) {
           LOG.error( ex );
@@ -105,36 +125,11 @@ public class Transitions {
   }
   
   public static <P extends HasName<P>> TransitionAction<P> callableAsAction( final Callable<P> callable ) {
-    TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
-      @Override
-      public void leave( P parent, Callback.Completion transitionCallback ) {
-        try {
-          callable.call( );
-          transitionCallback.fire( );
-        } catch ( Throwable ex ) {
-          LOG.error( ex );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    return action;
+    return callbackAsAction( Callbacks.forCallable( callable ) );
   }
   
-  public static <P extends HasName<P>> TransitionAction<P> runnableAsAction( final Runnable function ) {
-    TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
-      
-      @Override
-      public void leave( P parent, Completion transitionCallback ) {
-        try {
-          function.run( );
-          transitionCallback.fire( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          transitionCallback.fireException( ex );
-        }
-      }
-    };
-    return action;
+  public static <P extends HasName<P>> TransitionAction<P> runnableAsAction( final Runnable runnable ) {
+    return callbackAsAction( Callbacks.forRunnable( runnable ) );
   }
   
   public static <P extends HasName<P>> TransitionAction<P> predicateAsAction( final Predicate<P> predicate ) {

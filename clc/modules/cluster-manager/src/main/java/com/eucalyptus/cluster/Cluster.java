@@ -321,29 +321,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
-//          case STARTING_AUTHENTICATING:
-//          case STARTING_NOTREADY:
             transition = Automata.chainedTransition( this, State.PENDING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
             break;
           case NOTREADY:
             transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
             break;
           case DISABLED:
-            if ( Component.State.ENABLED.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.DISABLED, State.ENABLING );
-            } else if ( Component.State.DISABLED.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
-            }
-            break;
-          case ENABLING:
-//          case ENABLING_RESOURCES:
-//          case ENABLING_NET:
-//          case ENABLING_VMS:
-//          case ENABLING_ADDRS:
-//          case ENABLING_VMS_PASS_TWO:
-//          case ENABLING_ADDRS_PASS_TWO:
-            transition = Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
-                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+            transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
             break;
           case ENABLED:
             if ( Component.State.ENABLED.apply( this.configuration ) ) {
@@ -353,16 +337,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
               transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
             }
             break;
-//          case ENABLED_ADDRS:
-//          case ENABLED_RSC:
-//          case ENABLED_NET:
-//          case ENABLED_VMS:
-//          case ENABLED_SERVICE_CHECK:
-//            if ( Component.State.ENABLED.apply( this.configuration ) ) {
-//              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-//                                                       State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-//            }
-//            break;
           default:
             break;
         }
@@ -464,6 +438,33 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
+  
+  public void enable( ) {
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLING, State.ENABLING_RESOURCES,
+                                                                                                     State.ENABLING_NET, State.ENABLING_VMS,
+                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
+                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+    try {
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+      this.configuration.error( ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+      this.configuration.error( ex );
+    }
+  }
+  
+  public void disable( ) {
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
+    try {
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   public void stop( ) {
@@ -673,8 +674,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public void fireEvent( Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" );
-    } else if ( event instanceof ClockTick && ( ( ClockTick ) event ).isBackEdge( ) ) {
-      this.nextState( );
     } else if ( event instanceof Hertz ) {
       Hertz tick = ( Hertz ) event;
       if ( tick.isAsserted( 10 ) && State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
@@ -683,7 +682,35 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.updateVolatiles( );
       }
     } else if ( event instanceof LifecycleEvent ) {
-      LOG.info( LogUtil.dumpObject( event ) );//TODO:GRZE: FINISH UP HERE.
+      LifecycleEvent lifecycleEvent = ( LifecycleEvent ) event;
+      if( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
+        LOG.info( event );
+//TODO:GRZE:come back and decide.
+//        switch ( ( ( LifecycleEvent ) event ).getLifecycleEventType( ) ) {
+//          case START:
+//            this.start( );
+//            break;
+//          case ENABLE:
+//            this.enable( );
+//            break;
+//          case DISABLE:
+//            this.disable( );
+//            break;
+//          case STOP:
+//            this.stop( );
+//            break;
+//          case ERROR:
+//            LOG.info( event );
+//            break;
+//          case RESTART:
+//            this.stop( );
+//            this.start( );
+//            break;
+//          case STATE:
+//            LOG.info( event );
+//            break;
+//        }
+      }
     }
   }
   

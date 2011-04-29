@@ -84,40 +84,42 @@ public class LifecycleEvents {
   
   public static class Enable extends AbstractLifecycleEvent {
     public Enable( ServiceConfiguration configuration ) {
-      super( configuration );
+      super( LifecycleEvent.Type.ENABLE, configuration );
     }
   }
   
   public static class Disable extends AbstractLifecycleEvent {
     public Disable( ServiceConfiguration configuration ) {
-      super( configuration );
+      super( LifecycleEvent.Type.DISABLE, configuration );
     }
   }
   
   public static class Start extends AbstractLifecycleEvent {
     public Start( ServiceConfiguration configuration ) {
-      super( configuration );
+      super( LifecycleEvent.Type.START, configuration );
     }
   }
   
   public static class Stop extends AbstractLifecycleEvent {
     public Stop( ServiceConfiguration configuration ) {
-      super( configuration );
+      super( LifecycleEvent.Type.STOP, configuration );
     }
   }
   
-  public static class AbstractServiceEvent extends GenericEvent<ServiceStatusType> implements LifecycleEvent {
+  public static class AbstractServiceEvent extends GenericEvent<ServiceStatusType> implements LifecycleEvent.Check {
+    private final LifecycleEvent.Type      lifecycleEventType;
     private final ServiceConfiguration     serviceConfiguration;
     private final List<ServiceCheckRecord> details;
     private final Date                     timestamp;
     private final String                   uuid;
     
-    public AbstractServiceEvent( ServiceConfiguration serviceConfiguration, ServiceCheckRecord... details ) {
-      this( serviceConfiguration, Arrays.asList( details ) );
+    public AbstractServiceEvent( Type lifecycleEventType, ServiceConfiguration serviceConfiguration, ServiceCheckRecord... details ) {
+      this( lifecycleEventType, serviceConfiguration, Arrays.asList( details ) );
     }
     
-    public AbstractServiceEvent( ServiceConfiguration serviceConfiguration, List<ServiceCheckRecord> details ) {
+    public AbstractServiceEvent( Type lifecycleEventType, ServiceConfiguration serviceConfiguration, List<ServiceCheckRecord> details ) {
       super( );
+      this.lifecycleEventType = lifecycleEventType;
       this.uuid = UUID.randomUUID( ).toString( );
       this.timestamp = new Date( );
       this.serviceConfiguration = serviceConfiguration;
@@ -128,14 +130,17 @@ public class LifecycleEvents {
       return this.serviceConfiguration;
     }
     
+    @Override
     public List<ServiceCheckRecord> getDetails( ) {
       return this.details;
     }
     
+    @Override
     public String getUuid( ) {
       return this.uuid;
     }
     
+    @Override
     public Date getTimestamp( ) {
       return this.timestamp;
     }
@@ -145,11 +150,38 @@ public class LifecycleEvents {
       return this.serviceConfiguration;
     }
     
+    @Override
+    public Type getLifecycleEventType( ) {
+      return this.lifecycleEventType;
+    }
+    
+    @Override
+    public String toString( ) {
+      StringBuilder builder = new StringBuilder( );
+      if ( this.details.isEmpty( ) ) {
+        builder.append( "AbstractServiceEvent " )
+               .append( this.serviceConfiguration.getFullName( ) )
+               .append( " type=" ).append( this.lifecycleEventType )
+               .append( " uuid=" ).append( this.uuid )
+               .append( " ts=" ).append( this.timestamp );
+      } else {
+        for ( ServiceCheckRecord r : this.details ) {
+          builder.append( "AbstractServiceEvent " )
+                 .append( this.serviceConfiguration.getFullName( ) )
+                 .append( " type=" ).append( this.lifecycleEventType )
+                 .append( " uuid=" ).append( this.uuid )
+                 .append( " ts=" ).append( this.timestamp )
+                 .append( " event=" ).append( r ).append( "\n" );
+        }
+      }
+      return builder.toString( );
+    }
+    
   }
   
   public static class ServiceErrorEvent extends AbstractServiceEvent {
     ServiceErrorEvent( ServiceConfiguration serviceConfiguration, ServiceCheckRecord event ) {
-      super( serviceConfiguration, event );
+      super( LifecycleEvent.Type.ERROR, serviceConfiguration, event );
     }
     
   }
@@ -163,7 +195,7 @@ public class LifecycleEvents {
     }
     
     ServiceStateEvent( int serviceEpoch, String serviceState, ServiceConfiguration config, CheckException... exs ) {
-      super( config, Lists.transform( Arrays.asList( exs ), ServiceChecks.Functions.checkExToRecord( ) ) );
+      super( LifecycleEvent.Type.STATE, config, Lists.transform( Arrays.asList( exs ), ServiceChecks.Functions.checkExToRecord( ) ) );
       this.serviceEpoch = serviceEpoch;
       Component.State tempState = Component.State.NOTREADY;
       try {

@@ -40,5 +40,6 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
   public abstract T lookupByHost( String name ) throws ServiceRegistrationException;
   public abstract T lookup( String partition, String name ) throws ServiceRegistrationException;
   public abstract T newInstance( String partition, String name, String host, Integer port );
+  abstract T newInstance( );
 
 }

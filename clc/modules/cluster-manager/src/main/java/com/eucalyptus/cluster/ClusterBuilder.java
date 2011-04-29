@@ -1,13 +1,11 @@
 package com.eucalyptus.cluster;
 
-import java.io.File;
 import java.util.NoSuchElementException;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DatabaseServiceBuilder;
+import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -21,17 +19,12 @@ import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DescribeClustersType;
 import com.eucalyptus.config.ModifyClusterAttributeType;
 import com.eucalyptus.config.RegisterClusterType;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.system.SubDirectory;
 
 @DiscoverableServiceBuilder( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
-public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
+public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
   static Logger LOG                 = Logger.getLogger( ClusterBuilder.class );
   
   @Override
@@ -66,7 +59,6 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
             newCluster.start( );
           }
         }
-        super.fireStart( config );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
@@ -116,13 +108,12 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
       LOG.info( "Tearing down cluster: " + config );
-      Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+      Cluster cluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
       EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
       cluster.stop( );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
     }
-    super.fireStop( config );
   }
   
   @Override
@@ -141,17 +132,16 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
-          newCluster.start( );
+          newCluster.enable( );
         } else {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
           } catch ( NoSuchElementException ex ) {
             Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.start( );
+            newCluster.enable( );
           }
         }
       }
-      super.fireEnable( config );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }
@@ -167,14 +157,14 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            newCluster.stop( );
+            Clusters.getInstance( ).disable( newCluster.getName( ) );
+            newCluster.disable( );
           } catch ( NoSuchElementException ex ) {
             Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.stop( );
+            newCluster.disable( );
           }
         }
       }
-      super.fireDisable( config );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }

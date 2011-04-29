@@ -107,17 +107,17 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.ENABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.addPipelines )/*.run( ServiceTransitions.startEndpoint )*/;
-        in( State.DISABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.removePipelines )/*.run( ServiceTransitions.stopEndpoint )*/;
+        in( State.ENABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.addPipelines ).run( ServiceTransitions.addProperties )/*.run( ServiceTransitions.startEndpoint )*/;
+        in( State.DISABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.removePipelines ).run( ServiceTransitions.removeProperties )/*.run( ServiceTransitions.stopEndpoint )*/;
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
         from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.LOAD_TRANSITION );
-        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).run( ServiceTransitions.START_TRANSITION );
+        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).addListener( ServiceTransitions.fireStartEvent ).run( ServiceTransitions.START_TRANSITION );
         from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
-        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).run( ServiceTransitions.ENABLE_TRANSITION );
-        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).run( ServiceTransitions.STOP_TRANSITION );
+        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.fireEnableEvent ).run( ServiceTransitions.ENABLE_TRANSITION );
+        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.fireStopEvent ).run( ServiceTransitions.STOP_TRANSITION );
         from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
-        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).run( ServiceTransitions.DISABLE_TRANSITION );
+        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.fireDisableEvent ).run( ServiceTransitions.DISABLE_TRANSITION );
         from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
         from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.DESTROY_TRANSITION );
       }

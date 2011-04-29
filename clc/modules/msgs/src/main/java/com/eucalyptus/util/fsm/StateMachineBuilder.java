@@ -90,8 +90,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
       return this;
     }
     
-    private void commit( ) {
-    }
+    private void commit( ) {}
     
     public TransitionBuilder on( T transitionName ) {
       this.name = transitionName;
@@ -112,7 +111,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
       this.errorState = errorState;
       return this;
     }
-        
+    
     public void run( final Callback<P> callable ) {
       TransitionAction<P> action = Transitions.callbackAsAction( callable );
       this.commit( action );
@@ -130,13 +129,14 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
     public void run( TransitionAction<P> action ) {
       this.commit( action );
     }
-
+    
     public void run( final Predicate<P> predicate ) {
       TransitionAction<P> action = Transitions.predicateAsAction( predicate );
       this.commit( action );
     }
-
-    public TransitionBuilder add( TransitionListener<P> listener ) {
+    
+    public TransitionBuilder addListener( Callback<P> callback ) {
+      TransitionListener<P> listener = Transitions.callbackAsListener( callback );
       if ( this.listeners == null ) {
         this.transition.addListener( listener );
       } else {
@@ -145,7 +145,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
       return this;
     }
     
-    public TransitionBuilder add( TransitionListener<P>... listeners ) {
+    public TransitionBuilder addListener( TransitionListener<P>... listeners ) {
       if ( this.listeners == null ) {
         for ( TransitionListener<P> l : listeners ) {
           transition.addListener( l );
