@@ -314,43 +314,39 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     }.newAtomicMarkedState( );
   }
   
-  private void nextState( ) {
+  private void fireClockTick( Hertz tick ) {
     try {
-      if ( this.stateMachine.isBusy( ) ) {
-        return;
-      } else {
+      if ( !this.stateMachine.isBusy( ) ) {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
-            if( !this.stateMachine.isBusy( ) ) {
-              transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY );
+            if ( tick.isAsserted( 3l ) ) {
+              transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
             }
             break;
           case NOTREADY:
-            if( !this.stateMachine.isBusy( ) ) {
+            if ( tick.isAsserted( 10l ) ) {
               transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
             }
             break;
           case DISABLED:
-            if( !this.stateMachine.isBusy( ) ) {
+            if ( tick.isAsserted( 10l ) ) {
               transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
             }
             break;
           case ENABLED:
-            if( !this.stateMachine.isBusy( ) ) {
-              if ( Component.State.ENABLED.apply( this.configuration ) ) {
-                transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-                                                         State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-              } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
-                transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
-              }
+            if ( tick.isAsserted( 10l ) && Component.State.ENABLED.apply( this.configuration ) ) {
+              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+                                                       State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
+              transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
             }
             break;
           default:
             break;
         }
         if ( transition != null ) {
-          Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+          Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
         }
       }
     } catch ( IllegalStateException ex ) {
@@ -672,20 +668,17 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   @Override
   public void fireEvent( Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
-      LOG.info( this.getConfiguration( ).toString( ) + " skipping clock event because bootstrap isn't finished" );
+      LOG.info( this.getConfiguration( ).getFullName( ) + " skipping clock event because bootstrap isn't finished" );
     } else if ( event instanceof Hertz ) {
-      Hertz tick = ( Hertz ) event;
-      boolean mod10 = tick.isAsserted( 10l );
-      boolean mod3 = tick.isAsserted( 3l );
-      if ( mod10 && State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
-        this.nextState( );
-      } else if ( mod3 && State.ENABLED.ordinal( ) < this.stateMachine.getState( ).ordinal( ) ) {
-        this.updateVolatiles( );
-      }
+      this.fireClockTick( ( Hertz ) event );
     } else if ( event instanceof LifecycleEvent ) {
-      LifecycleEvent lifecycleEvent = ( LifecycleEvent ) event;
-      if ( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
-        LOG.info( event );
+      this.fireLifecycleEvent( ( LifecycleEvent ) event );
+    }
+  }
+
+  private void fireLifecycleEvent( LifecycleEvent lifecycleEvent ) {
+    if ( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
+      LOG.info( lifecycleEvent );
 //TODO:GRZE:come back and decide.
 //        switch ( ( ( LifecycleEvent ) event ).getLifecycleEventType( ) ) {
 //          case START:
@@ -711,7 +704,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
 //            LOG.info( event );
 //            break;
 //        }
-      }
     }
   }
   

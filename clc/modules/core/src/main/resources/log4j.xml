@@ -169,12 +169,24 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
   </category>
+  <category name="com.eucalyptus.context.Context" additivity="false">
+    <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.ws.util.PipelineRegistry" additivity="false">
+    <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.vm.MetadataRequest" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
