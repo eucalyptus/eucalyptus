@@ -74,19 +74,15 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceChecks;
-import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.event.LifecycleEvents;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -305,4 +301,8 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return this.getStateMachine( );
   }
   
+  @Override
+  public Component.State lookupState( ) {
+    return this.getStateMachine( ).getState( );
+  }
 }

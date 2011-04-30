@@ -363,7 +363,7 @@ public class ServiceTransitions {
                                                                                          try {
                                                                                            if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
                                                                                              parent.lookupComponent( ).getBootstrapper( ).check( );
-                                                                                             if ( parent.lookupComponent( ).getLocalService( ) != null ) {
+                                                                                             if ( parent.lookupComponent( ).hasLocalService( ) ) {
                                                                                                parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
                                                                                              }
                                                                                            }

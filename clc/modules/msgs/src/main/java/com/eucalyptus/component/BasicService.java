@@ -67,7 +67,6 @@ import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -77,19 +76,13 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.eucalyptus.util.fsm.TransitionHandler;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public class BasicService extends AbstractService implements Service {
@@ -230,7 +223,7 @@ public class BasicService extends AbstractService implements Service {
     } else if ( event instanceof Hertz ) {
       Component c = this.getComponent( );
       if ( c.hasLocalService( ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
-        if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
+        if ( Component.State.ENABLED.equals( c.getLocalServiceConfiguration( ).lookupService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
           Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
         } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
           c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );//TODO:GRZE:URGENT state change happening here

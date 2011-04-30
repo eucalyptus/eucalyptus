@@ -3,9 +3,8 @@ package com.eucalyptus.component;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
-import com.eucalyptus.empyrean.ServiceStatusType;
+import java.util.List;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.StateMachine;
@@ -40,6 +39,8 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public abstract StateMachine<ServiceConfiguration, Component.State, Component.Transition> lookupStateMachine( );
   
+  public abstract State lookupState( );
+
   public abstract ComponentId getComponentId( );
   
   public abstract Service lookupService( );
@@ -59,4 +60,10 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public void info( Throwable t );
 
   public void error( String correlationId, Throwable t );
+
+  /**
+   * @return
+   */
+  List<ServiceCheckRecord> lookupDetails( );
+
 }

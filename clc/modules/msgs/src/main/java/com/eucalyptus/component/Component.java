@@ -156,7 +156,7 @@ public class Component implements HasName<Component> {
   }
   
   public State getState( ) {
-    return this.getLocalService( ).getStateMachine( ).getState( );
+    return this.getLocalServiceConfiguration( ).lookupState( );
   }
   
   /**
@@ -186,8 +186,7 @@ public class Component implements HasName<Component> {
    * True if the component has not been explicitly configured as running in remote-mode where only
    * partial services are provided locally. That is, even if
    * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for
-   * {@link com.eucalyptus.component.id.ComponentService.dns}).
+   * service endpoint is still configured (i.e. for {@link com.eucalyptus.component.id.ComponentService.dns}).
    * 
    * @return true if the component has not been explicitly marked as remote.
    */
@@ -233,7 +232,7 @@ public class Component implements HasName<Component> {
   }
   
   public Boolean isEnabledLocally( ) {
-    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalService( ).getStateMachine( ).getState( ) );
+    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalServiceConfiguration( ).lookupState( ) );
   }
   
   public Boolean isRunningLocally( ) {
@@ -380,14 +379,14 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
-      Service service = this.serviceRegistry.deregister( config );
-      if ( State.STOPPED.ordinal( ) < this.getLocalService( ).getStateMachine( ).getState( ).ordinal( ) ) {
-        this.stopService( config );
+      if ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
+        if ( State.STOPPED.ordinal( ) < this.getLocalService( ).getStateMachine( ).getState( ).ordinal( ) ) {
+          this.stopService( config );
+        }
       }
       try {
-        EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ),
-                            service.getServiceConfiguration( ).getUri( ).toString( ) ).info( );
-        return this.getLocalService( ).getStateMachine( ).transitionByName( Transition.DESTROYING );
+        EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), config.getFullName( ), config.getUri( ).toString( ) ).info( );
+        return config.lookupStateMachine( ).transitionByName( Transition.DESTROYING );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -578,8 +577,7 @@ public class Component implements HasName<Component> {
      * Obtain a snapshot of the current service state. Note that this method creates a new set and
      * changes to the returned set will not be reflected in the underlying services set.
      * 
-     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
-     *         type.
+     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
      */
     public NavigableSet<Service> getServices( ) {
       return Sets.newTreeSet( this.services.values( ) );
@@ -628,8 +626,7 @@ public class Component implements HasName<Component> {
      * 
      * @param fullName
      * @return {@link Service} instance of the deregistered service.
-     * @throws NoSuchElementException if no {@link Service} is registered with the provided
-     *           {@link FullName}
+     * @throws NoSuchElementException if no {@link Service} is registered with the provided {@link FullName}
      */
     public Service deregister( FullName fullName ) throws NoSuchElementException {
       Service ret = this.services.remove( fullName );
@@ -642,8 +639,8 @@ public class Component implements HasName<Component> {
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided
-     * {@link ServiceConfiguration}, if it exists. If a service with the given name does not exist a
+     * Returns the {@link Service} instance which was registered with the provided {@link ServiceConfiguration}, if it exists. If a service with the given name
+     * does not exist a
      * NoSuchElementException is thrown.
      * 
      * @see #lookup(FullName)
@@ -742,6 +739,10 @@ public class Component implements HasName<Component> {
     public boolean hasService( ServiceConfiguration config ) {
       return this.services.containsKey( config.getFullName( ) );
     }
+  }
+  
+  public ServiceConfiguration getLocalServiceConfiguration( ) {
+    return this.serviceRegistry.getLocalService( ).getServiceConfiguration( );
   }
   
 }

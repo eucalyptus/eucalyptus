@@ -70,9 +70,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
@@ -80,12 +78,10 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -360,7 +356,7 @@ public class SystemBootstrapper {
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.hasLocalService( ) ) {
-        ServiceConfiguration localConfig = c.getLocalService( ).getServiceConfiguration( );
+        ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );

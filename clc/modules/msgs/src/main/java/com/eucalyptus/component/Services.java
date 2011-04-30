@@ -63,14 +63,69 @@
 
 package com.eucalyptus.component;
 
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
+
 public class Services {
-  public static Service newServiceInstance( ServiceConfiguration config ) {
-    if( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
-      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );
-    } else if( config.isLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+  @TypeMapper( { ServiceConfiguration.class, ServiceId.class } )
+  private enum ServiceIdMapper implements Function<ServiceConfiguration, ServiceId> {
+    INSTANCE;
+    
+    @Override
+    public ServiceId apply( final ServiceConfiguration input ) {
+      return new ServiceId( ) {
+        {
+          this.setUuid( input.getFullName( ).toString( ) );
+          this.setPartition( input.getPartition( ) );
+          this.setName( input.getName( ) );
+          this.setType( input.getComponentId( ).getName( ) );
+          this.setUri( input.getUri( ).toString( ) );
+        }
+      };
+    }
+  }
+  
+  @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
+  private enum ServiceMapper implements Function<ServiceConfiguration, Service> {
+    INSTANCE;
+    
+    @Override
+    public Service apply( final ServiceConfiguration input ) {
+      return input.lookupComponent( ).lookupService( input );
+    }
+    
+  }
+  
+  @TypeMapper
+  private enum ServiceDispatcherMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      return ServiceBuilderRegistry.lookup( input.getComponentId( ) );
+    }
+    
+  }
+  
+  public static <T> T transform( ServiceConfiguration config, Class<T> c ) {
+    Function<ServiceConfiguration, T> func = TypeMappers.lookup( ServiceConfiguration.class, c );
+    return func.apply( config );
+  }
+  
+  static Service newServiceInstance( ServiceConfiguration config ) {
+    if ( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
+      return config.getComponentId( ).hasDispatcher( )
+        ? new MessagableService( config )
+        : new BasicService( config );
+    } else if ( config.isLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
       return new BasicService.Broken( config );
-    } else /**if( !config.isLocal() )**/ {
-      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );//TODO:GRZE:fix this up.
+    } else /** if( !config.isLocal() ) **/
+    {
+      return config.getComponentId( ).hasDispatcher( )
+        ? new MessagableService( config )
+        : new BasicService( config );//TODO:GRZE:fix this up.
     }
   }
 }

@@ -69,6 +69,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Services;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -178,7 +179,7 @@ public class EmpyreanService {
       if( comp.hasLocalService( ) ) {
         final Service localService = comp.getLocalService( );
         reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
-          setServiceId( localService.getServiceId( ) );
+          setServiceId( Services.transform( config, ServiceId.class ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
           setLocalState( localService.getStateMachine( ).getState( ).toString( ) );
           getDetails( ).addAll( localService.getDetails( ) );

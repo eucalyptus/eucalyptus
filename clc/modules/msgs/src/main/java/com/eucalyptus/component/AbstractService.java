@@ -63,8 +63,8 @@
 
 package com.eucalyptus.component;
 
+import java.util.Comparator;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.component.event.LifecycleEvents.Disable;
 import com.eucalyptus.component.event.LifecycleEvents.Enable;
@@ -72,14 +72,26 @@ import com.eucalyptus.component.event.LifecycleEvents.ServiceErrorEvent;
 import com.eucalyptus.component.event.LifecycleEvents.ServiceStateEvent;
 import com.eucalyptus.component.event.LifecycleEvents.Start;
 import com.eucalyptus.component.event.LifecycleEvents.Stop;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.system.Threads;
+import com.google.common.collect.SortedSetMultimap;
+import com.google.common.collect.TreeMultimap;
 
 public class AbstractService {
-  private static Logger LOG = Logger.getLogger( AbstractService.class );
+  private static Logger                                     LOG     = Logger.getLogger( AbstractService.class );
+  
+  private final SortedSetMultimap<Long, ServiceCheckRecord> details = TreeMultimap.create( new Comparator<Long>( ) {
+                                                                      
+                                                                      @Override
+                                                                      public int compare( Long o1, Long o2 ) {
+                                                                        return o1.compareTo( o2 );
+                                                                      }
+                                                                    }, new Comparator<ServiceCheckRecord>( ) {
+                                                                      
+                                                                      @Override
+                                                                      public int compare( ServiceCheckRecord o1, ServiceCheckRecord o2 ) {
+                                                                        return o1.getUuid( ).compareTo( o2.getUuid( ) );
+                                                                      }
+                                                                    } );
   
   public void fireLifecycleEvent( Event event ) {
     if ( event instanceof LifecycleEvents.Start ) {
@@ -99,26 +111,42 @@ public class AbstractService {
   
   protected void doStart( Start event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
   }
   
   protected void doStop( Stop event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
   }
   
   protected void doEnable( Enable event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
   }
   
   protected void doDisable( Disable event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
   }
   
   protected void doState( ServiceErrorEvent event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
+    for ( ServiceCheckRecord record : event.getDetails( ) ) {
+      submitRecord( record );
+    }
+  }
+
+  private void submitRecord( ServiceCheckRecord record ) {
+    details.put( record.getTimestamp( ).getTime( ), record );
   }
   
   protected void doError( ServiceStateEvent event ) {
     LOG.debug( event );
+    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
+    for ( ServiceCheckRecord record : event.getDetails( ) ) {
+      submitRecord( record );
+    }
   }
   
 }
