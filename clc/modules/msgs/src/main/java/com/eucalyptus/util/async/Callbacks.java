@@ -4,15 +4,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.Callback.Checked;
-import com.eucalyptus.util.async.Callback.Completion;
-import com.eucalyptus.util.async.Callbacks.BasicCallbackProcessor;
-import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Callbacks {
@@ -22,10 +18,10 @@ public class Callbacks {
     return new Callback( ) {
       
       @Override
-      public void fire( Object t ) {
+      public void fire( final Object t ) {
         try {
           callable.call( );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -36,23 +32,14 @@ public class Callbacks {
     return new Callback( ) {
       
       @Override
-      public void fire( Object t ) {
+      public void fire( final Object t ) {
         try {
           runnable.run( );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
       }
     };
-  }
-  
-  public static <T> CheckedListenableFuture<T> chain( Callable<CheckedListenableFuture<T>>... callables ) {
-    for( Callable<CheckedListenableFuture<T>> c : callables ) {
-      c.call( ).addListener( new Runnable( ) {
-
-        @Override
-        public void run( ) {}} );
-    }
   }
   
   public static <T> Callback<T> noop( ) {
@@ -61,15 +48,15 @@ public class Callbacks {
   
   private static final class NoopCallback<T> implements Callback<T> {
     @Override
-    public final void fire( T t ) {}
+    public final void fire( final T t ) {}
   }
-
+  
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {
     private final Callback<R> callback;
     private final Future<R>   future;
-    private Logger            LOG;
+    private final Logger      LOG;
     
-    private BasicCallbackProcessor( Future<R> future, Callback<R> callback ) {
+    private BasicCallbackProcessor( final Future<R> future, final Callback<R> callback ) {
       this.callback = callback;
       this.future = future;
       this.LOG = Logger.getLogger( this.callback.getClass( ) );
@@ -87,18 +74,18 @@ public class Callbacks {
         try {
           this.LOG.trace( EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).toString( ) );
           this.callback.fire( reply );
-        } catch ( Throwable ex ) {
+        } catch ( final Throwable ex ) {
           this.LOG.error( EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).toString( ) );
           this.doFail( ex );
         }
-      } catch ( Throwable e ) {
+      } catch ( final Throwable e ) {
         this.LOG.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ) );
         this.doFail( e );
       }
     }
     
     private final void doFail( Throwable failure ) {
-      if ( ( failure instanceof ExecutionException ) && failure.getCause( ) != null ) {
+      if ( ( failure instanceof ExecutionException ) && ( failure.getCause( ) != null ) ) {
         failure = failure.getCause( );
       }
       if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
@@ -106,7 +93,7 @@ public class Callbacks {
           this.LOG.trace( EventRecord.here( this.callback.getClass( ), EventType.CALLBACK, "fireException(" + failure.getClass( ).getSimpleName( ) + ")",
                                             failure.getMessage( ) )/*, Exceptions.filterStackTrace( failure, 2 )*/);
           ( ( Checked ) this.callback ).fireException( failure );
-        } catch ( Throwable t ) {
+        } catch ( final Throwable t ) {
           this.LOG.error( "BUG: an error occurred while trying to process an error.  Previous error was: " + failure.getMessage( ), t );
         }
       } else if ( Callback.Completion.class.isAssignableFrom( this.callback.getClass( ) ) ) {
@@ -122,9 +109,9 @@ public class Callbacks {
     }
     
   }
-
+  
   @SuppressWarnings( "unchecked" )
-  public static Runnable addListenerHandler( CheckedListenableFuture<?> future, Callback<?> listener ) {
+  public static Runnable addListenerHandler( final CheckedListenableFuture<?> future, final Callback<?> listener ) {
     Runnable r;
     future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ), Threads.currentThreadExecutor( ) );
     return r;
