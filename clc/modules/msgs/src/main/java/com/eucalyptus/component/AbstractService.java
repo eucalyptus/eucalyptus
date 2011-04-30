@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.util.Collection;
 import java.util.Comparator;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.event.LifecycleEvents;
@@ -147,6 +148,10 @@ public class AbstractService {
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );
     }
+  }
+
+  public Collection<ServiceCheckRecord> getDetails( ) {
+    return this.details.values( );
   }
   
 }

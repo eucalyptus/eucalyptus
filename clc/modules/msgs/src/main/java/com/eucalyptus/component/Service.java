@@ -66,20 +66,14 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Collection;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
-import com.eucalyptus.util.fsm.StateMachine;
 
 public interface Service extends HasFullName<ServiceConfiguration>, EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
@@ -87,12 +81,9 @@ public interface Service extends HasFullName<ServiceConfiguration>, EventListene
   
   public abstract String toString( );
   
-  /** ASAP:FIXME:GRZE **/
-  public abstract List<String> getDetails( );
+  public Collection<ServiceCheckRecord> getDetails( );
   
   public abstract void enqueue( Request request );
-  
-  public abstract ServiceId getServiceId( );
   
   public abstract Boolean isLocal( );
   

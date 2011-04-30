@@ -66,14 +66,12 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.Hertz;
@@ -83,7 +81,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.google.common.collect.Lists;
 
 public class BasicService extends AbstractService implements Service {
   private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
@@ -133,20 +130,6 @@ public class BasicService extends AbstractService implements Service {
     return this.serviceConfiguration.getFullName( ).toString( );
   }
   
-  /** TODO:GRZE: clean this up **/
-  @Override
-  public final ServiceId getServiceId( ) {
-    return new ServiceId( ) {
-      {
-        this.setUuid( BasicService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( BasicService.this.serviceConfiguration.getPartition( ) );
-        this.setName( BasicService.this.serviceConfiguration.getName( ) );
-        this.setType( BasicService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( BasicService.this.serviceConfiguration.getUri( ).toString( ) );
-      }
-    };
-  }
-  
   @Override
   public Boolean isLocal( ) {
     return this.serviceConfiguration.isLocal( );
@@ -189,11 +172,6 @@ public class BasicService extends AbstractService implements Service {
   @Override
   public Dispatcher getDispatcher( ) {
     throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
-  }
-  
-  @Override
-  public List<String> getDetails( ) {
-    return Lists.newArrayList( );//TODO:GRZE:OMGFIXME
   }
   
   @Override

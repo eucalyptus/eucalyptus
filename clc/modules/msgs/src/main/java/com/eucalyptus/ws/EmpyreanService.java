@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Services;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -84,6 +85,8 @@ import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Functions;
+import com.google.common.collect.Collections2;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -177,12 +180,12 @@ public class EmpyreanService {
     final DescribeServicesResponseType reply = request.getReply( );
     for( Component comp : Components.list( ) ) {
       if( comp.hasLocalService( ) ) {
-        final Service localService = comp.getLocalService( );
+        final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
         reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
           setServiceId( Services.transform( config, ServiceId.class ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
-          setLocalState( localService.getStateMachine( ).getState( ).toString( ) );
-          getDetails( ).addAll( localService.getDetails( ) );
+          setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+          getDetails( ).addAll( Collections2.transform( config.lookupDetails( ), Functions.toStringFunction( ) ) );
         }} );
       }
     }

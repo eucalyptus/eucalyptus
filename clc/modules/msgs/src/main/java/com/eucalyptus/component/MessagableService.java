@@ -66,16 +66,14 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
+import java.util.Collection;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class MessagableService extends AbstractService implements Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
@@ -118,12 +116,6 @@ public class MessagableService extends AbstractService implements Service {
                           this.getComponentId( ), this.getName( ), this.endpoint, this.getServiceConfiguration( ) );
   }
   
-  /** ASAP:FIXME:GRZE **/
-  @Override
-  public List<String> getDetails( ) {
-    return Arrays.asList( this.toString( ).split( "\n" ) );
-  }
-  
   @Override
   public void enqueue( final Request request ) {
     this.endpoint.enqueue( request );
@@ -137,11 +129,6 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public boolean equals( final Object obj ) {
     return this.serviceDelegate.equals( obj );
-  }
-  
-  @Override
-  public final ServiceId getServiceId( ) {
-    return this.serviceDelegate.getServiceId( );
   }
   
   @Override
@@ -227,6 +214,10 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public int compareTo( final ServiceConfiguration o ) {
     return this.serviceDelegate.compareTo( o );
+  }
+
+  public Collection<ServiceCheckRecord> getDetails( ) {
+    return this.serviceDelegate.getDetails( );
   }
   
 }
