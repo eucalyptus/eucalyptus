@@ -34,6 +34,7 @@ import inspect
 import os
 import sys
 import boto.utils
+import boto.exception
 import eucadmin.configfile
 
 DefaultEucaDir = '@prefix@'
@@ -261,6 +262,7 @@ class EucaConf(object):
                 self.config[key] = self.specified_options[key]
 
     def main(self):
+        status = 0
         self.update_config_file()
         if self.options.debug:
             self.debug = 2
@@ -268,9 +270,13 @@ class EucaConf(object):
             for name, method in inspect.getmembers(self):
                 if name.startswith('do_') and inspect.ismethod(method):
                     method()
+        except boto.exception.BotoClientError, e:
+            print e.reason
+            status = 1
         except Exception, e:
             print e.message
-            sys.exit(1)
+            status = 1
+        sys.exit(status)
 
     def do_get_credentials(self):
         if self.options.get_credentials:
@@ -432,7 +438,7 @@ class EucaConf(object):
                             'var/lib/eucalyptus/keys')
         # probably need to look in partition directory
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-        files = ['node-cert.pem', 'cluster-cert.pem',
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
                  'node-pk.pem', 'cluster-pk.pem']
         req = cls([path], path, node, files)
         return req.sync()
