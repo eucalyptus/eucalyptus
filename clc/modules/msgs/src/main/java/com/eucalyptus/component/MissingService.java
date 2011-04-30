@@ -66,12 +66,11 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
+import java.util.Collection;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Request;
@@ -92,20 +91,6 @@ public class MissingService extends AbstractService implements Service {
   @Override
   public final String getName( ) {
     return this.serviceConfiguration.getFullName( ).toString( );
-  }
-  
-  /** TODO:GRZE: clean this up **/
-  @Override
-  public final ServiceId getServiceId( ) {
-    return new ServiceId( ) {
-      {
-        this.setUuid( MissingService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( MissingService.this.serviceConfiguration.getPartition( ) );
-        this.setName( MissingService.this.serviceConfiguration.getName( ) );
-        this.setType( MissingService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( MissingService.this.serviceConfiguration.getUri( ).toString( ) );
-      }
-    };
   }
   
   @Override
@@ -173,7 +158,7 @@ public class MissingService extends AbstractService implements Service {
   }
   
   @Override
-  public List<String> getDetails( ) {
+  public Collection<ServiceCheckRecord> getDetails( ) {
     throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
