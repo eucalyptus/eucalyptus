@@ -235,7 +235,7 @@ public class ServiceChecks {
         ? this.uuid
         : correlationId );
       this.timestamp = new Date( );
-      this.eventState = config.lookupService( ).getState( );
+      this.eventState = config.lookupStateMachine( ).getState( );
       this.eventEpoch = Topology.epoch( );
     }
     

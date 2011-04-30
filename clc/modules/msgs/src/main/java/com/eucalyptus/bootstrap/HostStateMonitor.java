@@ -76,7 +76,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.SubjectMessageCallback;
@@ -108,7 +108,7 @@ public class HostStateMonitor implements EventListener<Event> {
         public Request apply( final Host target ) {
           try {
             if( target.getServiceConfiguration( ) != null ) { 
-              final Request req = Callbacks.newRequest( new ServiceCallback( target ) );
+              final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
               Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
                 
                 @Override

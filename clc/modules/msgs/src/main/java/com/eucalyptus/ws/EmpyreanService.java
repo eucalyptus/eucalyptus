@@ -154,7 +154,7 @@ public class EmpyreanService {
           String partition = service.getServiceConfiguration( ).getPartition( );
           String name = service.getServiceConfiguration( ).getName( );
           if( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
-            if( Component.State.ENABLED.equals( service.getState( ) ) ) {
+            if( Component.State.ENABLED.equals( service.getStateMachine( ).getState( ) ) ) {
               try {
                 c.disableService( service.getServiceConfiguration( ) );
                 reply.getServices( ).add( serviceInfo );
@@ -180,7 +180,7 @@ public class EmpyreanService {
         reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
           setServiceId( localService.getServiceId( ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
-          setLocalState( localService.getState( ).toString( ) );
+          setLocalState( localService.getStateMachine( ).getState( ).toString( ) );
           getDetails( ).addAll( localService.getDetails( ) );
         }} );
       }

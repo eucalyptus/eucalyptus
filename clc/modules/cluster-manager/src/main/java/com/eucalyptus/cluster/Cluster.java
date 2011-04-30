@@ -110,12 +110,14 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.util.fsm.Automata;
@@ -130,6 +132,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
@@ -150,21 +153,21 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                  
                                                                                  @Override
                                                                                  public boolean apply( Cluster input ) {
-                                                                                   return Component.State.DISABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
+                                                                                   return Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
                                                                                  }
                                                                                };
   private final Predicate<Cluster>                       COMPONENT_IS_ENABLED  = new Predicate<Cluster>( ) {
                                                                                  
                                                                                  @Override
                                                                                  public boolean apply( Cluster input ) {
-                                                                                   return Component.State.ENABLED.equals( input.getConfiguration( ).lookupService( ).getState( ) );
+                                                                                   return Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
                                                                                  }
                                                                                };
   private final Predicate<Cluster>                       COMPONENT_IS_STARTED  = new Predicate<Cluster>( ) {
                                                                                  
                                                                                  @Override
                                                                                  public boolean apply( Cluster input ) {
-                                                                                   return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupService( ).getState( ).ordinal( );
+                                                                                   return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( );
                                                                                  }
                                                                                };
   
@@ -185,7 +188,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback )
+            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                      .sendSync( parent.getLogServiceConfiguration( ) );
           } catch ( ExecutionException e ) {
             if ( e.getCause( ) instanceof FailedRequestException ) {
@@ -223,7 +226,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
           } catch ( ExecutionException e ) {
             if ( e.getCause( ) instanceof FailedRequestException ) {
               LOG.error( e.getCause( ).getMessage( ) );
@@ -251,7 +254,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     /** Component.State.DISABLED -> Component.State.ENABLED **/
     ENABLING, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
-    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK, 
+    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK,
+    
   }
   
   public enum Transition implements Automata.Transition<Transition> {
@@ -321,25 +325,25 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
             if ( tick.isAsserted( 3l ) ) {
-              transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
+              transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
             }
             break;
           case NOTREADY:
             if ( tick.isAsserted( 10l ) ) {
-              transition = Automata.chainedTransition( this, State.NOTREADY, State.DISABLED );
+              transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
             }
             break;
           case DISABLED:
             if ( tick.isAsserted( 10l ) ) {
-              transition = Automata.chainedTransition( this, State.DISABLED, State.DISABLED );
+              transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
             }
             break;
           case ENABLED:
             if ( tick.isAsserted( 10l ) && Component.State.ENABLED.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+              transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                        State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
             } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
-              transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
+              transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
             }
             break;
           default:
@@ -446,7 +450,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void enable( ) throws ServiceRegistrationException {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING,
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING,
                                                                                                      State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED,
                                                                                                      State.ENABLING, State.ENABLING_RESOURCES,
                                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
@@ -456,12 +460,12 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void disable( ) throws ServiceRegistrationException {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.ENABLED, State.DISABLED );
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
     Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
   }
   
   public void stop( ) throws ServiceRegistrationException {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.chainedTransition( this, State.DISABLED, State.PENDING );
+    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( this, State.DISABLED, State.PENDING );
     Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
@@ -641,7 +645,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
         try {
-          Callbacks.newRequest( factory.newInstance( ) ).then( transitionCallback )
+          AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                    .sendSync( parent.getLogServiceConfiguration( ) );
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {
@@ -676,6 +680,28 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     }
   }
 
+  private static <P, T extends SubjectMessageCallback<P, Q, R>, Q extends BaseMessage, R extends BaseMessage> SubjectRemoteCallbackFactory<T, P> newSubjectMessageFactory( final Class<T> callbackClass, final P subject ) {
+    return new SubjectRemoteCallbackFactory( ) {
+      @Override
+      public T newInstance( ) {
+        try {
+          T callback = callbackClass.newInstance( );
+          callback.setSubject( subject );
+          return callback;
+        } catch ( Throwable t ) {
+          LOG.error( t, t );
+          throw new RuntimeException( t );
+        }
+      }
+      
+      @Override
+      public P getSubject( ) {
+        return subject;
+      }
+    };
+  }
+  
+
   private void fireLifecycleEvent( LifecycleEvent lifecycleEvent ) {
     if ( this.configuration.equals( lifecycleEvent.getReference( ) ) ) {
       LOG.info( lifecycleEvent );
@@ -709,7 +735,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   private void updateVolatiles( ) {
     try {
-      Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getConfiguration( ) );
+      AsyncRequests.newRequest( new VmPendingCallback( this ) ).sendSync( this.getConfiguration( ) );
     } catch ( ExecutionException ex ) {
       Exceptions.trace( ex );
     } catch ( InterruptedException ex ) {

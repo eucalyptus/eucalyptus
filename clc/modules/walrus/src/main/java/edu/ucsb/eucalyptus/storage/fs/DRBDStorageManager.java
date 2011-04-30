@@ -397,7 +397,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 					NavigableSet<Service> hii = Components.lookup("walrus").getServices();
 					boolean isOtherPrimary = false;
 					for (Service ii : hii) {
-						isOtherPrimary |= Component.State.ENABLED.equals(ii.getState()) && !ii.isLocal() ? true : false;
+						isOtherPrimary |= Component.State.ENABLED.equals(ii.getStateMachine().getState()) && !ii.isLocal() ? true : false;
 					}
 					if(!isOtherPrimary) {
 						return;

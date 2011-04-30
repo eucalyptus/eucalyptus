@@ -94,19 +94,18 @@ public class ServiceTransitions {
   private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
-    final Service service = config.lookupService( );
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    switch ( service.getState( ) ) {
+    switch ( config.lookupStateMachine( ).getState( ) ) {
       case NOTREADY:
       case DISABLED:
       case ENABLED:
         break;
       case LOADED:
       case STOPPED:
-        transition = Automata.chainedTransition( config, Component.State.LOADED, Component.State.NOTREADY );
+        transition = Automata.sequenceTransitions( config, Component.State.LOADED, Component.State.NOTREADY );
         break;
       case INITIALIZED:
-        transition = Automata.chainedTransition( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY );
+        transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY );
         break;
       default:
         throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
@@ -125,22 +124,21 @@ public class ServiceTransitions {
   }
   
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
-    final Service service = config.lookupService( );
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    switch ( service.getState( ) ) {
+    switch ( config.lookupStateMachine( ).getState( ) ) {
       case ENABLED:
         break;
       case NOTREADY:
       case DISABLED:
-        transition = Automata.chainedTransition( config, Component.State.DISABLED, Component.State.ENABLED );
+        transition = Automata.sequenceTransitions( config, Component.State.DISABLED, Component.State.ENABLED );
         break;
       case LOADED:
       case STOPPED:
-        transition = Automata.chainedTransition( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED,
+        transition = Automata.sequenceTransitions( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED,
                                                                       Component.State.ENABLED );
         break;
       case INITIALIZED:
-        transition = Automata.chainedTransition( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY,
+        transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY,
                                                                       Component.State.DISABLED, Component.State.ENABLED );
         break;
       default:
@@ -376,7 +374,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ),
                                                                                                                    ex );
-                                                                                           if ( State.ENABLED.equals( parent.lookupService( ).getState( ) ) ) {
+                                                                                           if ( State.ENABLED.equals( parent.lookupStateMachine( ).getState( ) ) ) {
                                                                                              try {
                                                                                                parent.lookupComponent( ).getBootstrapper( ).disable( );
                                                                                                if ( parent.lookupComponent( ).hasLocalService( ) ) {

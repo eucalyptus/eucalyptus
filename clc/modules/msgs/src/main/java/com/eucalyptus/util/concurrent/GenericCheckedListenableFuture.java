@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,11 +63,16 @@
 
 package com.eucalyptus.util.concurrent;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
-public class GenericFuture<V> extends AbstractCheckedListenableFuture<V> implements CheckedListenableFuture<V> {
+public class GenericCheckedListenableFuture<T> extends AbstractListenableFuture<T> implements CheckedListenableFuture<T> {
 
+  /**
+   * @see com.eucalyptus.util.async.CheckedListenableFuture#isCanceled()
+   */
+  @Override
+  public boolean isCanceled( ) {
+    return false;
+  }
+  
 }

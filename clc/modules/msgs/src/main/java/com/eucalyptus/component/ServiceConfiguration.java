@@ -8,6 +8,7 @@ import com.eucalyptus.component.ServiceChecks.Severity;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.fsm.HasStateMachine;
+import com.eucalyptus.util.fsm.StateMachine;
 
 public interface ServiceConfiguration extends Serializable, HasFullName<ServiceConfiguration>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
@@ -36,6 +37,8 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public abstract Partition lookupPartition( );
   
   public abstract Component lookupComponent( );
+
+  public abstract StateMachine<ServiceConfiguration, Component.State, Component.Transition> lookupStateMachine( );
   
   public abstract ComponentId getComponentId( );
   

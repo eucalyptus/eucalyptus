@@ -63,26 +63,25 @@
 
 package com.eucalyptus.util.fsm;
 
-import java.util.Arrays;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.not;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 public class Automata {
   public interface EnumMappable {
     Mapper asEnum = new Mapper( );
     
     class Mapper {
-      public static <E> E[] getEnumConstants( E input ) {
+      public static <E> E[] getEnumConstants( final E input ) {
         if ( Enum.class.isAssignableFrom( input.getClass( ) ) ) {
           return ( E[] ) ( ( Enum ) input ).getDeclaringClass( ).getEnumConstants( );
         } else {
@@ -98,50 +97,37 @@ public class Automata {
   
   public interface State<S extends Enum<S>> extends EnumMappable, Comparable<S> {}
   
-  private static Logger LOG = Logger.getLogger( Automata.class );
+  public static Logger LOG = Logger.getLogger( Automata.class );
   
-  public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<ServiceConfiguration>> chainedTransition( final HasStateMachine<P, S, ?> config, final S fromState, final S... toStates ) {
-    if ( toStates.length < 1 ) {
-      throw new IllegalArgumentException( "At least one toState must be specified" );
-    }
-    final S toState = ( toStates.length != 0 )
-      ? toStates[0]
-      : null;
-    final S nextFromState = toState;
-    final S[] nextStates = ( toStates.length > 1 )
-      ? Arrays.copyOfRange( toStates, 1, toStates.length )
-      : Arrays.copyOfRange( toStates, 0, 0 );
-    LOG.debug( "Preparing callback for " + config.getFullName( ) + " of transition " + fromState + " -> " + toState + " with subsequent states: "
-               + Joiner.on( "->" ).join( nextStates ) );
-    final Callable<CheckedListenableFuture<ServiceConfiguration>> nextTransition = ( nextStates.length != 0 )
-      ? chainedTransition( config, nextFromState, nextStates )
-      : null;
-    return new Callable<CheckedListenableFuture<ServiceConfiguration>>( ) {
-      @Override
-      public CheckedListenableFuture<ServiceConfiguration> call( ) throws Exception {
-        StateMachine serviceStateMachine = config.getStateMachine( );
-        if ( !fromState.equals( serviceStateMachine.getState( ) ) ) {
-          return Futures.predestinedFailedFuture( new IllegalStateException( "Attempt to transition from " + fromState + "->" + toState + " when service is currently in "
-                                           + serviceStateMachine.getState( )
-                                           + " for " + config.toString( ) ) );
-        } else {
-          EventRecord.here( Automata.class, EventType.CALLBACK, EventType.COMPONENT_SERVICE_TRANSITION.toString( ), fromState.toString( ),
-                            toState.toString( ), config.getFullName( ).toString( ) ).debug( );
-          CheckedListenableFuture<ServiceConfiguration> future;
+  public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<P>> sequenceTransitions( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
+    assertThat( toStates, not( emptyArray( ) ) );
+    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " transition sequence: " + Joiner.on( "->" ).join( toStates ) );
+    final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, toStates );
+    return Futures.sequence( callables.toArray( new Callable[] {} ) );
+  }
+  
+  private static <S extends Automata.State, P extends HasFullName<P>> List<Callable<CheckedListenableFuture<P>>> makeTransitionCallables( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
+    final List<Callable<CheckedListenableFuture<P>>> callables = Lists.newArrayList( );
+    final StateMachine<P, S, ?> fsm = hasFsm.getStateMachine( );
+    for ( final S toState : toStates ) {
+      callables.add( new Callable<CheckedListenableFuture<P>>( ) {
+        
+        @Override
+        public CheckedListenableFuture<P> call( ) {
           try {
-            future = serviceStateMachine.transition( toState );
-            if ( nextTransition != null ) {
-              return future.addListener( nextTransition ).get( );
-            } else {
-              return future;
-            }
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+            return fsm.transition( toState );
+          } catch ( final IllegalStateException ex ) {
+            return Futures.predestinedFailedFuture( ex );
+          } catch ( final ExistingTransitionException ex ) {
+            return Futures.predestinedFailedFuture( ex.getCause( ) );
+          } catch ( final UndeclaredThrowableException ex ) {
+            return Futures.predestinedFailedFuture( ex.getCause( ) );
+          } catch ( final Throwable ex ) {
             return Futures.predestinedFailedFuture( ex );
           }
         }
-      }
-    };
+      } );
+    }
+    return callables;
   }
-  
 }

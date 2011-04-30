@@ -81,8 +81,8 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -116,7 +116,7 @@ public class ClusterState {
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         if( addr.isAssigned( ) ) {
-          Callbacks.newRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
+          AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
         } else if ( addr.isSystemOwned( ) ) {
           addr.release( );
         }

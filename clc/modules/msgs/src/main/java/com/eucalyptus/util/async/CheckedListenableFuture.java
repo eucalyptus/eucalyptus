@@ -9,8 +9,6 @@ import java.util.concurrent.TimeoutException;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 
 public interface CheckedListenableFuture<R> extends ListenableFuture<R> {
-  public abstract <T> CheckedListenableFuture<T> addListener(Callable<T> listener, ExecutorService exec);
-  public abstract <T> CheckedListenableFuture<T> addListener(Callable<T> listener);
   /**
    * Sets the future to having failed with the given exception. This exception
    * will be wrapped in an ExecutionException and thrown from the get methods.

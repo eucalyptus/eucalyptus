@@ -96,7 +96,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -406,7 +406,7 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     attachVol.setStatus( "attaching" );
-    Callbacks.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
+    AsyncRequests.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
     
     vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
@@ -482,7 +482,7 @@ public class VolumeManager {
     request.setRemoteDevice( volume.getRemoteDevice( ) );
     request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     request.setInstanceId( vm.getInstanceId( ) );
-    Callbacks.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+    AsyncRequests.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getClusterName( ) ).info( );
     volume.setStatus( "detaching" );

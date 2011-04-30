@@ -87,7 +87,6 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
-import com.eucalyptus.util.fsm.TransitionFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -157,7 +156,7 @@ public class Component implements HasName<Component> {
   }
   
   public State getState( ) {
-    return this.getLocalService( ).getState( );
+    return this.getLocalService( ).getStateMachine( ).getState( );
   }
   
   /**
@@ -234,7 +233,7 @@ public class Component implements HasName<Component> {
   }
   
   public Boolean isEnabledLocally( ) {
-    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalService( ).getState( ) );
+    return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalService( ).getStateMachine( ).getState( ) );
   }
   
   public Boolean isRunningLocally( ) {
@@ -323,13 +322,13 @@ public class Component implements HasName<Component> {
    */
   public CheckedListenableFuture<ServiceConfiguration> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     Service service = this.lookupRegisteredService( config );
-    if ( State.INITIALIZED.equals( service.getState( ) ) ) {
+    if ( State.INITIALIZED.equals( service.getStateMachine( ).getState( ) ) ) {
       try {
-        return service.transitionByName( Transition.LOADING );
+        return service.getStateMachine( ).transitionByName( Transition.LOADING );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
-    } else if ( State.LOADED.equals( service.getState( ) ) ) {
+    } else if ( State.LOADED.equals( service.getStateMachine( ).getState( ) ) ) {
       return Futures.predestinedFuture( service.getServiceConfiguration( ) );
     } else {
       return Futures.predestinedFuture( service.getServiceConfiguration( ) );
@@ -340,7 +339,7 @@ public class Component implements HasName<Component> {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DISABLED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
     try {
-      return service.transition( State.DISABLED );
+      return service.getStateMachine( ).transition( State.DISABLED );
     } catch ( Throwable ex ) {
       throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
     }
@@ -349,14 +348,14 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<ServiceConfiguration> stopService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_STOPPED, this.getName( ), config.getName( ), config.getUri( ).toString( ) ).info( );
     final Service service = this.serviceRegistry.lookup( config );
-    if ( State.ENABLED.equals( service.getState( ) ) ) {
+    if ( State.ENABLED.equals( service.getStateMachine( ).getState( ) ) ) {
       try {
-        final CheckedListenableFuture<ServiceConfiguration> future = new TransitionFuture<ServiceConfiguration>( );
-        service.transition( State.DISABLED ).addListener( new Runnable( ) {
+        final CheckedListenableFuture<ServiceConfiguration> future = Futures.newGenericeFuture( );
+        service.getStateMachine( ).transition( State.DISABLED ).addListener( new Runnable( ) {
           @Override
           public void run( ) {
             try {
-              service.transition( State.STOPPED );
+              service.getStateMachine( ).transition( State.STOPPED );
               future.set( service.getServiceConfiguration( ) );
             } catch ( Throwable ex ) {
               Exceptions.trace( new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex ) );
@@ -368,9 +367,9 @@ public class Component implements HasName<Component> {
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to disable service: " + config + " because of: " + ex.getMessage( ), ex );
       }
-    } else if ( State.DISABLED.equals( service.getState( ) ) || State.NOTREADY.equals( service.getState( ) ) ) {
+    } else if ( State.DISABLED.equals( service.getStateMachine( ).getState( ) ) || State.NOTREADY.equals( service.getStateMachine( ).getState( ) ) ) {
       try {
-        return service.transition( State.STOPPED );
+        return service.getStateMachine( ).transition( State.STOPPED );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to stop service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -382,13 +381,13 @@ public class Component implements HasName<Component> {
   public CheckedListenableFuture<ServiceConfiguration> destroyService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
       Service service = this.serviceRegistry.deregister( config );
-      if ( State.STOPPED.ordinal( ) < this.getLocalService( ).getState( ).ordinal( ) ) {
+      if ( State.STOPPED.ordinal( ) < this.getLocalService( ).getStateMachine( ).getState( ).ordinal( ) ) {
         this.stopService( config );
       }
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), service.getName( ),
                             service.getServiceConfiguration( ).getUri( ).toString( ) ).info( );
-        return this.getLocalService( ).transitionByName( Transition.DESTROYING );
+        return this.getLocalService( ).getStateMachine( ).transitionByName( Transition.DESTROYING );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + config + " because of: " + ex.getMessage( ), ex );
       }
@@ -405,9 +404,9 @@ public class Component implements HasName<Component> {
       service = this.serviceRegistry.register( configuration );
     }
     service.setGoal( State.ENABLED );
-    if ( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
+    if ( Component.State.PRIMORDIAL.equals( service.getStateMachine( ).getState( ) ) ) {
       try {
-        service.transition( State.INITIALIZED );
+        service.getStateMachine( ).transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
@@ -427,9 +426,9 @@ public class Component implements HasName<Component> {
     service.setGoal( this.serviceRegistry.getServices( ).size( ) == 1
                      ? State.ENABLED
                      : State.DISABLED );
-    if ( Component.State.PRIMORDIAL.equals( service.getState( ) ) ) {
+    if ( Component.State.PRIMORDIAL.equals( service.getStateMachine( ).getState( ) ) ) {
       try {
-        service.transition( State.INITIALIZED );
+        service.getStateMachine( ).transition( State.INITIALIZED );
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
@@ -527,7 +526,7 @@ public class Component implements HasName<Component> {
     if ( ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
       try {
-        service.transition( State.INITIALIZED );
+        service.getStateMachine( ).transition( State.INITIALIZED );
       } catch ( IllegalStateException ex ) {
         LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
@@ -543,7 +542,7 @@ public class Component implements HasName<Component> {
     } else {
       service = this.serviceRegistry.register( config );
       try {
-        service.transition( State.INITIALIZED );
+        service.getStateMachine( ).transition( State.INITIALIZED );
       } catch ( IllegalStateException ex ) {
         LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
@@ -589,7 +588,7 @@ public class Component implements HasName<Component> {
     List<ServiceInfoType> getServiceInfos( final String localhostAddr ) {
       List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
       for ( final Service s : this.services.values( ) ) {
-        if ( State.ENABLED.equals( s.getState( ) ) ) {
+        if ( State.ENABLED.equals( s.getStateMachine( ).getState( ) ) ) {
           serviceSnapshot.add( 0, new ServiceInfoType( ) {
             {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );

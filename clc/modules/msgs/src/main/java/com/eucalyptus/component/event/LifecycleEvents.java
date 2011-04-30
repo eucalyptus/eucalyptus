@@ -191,7 +191,7 @@ public class LifecycleEvents {
     private final Component.State serviceState;
     
     ServiceStateEvent( ServiceConfiguration config, CheckException... exs ) {
-      this( Topology.epoch( ), config.lookupService( ).getState( ).toString( ), config, exs );
+      this( Topology.epoch( ), config.lookupStateMachine( ).getState( ).toString( ), config, exs );
     }
     
     ServiceStateEvent( int serviceEpoch, String serviceState, ServiceConfiguration config, CheckException... exs ) {

@@ -21,7 +21,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   
   protected AsyncRequest( final TwiceChecked<Q, R> cb ) {
     super( );
-    this.response = Futures.newAsyncMessageFuture( );
+    this.response = new AsyncResponseFuture<R>( );
     this.handler = new AsyncRequestHandler<Q, R>( this.response );
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.callback = new TwiceChecked<Q, R>( ) {
@@ -67,7 +67,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         }
       }
     };
-    Futures.addListenerHandler( response, this.callback );
+    Callbacks.addListenerHandler( response, this.callback );
   }
   
   /**

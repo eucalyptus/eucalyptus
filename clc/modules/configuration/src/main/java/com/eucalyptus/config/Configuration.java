@@ -172,13 +172,12 @@ public class Configuration {
         if( c.lookupServices( ).isEmpty( ) ) {
           listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", c.getComponentId( ).name( ).toUpperCase( ) ), c.getComponentId( ).name( ), "", c.getState( ).toString( ), "" ) );
         } else {
-          for ( Service s : c.lookupServices( ) ) {
-            ServiceConfiguration conf = s.getServiceConfiguration( );
+          for ( ServiceConfiguration conf : c.lookupServiceConfigurations( ) ) {
             try {
               listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
                 ? conf.getPartition( )
                 : "-" ),
-                                                      conf.getFullName( ).toString( ), conf.getHostName( ), s.getState( ).toString( ), "" ) );
+                                                      conf.getFullName( ).toString( ), conf.getHostName( ), conf.lookupStateMachine( ).getState( ).toString( ), "" ) );
             } catch ( Exception ex ) {
               LOG.error( ex , ex );
               listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) ) + ( conf.getPartition( ) != null
@@ -199,7 +198,7 @@ public class Configuration {
       for ( ServiceConfiguration conf : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
         try {
           Service s = Components.lookup( conf.getComponentId( ) ).lookupService( conf );
-          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), s.getState( ).toString( ), s.getDetails( ) ) );
+          listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), conf.lookupStateMachine( ).getState( ).toString( ), s.getDetails( ) ) );
         } catch ( NoSuchElementException ex ) {
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), Component.State.NOTREADY.toString( ), "unknown" ) );
           LOG.error( ex, ex );

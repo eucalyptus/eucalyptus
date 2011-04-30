@@ -68,6 +68,7 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableList;
 
 public interface StateMachine<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
+  public abstract P getParent( );
   
   public abstract ImmutableList<S> getStates( );
   

@@ -287,7 +287,7 @@ public class Components {
         }
       }
     }
-
+    
     public static Function<Service, ServiceConfiguration> serviceToServiceConfiguration( ) {
       return new Function<Service, ServiceConfiguration>( ) {
         
@@ -297,7 +297,7 @@ public class Components {
         }
       };
     }
-
+    
     public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
       return new Function<ServiceId, ServiceConfiguration>( ) {
         
@@ -308,7 +308,7 @@ public class Components {
             Service service = comp.lookupService( serviceId.getName( ) );
             return service.getServiceConfiguration( );
           } catch ( NoSuchElementException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             throw ex;
           }
         }
@@ -323,7 +323,7 @@ public class Components {
         
         @Override
         public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getState( ) );
+          return Component.State.ENABLED.equals( arg0.getStateMachine( ).getState( ) );
         }
       };
     }
@@ -333,7 +333,7 @@ public class Components {
         
         @Override
         public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getState( ) );
+          return Component.State.ENABLED.equals( arg0.getStateMachine( ).getState( ) );
         }
       };
     }

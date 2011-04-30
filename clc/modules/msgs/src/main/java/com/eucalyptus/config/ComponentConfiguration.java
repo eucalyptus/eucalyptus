@@ -299,5 +299,10 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
     return this.lookupService( ).getStateMachine( );
   }
+
+  @Override
+  public StateMachine<ServiceConfiguration, State, Transition> lookupStateMachine( ) {
+    return this.getStateMachine( );
+  }
   
 }

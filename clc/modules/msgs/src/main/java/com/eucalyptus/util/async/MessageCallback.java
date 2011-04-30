@@ -6,13 +6,13 @@ import org.apache.log4j.Logger;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessage> implements RemoteCallback<Q, R> {
-  private Logger                           LOG      = Logger.getLogger( this.getClass( ) );
-  private final AtomicReference<Q>         request  = new AtomicReference<Q>( null );
+  private Logger                   LOG     = Logger.getLogger( this.getClass( ) );
+  private final AtomicReference<Q> request = new AtomicReference<Q>( null );
   
   protected MessageCallback( ) {
     super( );
   }
-    
+  
   /**
    * @see com.eucalyptus.util.async.RemoteCallback#getRequest()
    * @return
@@ -62,28 +62,4 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
     LOG.error( t, t );
   }
   
-  /**
-   * @see com.eucalyptus.util.async.RemoteCallback#regarding(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param <S>
-   * @param msg
-   * @return
-   */
-  @Override
-  public <S extends RemoteCallback<Q, R>> S regarding( BaseMessage msg ) {
-    this.getRequest( ).regarding( msg );
-    return ( S ) this;
-  }
-  
-  /**
-   * @see com.eucalyptus.util.async.RemoteCallback#regardingUserRequest(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param <S>
-   * @param msg
-   * @return
-   */
-  @Override
-  public <S extends RemoteCallback<Q, R>> S regardingUserRequest( BaseMessage msg ) {
-    this.getRequest( ).regardingUserRequest( msg );
-    return ( S ) this;
-  }
-
 }

@@ -61,67 +61,18 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util.fsm;
+package com.eucalyptus.util.async;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.concurrent.AbstractCheckedListenableFuture;
-import com.eucalyptus.util.concurrent.AbstractListenableFuture;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class TransitionFuture<R> extends AbstractCheckedListenableFuture<R> implements CheckedListenableFuture<R> {
-    private static Logger LOG = Logger.getLogger( TransitionFuture.class );
-    
-    public TransitionFuture( ) {
-      super( );
-    }
+public class AsyncRequests {
 
-    public TransitionFuture( R value ) {
-      super( );
-      this.set( value );
-    }
-
-    @Override
-    public boolean setException( Throwable exception ) {
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
-      boolean r = false;
-      if ( !( r = super.setException( exception ) ) ) {
-        LOG.error( "Duplicate exception: " + exception.getMessage( ) );
+  public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
+    return new AsyncRequest( msgCallback ) {
+      {
+        setRequest( msgCallback.getRequest( ) );
       }
-      return r;
-    }
-    
-    @Override
-    public R get( long timeout, TimeUnit unit ) throws InterruptedException, TimeoutException, ExecutionException {
-      return super.get( timeout, unit );
-    }
-    
-    @Override
-    public R get( ) throws InterruptedException, ExecutionException {
-      return super.get( );
-    }
-    
-    @Override
-    public boolean set( R result ) {
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + result.getClass( ).getCanonicalName( ) + ")" ).trace( );
-      boolean r = false;
-      if( !( r = super.set( result ) ) ) {
-        LOG.error( "Duplicate result: " + result );
-      }
-      return r;
-    }
-    
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-      return super.cancel();
-    }
-
-    @Override
-    public boolean isCanceled( ) {
-      return super.isCancelled( );
-    }
+    };
   }
+
+}

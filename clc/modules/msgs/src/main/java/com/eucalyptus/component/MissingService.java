@@ -67,46 +67,31 @@ import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.eucalyptus.util.fsm.TransitionHandler;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.util.fsm.StateMachineBuilder;
 
 public class MissingService extends AbstractService implements Service {
   private static Logger              LOG = Logger.getLogger( MissingService.class );
   private final ServiceConfiguration serviceConfiguration;
+  private final StateMachineBuilder<ServiceConfiguration, State, Transition> stateMachine;
   
   MissingService( ServiceConfiguration serviceConfiguration ) {
     this.serviceConfiguration = serviceConfiguration;
+    this.stateMachine = new StateMachineBuilder<ServiceConfiguration, State, Transition>( serviceConfiguration, State.BROKEN );
+
   }
   
   @Override
   public final String getName( ) {
     return this.serviceConfiguration.getFullName( ).toString( );
-  }
-  
-  @Override
-  public Component.State getState( ) {
-    return Component.State.MISSING;
   }
   
   /** TODO:GRZE: clean this up **/
@@ -181,12 +166,7 @@ public class MissingService extends AbstractService implements Service {
   public String getPartition( ) {
     return this.serviceConfiguration.getPartition( );
   }
-  
-  @Override
-  public Component getParent( ) {
-    return this.getComponent( );
-  }
-  
+    
   @Override
   public Dispatcher getDispatcher( ) {
     throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
@@ -218,16 +198,6 @@ public class MissingService extends AbstractService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return Futures.predestinedFuture( this.serviceConfiguration );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return Futures.predestinedFuture( this.serviceConfiguration );
-  }
-  
-  @Override
   public InetSocketAddress getSocketAddress( ) {
     throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
@@ -238,26 +208,6 @@ public class MissingService extends AbstractService implements Service {
   @Override
   public void fireEvent( Event event ) {
     LOG.debug( "MissingService " + this.serviceConfiguration + "ignored the event: " + event );
-  }
-  
-  @Override
-  public ImmutableList<State> getStates( ) {
-    return ImmutableList.of( );
-  }
-  
-  @Override
-  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
-    return ImmutableList.of( );
-  }
-  
-  @Override
-  public boolean isLegalTransition( Transition transitionName ) {
-    return false;
-  }
-  
-  @Override
-  public boolean isBusy( ) {
-    return false;
   }
   
   @Override

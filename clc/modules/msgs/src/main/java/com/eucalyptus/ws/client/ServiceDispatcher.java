@@ -39,7 +39,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
     try {
       Service first = c.getServices( ).first( );
-      if ( !Component.State.ENABLED.equals( c.getServices( ).first( ).getState( ) ) ) {
+      if ( !Component.State.ENABLED.equals( c.getServices( ).first( ).getStateMachine( ).getState( ) ) ) {
         LOG.error( "Failed to find service dispatcher for component=" + c );
         throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: " + c.getServices( ) );
       } else {

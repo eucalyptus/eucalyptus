@@ -83,8 +83,8 @@ import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -175,7 +175,7 @@ public class ClusterAllocator extends Thread {
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( NetworkToken networkToken ) {
     if ( networkToken != null ) {
-      Request<StartNetworkType, StartNetworkResponseType> callback = Callbacks.newRequest( new StartNetworkCallback( networkToken ) );
+      Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( networkToken ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), networkToken.toString( ) ).debug( );
     }
@@ -237,7 +237,7 @@ public class ClusterAllocator extends Thread {
                                    childToken.getInstanceIds( ), macs,
                                    vlan, networkNames, networkIndexes, Lists.newArrayList( UUID.randomUUID( ).toString( ) ) ).regarding( request );
     run.setUserId( userFullName.getUserId( ) );
-    Request<VmRunType, VmRunResponseType> req = Callbacks.newRequest( new VmRunCallback( run, childToken ) );
+    Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
     if ( !childToken.getAddresses( ).isEmpty( ) ) {
       req.then( new Callback.Success<VmRunResponseType>( ) {
         @Override
@@ -246,7 +246,7 @@ public class ClusterAllocator extends Thread {
           for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
             final Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
             final VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-            Callbacks.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
               public void fire( BaseMessage response ) {
                 vm.updatePublicAddress( addr.getName( ) );
               }

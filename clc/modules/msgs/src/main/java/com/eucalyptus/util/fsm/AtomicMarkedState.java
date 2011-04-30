@@ -9,12 +9,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata.State;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -341,7 +343,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     private final TransitionAction<P>        transition;
     private final Throwable                  startStackTrace;
     private final Throwable                  endStackTrace    = new RuntimeException( );
-    private final CheckedListenableFuture<P> transitionFuture = new TransitionFuture<P>( );
+    private final CheckedListenableFuture<P> transitionFuture = Futures.newGenericeFuture( );
     private TransitionRule<S, T>             rule;
     
     public ActiveTransition( Long id, TransitionRule<S, T> rule, TransitionAction<P> transition ) {
@@ -371,12 +373,15 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         LOG.error( t, t );
         this.teardown( );
         AtomicMarkedState.this.rollback( );
+        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
         this.transitionFuture.setException( t );
       }
       try {
         this.transition.after( AtomicMarkedState.this.parent );
+        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + AtomicMarkedState.this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
         this.transitionFuture.set( AtomicMarkedState.this.parent );
       } catch ( Throwable t ) {
+        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
         this.transitionFuture.setException( t );
         LOG.error( t, t );
       }
@@ -434,5 +439,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
       return sb.toString( );
     }
+  }
+
+  public P getParent( ) {
+    return this.parent;
   }
 }

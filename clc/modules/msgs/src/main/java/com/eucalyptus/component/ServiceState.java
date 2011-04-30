@@ -205,5 +205,9 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   public boolean isLegalTransition( Transition transitionName ) {
     return this.stateMachine.isLegalTransition( transitionName );
   }
+
+  public ServiceConfiguration getParent( ) {
+    return this.stateMachine.getParent( );
+  }
   
 }

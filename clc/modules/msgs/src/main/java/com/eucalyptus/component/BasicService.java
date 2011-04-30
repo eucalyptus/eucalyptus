@@ -107,8 +107,8 @@ public class BasicService extends AbstractService implements Service {
       @Override
       public void run( ) {
         try {
-          if ( BasicService.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transition( BasicService.this.getState( ) );
+          if ( BasicService.this.getStateMachine( ).getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
+            BasicService.this.stateMachine.transition( BasicService.this.getStateMachine( ).getState( ) );
           }
         } catch ( Throwable ex ) {
           LOG.debug( "CheckRunner caught an exception: " + ex );
@@ -138,11 +138,6 @@ public class BasicService extends AbstractService implements Service {
   @Override
   public final String getName( ) {
     return this.serviceConfiguration.getFullName( ).toString( );
-  }
-  
-  @Override
-  public State getState( ) {
-    return this.stateMachine.getState( );
   }
   
   /** TODO:GRZE: clean this up **/
@@ -196,11 +191,6 @@ public class BasicService extends AbstractService implements Service {
   public String toString( ) {
     return String.format( "Service %s name=%s serviceConfiguration=%s\n",
                           this.getComponentId( ), this.getName( ), this.getServiceConfiguration( ) );
-  }
-  
-  @Override
-  public Component getParent( ) {
-    return this.getComponent( );
   }
   
   @Override
@@ -301,31 +291,6 @@ public class BasicService extends AbstractService implements Service {
   
   public FullName getFullName( ) {
     return this.serviceConfiguration.getFullName( );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State nextState ) throws IllegalStateException, ExistingTransitionException {
-    return this.stateMachine.transition( nextState );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transitionByName( transition );
-  }
-  
-  @Override
-  public ImmutableList<State> getStates( ) {
-    return this.stateMachine.getStates( );
-  }
-  
-  @Override
-  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
-    return this.stateMachine.getTransitions( );
-  }
-  
-  @Override
-  public boolean isLegalTransition( Transition transitionName ) {
-    return this.stateMachine.isLegalTransition( transitionName );
   }
   
   @Override

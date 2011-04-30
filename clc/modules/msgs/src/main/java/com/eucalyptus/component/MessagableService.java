@@ -148,11 +148,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public State getState( ) {
-    return this.serviceDelegate.getState( );
-  }
-  
-  @Override
   public final ServiceId getServiceId( ) {
     return this.serviceDelegate.getServiceId( );
   }
@@ -188,11 +183,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public Component getParent( ) {
-    return this.serviceDelegate.getParent( );
-  }
-  
-  @Override
   public boolean checkTransition( Transition transition ) {
     return this.serviceDelegate.checkTransition( transition );
   }
@@ -200,16 +190,6 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public State getGoal( ) {
     return this.serviceDelegate.getGoal( );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.getStateMachine( ).transitionByName( transition );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.getStateMachine( ).transition( state );
   }
   
   public void setGoal( State state ) {

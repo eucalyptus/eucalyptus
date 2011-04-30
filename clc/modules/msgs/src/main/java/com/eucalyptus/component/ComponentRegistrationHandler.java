@@ -67,8 +67,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.util.concurrent.GenericFuture;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
@@ -76,6 +74,7 @@ public class ComponentRegistrationHandler {
   public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     final ServiceBuilder builder = component.getBuilder( );
     String partition = part;
+
     if( !component.getComponentId( ).isPartitioned( ) ) {
       partition = name;
     } else if( component.getComponentId( ).isCloudLocal( ) ) {
@@ -84,11 +83,13 @@ public class ComponentRegistrationHandler {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
+
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
     }
+
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {

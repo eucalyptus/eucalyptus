@@ -109,7 +109,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -349,7 +349,7 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+      AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }

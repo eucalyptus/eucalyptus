@@ -81,7 +81,7 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.StateMachine;
 
-public interface Service extends HasParent<Component>, HasFullName<ServiceConfiguration>, EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition>, StateMachine<ServiceConfiguration, Component.State, Component.Transition> {
+public interface Service extends HasFullName<ServiceConfiguration>, EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
   public abstract Dispatcher getDispatcher( );
   
@@ -91,8 +91,6 @@ public interface Service extends HasParent<Component>, HasFullName<ServiceConfig
   public abstract List<String> getDetails( );
   
   public abstract void enqueue( Request request );
-  
-  public abstract State getState( );
   
   public abstract ServiceId getServiceId( );
   
