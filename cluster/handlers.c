@@ -2734,6 +2734,8 @@ int ccGetStateString(char *statestr, int n) {
     snprintf(statestr, n, "INITIALIZED");
   } else if (config->ccState == PRIMORDIAL) {
     snprintf(statestr, n, "PRIMORDIAL");
+  } else if (config->ccState == NOTREADY) {
+    snprintf(statestr, n, "NOTREADY");
   }
   return(0);
 }
@@ -2938,6 +2940,10 @@ void *monitor_thread(void *in) {
       sem_mywait(CONFIG);
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
+      sem_mypost(CONFIG);
+    } else if (config->ccState == NOTREADY) {
+      sem_mywait(CONFIG);
+      ccChangeState(DISABLED);
       sem_mypost(CONFIG);
     }
 
