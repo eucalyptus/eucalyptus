@@ -80,12 +80,15 @@
 #include "blobstore.h"
 #include "walrus.h"
 #include "backing.h"
+#include "handlers.h" // connect_iscsi*
 
 #define TIMEOUT 100*60*60*2 // TODO: change the timeout?
 
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
+
+extern struct nc_state_t nc_state; // TODO: remove this extern
 
 static void bs_errors (const char * msg)
 {
@@ -136,7 +139,7 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
     return OK;
 }
 
-static void set_backing (virtualBootRecord * vbr, blockblob * bb, int allow_block_dev)
+static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * bb, int allow_block_dev)
 {
     if (allow_block_dev && strlen (blockblob_get_dev (bb))) {
         strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
@@ -344,7 +347,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                 goto w_error;
         }        
 
-        set_backing (vbr, work_bb, allow_block_dev);
+        update_vbr_with_backing_info (vbr, work_bb, allow_block_dev);
         ret = OK;
 
         w_error:
@@ -355,10 +358,20 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
         break;
     }
         
-    case NC_LOCATION_IQN:
-        logprintfl (EUCAERROR, "error: backing of type %s is NOT IMPLEMENTED\n", vbr->typeName);
-        // TODO:
+    case NC_LOCATION_IQN: {
+        char * dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, nc_state.home, vbr->resourceLocation);
+		if (!dev || !strstr(dev, "/dev")) {
+            logprintfl(EUCAERROR, "error: failed to connect to iSCSI target\n");
+            goto i_error;
+		} 
+        // update VBR with device location
+        strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+        vbr->backingType = SOURCE_TYPE_BLOCK;
+        ret = OK;
+
+    i_error:
         break;
+    }
 
     case NC_LOCATION_AOE:
         logprintfl (EUCAERROR, "error: backing of type %s is NOT IMPLEMENTED\n", vbr->typeName);
@@ -392,7 +405,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
         }
         
         if (format == OK) {
-            set_backing (vbr, work_bb, allow_block_dev);
+            update_vbr_with_backing_info (vbr, work_bb, allow_block_dev);
             ret = OK;
         }
 
@@ -528,7 +541,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
         logprintfl (EUCAERROR, "error: failed to clone partitions to created disk\n");
         goto cleanup;
     }
-    set_backing (disk, dbb, TRUE);
+    update_vbr_with_backing_info (disk, dbb, TRUE);
 
     // create MBR
     logprintfl (EUCAINFO, "creating MBR\n");
@@ -650,7 +663,7 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing (ncInstance * instance)
+int destroy_instance_backing (ncInstance * instance, int destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -683,12 +696,18 @@ int destroy_instance_backing (ncInstance * instance)
         for (int j=0; j<EUCA_MAX_DISKS; j++) {
             for (int k=0; k<EUCA_MAX_PARTITIONS; k++) {
                 virtualBootRecord * vbr = parts [i][j][k];
-                if (vbr) { 
-                    // if k==0, we will destroy a disk blob, 
-                    // which must be destroyed before child
-                    // partition blobs, if any (k>0)
-                    if (destroy_blob (instance, vbr)) {
-                        logprintfl (EUCAWARN, "Error: failed to destroy backing (bus %d, disk %d, part %d) for instance %s\n", i, j, k, instance->instanceId);
+                if (vbr) {  
+                    if (vbr->locationType==NC_LOCATION_IQN) {
+                        if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+                            logprintfl(EUCAERROR, "error: failed to disconnect iSCSI target attached to %s\n", vbr->backingPath);
+                        } 
+                    } else {
+                        // if k==0, we will destroy a disk blob, 
+                        // which must be destroyed before child
+                        // partition blobs, if any (k>0)
+                        if (destroy_files && destroy_blob (instance, vbr)) {
+                            logprintfl (EUCAWARN, "Error: failed to destroy backing (bus %d, disk %d, part %d) for instance %s\n", i, j, k, instance->instanceId);
+                        }
                     }
                 }
             }
@@ -698,27 +717,29 @@ int destroy_instance_backing (ncInstance * instance)
     // destroy the prerequisites
     for (int i=0; i<total_prereqs; i++) {
         virtualBootRecord * vbr = prereq [i];
-        if (destroy_blob (instance, vbr)) {
+        if (destroy_files && destroy_blob (instance, vbr)) {
             logprintfl (EUCAWARN, "Error: failed to destroy prerequisite for instance %s\n", instance->instanceId);
         }
     }
 
-    // remove the known leftover files
-    unlink (instance->instancePath);
-    unlink (instance->xmlFilePath);
-    unlink (instance->libvirtFilePath);
-    unlink (instance->consoleFilePath);
-    set_path (path, sizeof (path), instance, "instance.checkpoint");
-    unlink (path);
+    if (destroy_files) {
+        // remove the known leftover files
+        unlink (instance->instancePath);
+        unlink (instance->xmlFilePath);
+        unlink (instance->libvirtFilePath);
+        unlink (instance->consoleFilePath);
+        set_path (path, sizeof (path), instance, "instance.checkpoint");
+        unlink (path);
+    }
 
     // finally try to remove the directory. now,
     // if either the user or our code introduced
     // any new files, this last step will fail
     set_path (path, sizeof (path), instance, NULL);
-    if (rmdir (path)) {
+    if (rmdir (path) && destroy_files) {
         logprintfl (EUCAWARN, "warning: failed to remove backing directory %s\n", path);
     }
-
+    
     return ret;
 }
 

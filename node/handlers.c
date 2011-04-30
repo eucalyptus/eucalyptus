@@ -461,27 +461,24 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-	    // time out logic for STAGING or BOOTING or BUNDLING instances
+            // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state==STAGING  
-		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+                && (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
-		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-	    if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
+                && (now - instance->bootTime)     < booting_cleanup_threshold) continue;
+            if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
                 && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
             if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
                 && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
-
-            /* ok, it's been condemned => destroy the files */
-            if (!nc_state.save_instance_files) {
-                logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);
-                if (destroy_instance_backing (instance)) {
-                    logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
-                }
-            } else {
-                logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
+            
+            // ok, it's been condemned => destroy the files
+            int destroy_files = !nc_state.save_instance_files;
+            logprintfl (EUCAINFO, "cleaning up state for instance %s%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
+            if (destroy_instance_backing (instance, destroy_files)) {
+                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
             }
             
-            /* check to see if this is the last instance running on vlan, handle local networking information drop */
+            // check to see if this is the last instance running on vlan, handle local networking information drop
             int left = 0;
             bunchOfInstances * vnhead;
             for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {

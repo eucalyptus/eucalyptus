@@ -154,7 +154,8 @@ parse_vbr ( // parses the VBR as supplied by a client, checks values, and fills 
     if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
         vbr->locationType = NC_LOCATION_URL;
         strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-    } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation) {
+    } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation ||
+               strchr (vbr->resourceLocation, ',')) { // TODO: remove this transitionary iSCSI crutch?
         vbr->locationType = NC_LOCATION_IQN;
     } else if (strcasestr (vbr->resourceLocation, "aoe://") == vbr->resourceLocation ||
                strcasestr (vbr->resourceLocation, "/dev/") == vbr->resourceLocation ) { // TODO: remove this transitionary AoE crutch

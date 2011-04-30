@@ -70,4 +70,4 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
 int create_instance_backing (ncInstance * instance);
 int save_instance_struct (const ncInstance * instance);
 ncInstance * load_instance_struct (const char * instanceId);
-int destroy_instance_backing (ncInstance * instance);
+int destroy_instance_backing (ncInstance * instance, int destroy_files);
