@@ -67,22 +67,14 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.NoSuchElementException;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.eucalyptus.util.fsm.TransitionHandler;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.ImmutableList;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class MessagableService extends AbstractService implements Service {
@@ -94,7 +86,7 @@ public class MessagableService extends AbstractService implements Service {
   
   /** ASAP:FIXME:GRZE **/
   
-  MessagableService( Service baseService ) {
+  MessagableService( final Service baseService ) {
     this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isLocal( ) ) {
@@ -109,7 +101,7 @@ public class MessagableService extends AbstractService implements Service {
     this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
   }
   
-  MessagableService( ServiceConfiguration config ) {
+  MessagableService( final ServiceConfiguration config ) {
     this( new BasicService( config ) );
   }
   
@@ -133,7 +125,7 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public void enqueue( Request request ) {
+  public void enqueue( final Request request ) {
     this.endpoint.enqueue( request );
   }
   
@@ -143,7 +135,7 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     return this.serviceDelegate.equals( obj );
   }
   
@@ -183,7 +175,7 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public boolean checkTransition( Transition transition ) {
+  public boolean checkTransition( final Transition transition ) {
     return this.serviceDelegate.checkTransition( transition );
   }
   
@@ -192,58 +184,49 @@ public class MessagableService extends AbstractService implements Service {
     return this.serviceDelegate.getGoal( );
   }
   
-  public void setGoal( State state ) {
+  @Override
+  public void setGoal( final State state ) {
     this.serviceDelegate.setGoal( state );
   }
-
+  
+  @Override
   public InetSocketAddress getSocketAddress( ) {
     return this.serviceDelegate.getSocketAddress( );
   }
-
+  
   @Override
   public ServiceEndpoint getEndpoint( ) {
     return this.endpoint;
   }
-
+  
   @Override
-  public void fireEvent( Event event ) {
+  public void fireEvent( final Event event ) {
     this.serviceDelegate.fireEvent( event );
   }
-
+  
+  @Override
   public String getName( ) {
     return this.serviceDelegate.getName( );
   }
-
+  
+  @Override
   public String getPartition( ) {
     return this.serviceDelegate.getPartition( );
   }
-
+  
+  @Override
   public FullName getFullName( ) {
     return this.serviceDelegate.getFullName( );
   }
-
+  
+  @Override
   public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
     return this.serviceDelegate.getStateMachine( );
   }
-
-  public ImmutableList<State> getStates( ) {
-    return this.serviceDelegate.getStates( );
-  }
-
-  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
-    return this.serviceDelegate.getTransitions( );
-  }
-
-  public int compareTo( ServiceConfiguration o ) {
+  
+  @Override
+  public int compareTo( final ServiceConfiguration o ) {
     return this.serviceDelegate.compareTo( o );
-  }
-
-  public boolean isLegalTransition( Transition transitionName ) {
-    return this.serviceDelegate.isLegalTransition( transitionName );
-  }
-
-  public boolean isBusy( ) {
-    return this.serviceDelegate.isBusy( );
   }
   
 }

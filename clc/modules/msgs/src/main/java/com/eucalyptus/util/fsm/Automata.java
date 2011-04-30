@@ -101,6 +101,7 @@ public class Automata {
   
   public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<P>> sequenceTransitions( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
     assertThat( toStates, not( emptyArray( ) ) );
+    //TODO:GRZE: enforce that the sequence of states denotes a valid transition path
     LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " transition sequence: " + Joiner.on( "->" ).join( toStates ) );
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, toStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
