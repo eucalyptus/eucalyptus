@@ -72,7 +72,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -140,7 +139,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if ( Logs.TRACE ) {
+          if ( Logs.EXTREME ) {
             Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
           }
         } catch ( final InterruptedException e ) {

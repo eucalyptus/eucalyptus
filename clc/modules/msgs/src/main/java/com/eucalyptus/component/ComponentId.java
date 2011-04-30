@@ -2,8 +2,6 @@ package com.eucalyptus.component;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Reader;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -323,9 +321,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public String toString( ) {
-    return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s",
-                          this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
-                          this.hasCredentials( ), defaultClientPipelineClass, this.lookupBaseMessageType( ) );
+    return String.format( "ComponentId:%s:partitioned=%s:msg=%s:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
+                          this.name( ), this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
+                          this.isPartitioned( ), this.hasCredentials( ) );
   }
   
   public static abstract class Unpartioned extends ComponentId {
@@ -340,7 +338,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     
     @Override
     public String getPartition( ) {
-      return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : ( this.isAlwaysLocal( ) ? Empyrean.INCOGNITO.name() : this.name( ) );
+      return this.isCloudLocal( )
+        ? Eucalyptus.INCOGNITO.name( )
+        : ( this.isAlwaysLocal( )
+          ? Empyrean.INCOGNITO.name( )
+          : this.name( ) );
     }
     
   }

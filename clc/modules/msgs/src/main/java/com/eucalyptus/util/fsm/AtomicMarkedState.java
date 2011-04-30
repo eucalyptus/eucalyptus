@@ -353,7 +353,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       this.rule = rule;
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
-      if ( Logs.DEBUG ) {
+      if ( Logs.EXTREME ) {
         this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
       } else {
         this.startStackTrace = null;
@@ -388,7 +388,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     private void teardown( ) {
-      if ( Logs.TRACE ) {
+      if ( Logs.EXTREME ) {
         RuntimeException ex = new RuntimeException( );
         if ( this.endTime != 0l ) {
           LOG.error( "Transition being committed for a second time!" );

@@ -1,6 +1,5 @@
 package com.eucalyptus.util.fsm;
 
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,9 +10,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.TransitionListener.Phases;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> implements TransitionAction<P>, TransitionHandler<P, S, T>, TransitionRule<S, T> {
@@ -45,14 +42,14 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
    */
   @Override
   public TransitionHandler<P, S, T> addListener( TransitionListener<P> listener ) {
-    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
+    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
   }
   
   private void removeListener( Integer key ) {
     TransitionListener<P> listener = this.listeners.remove( key );
-    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
+    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) ) );
   }
   
   /**
@@ -110,10 +107,9 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
       final TransitionListener<P> tl = entry.getValue( );
-      if ( Logs.TRACE ) {
-        EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
-                          entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
-      }
+      Logs.exhaust( ).trace( EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ),
+                                               phase.toString( ),//
+                                               entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ) );
       try {
         if ( !pred.apply( entry.getValue( ) ) ) {
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );

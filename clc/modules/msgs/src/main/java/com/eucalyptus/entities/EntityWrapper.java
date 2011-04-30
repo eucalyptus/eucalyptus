@@ -79,8 +79,8 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -399,7 +399,7 @@ public class EntityWrapper<TYPE> {
     }
     
     public String getMessage( ) {
-      if ( Logs.TRACE ) {
+      if ( Logs.EXTREME ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );
       } else {
         return "n.a";

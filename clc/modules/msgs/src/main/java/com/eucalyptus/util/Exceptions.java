@@ -20,7 +20,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return Logs.DEBUG ? string( ex ) : ex.getMessage( ); 
+    return Logs.EXTREME ? string( ex ) : ex.getMessage( ); 
   }
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null ? new RuntimeException() : ex );

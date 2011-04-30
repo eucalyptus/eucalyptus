@@ -120,7 +120,7 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
-      if ( Logs.DEBUG && request instanceof MappingHttpMessage ) {
+      if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
         ((MappingHttpMessage)request).logMessage( );
         for( FilteredPipeline p : this.pipelines ) {
           LOG.debug( "PIPELINE: " + p );
@@ -128,7 +128,7 @@ public class PipelineRegistry {
       }
       throw new NoAcceptingPipelineException( ); 
     }
-    if ( Logs.TRACE ) {
+    if ( Logs.EXTREME ) {
       EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
     }
     return candidate;

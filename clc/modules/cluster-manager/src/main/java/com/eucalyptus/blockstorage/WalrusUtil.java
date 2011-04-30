@@ -61,10 +61,7 @@
 package com.eucalyptus.blockstorage;
 
 import java.io.ByteArrayInputStream;
-import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import javax.crypto.Cipher;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.log4j.Logger;
@@ -72,30 +69,19 @@ import org.w3c.dom.Document;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
-import com.eucalyptus.images.Images;
-import com.eucalyptus.images.NoSuchImageException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
-import edu.ucsb.eucalyptus.msgs.CheckImageType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
@@ -167,10 +153,8 @@ public class WalrusUtil {
       if ( reply == null || reply.getBase64Data( ) == null ) {
         throw new EucalyptusCloudException( "No data: " + imageLocation );
       } else {
-        if ( Logs.DEBUG ) {
-          LOG.debug( "Got the manifest to verify: " );
-          LOG.debug( Hashes.base64decode( reply.getBase64Data( ) ) );
-        }
+        Logs.exhaust( ).debug( "Got the manifest to verify: " );
+        Logs.exhaust( ).debug( Hashes.base64decode( reply.getBase64Data( ) ) );
         if( checkManifest( user, reply.getBase64Data( ) ) ) {
           return;
         } else {

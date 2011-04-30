@@ -78,10 +78,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -113,50 +111,8 @@ public class SystemBootstrapper {
   public SystemBootstrapper( ) {}
   
   public boolean init( ) throws Exception {
-    try {
-      Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
-      Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
-      if ( Logs.EXTREME ) {
-        System.setProperty( "euca.log.level", "TRACE" );
-        System.setProperty( "euca.exhaust.level", "TRACE" );
-        System.setProperty( "euca.log.exhaustive", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.cc", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-      }
-      
-      System.setOut( new PrintStream( System.out ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null
-              ? "null"
-              : string.replaceAll( "\\n*$", "" ) ) );
-          }
-        }
-      }
-
-      );
-      
-      System.setErr( new PrintStream( System.err ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            Logs.exhaust( ).error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null
-              ? "null"
-              : string.replaceAll( "\\n*$", "" ) ) );
-          }
-        }
-      }
-            );
-      
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
-      Security.addProvider( new BouncyCastleProvider( ) );
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      System.exit( 1 );
-    }
+    Logs.init( );
+    Security.addProvider( new BouncyCastleProvider( ) );
     try {
       Bootstrap.initialize( );
       Bootstrap.Stage stage = Bootstrap.transition( );
