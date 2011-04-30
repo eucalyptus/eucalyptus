@@ -3,7 +3,7 @@ package com.eucalyptus.component;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.List;
+import java.util.Collection;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.fsm.HasStateMachine;
@@ -61,9 +61,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public void error( String correlationId, Throwable t );
 
-  /**
-   * @return
-   */
-  List<ServiceCheckRecord> lookupDetails( );
+  public Collection<ServiceCheckRecord> lookupDetails( );
 
 }
