@@ -65,6 +65,7 @@ package com.eucalyptus.config;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Collection;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.component.Component;
@@ -79,6 +80,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -254,6 +256,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     } catch ( ServiceRegistrationException ex ) {
       return Partition.fakePartition( this.getComponentId( ) );
     }
+  }
+  
+  @Override
+  public Collection<ServiceCheckRecord> lookupDetails( ) {
+    return this.lookupService( ).getDetails( );
   }
   
   @Override

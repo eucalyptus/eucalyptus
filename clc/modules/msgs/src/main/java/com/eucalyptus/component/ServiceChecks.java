@@ -184,14 +184,14 @@ public class ServiceChecks {
   }
   
   public static ServiceCheckRecord createRecord( ServiceConfiguration config, String message ) {
-    return newEventRecord( UUID.randomUUID( ).toString( ), config, new RuntimeException( message ) );
+    return createRecord( UUID.randomUUID( ).toString( ), config, new RuntimeException( message ) );
   }
 
   public static ServiceCheckRecord createRecord( ServiceConfiguration config, Throwable t ) {
-    return newEventRecord( UUID.randomUUID( ).toString( ), config, t );
+    return createRecord( UUID.randomUUID( ).toString( ), config, t );
   }
   
-  static ServiceCheckRecord newEventRecord( String correlationId, ServiceConfiguration config, Throwable t ) {
+  public static ServiceCheckRecord createRecord( String correlationId, ServiceConfiguration config, Throwable t ) {
     //TODO:GRZE: exception filtering here
     return new ServiceCheckRecord( correlationId, error( config, t ) );
   }

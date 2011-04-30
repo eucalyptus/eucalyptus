@@ -221,7 +221,7 @@ public class LifecycleEvents {
   }
   
   public static LifecycleEvent error( String correlationId, ServiceConfiguration config, Throwable t ) {
-    return new ServiceErrorEvent( config, ServiceChecks.newEventRecord( correlationId, config, t ) );
+    return new ServiceErrorEvent( config, ServiceChecks.createRecord( correlationId, config, t ) );
   }
   
   public static ServiceStateEvent info( ServiceConfiguration config, CheckException... exs ) {
