@@ -80,6 +80,8 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Functions;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 
 public class Configuration {
@@ -190,7 +192,7 @@ public class Configuration {
                                                         : "-" ),
                                                       conf.getFullName( ).toString( ), conf.getHostName( ), "none", "" ) );
             }
-            for ( final String d : conf.lookupService( ).getDetails( ) ) {
+            for ( final String d : Collections2.transform( conf.lookupDetails( ), Functions.toStringFunction( ) ) ) {
               listConfigs.add( new ComponentInfoType( String.format( "%-15.15s", conf.getComponentId( ).name( ).toUpperCase( ) )
                                                       + ( conf.getPartition( ) != null
                                                         ? conf.getPartition( )
@@ -205,7 +207,7 @@ public class Configuration {
         try {
           final Service s = Components.lookup( conf.getComponentId( ) ).lookupService( conf );
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ),
-                                                  conf.lookupStateMachine( ).getState( ).toString( ), s.getDetails( ) ) );
+                                                  conf.lookupStateMachine( ).getState( ).toString( ), Collections2.transform( conf.lookupDetails( ), Functions.toStringFunction( ) ) ) );
         } catch ( final NoSuchElementException ex ) {
           listConfigs.add( new ComponentInfoType( conf.getPartition( ), conf.getName( ), conf.getHostName( ), Component.State.NOTREADY.toString( ), "unknown" ) );
           LOG.error( ex, ex );

@@ -63,11 +63,11 @@
  */
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.util.HasSideEffect;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.util.ArrayList
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.util.HasSideEffect
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 @ComponentMessage(ConfigurationService.class)
 public class ConfigurationMessage extends BaseMessage {
@@ -83,7 +83,7 @@ public class ComponentInfoType extends EucalyptusData {
   String state;//really an enum
   String detail;//TODO: remove me.
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String host, String state, List<String> details){
+  public ComponentInfoType(String partition, String name, String host, String state, Collection<String> details){
     this.partition = partition; 
     this.name = name; 
     this.state = state; 
