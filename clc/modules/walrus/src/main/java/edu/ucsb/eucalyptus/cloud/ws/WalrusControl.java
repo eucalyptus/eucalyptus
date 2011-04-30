@@ -66,19 +66,17 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.util.ArrayList;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
-
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AddObjectResponseType;
@@ -155,7 +153,6 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import edu.ucsb.eucalyptus.msgs.ValidateImageResponseType;
 import edu.ucsb.eucalyptus.msgs.ValidateImageType;
 import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.storage.fs.FileSystemStorageManager;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 
@@ -174,7 +171,7 @@ public class WalrusControl {
 		String returnValue;
 		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
 		if(returnValue.length() == 0) {
-			throw new EucalyptusCloudException("drbdadm not found: Is drbd installed?");
+		  Components.lookup( Walrus.class ).getLocalServiceConfiguration( ).error( new EucalyptusCloudException("drbdadm not found: Is drbd installed?") );
 		}
 	}	
 
