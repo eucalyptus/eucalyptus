@@ -300,13 +300,13 @@ class EucaConf(object):
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
             req.main()
-            if len(req.issues) > 0:
-                print 'The following issues were found:'
-                issue_string = '\n\t'.join(req.issues)
-                print issue_string
-                sys.exit(1)
+            if len(req.messages) > 0:
+                print 'The following messages should be reviewed:'
+                for msg in req.messages:
+                    print '\t%s' % msg
             else:
                 print 'No issues found'
+            sys.exit(req.status)
 
     def do_enable(self):
         if self.options.enable_what:
