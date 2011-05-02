@@ -176,6 +176,7 @@ public class RegisterImageType extends VmImageMessage {
   String kernelId;
   String ramdiskId;
   String rootDeviceName;
+  @HttpParameterMapping (parameter = "BlockDeviceMapping")
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
 }
 /** *******************************************************************************/

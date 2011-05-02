@@ -191,13 +191,14 @@ public class EmpyreanService {
     final String hostFilter = request.getByHost( );
     final String partitionFilter = request.getByPartition( );
     final String stateFilter = request.getByState( );
+    final boolean listAll = Boolean.TRUE.equals( request.getListAll( ) );
     for ( Component comp : Components.list( ) ) {
       if ( typeFilter == null || ( typeFilter != null && !typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) ) {
-        if ( !Boolean.TRUE.equals( request.getListAll( ) ) && hostFilter == null || Internets.testLocal( hostFilter ) ) {
+        if ( !listAll && ( hostFilter == null || Internets.testLocal( hostFilter ) ) ) {
           if ( comp.hasLocalService( ) ) {
             final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
             if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
-                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ) ) ) ) {
+                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
               reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
                 {
                   setServiceId( TypeMappers.transform( config, ServiceId.class ) );
@@ -214,8 +215,8 @@ public class EmpyreanService {
         } else {
           for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
             if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
-                 && ( hostFilter == null || Internets.testLocal( hostFilter ) )
-                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ) ) ) ) {
+                 && ( hostFilter == null || hostFilter.equals( config.getHostName( ) ) )
+                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
               reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
                 {
                   setServiceId( TypeMappers.transform( config, ServiceId.class ) );
