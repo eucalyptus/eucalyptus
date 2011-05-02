@@ -89,7 +89,7 @@ public class BasicService extends AbstractService implements Service {
   private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration                                                      serviceConfiguration;
   private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
-  private State                                                                           goal = Component.State.DISABLED;
+  private State                                                                           goal = Component.State.ENABLED;
   
   BasicService( ServiceConfiguration serviceConfiguration ) throws ServiceRegistrationException {
     super( );
@@ -201,7 +201,7 @@ public class BasicService extends AbstractService implements Service {
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
-    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) ) {
+    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) && ( ( Hertz ) event ).isAsserted( 10l ) ) {
       ServiceConfiguration config = this.getServiceConfiguration( );
       if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
         try {
