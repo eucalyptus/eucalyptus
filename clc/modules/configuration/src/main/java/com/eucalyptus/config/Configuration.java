@@ -194,7 +194,7 @@ public class Configuration {
           throw new EucalyptusCloudException( ex.getMessage( ), ex );
         }
       } else if ( "disable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        builder.getComponent( ).disableService( conf );
+        builder.getComponent( ).disableTransition( conf );
       }
     }
     return reply;

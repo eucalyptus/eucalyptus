@@ -75,25 +75,22 @@ public class AnonymousMessage extends BaseMessage implements Cloneable, Serializ
 @ComponentMessage(Empyrean.class)
 public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
 }
+public class ModifyServiceType extends EmpyreanMessage {
+  String name;
+  String state;
+}
+public class ModifyServiceResponseType extends EmpyreanMessage implements HasSideEffect {}
 public class ServiceTransitionType extends EmpyreanMessage  {
   ArrayList<ServiceInfoType> services = new ArrayList<ServiceInfoType>();
 }
-public class StartServiceType extends ServiceTransitionType {
-}
-public class StartServiceResponseType extends ServiceTransitionType {
-}
-public class StopServiceType extends ServiceTransitionType {
-}
-public class StopServiceResponseType extends ServiceTransitionType {
-}
-public class EnableServiceType extends ServiceTransitionType {
-}
-public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
-}
-public class DisableServiceType extends ServiceTransitionType {
-}
-public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
-}
+public class StartServiceType extends ServiceTransitionType {}
+public class StartServiceResponseType extends ServiceTransitionType {}
+public class StopServiceType extends ServiceTransitionType {}
+public class StopServiceResponseType extends ServiceTransitionType {}
+public class EnableServiceType extends ServiceTransitionType {}
+public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
+public class DisableServiceType extends ServiceTransitionType {}
+public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
 public class ServiceId extends EucalyptusData {
   String uuid;/** UUID of the registration **/
   String partition;/** The resource partition name **/

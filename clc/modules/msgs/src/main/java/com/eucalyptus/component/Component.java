@@ -246,7 +246,7 @@ public class Component implements HasName<Component> {
   }
   
   @Deprecated
-  public Service lookupService( String name ) {
+  public ServiceConfiguration lookupServiceConfiguration( String name ) {
     return this.serviceRegistry.getService( name );
   }
   
@@ -313,17 +313,17 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> disableService( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<ServiceConfiguration> disableTransition( ServiceConfiguration config ) throws ServiceRegistrationException {
     this.setServiceGoalState( config, State.DISABLED );
     return ServiceTransitions.transitionChain( config, State.DISABLED );
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> stopService( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
     this.setServiceGoalState( configuration, State.STOPPED );
     return ServiceTransitions.transitionChain( configuration, State.STOPPED );
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> destroyService( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
+  public CheckedListenableFuture<ServiceConfiguration> destroyTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
     try {
       Service service = null;
       if ( this.serviceRegistry.hasService( configuration ) ) {
@@ -642,10 +642,10 @@ public class Component implements HasName<Component> {
      * @throws NoSuchElementException
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
-    public Service getService( String name ) throws NoSuchElementException {
+    public ServiceConfiguration getService( String name ) throws NoSuchElementException {
       Assertions.assertNotNull( name );
-      for ( Service s : this.services.values( ) ) {
-        if ( s.getServiceConfiguration( ).getName( ).equals( name ) ) {
+      for ( ServiceConfiguration s : this.services.keySet( ) ) {
+        if ( s.getName( ).equals( name ) ) {
           return s;
         }
       }

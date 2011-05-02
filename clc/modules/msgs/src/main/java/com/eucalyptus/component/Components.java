@@ -305,8 +305,7 @@ public class Components {
         public ServiceConfiguration apply( ServiceId serviceId ) {
           try {
             Component comp = Components.lookup( serviceId.getType( ) );
-            Service service = comp.lookupService( serviceId.getName( ) );
-            return service.getServiceConfiguration( );
+            return comp.lookupServiceConfiguration( serviceId.getName( ) );
           } catch ( NoSuchElementException ex ) {
             LOG.error( ex, ex );
             throw ex;

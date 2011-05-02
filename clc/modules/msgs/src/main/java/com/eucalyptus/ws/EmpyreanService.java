@@ -78,6 +78,8 @@ import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ModifyServiceResponseType;
+import com.eucalyptus.empyrean.ModifyServiceType;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
@@ -94,16 +96,68 @@ import com.google.common.collect.Collections2;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
+  private enum TransitionName {
+    START, STOP, ENABLE, DISABLE, RESTART
+  }
+  public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
+    ModifyServiceResponseType reply = request.getReply( );
+    reply.set_return( true );
+    TransitionName transition = TransitionName.valueOf( request.getState( ) );
+    for ( Component comp : Components.list( ) ) {
+      try {
+        ServiceConfiguration a = comp.lookupServiceConfiguration( request.getName( ) );
+        Component.State serviceState = a.lookupState( );
+        switch ( transition ) {
+          case DISABLE:
+            if( Component.State.DISABLED.equals( a.lookupState( ) ) || Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.disableTransition( a ).get( );
+            }
+          break;
+          case ENABLE:
+            if( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.enableTransition( a ).get( );
+            }
+          break;
+          case STOP:
+            if( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.stopTransition( a ).get( );
+            }
+          break;
+          case START:
+            if( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
+              return reply;
+            } else {
+              comp.startTransition( a ).get( );
+            }
+          break;
+          case RESTART:
+            comp.stopTransition( a ).get( );            
+            comp.enableTransition( a ).get( );            
+          break;
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        return reply.markFailed( );
+      }
+    }
+    return reply;
+  }
   
   public StartServiceResponseType startService( StartServiceType request ) {
     StartServiceResponseType reply = request.getReply( );
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isLocal( ) ) {
           try {
-            comp.startTransition( service.getServiceConfiguration( ) );
+            comp.startTransition( service );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
           }
@@ -120,18 +174,21 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isLocal( ) ) {
           try {
-            LOG.info( "Should be stopping the service instance here: " + service.getServiceConfiguration( ) );
-            //TODO:GRZE:FIXME
-            //            comp.stopService( service.getServiceConfiguration( ) );
+            comp.stopTransition( service );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
+            return reply.markFailed( );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex , ex );
+            return reply.markFailed( );
           }
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
+        return reply.markFailed( );
       }
     }
     return reply;
@@ -142,16 +199,18 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isLocal( ) ) {
           try {
-            comp.enableTransition( service.getServiceConfiguration( ) );
+            comp.enableTransition( service );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
+            return reply.markFailed( );
           }
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
+        return reply.markFailed( );
       }
     }
     return reply;
@@ -168,18 +227,21 @@ public class EmpyreanService {
           if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
             if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
               try {
-                c.disableService( config );
+                c.disableTransition( config );
                 reply.getServices( ).add( serviceInfo );
               } catch ( ServiceRegistrationException ex ) {
                 LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
+                return reply.markFailed( );
               }
             } else {
               LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + config.toString( ) );
+              return reply.markFailed( );
             }
           }
         }
       } catch ( NoSuchElementException ex ) {
         Exceptions.trace( "Failed to lookup component of type: " + serviceInfo.getType( ), ex );
+        return reply.markFailed( );
       }
     }
     return reply;
@@ -208,9 +270,9 @@ public class EmpyreanService {
                   this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
                   if ( showEvents ) {
                     this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                        TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-                    if( !showEventStacks ) {
-                      for( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                                                                             TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                    if ( !showEventStacks ) {
+                      for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
                         a.setStackTrace( "" );
                       }
                     }
@@ -235,9 +297,9 @@ public class EmpyreanService {
                   }
                   if ( showEvents ) {
                     this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                        TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-                    if( !showEventStacks ) {
-                      for( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                                                                             TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                    if ( !showEventStacks ) {
+                      for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
                         a.setStackTrace( "" );
                       }
                     }

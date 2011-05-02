@@ -52,7 +52,7 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
   @Override
   public ServiceConfiguration lookupByName( String name ) throws ServiceRegistrationException {
     try {
-      return this.getComponent( ).lookupService( name ).getServiceConfiguration( );
+      return this.getComponent( ).lookupServiceConfiguration( name );
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( ex );
     }
@@ -65,14 +65,14 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
   
   @Override
   public ServiceConfiguration lookup( String partition, String name ) throws ServiceRegistrationException {
-    Service service;
+    ServiceConfiguration service;
     try {
-      service = this.getComponent( ).lookupService( name );
+      service = this.getComponent( ).lookupServiceConfiguration( name );
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( ex );
     }
     if ( service.getPartition( ).equals( partition ) ) {
-      return service.getServiceConfiguration( );
+      return service;
     } else {
       throw new ServiceRegistrationException( "No service found matching partition: " + partition + " and name: " + name + " for component: "
                                               + this.getComponent( ).getName( ) );

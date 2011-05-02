@@ -98,7 +98,7 @@ class DescribeServices(AWSQueryRequest):
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
         fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%-40s\t%s'
-        detail_fmt = 'SERVICEEVENT\t%-36.36s\t%-15s\t%-15s\t%s'
+        detail_fmt = 'SERVICEEVENT\t%-36.36s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
             print fmt % (service_id['euca:type'],
@@ -112,13 +112,16 @@ class DescribeServices(AWSQueryRequest):
             if details:
                 detail_item = details['euca:item']
                 if detail_item:
-                    print detail_fmt % (detail_item['euca:uuid'],
-                                        detail_item['euca:serviceFullName'],
-                                        detail_item['euca:severity'],
-                                        detail_item['euca:timestamp'])
-                    print detail_item['euca:message']
-                    if detail_item['euca:stackTrace']:
-                      print detail_item['euca:stackTrace']
+                      print detail_fmt % (detail_item['euca:uuid'],
+                                          detail_item['euca:serviceFullName'])
+                      print detail_fmt % (detail_item['euca:uuid'],
+                                          detail_item['euca:severity'])
+                      print detail_fmt % (detail_item['euca:uuid'],
+                                          detail_item['euca:timestamp'])
+                      print detail_fmt % (detail_item['euca:uuid'],detail_item['euca:message'])
+                      if detail_item['euca:stackTrace']:
+                          print detail_item['euca:stackTrace']
+                      print
                              
 
 
