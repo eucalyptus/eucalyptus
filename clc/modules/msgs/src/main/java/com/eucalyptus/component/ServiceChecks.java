@@ -232,7 +232,7 @@ public class ServiceChecks {
       }
       this.severity = severity;
       this.config = config;
-      this.uuid = this.getMessage( ).substring( 0, 36 );
+      this.uuid = uuid( cause );
       this.correlationId = ( correlationId == null
         ? this.uuid
         : correlationId );
