@@ -115,7 +115,7 @@ public class ServiceTransitions {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
       CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.LOADED,
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED, Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED );
         
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
