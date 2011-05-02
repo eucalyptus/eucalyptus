@@ -132,7 +132,6 @@ public class AbstractService {
   
   protected void doState( ServiceErrorEvent event ) {
     LOG.debug( event );
-    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );
     }
@@ -144,7 +143,6 @@ public class AbstractService {
   
   protected void doError( ServiceStateEvent event ) {
     LOG.debug( event );
-    submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );
     }

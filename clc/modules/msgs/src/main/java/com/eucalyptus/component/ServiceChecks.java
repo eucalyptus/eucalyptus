@@ -225,7 +225,7 @@ public class ServiceChecks {
     
     private CheckException( String correlationId, Throwable cause, Severity severity, ServiceConfiguration config ) {
       super( cause.getMessage( ) );
-      if ( cause != null && cause instanceof CheckException ) {
+      if ( cause instanceof CheckException ) {
         this.setStackTrace( cause.getStackTrace( ) );
       } else {
         this.initCause( cause );

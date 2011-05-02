@@ -196,7 +196,7 @@ public class X509Download extends HttpServlet {
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
-        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( ).getServiceConfiguration( );
+        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
         String uri = walrusConfig.getUri( ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
