@@ -193,7 +193,7 @@ public class EmpyreanService {
     final String stateFilter = request.getByState( );
     for ( Component comp : Components.list( ) ) {
       if ( typeFilter == null || ( typeFilter != null && !typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) ) {
-        if ( !Boolean.TRUE.equals( request.getListAll( ) ) || hostFilter == null || ( ( hostFilter != null && Internets.testLocal( hostFilter ) ) ) ) {
+        if ( !Boolean.TRUE.equals( request.getListAll( ) ) && hostFilter == null || Internets.testLocal( hostFilter ) ) {
           if ( comp.hasLocalService( ) ) {
             final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
             if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
