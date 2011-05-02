@@ -63,18 +63,37 @@
 
 package com.eucalyptus.util;
 
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.apache.log4j.Logger;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Classes {
+  private static Logger LOG = Logger.getLogger( Classes.class );
   public static Class findAncestor( Object o, Predicate<Class> condition ) {
     return Iterables.find( ancestry( o ), condition );
+  }
+  
+  public static <T> List<T> newInstance( Class<T> type ) {
+    if( !Modifier.isPublic( type.getModifiers( ) ) ) {
+      throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
+    } else if( type.isEnum( ) ) {
+      return Lists.newArrayList( type.getEnumConstants( ) );
+    } else {
+      try {
+        return Lists.newArrayList( type.newInstance( ) );
+      } catch ( InstantiationException ex ) {
+        throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
+      } catch ( IllegalAccessException ex ) {
+        throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
+      }
+    }
   }
   public static List<Class> ancestry( Object o ) {
     Function<Class, Class> parent = new Function<Class, Class>( ) {

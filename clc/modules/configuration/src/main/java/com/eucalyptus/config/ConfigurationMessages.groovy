@@ -77,26 +77,14 @@ public class ConfigurationMessage extends BaseMessage {
   }
 }
 public class ComponentInfoType extends EucalyptusData {
+  String type;
   String partition;
   String name;
   String hostName;
+  String fullName;
   String state;//really an enum
-  String detail;//TODO: remove me.
+  String detail;
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String host, String state, Collection<String> details){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = details.toString( );
-  }
-  public ComponentInfoType(String partition, String name, String host, String state, String detail){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = detail;
-  }
 }
 
 public class NodeComponentInfoType extends EucalyptusData {
@@ -130,7 +118,9 @@ public class DeregisterComponentType extends ConfigurationMessage {
 }
 public class DeregisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
 
-public class DescribeComponentsType extends ConfigurationMessage {}
+public class DescribeComponentsType extends ConfigurationMessage {
+  Boolean verbose = Boolean.FALSE;
+}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }

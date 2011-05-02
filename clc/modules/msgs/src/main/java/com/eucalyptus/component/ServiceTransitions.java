@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.event.LifecycleEvents;
@@ -94,67 +95,49 @@ public class ServiceTransitions {
   private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    switch ( config.lookupStateMachine( ).getState( ) ) {
-      case NOTREADY:
-      case DISABLED:
-      case ENABLED:
-        break;
-      case LOADED:
-      case STOPPED:
-        transition = Automata.sequenceTransitions( config, Component.State.LOADED, Component.State.NOTREADY );
-        break;
-      case INITIALIZED:
-        transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY );
-        break;
-      default:
-        throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
+    if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
+      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+      try {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.PRIMORDIAL,
+                                                                                                           Component.State.INITIALIZED, Component.State.LOADED,
+                                                                                                           Component.State.NOTREADY );
+        
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        transitionResult = result.get( );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        transitionResult = Futures.predestinedFailedFuture( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex.getCause( ), ex.getCause( ) );
+        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+      }
+      return transitionResult;
+    } else {
+      return Futures.predestinedFuture( config );
     }
-    CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
-    try {
-      transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex, ex );
-      transitionResult = Futures.predestinedFailedFuture( ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-      transitionResult = Futures.predestinedFailedFuture( ex );
-    }
-    return transitionResult;
   }
   
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    switch ( config.lookupStateMachine( ).getState( ) ) {
-      case ENABLED:
-        break;
-      case NOTREADY:
-      case DISABLED:
-        transition = Automata.sequenceTransitions( config, Component.State.DISABLED, Component.State.ENABLED );
-        break;
-      case LOADED:
-      case STOPPED:
-        transition = Automata.sequenceTransitions( config, Component.State.LOADED, Component.State.NOTREADY, Component.State.DISABLED,
-                                                                      Component.State.ENABLED );
-        break;
-      case INITIALIZED:
-        transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED, Component.State.LOADED, Component.State.NOTREADY,
-                                                                      Component.State.DISABLED, Component.State.ENABLED );
-        break;
-      default:
-        throw new IllegalStateException( "Failed to find transition for current component state: " + config.lookupComponent( ).toString( ) );
+    if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
+      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+      try {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.PRIMORDIAL,
+                                                                                                           Component.State.INITIALIZED, Component.State.LOADED,
+                                                                                                           Component.State.NOTREADY,
+                                                                                                           Component.State.DISABLED, Component.State.ENABLED );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        transitionResult = result.get( );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        transitionResult = Futures.predestinedFailedFuture( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex.getCause( ), ex.getCause( ) );
+        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+      }
+      return transitionResult;
+    } else {
+      return Futures.predestinedFuture( config );
     }
-    CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
-    try {
-      transitionResult = Threads.lookup( Empyrean.class ).submit( transition ).get( );
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex, ex );
-      transitionResult = Futures.predestinedFailedFuture( ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex.getCause( ), ex.getCause( ) );
-      transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
-    }
-    return transitionResult;
   }
   
   public static final TransitionAction<ServiceConfiguration> LOAD_TRANSITION       = new AbstractTransitionAction<ServiceConfiguration>( ) {

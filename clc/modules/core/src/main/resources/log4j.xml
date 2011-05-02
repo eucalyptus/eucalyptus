@@ -177,11 +177,7 @@
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper" additivity="false">
+  <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>

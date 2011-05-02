@@ -67,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
@@ -102,8 +103,14 @@ public class Automata {
   public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<P>> sequenceTransitions( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
     assertThat( toStates, not( emptyArray( ) ) );
     //TODO:GRZE: enforce that the sequence of states denotes a valid transition path
-    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " transition sequence: " + Joiner.on( "->" ).join( toStates ) );
-    final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, toStates );
+    S currentState = hasFsm.getStateMachine( ).getState( );
+    int index = Lists.newArrayList( toStates ).indexOf( currentState );
+    S[] actualStates = toStates; 
+    if( index > 0 && index < toStates.length ) {
+      actualStates = Arrays.copyOfRange( toStates, index+1, toStates.length );
+    }
+    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: " + Joiner.on( "->" ).join( actualStates ) );
+    final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
   }
   

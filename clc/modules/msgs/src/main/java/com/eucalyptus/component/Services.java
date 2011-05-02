@@ -70,7 +70,7 @@ import com.google.common.base.Function;
 
 public class Services {
   @TypeMapper( { ServiceConfiguration.class, ServiceId.class } )
-  private enum ServiceIdMapper implements Function<ServiceConfiguration, ServiceId> {
+  public enum ServiceIdMapper implements Function<ServiceConfiguration, ServiceId> {
     INSTANCE;
     
     @Override
@@ -88,7 +88,7 @@ public class Services {
   }
   
   @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
-  private enum ServiceMapper implements Function<ServiceConfiguration, Service> {
+  public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
     INSTANCE;
     
     @Override
@@ -99,7 +99,7 @@ public class Services {
   }
   
   @TypeMapper
-  private enum ServiceDispatcherMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+  public enum ServiceDispatcherMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
     INSTANCE;
     
     @Override

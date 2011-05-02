@@ -29,7 +29,7 @@ public class TypeMappers {
     return mappers.get( key );
   }
   
-  static class TypeMapperDiscovery extends ServiceJarDiscovery {
+  public static class TypeMapperDiscovery extends ServiceJarDiscovery {
     
     @Override
     public boolean processClass( Class candidate ) throws Throwable {
@@ -39,7 +39,7 @@ public class TypeMappers {
         //first try default @value
         if ( !types[0].equals( Object.class ) && !types[1].equals( Object.class ) ) {
           try {
-            registerMapper( types[0], types[1], ( Function ) candidate.newInstance( ) );
+            registerMapper( types[0], types[1], ( Function ) Classes.newInstance( candidate ).get( 0 ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );
@@ -48,7 +48,7 @@ public class TypeMappers {
         //try from= and to= in the annotation
         if ( !mapper.from( ).equals( Object.class ) && !mapper.to( ).equals( Object.class ) ) {
           try {
-            registerMapper( mapper.from( ), mapper.to( ), ( Function ) candidate.newInstance( ) );
+            registerMapper( mapper.from( ), mapper.to( ), ( Function ) Classes.newInstance( candidate ).get( 0 ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );
@@ -57,7 +57,7 @@ public class TypeMappers {
         //try generics
         List<Class> generics = Lists.newArrayList( );
         try {
-          generics.addAll( Classes.genericsToClasses( candidate.newInstance( ) ) );
+          generics.addAll( Classes.genericsToClasses( Classes.newInstance( candidate ).get( 0 ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -65,7 +65,7 @@ public class TypeMappers {
           return false;
         } else {
           try {
-            registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) candidate.newInstance( ) );
+            registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) Classes.newInstance( candidate ).get( 0 ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );

@@ -102,7 +102,7 @@ public class Component implements HasName<Component> {
   private final ComponentBootstrapper bootstrapper;
   
   public enum State implements Automata.State<State>, Predicate<HasStateMachine<?, State, ?>> {
-    MISSING, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
+    NONE, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
     
     @Override
     public boolean apply( HasStateMachine<?, State, ?> arg0 ) {
@@ -156,7 +156,7 @@ public class Component implements HasName<Component> {
   }
   
   public State getState( ) {
-    return this.getLocalServiceConfiguration( ).lookupState( );
+    return this.hasLocalService( ) ? this.getLocalServiceConfiguration( ).lookupState( ) : State.NONE;
   }
   
   /**

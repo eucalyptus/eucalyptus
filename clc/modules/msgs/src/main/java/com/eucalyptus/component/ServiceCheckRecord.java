@@ -140,8 +140,8 @@ public class ServiceCheckRecord extends AbstractPersistent {
            .append( " uuid=" ).append( this.uuid )
            .append( " correlationId=" ).append( this.correlationId )
            .append( " timestamp=" ).append( this.timestamp )
-           .append( " message=" ).append( this.message )
-           .append( " stackTrace=" ).append( this.stackTrace );
+           .append( " message=" ).append( this.message );
+//           .append( " stackTrace=" ).append( this.stackTrace );
     return builder.toString( );
   }
   
