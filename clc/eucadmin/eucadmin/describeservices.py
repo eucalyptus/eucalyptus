@@ -61,7 +61,6 @@ class DescribeServices(AWSQueryRequest):
                     short_name='F',
                     long_name='filter-state',
                     ptype='string',
-                    default='ENABLED',
                     optional=True,
                     doc='Filter services by state.'),
               Param(name='ByPartition',
@@ -76,7 +75,13 @@ class DescribeServices(AWSQueryRequest):
                     ptype='boolean',
                     default=False,
                     optional=True,
-                    doc='Show service event details.')
+                    doc='Show service event details.'),
+              Param(name='ShowEventStacks',
+                    long_name='events-verbose',
+                    ptype='boolean',
+                    default=False,
+                    optional=True,
+                    doc='Show verbose service event details.')
               ]
 
     def __init__(self, **args):
@@ -92,7 +97,7 @@ class DescribeServices(AWSQueryRequest):
       
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
-        fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%s\t%s'
+        fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%-40s\t%s'
         detail_fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
@@ -101,17 +106,19 @@ class DescribeServices(AWSQueryRequest):
                          service_id['euca:name'],
                          s['euca:localState'],
                          s['euca:localEpoch'],
-                         service_id['euca:fullName'],
-                         service_id['euca:uri'])
-            details = s['euca:details']
+                         service_id['euca:uri'],
+                         service_id['euca:fullName'])
+            details = s['euca:statusDetails']
             if details:
-                detail_items = details['euca:item']
-                if detail_items:
-                    detail_entry = detail_items['euca:entry']
-                    print detail_fmt % (service_id['euca:type'],
-                                 service_id['euca:partition'],
-                                 service_id['euca:name'],
-                                 detail_entry)
+                detail_item = details['euca:item']
+                if detail_item:
+                    print detail_fmt % (detail_item['euca:serviceFullName'],
+                                 detail_item['euca:severity'],
+                                 detail_item['euca:timestamp'],
+                                 detail_item['euca:uuid'])
+                    print detail_item['euca:message']
+                    if detail_item['euca:stackTrace']:
+                      print detail_item['euca:stackTrace']
                              
 
 

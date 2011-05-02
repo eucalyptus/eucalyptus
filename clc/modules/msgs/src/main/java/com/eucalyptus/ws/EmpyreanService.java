@@ -192,6 +192,8 @@ public class EmpyreanService {
     final String partitionFilter = request.getByPartition( );
     final String stateFilter = request.getByState( );
     final boolean listAll = Boolean.TRUE.equals( request.getListAll( ) );
+    final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
+    final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     for ( Component comp : Components.list( ) ) {
       if ( typeFilter == null || ( typeFilter != null && !typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) ) {
         if ( !listAll && ( hostFilter == null || Internets.testLocal( hostFilter ) ) ) {
@@ -201,12 +203,17 @@ public class EmpyreanService {
                  && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
               reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
                 {
-                  setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-                  setLocalEpoch( reply.getBaseEpoch( ) );
-                  setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-                  if ( Boolean.TRUE.equals( request.getShowEvents( ) ) ) {
-                    getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                  this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+                  this.setLocalEpoch( reply.getBaseEpoch( ) );
+                  this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+                  if ( showEvents ) {
+                    this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
                                                                         TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                    if( !showEventStacks ) {
+                      for( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                        a.setStackTrace( "" );
+                      }
+                    }
                   }
                 }
               } );
@@ -219,16 +226,21 @@ public class EmpyreanService {
                  && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
               reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
                 {
-                  setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-                  setLocalEpoch( reply.getBaseEpoch( ) );
+                  this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+                  this.setLocalEpoch( reply.getBaseEpoch( ) );
                   try {
-                    setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+                    this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
                   } catch ( Exception ex ) {
-                    setLocalState( "n/a: " + ex.getMessage( ) );
+                    this.setLocalState( "n/a: " + ex.getMessage( ) );
                   }
-                  if ( Boolean.TRUE.equals( request.getShowEvents( ) ) ) {
-                    getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                  if ( showEvents ) {
+                    this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
                                                                         TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                    if( !showEventStacks ) {
+                      for( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                        a.setStackTrace( "" );
+                      }
+                    }
                   }
                 }
               } );

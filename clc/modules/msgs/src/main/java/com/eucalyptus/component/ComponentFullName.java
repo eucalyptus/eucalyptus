@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.util.Arrays;
 import java.util.List;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Assertions;
@@ -95,7 +96,11 @@ public class ComponentFullName implements FullName {
     ComponentId tempComponentId = Empyrean.INCOGNITO;
     String tempPartition = "";
     if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
-      tempComponentId = Eucalyptus.INCOGNITO;
+      if( this.realComponentId.serviceDependencies( ).contains( Eucalyptus.class ) ) {
+        tempComponentId = Eucalyptus.INCOGNITO;
+      } else if ( this.realComponentId.serviceDependencies( ).contains( Any.class ) || this.realComponentId.serviceDependencies( ).contains( Empyrean.class ) ) {
+        tempComponentId = Empyrean.INCOGNITO;
+      }
       tempPartition = partition;
     } else if ( !hasParentComponent && !this.realComponentId.isPartitioned( ) ) {
       tempComponentId = this.realComponentId;

@@ -202,13 +202,13 @@ public class ServiceChecks {
   
   private static CheckException newServiceCheckException( String correlationId, Severity severity, ServiceConfiguration config, Throwable t ) {
     if ( t instanceof Error ) {
-      return new CheckException( correlationId, t.getMessage( ), t, Severity.FATAL, config );
+      return new CheckException( correlationId, t, Severity.FATAL, config );
     } else if ( Severity.WARNING.ordinal( ) > severity.ordinal( ) && t instanceof RuntimeException ) {
-      return new CheckException( correlationId, t.getMessage( ), t, Severity.WARNING, config );
+      return new CheckException( correlationId, t, Severity.WARNING, config );
     } else if ( t instanceof CheckException ) {
-      return new CheckException( correlationId, t.getMessage( ), t, severity, config );
+      return new CheckException( correlationId, t, severity, config );
     } else {
-      return new CheckException( correlationId, t.getMessage( ), t, Severity.DEBUG, config );
+      return new CheckException( correlationId, t, Severity.DEBUG, config );
     }
   }
   
@@ -223,10 +223,8 @@ public class ServiceChecks {
     private final Component.State      eventState;
     private CheckException             other;
     
-    private CheckException( String correlationId, String message, Throwable cause, Severity severity, ServiceConfiguration config ) {
-      super( uuid( cause ) + " " + message + ( cause != null && cause.getMessage( ) != null
-        ? ": " + cause.getMessage( )
-        : "" ) );
+    private CheckException( String correlationId, Throwable cause, Severity severity, ServiceConfiguration config ) {
+      super( cause.getMessage( ) );
       if ( cause != null && cause instanceof CheckException ) {
         this.setStackTrace( cause.getStackTrace( ) );
       } else {
