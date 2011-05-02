@@ -34,22 +34,20 @@ from eucadmin.utils import chown_recursive, chmod_recursive
 
 RootWrapPath = 	'usr/lib/eucalyptus/euca_rootwrap'
 
-MakeDirs = ['var/lib/eucalyptus/dynserv',
-            'var/lib/eucalyptus/dynserv/data',
+MakeDirs = ['var/lib/eucalyptus/dynserv/data',
             'var/lib/eucalyptus/db',
             'var/lib/eucalyptus/keys',
             'var/lib/eucalyptus/CC']
 
-ChownPaths = ['var/lib/eucalyptus',
-              'var/log/eucalyptus',
-              'var/run/eucalyptus',
-              'etc/eucalyptus/eucalyptus.conf',
-              'etc/eucalyptus',
-              'var/lib/eucalyptus/dynserv/data',
-              'var/lib/eucalyptus/dynserv',
-              'var/lib/eucalyptus/db',
-              'var/lib/eucalyptus/keys',
-              'var/lib/eucalyptus/CC']
+ChownPaths = [('var/lib/eucalyptus', True),
+              ('var/log/eucalyptus', True),
+              ('var/run/eucalyptus', True),
+              ('etc/eucalyptus/eucalyptus.conf', False),
+              ('etc/eucalyptus', False),
+              ('var/lib/eucalyptus/dynserv', True),
+              ('var/lib/eucalyptus/db', False),
+              ('var/lib/eucalyptus/keys', False),
+              ('var/lib/eucalyptus/CC', False)]
 
 ChmodPaths = [('var/lib/eucalyptus/dynserv', 0700),
               ('var/lib/eucalyptus/dynserv/data', 0700),
@@ -66,9 +64,13 @@ class EucaSetup(object):
         self.euca_user_group_id = None
 
     def chown_paths(self):
-        for path in ChownPaths:
+        for path, recurse_flg in ChownPaths:
             path = os.path.join(self.config['EUCALYPTUS'], path)
-            chown_recursive(path, self.euca_user_id, self.euca_user_group_id)
+            if recurse_flg:
+                chown_recursive(path, self.euca_user_id,
+                                self.euca_user_group_id)
+            else:
+                os.chown(path, self.euca_user_id, self.euca_user_group_id)
 
     def chmod_paths(self):
         for path,mod in ChmodPaths:
