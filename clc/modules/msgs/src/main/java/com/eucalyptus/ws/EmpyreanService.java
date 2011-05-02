@@ -195,7 +195,7 @@ public class EmpyreanService {
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     for ( Component comp : Components.list( ) ) {
-      if ( typeFilter == null || ( typeFilter != null && !typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) ) {
+      if ( typeFilter == null || typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) {
         if ( !listAll && ( hostFilter == null || Internets.testLocal( hostFilter ) ) ) {
           if ( comp.hasLocalService( ) ) {
             final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
