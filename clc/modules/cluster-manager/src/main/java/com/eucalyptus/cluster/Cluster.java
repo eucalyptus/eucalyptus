@@ -501,9 +501,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
-      throw new ServiceRegistrationException( ex );
+      LOG.error( ex );
     } catch ( ExecutionException ex ) {
-      throw new ServiceRegistrationException( ex.getCause( ) );
+      LOG.error( ex.getCause( ) );
     }
     
   }
