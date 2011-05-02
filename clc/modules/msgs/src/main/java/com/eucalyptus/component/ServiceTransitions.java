@@ -194,6 +194,25 @@ public class ServiceTransitions {
       return Futures.predestinedFuture( config );
     }
   }
+  static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
+    if ( !State.PRIMORDIAL.equals( config.lookupState( ) ) ) {
+      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+      try {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED, Component.State.DISABLED, Component.State.STOPPED );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        transitionResult = result.get( );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        transitionResult = Futures.predestinedFailedFuture( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex.getCause( ), ex.getCause( ) );
+        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+      }
+      return transitionResult;
+    } else {
+      return Futures.predestinedFuture( config );
+    }
+  }
   
   public static final TransitionAction<ServiceConfiguration> LOAD_TRANSITION       = new AbstractTransitionAction<ServiceConfiguration>( ) {
                                                                                      

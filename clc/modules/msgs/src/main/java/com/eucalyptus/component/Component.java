@@ -323,15 +323,14 @@ public class Component implements HasName<Component> {
     return ServiceTransitions.transitionChain( configuration, State.STOPPED );
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> destroyTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
+  public void destroyTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
     try {
       Service service = null;
       if ( this.serviceRegistry.hasService( configuration ) ) {
         service = this.serviceRegistry.lookup( configuration );
-        this.serviceRegistry.deregister( configuration );
       }
       try {
-        ServiceTransitions.stopTransitionChain( configuration ).get( );
+        ServiceTransitions.destroyTransitionChain( configuration ).get( );
       } catch ( ExecutionException ex1 ) {
         configuration.error( ex1 );
       } catch ( InterruptedException ex1 ) {
@@ -340,7 +339,7 @@ public class Component implements HasName<Component> {
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
                             configuration.getUri( ).toString( ) ).info( );
-        return configuration.lookupStateMachine( ).transitionByName( Transition.DESTROYING );
+        this.serviceRegistry.deregister( configuration );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + configuration + " because of: " + ex.getMessage( ), ex );
       }

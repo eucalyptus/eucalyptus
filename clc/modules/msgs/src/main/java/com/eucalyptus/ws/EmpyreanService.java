@@ -103,8 +103,7 @@ public class EmpyreanService {
   
   public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
     ModifyServiceResponseType reply = request.getReply( );
-    reply.set_return( true );
-    TransitionName transition = TransitionName.valueOf( request.getState( ) );
+    TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
     for ( Component comp : Components.list( ) ) {
       ServiceConfiguration a;
       try {
@@ -113,10 +112,11 @@ public class EmpyreanService {
         continue;
       }
       Component.State serviceState = a.lookupState( );
+      reply.set_return( true );
       try {
         switch ( transition ) {
           case DISABLE:
-            if ( Component.State.DISABLED.equals( a.lookupState( ) ) || Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
+            if ( !Component.State.DISABLED.equals( a.lookupState( ) ) && !Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
               return reply;
             } else {
               comp.disableTransition( a ).get( );

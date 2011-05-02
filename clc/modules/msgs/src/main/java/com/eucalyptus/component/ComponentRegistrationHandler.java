@@ -132,9 +132,9 @@ public class ComponentRegistrationHandler {
     }
     try {
       try {
-        builder.getComponent( ).disableTransition( conf ).get( );
-        builder.getComponent( ).stopTransition( conf ).get( );
-        builder.getComponent( ).destroyTransition( conf ).get( );
+//        builder.getComponent( ).disableTransition( conf ).get( );
+//        builder.getComponent( ).stopTransition( conf ).get( );
+        builder.getComponent( ).destroyTransition( conf );
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
       }

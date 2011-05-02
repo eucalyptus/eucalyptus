@@ -265,44 +265,39 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public void error( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( this, t ) );
-  }
-  
-  @Override
-  public void error( String correlationId, Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( correlationId, this, t ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.ERROR.transform( this, t ) ) );
   }
   
   @Override
   public void info( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.info( this, t ) ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.Severity.INFO.transform( this, t ) ) );
   }
   
   @Override
   public void fatal( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.fatal( this, t ) ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.FATAL.transform( this, t ) ) );
   }
   
   @Override
   public void urgent( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.urgent( this, t ) ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.URGENT.transform( this, t ) ) );
   }
   
   @Override
   public void warning( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.warning( this, t ) ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.WARNING.transform( this, t ) ) );
   }
   
   @Override
   public void debug( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.debug( this, t ) ) );
+    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.Severity.DEBUG.transform( this, t ) ) );
   }
-
+  
   @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
     return this.lookupService( ).getStateMachine( );
   }
-
+  
   @Override
   public StateMachine<ServiceConfiguration, State, Transition> lookupStateMachine( ) {
     return this.getStateMachine( );

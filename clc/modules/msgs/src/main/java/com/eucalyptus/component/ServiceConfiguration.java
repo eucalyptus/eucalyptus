@@ -59,8 +59,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public void info( Throwable t );
 
-  public void error( String correlationId, Throwable t );
-
   public Collection<ServiceCheckRecord> lookupDetails( );
 
 }

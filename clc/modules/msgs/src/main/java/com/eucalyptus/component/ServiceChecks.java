@@ -73,6 +73,7 @@ import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class ServiceChecks {
   
@@ -111,31 +112,38 @@ public class ServiceChecks {
     WARNING, //default: store, describe, ui, notification
     ERROR, //default: store, describe, ui, notification
     URGENT, //default: store, describe, ui, notification, alert
-    FATAL
+    FATAL;
+    
+    public CheckException transform( ServiceConfiguration config, Throwable... ts ) {
+      return transform( config, Arrays.asList( ts ) );
+    }
+    
+    public CheckException transform( ServiceConfiguration config, List<Throwable> ts ) {
+      List<CheckException> exs = Lists.transform( ts, getExceptionMapper( this, config ) );
+      CheckException last = chainCheckExceptions( exs );
+      return last;
+    }
   };
   
-  public static CheckException fatal( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.FATAL, config, t );
+  private static Function<Throwable, CheckException> getExceptionMapper( final Severity severity, final ServiceConfiguration config ) {
+    return new Function<Throwable, CheckException>( ) {
+      
+      @Override
+      public CheckException apply( Throwable input ) {
+        return newServiceCheckException( severity, config, input );
+      }
+    };
   }
   
-  public static CheckException urgent( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.URGENT, config, t );
-  }
-  
-  public static CheckException error( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.ERROR, config, t );
-  }
-  
-  public static CheckException warning( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.WARNING, config, t );
-  }
-  
-  public static CheckException info( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.INFO, config, t );
-  }
-  
-  public static CheckException debug( ServiceConfiguration config, Throwable t ) {
-    return newServiceCheckException( Severity.DEBUG, config, t );
+  private static CheckException chainCheckExceptions( List<CheckException> exs ) {
+    CheckException last = null;
+    for ( CheckException ex : Lists.reverse( exs ) ) {
+      if ( last != null ) {
+        ex.addOtherException( ex );
+      }
+      last = ex;
+    }
+    return last;
   }
   
   public static class Functions {
@@ -183,17 +191,17 @@ public class ServiceChecks {
     
   }
   
-  public static ServiceCheckRecord createRecord( ServiceConfiguration config, String message ) {
+  static ServiceCheckRecord createRecord( ServiceConfiguration config, String message ) {
     return createRecord( UUID.randomUUID( ).toString( ), config, new RuntimeException( message ) );
   }
-
-  public static ServiceCheckRecord createRecord( ServiceConfiguration config, Throwable t ) {
+  
+  static ServiceCheckRecord createRecord( ServiceConfiguration config, Throwable t ) {
     return createRecord( UUID.randomUUID( ).toString( ), config, t );
   }
   
-  public static ServiceCheckRecord createRecord( String correlationId, ServiceConfiguration config, Throwable t ) {
+  public static ServiceCheckRecord createRecord( String correlationId, ServiceConfiguration config, Throwable t ) {//TODO:GRZE:FIX VISIBILITY HERE?!?!?!
     //TODO:GRZE: exception filtering here
-    return new ServiceCheckRecord( correlationId, error( config, t ) );
+    return new ServiceCheckRecord( correlationId, Severity.ERROR.transform( config, t ) );
   }
   
   private static CheckException newServiceCheckException( Severity severity, ServiceConfiguration config, Throwable t ) {

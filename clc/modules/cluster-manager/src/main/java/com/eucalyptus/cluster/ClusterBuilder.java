@@ -3,12 +3,13 @@ package com.eucalyptus.cluster;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -162,7 +163,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   }
   
   @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException, CheckException {
     Clusters.lookup( config ).check( );
   }
   
