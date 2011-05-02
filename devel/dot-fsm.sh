@@ -56,7 +56,7 @@ END{
 	"\t}\n"
 	for(i in trans) printf(subgraphFormat, i, trans[i]); 
 }' | \
-sed 's/\([^_]*\)_\([^#]*\)#/\1_\2  [label=<<FONT POINT-SIZE="10">\1_\2</FONT>>];\n\t\t/g;s/#}/\n\t}/g'
+sed 's/\([^_]*\)_\([^#]*\)#/\1_\2  [label=<<FONT POINT-SIZE="10">\1_\2<\/FONT>>];\n\t\t/g;s/#}/\n\t}/g'
 )
 
 echo "${HEADER}"
