@@ -513,11 +513,11 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getLocalService( ).getStateMachine( ).isLegalTransition( transition ) ) {
+    if ( component.getLocalServiceConfiguration( ).lookupStateMachine( ).isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getLocalService( ).getStateMachine( ).transitionByName( transition );
+          component.getLocalServiceConfiguration( ).lookupStateMachine( ).transitionByName( transition );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

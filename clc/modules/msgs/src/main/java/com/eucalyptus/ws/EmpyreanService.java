@@ -64,6 +64,7 @@
 package com.eucalyptus.ws;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -184,12 +185,15 @@ public class EmpyreanService {
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isLocal( ) ) {
           try {
-            comp.stopTransition( service );
+            comp.stopTransition( service ).get( );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
             return reply.markFailed( );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+            return reply.markFailed( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
             return reply.markFailed( );
           }
         }
@@ -234,10 +238,13 @@ public class EmpyreanService {
           if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
             if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
               try {
-                c.disableTransition( config );
+                c.disableTransition( config ).get( );
                 reply.getServices( ).add( serviceInfo );
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex , ex );
+                return reply.markFailed( );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex , ex );
                 return reply.markFailed( );
               }
             } else {

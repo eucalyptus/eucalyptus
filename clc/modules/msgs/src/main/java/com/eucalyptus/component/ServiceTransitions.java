@@ -431,7 +431,7 @@ public class ServiceTransitions {
                                                                                                                    + " due to "
                                                                                                                    + ex.toString( ),
                                                                                                                    ex );
-                                                                                           if ( State.ENABLED.equals( parent.lookupStateMachine( ).getState( ) ) ) {
+                                                                                           if ( State.ENABLED.isIn( parent ) ) {
                                                                                              try {
                                                                                                parent.lookupComponent( ).getBootstrapper( ).disable( );
                                                                                                if ( parent.lookupComponent( ).hasLocalService( ) ) {

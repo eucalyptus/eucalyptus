@@ -207,17 +207,16 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
-    return this.serviceDelegate.getStateMachine( );
-  }
-  
-  @Override
   public int compareTo( final ServiceConfiguration o ) {
     return this.serviceDelegate.compareTo( o );
   }
 
   public Collection<ServiceCheckRecord> getDetails( ) {
     return this.serviceDelegate.getDetails( );
+  }
+
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return this.serviceDelegate.getStateMachine( );
   }
   
 }

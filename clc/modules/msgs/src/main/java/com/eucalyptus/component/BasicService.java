@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -85,10 +86,10 @@ import com.eucalyptus.util.fsm.StateMachine;
 public class BasicService extends AbstractService implements Service {
   private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration                                                      serviceConfiguration;
-  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
   private final Runnable                                                                  checker;
-  private State                                                                           goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
-                                                                                                                                         
+  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
+  private State                                                                           goal = Component.State.DISABLED;
+  
   BasicService( ServiceConfiguration serviceConfiguration ) {
     super( );
     this.serviceConfiguration = serviceConfiguration;
@@ -97,8 +98,8 @@ public class BasicService extends AbstractService implements Service {
       @Override
       public void run( ) {
         try {
-          if ( BasicService.this.getStateMachine( ).getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transition( BasicService.this.getStateMachine( ).getState( ) );
+          if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
+            BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) );
           }
         } catch ( Throwable ex ) {
           LOG.debug( "CheckRunner caught an exception: " + ex );
@@ -115,7 +116,7 @@ public class BasicService extends AbstractService implements Service {
       super( serviceConfiguration );
       super.setGoal( Component.State.BROKEN );
       try {
-        super.getStateMachine( ).transition( Component.State.BROKEN );
+        super.stateMachine.transition( Component.State.BROKEN );
       } catch ( IllegalStateException ex ) {
         LOG.error( ex, ex );
       } catch ( ExistingTransitionException ex ) {
@@ -199,12 +200,21 @@ public class BasicService extends AbstractService implements Service {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
     } else if ( event instanceof Hertz ) {
-      Component c = this.getComponent( );
-      if ( c.hasLocalService( ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
-        if ( Component.State.ENABLED.equals( c.getLocalServiceConfiguration( ).lookupService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
-          Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
-        } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-          c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );//TODO:GRZE:URGENT state change happening here
+      ServiceConfiguration config = this.getServiceConfiguration( );
+      if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
+        try {
+          Threads.lookup( Empyrean.class ).submit( BasicService.this.checker ).get( );
+        } catch ( InterruptedException ex ) {
+          config.error( ex );
+          config.lookupService( ).setGoal( Component.State.DISABLED );
+        } catch ( ExecutionException ex ) {
+          config.error( ex.getCause( ) );
+          config.lookupService( ).setGoal( Component.State.DISABLED );
+        }
+        if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
+          config.lookupComponent( ).enableTransition( config );
+        } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
+          config.lookupComponent( ).disableTransition( config );
         }
       }
     }

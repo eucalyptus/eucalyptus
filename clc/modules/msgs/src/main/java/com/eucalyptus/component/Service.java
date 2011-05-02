@@ -74,8 +74,9 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.HasStateMachine;
+import com.eucalyptus.util.fsm.StateMachine;
 
-public interface Service extends EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
+public interface Service extends EventListener<Event>, HasFullName<ServiceConfiguration> {
   
   public abstract Dispatcher getDispatcher( );
   
@@ -106,5 +107,7 @@ public interface Service extends EventListener<Event>, HasStateMachine<ServiceCo
   public abstract void setGoal( State state );
   
   ServiceEndpoint getEndpoint( );
+
+  public abstract StateMachine<ServiceConfiguration, State, Transition> getStateMachine( );
   
 }
