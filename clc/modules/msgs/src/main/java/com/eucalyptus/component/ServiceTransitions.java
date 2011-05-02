@@ -115,8 +115,7 @@ public class ServiceTransitions {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
       CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.PRIMORDIAL,
-                                                                                                           Component.State.INITIALIZED, Component.State.LOADED,
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED );
         
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
@@ -138,10 +137,7 @@ public class ServiceTransitions {
     if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
       CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.PRIMORDIAL,
-                                                                                                           Component.State.INITIALIZED, Component.State.LOADED,
-                                                                                                           Component.State.NOTREADY,
-                                                                                                           Component.State.DISABLED, Component.State.ENABLED );
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.DISABLED, Component.State.ENABLED );
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
         transitionResult = result.get( );
       } catch ( InterruptedException ex ) {

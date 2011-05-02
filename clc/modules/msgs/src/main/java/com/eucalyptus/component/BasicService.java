@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
@@ -86,33 +87,33 @@ import com.eucalyptus.util.fsm.StateMachine;
 public class BasicService extends AbstractService implements Service {
   private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration                                                      serviceConfiguration;
-  private final Runnable                                                                  checker;
   private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
   private State                                                                           goal = Component.State.DISABLED;
   
-  BasicService( ServiceConfiguration serviceConfiguration ) {
+  BasicService( ServiceConfiguration serviceConfiguration ) throws ServiceRegistrationException {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    this.checker = new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) );
-          }
-        } catch ( Throwable ex ) {
-          LOG.debug( "CheckRunner caught an exception: " + ex );
-        }
-      }
-    };
+    try {
+      this.stateMachine.transition( State.INITIALIZED );
+    } catch ( IllegalStateException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    }
+
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   static class Broken extends BasicService {
     
-    Broken( ServiceConfiguration serviceConfiguration ) {
+    Broken( ServiceConfiguration serviceConfiguration ) throws ServiceRegistrationException {
       super( serviceConfiguration );
       super.setGoal( Component.State.BROKEN );
       try {
@@ -203,7 +204,18 @@ public class BasicService extends AbstractService implements Service {
       ServiceConfiguration config = this.getServiceConfiguration( );
       if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
         try {
-          Threads.lookup( Empyrean.class ).submit( BasicService.this.checker ).get( );
+          Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+            @Override
+            public void run( ) {
+              try {
+                if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
+                  BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) );
+                }
+              } catch ( Throwable ex ) {
+                LOG.debug( "CheckRunner caught an exception: " + ex );
+              }
+            }
+          } ).get( );
         } catch ( InterruptedException ex ) {
           config.error( ex );
           config.lookupService( ).setGoal( Component.State.DISABLED );

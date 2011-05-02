@@ -99,7 +99,7 @@ public class MessagableService extends AbstractService implements Service {
     this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
   }
   
-  MessagableService( final ServiceConfiguration config ) {
+  MessagableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this( new BasicService( config ) );
   }
   

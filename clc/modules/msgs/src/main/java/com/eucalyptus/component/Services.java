@@ -134,7 +134,7 @@ public class Services {
     
   }
   
-  static Service newServiceInstance( ServiceConfiguration config ) {
+  static Service newServiceInstance( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
       return config.getComponentId( ).hasDispatcher( )
         ? new MessagableService( config )

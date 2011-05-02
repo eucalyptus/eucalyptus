@@ -366,10 +366,15 @@ public class Component implements HasName<Component> {
     Service service = null;
     if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
+      service.setGoal( goalState );
     } else {
-      service = this.serviceRegistry.register( configuration );
+      try {
+        service = this.serviceRegistry.register( configuration );
+        service.setGoal( goalState );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      }
     }
-    service.setGoal( goalState );
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
@@ -455,34 +460,10 @@ public class Component implements HasName<Component> {
     Service service = null;
     if ( ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
-      try {
-        config.lookupStateMachine( ).transition( State.INITIALIZED );
-      } catch ( IllegalStateException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      }
     } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
     } else {
       service = this.serviceRegistry.register( config );
-      try {
-        config.lookupStateMachine( ).transition( State.INITIALIZED );
-      } catch ( IllegalStateException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      } catch ( ExistingTransitionException ex ) {
-        LOG.error( ex, ex );
-        throw new ServiceRegistrationException( "Initializing service " + config + " failed because of: " + ex.getMessage( ), ex );
-      }
     }
     return service;
   }
@@ -615,8 +596,9 @@ public class Component implements HasName<Component> {
      * Register the given {@link Service} with the registry. Only used internally.
      * 
      * @param service
+     * @throws ServiceRegistrationException 
      */
-    Service register( ServiceConfiguration config ) {
+    Service register( ServiceConfiguration config ) throws ServiceRegistrationException {
       Service service = Services.newServiceInstance( config );
       if ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
         this.localService.set( service );
