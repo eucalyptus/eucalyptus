@@ -28,97 +28,10 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-
-# # pre-flight checks
-# if [ -n "$CHECK" ]; then
-# 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
-
-# 	# first of all check euca_rootwrap
-# 	if [ ! -x $ROOTWRAP ]; then
-# 		echo "Cannot find euca_rootwrap!"
-# 		exit 1
-# 	fi
-# 	# get EUCA group
-# 	if [ -z "$EUCA_USER" ]; then
-# 		echo "Running eucalyptus as root"
-# 		EUCA_USER="root"
-# 		EUCA_GROUP="root"
-# 	fi
-# 	# if running as root no need to do anything
-# 	if [ "$EUCA_USER" != "root" ]; then
-# 		ID="`which id 2> /dev/null`"
-# 		if [ -z "$ID" ]; then
-# 			echo "Cannot find command id"
-# 			exit 1
-# 		fi
-# 		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-# 			echo "User $EUCA_USER doesn't exists!"
-# 			exit 1
-# 		fi
-# 		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
-# 		if [ -z "$EUCA_GROUP" ]; then
-# 			echo "Cannot detect $EUCA_USER group: using $EUCA_USER"
-# 			exit 1
-# 		fi
-# 		# need to check if euca_rootwrap can run as EUCA_USER
-#                 TEST_EUID="`sudo -u $EUCA_USER $ROOTWRAP $ID -u`"
-# 		if [ "$?" != "0" -o "$TEST_EUID" != "0" ]; then
-# 			echo "Problem running $ROOTWRAP! Did you run euca_conf -setup?"
-# 			exit 1
-# 		fi
-# 	fi
-
-# 	# let's be sure we have the INSTANCE_PATH
-# 	if [ "$CHECK" = "nc" ]; then
-# 		if [ -z "$INSTANCE_PATH" ]; then
-# 			echo "INSTANCE_PATH is not defined"
-# 			exit 1
-# 		fi
-# 		if [ ! -d "$INSTANCE_PATH" ]; then
-# 			echo "$INSTANCE_PATH doesn't exist: did you run euca_conf -setup?"
-# 			exit 1
-# 		fi
-# 	fi
-
-# 	# let's set up directories which could disappears if /var/run is
-# 	# in memory
-# 	if [ ! -d $EUCALYPTUS/var/run/eucalyptus ]; then
-# 		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus ; then
-# 			# error should come from mkdir
-# 			exit 1
-# 		fi
-# 	fi
-# 	if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus ; then
-# 	    # error should come from chown
-# 	    exit 1
-# 	fi
-
-
-# 	if [ "$CHECK" = "cc" ]; then
-# 	    if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
-# 		if ! mkdir -p $EUCALYPTUS/var/run/eucalyptus/net ; then
-# 			# error should come from mkdir
-# 		    exit 1
-# 		fi
-# 	    fi
-# 	    if ! chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus/net ; then
-# 			# error should come from chown
-# 		exit 1
-# 	    fi
-# 	fi
-
-# 	if [ "$CHECK" = "vmware" ]; then
-# 		if ! $EUCALYPTUS/usr/share/eucalyptus/euca_vmware --config $EUCALYPTUS/etc/eucalyptus/vmware_conf.xml ; then
-# 			exit 1
-# 		fi
-# 	fi
-
-# 	# good to go
-# 	exit 0
-# fi
 import os
 import pwd
 from eucadmin.command import Command
+from eucadmin.utils import chown_recursive, chmod_recursive
 
 RootWrapPath = 'usr/lib/eucalyptus/euca_rootwrap'
 
@@ -184,7 +97,7 @@ class Check(object):
         if not os.path.isdir(d):
             try:
                 os.mkdir(d)
-                os.chown(d, self.euca_user_id, self.euca_user_group_id)
+                chown_recursive(d, self.euca_user_id, self.euca_user_group_id)
             except OSError:
                 self.messages.append('Unable to make directory: %s' % d)
                 self.status = 1
@@ -194,7 +107,7 @@ class Check(object):
             if not os.path.isdir(d):
                 try:
                     os.mkdir(d)
-                    os.chown(d, self.euca_user_id, self.euca_user_group_id)
+                    chown_recursive(d, self.euca_user_id, self.euca_user_group_id)
                 except OSError:
                     self.messages.append('Unable to make directory: %s' % d)
                     self.status = 1

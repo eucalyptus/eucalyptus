@@ -28,98 +28,9 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-# # first time setup
-# if [ -n "$SETUP" ]; then
-# 	ROOTWRAP="$EUCALYPTUS/usr/lib/eucalyptus/euca_rootwrap"
-	
-# 	# first of all setup euca_rootwrap
-# 	if [ ! -x "$ROOTWRAP" ]; then
-# 		echo "Cannot find $ROOTWRAP (or not readable)!"
-# 		exit 1
-# 	fi
-# 	# get EUCA group
-# 	if [ -z "$EUCA_USER" ]; then
-# 		echo "Is EUCA_USER defined?"
-# 		exit 1
-# 	fi
-# 	# if running as root no need to do anything
-# 	if [ "$EUCA_USER" != "root" ]; then
-# 		ID="`which id 2> /dev/null`"
-# 		if [ -z "$ID" ]; then
-# 			echo "Cannot find command $ID"
-# 			exit 1
-# 		fi
-# 		if ! $ID $EUCA_USER > /dev/null 2> /dev/null ; then
-# 			echo "User $EUCA_USER doesn't exists!"
-# 			exit 1
-# 		fi
-# 		EUCA_GROUP="`$ID -ng $EUCA_USER 2>/dev/null`"
-# 		if [ -z "$EUCA_GROUP" ]; then
-# 			echo "Cannot detect $EUCA_USER group"
-# 			exit 1
-# 		fi
-# 		if ! chown root:$EUCA_GROUP $ROOTWRAP ; then
-# 			exit 1
-# 		fi
-# 		if ! chmod 4750 $ROOTWRAP ; then
-# 			exit 1
-# 		fi
-# 	fi
-	
-# 	# let's create the instance path
-# 	if [ -n "$INSTANCE_PATH" -a "$INSTANCE_PATH" != "not_configured" -a ! -d "$INSTANCE_PATH" ]; then
-# 		if ! mkdir -p $INSTANCE_PATH ; then
-# 			echo "Failed to create instance path!"
-# 			exit 1
-# 		fi
-# 	fi
-# 	if ! chown $EUCA_USER:$EUCA_GROUP $INSTANCE_PATH ; then
-#                 echo "Failed to modify ownership of $INSTANCE_PATH (must be owned by $EUCA_USER:$EUCA_GROUP)!"
-# 		exit 1
-# 	fi
-
-# 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus
-# 	ret=$?
-# 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/log/eucalyptus
-# 	let $((ret += $?))
-# 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/run/eucalyptus
-# 	let $((ret += $?))
-# 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
-# 	let $((ret += $?))
-# 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/etc/eucalyptus
-# 	let $((ret += $?))
-
-# 	# let's create more needed directory with the right permissions
-# 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/dynserv/data
-# 	let $((ret += $?))
-# 	chown -R $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/dynserv
-# 	let $((ret += $?))
-# 	chmod -R 700 $EUCALYPTUS/var/lib/eucalyptus/dynserv
-# 	let $((ret += $?))
-# 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/db
-# 	let $((ret += $?))
-# 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/db
-# 	let $((ret += $?))
-# 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/db
-# 	let $((ret += $?))
-# 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/keys
-# 	let $((ret += $?))
-# 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/keys
-# 	let $((ret += $?))
-# 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/keys
-# 	let $((ret += $?))
-# 	mkdir -p $EUCALYPTUS/var/lib/eucalyptus/CC
-# 	let $((ret += $?))
-# 	chown $EUCA_USER:$EUCA_GROUP $EUCALYPTUS/var/lib/eucalyptus/CC
-# 	let $((ret += $?))
-# 	chmod 700 $EUCALYPTUS/var/lib/eucalyptus/CC
-# 	let $((ret += $?))
-
-# 	exit $ret
-# fi
-
 import os
 import pwd
+from eucadmin.utils import chown_recursive, chmod_recursive
 
 RootWrapPath = 	'usr/lib/eucalyptus/euca_rootwrap'
 
@@ -157,12 +68,12 @@ class EucaSetup(object):
     def chown_paths(self):
         for path in ChownPaths:
             path = os.path.join(self.config['EUCALYPTUS'], path)
-            os.chown(path, self.euca_user_id, self.euca_user_group_id)
+            chown_recursive(path, self.euca_user_id, self.euca_user_group_id)
 
     def chmod_paths(self):
         for path,mod in ChmodPaths:
             path = os.path.join(self.config['EUCALYPTUS'], path)
-            os.chmod(path, mod)
+            chmod_recursive(path, mod)
 
     def make_dirs(self):
         for dir_name in MakeDirs:
