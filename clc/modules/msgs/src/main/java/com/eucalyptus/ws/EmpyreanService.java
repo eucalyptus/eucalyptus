@@ -96,53 +96,60 @@ import com.google.common.collect.Collections2;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
+  
   private enum TransitionName {
     START, STOP, ENABLE, DISABLE, RESTART
   }
+  
   public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
     ModifyServiceResponseType reply = request.getReply( );
     reply.set_return( true );
     TransitionName transition = TransitionName.valueOf( request.getState( ) );
     for ( Component comp : Components.list( ) ) {
+      ServiceConfiguration a;
       try {
-        ServiceConfiguration a = comp.lookupServiceConfiguration( request.getName( ) );
-        Component.State serviceState = a.lookupState( );
+        a = comp.lookupServiceConfiguration( request.getName( ) );
+      } catch ( Exception ex1 ) {
+        continue;
+      }
+      Component.State serviceState = a.lookupState( );
+      try {
         switch ( transition ) {
           case DISABLE:
-            if( Component.State.DISABLED.equals( a.lookupState( ) ) || Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
+            if ( Component.State.DISABLED.equals( a.lookupState( ) ) || Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
               return reply;
             } else {
               comp.disableTransition( a ).get( );
             }
-          break;
+            break;
           case ENABLE:
-            if( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
+            if ( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
               return reply;
             } else {
               comp.enableTransition( a ).get( );
             }
-          break;
+            break;
           case STOP:
-            if( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
+            if ( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
               return reply;
             } else {
               comp.stopTransition( a ).get( );
             }
-          break;
+            break;
           case START:
-            if( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
+            if ( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
               return reply;
             } else {
               comp.startTransition( a ).get( );
             }
-          break;
+            break;
           case RESTART:
-            comp.stopTransition( a ).get( );            
-            comp.enableTransition( a ).get( );            
-          break;
+            comp.stopTransition( a ).get( );
+            comp.enableTransition( a ).get( );
+            break;
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         return reply.markFailed( );
       }
     }
@@ -182,7 +189,7 @@ public class EmpyreanService {
             LOG.error( ex, ex );
             return reply.markFailed( );
           } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             return reply.markFailed( );
           }
         }
