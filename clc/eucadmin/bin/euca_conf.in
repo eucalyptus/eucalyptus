@@ -304,8 +304,6 @@ class EucaConf(object):
                 print 'The following messages should be reviewed:'
                 for msg in req.messages:
                     print '\t%s' % msg
-            else:
-                print 'No issues found'
             sys.exit(req.status)
 
     def do_enable(self):

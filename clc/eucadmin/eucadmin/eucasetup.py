@@ -49,11 +49,10 @@ ChownPaths = [('var/lib/eucalyptus', True),
               ('var/lib/eucalyptus/keys', False),
               ('var/lib/eucalyptus/CC', False)]
 
-ChmodPaths = [('var/lib/eucalyptus/dynserv', 0700),
-              ('var/lib/eucalyptus/dynserv/data', 0700),
-              ('var/lib/eucalyptus/db', 0700),
-              ('var/lib/eucalyptus/keys', 0700),
-              ('var/lib/eucalyptus/CC', 0700)]
+ChmodPaths = [('var/lib/eucalyptus/dynserv', 0700, True),
+              ('var/lib/eucalyptus/db', 0700, False),
+              ('var/lib/eucalyptus/keys', 0700, False),
+              ('var/lib/eucalyptus/CC', 0700, False)]
 
 class EucaSetup(object):
 
@@ -64,7 +63,7 @@ class EucaSetup(object):
         self.euca_user_group_id = None
 
     def chown_paths(self):
-        for path, recurse_flg in ChownPaths:
+        for path,recurse_flg in ChownPaths:
             path = os.path.join(self.config['EUCALYPTUS'], path)
             if recurse_flg:
                 chown_recursive(path, self.euca_user_id,
@@ -73,9 +72,12 @@ class EucaSetup(object):
                 os.chown(path, self.euca_user_id, self.euca_user_group_id)
 
     def chmod_paths(self):
-        for path,mod in ChmodPaths:
+        for path,mod,recurse_flg in ChmodPaths:
             path = os.path.join(self.config['EUCALYPTUS'], path)
-            chmod_recursive(path, mod)
+            if recurse_flg:
+                chmod_recursive(path, mod)
+            else:
+                os.chmod(path, mod)
 
     def make_dirs(self):
         for dir_name in MakeDirs:
@@ -104,7 +106,7 @@ class EucaSetup(object):
         self.instance_path = self.config['INSTANCE_PATH']
         if self.instance_path and self.instance_path != 'not_configured':
             if not os.path.isdir(self.instance_path):
-                os.mkdir(self.instance_path)
+                os.makedirs(self.instance_path)
             os.chown(self.instance_path, self.euca_user_id,
                      self.euca_user_group_id)
         self.make_dirs()
