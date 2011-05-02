@@ -273,10 +273,10 @@ public class Components {
                 buf.append( "-> " + b.toString( ) ).append( "\n" );
               }
               buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-              for ( Service s : comp.getServices( ) ) {
+              for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
                 try {
-                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
-                  buf.append( "|-> Service config:   " ).append( s.getServiceConfiguration( ) ).append( "\n" );
+                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getUri( ) ).append( "\n" );
+                  buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
                 } catch ( Exception ex ) {
                   LOG.error( ex, ex );
                 }
@@ -318,22 +318,22 @@ public class Components {
   }
   
   public static class Predicates {
-    public static final Predicate<Service> enabledService( ) {
-      return new Predicate<Service>( ) {
+    public static final Predicate<ServiceConfiguration> enabledService( ) {
+      return new Predicate<ServiceConfiguration>( ) {
         
         @Override
-        public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getStateMachine( ).getState( ) );
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return Component.State.ENABLED.isIn( arg0 );
         }
       };
     }
     
-    public static Predicate<Service> serviceInPartition( String partitionName ) {
-      return new Predicate<Service>( ) {
+    public static Predicate<ServiceConfiguration> serviceInPartition( final String partitionName ) {
+      return new Predicate<ServiceConfiguration>( ) {
         
         @Override
-        public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getStateMachine( ).getState( ) );
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return partitionName.equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
         }
       };
     }

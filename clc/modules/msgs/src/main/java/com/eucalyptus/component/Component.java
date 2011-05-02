@@ -129,14 +129,6 @@ public class Component implements HasName<Component> {
   }
   
   /**
-   * @return
-   * @see com.eucalyptus.component.Component.ServiceRegistry#getServices()
-   */
-  public NavigableSet<Service> lookupServices( ) {
-    return this.serviceRegistry.getServices( );
-  }
-  
-  /**
    * @return the identity
    */
   public ComponentId getComponentId( ) {
@@ -197,29 +189,23 @@ public class Component implements HasName<Component> {
     return this.isAvailableLocally( ) && this.identity.runLimitedServices( );
   }
   
-  public List<ServiceConfiguration> lookupServiceConfigurations( ) {
-    return Lists.newArrayList( Iterables.transform( this.serviceRegistry.getServices( ), new Function<Service, ServiceConfiguration>( ) {
-      
-      @Override
-      public ServiceConfiguration apply( Service arg0 ) {
-        return arg0.getServiceConfiguration( );
-      }
-    } ) );
+  public NavigableSet<ServiceConfiguration> lookupServiceConfigurations( ) {
+    return this.serviceRegistry.getServices( );
   }
   
   public URI getUri( ) {
-    NavigableSet<Service> services = this.serviceRegistry.getServices( );
+    NavigableSet<ServiceConfiguration> services = this.serviceRegistry.getServices( );
     if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.getName( ) ) ) {
       throw new RuntimeException( "Cloud local component has " + services.size( ) + " registered services (Should be exactly 1): " + this + " "
                                   + services.toString( ) );
     } else if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.getName( ) ) ) {
       return this.getComponentId( ).getLocalEndpointUri( );
     } else if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) == 1 ) {
-      return services.first( ).getServiceConfiguration( ).getUri( );
+      return services.first( ).getUri( );
     } else {
-      for ( Service s : services ) {
+      for ( ServiceConfiguration s : services ) {
         if ( s.isLocal( ) ) {
-          return s.getServiceConfiguration( ).getUri( );
+          return s.getUri( );
         }
       }
       throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
@@ -257,16 +243,6 @@ public class Component implements HasName<Component> {
    */
   public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
     return this.serviceRegistry.lookup( config );
-  }
-  
-  /**
-   * @param fullName
-   * @return
-   * @throws NoSuchElementException
-   * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.util.FullName)
-   */
-  public Service lookupService( FullName fullName ) throws NoSuchElementException {
-    return this.serviceRegistry.lookup( fullName );
   }
   
   @Deprecated
@@ -374,7 +350,9 @@ public class Component implements HasName<Component> {
   }
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    this.setServiceGoalState( configuration, State.ENABLED );
+    this.setServiceGoalState( configuration, this.serviceRegistry.getServices( ).size( ) == 1
+                              ? State.ENABLED
+                                : State.DISABLED );
     return ServiceTransitions.transitionChain( configuration, State.ENABLED );
   }
   
@@ -384,7 +362,7 @@ public class Component implements HasName<Component> {
                            : State.DISABLED );
     return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
   }
-    
+  
   private void setServiceGoalState( final ServiceConfiguration configuration, final State goalState ) throws NoSuchElementException {
     Service service = null;
     if ( this.serviceRegistry.hasService( configuration ) ) {
@@ -395,19 +373,15 @@ public class Component implements HasName<Component> {
     service.setGoal( goalState );
   }
   
-  public NavigableSet<Service> getServices( ) {
-    return this.lookupServices( );
-  }
-  
-  public NavigableSet<Service> enabledServices( ) {
+  public NavigableSet<ServiceConfiguration> enabledServices( ) {
     return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Components.Predicates.enabledService( ) ) );
   }
   
   NavigableSet<ServiceConfiguration> enabledPartitionServices( final String partitionName ) {
-    Iterable<Service> services = Iterables.filter( this.serviceRegistry.getServices( ),
-                                                   Predicates.and( Components.Predicates.enabledService( ),
-                                                                   Components.Predicates.serviceInPartition( partitionName ) ) );
-    return Sets.newTreeSet( Iterables.transform( services, Components.Functions.serviceToServiceConfiguration( ) ) );
+    Iterable<ServiceConfiguration> services = Iterables.filter( this.serviceRegistry.getServices( ),
+                                                                Predicates.and( Components.Predicates.enabledService( ),
+                                                                                Components.Predicates.serviceInPartition( partitionName ) ) );
+    return Sets.newTreeSet( services );
   }
   
   private ConcurrentNavigableMap<String, ServiceCheckRecord> errors = new ConcurrentSkipListMap<String, ServiceCheckRecord>( );
@@ -515,8 +489,8 @@ public class Component implements HasName<Component> {
   }
   
   class ServiceRegistry {
-    private final AtomicReference<Service> localService = new AtomicReference( null );
-    private final Map<FullName, Service>   services     = Maps.newConcurrentMap( );
+    private final AtomicReference<Service>           localService = new AtomicReference( null );
+    private final Map<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return !Component.this.identity.runLimitedServices( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
@@ -538,8 +512,8 @@ public class Component implements HasName<Component> {
      * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
      *         type.
      */
-    public NavigableSet<Service> getServices( ) {
-      return Sets.newTreeSet( this.services.values( ) );
+    public NavigableSet<ServiceConfiguration> getServices( ) {
+      return Sets.newTreeSet( this.services.keySet( ) );
     }
     
     List<ServiceInfoType> getServiceInfos( final String localhostAddr ) {
@@ -610,26 +584,13 @@ public class Component implements HasName<Component> {
      * @throws NoSuchElementException
      */
     public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
-      return this.lookup( config.getFullName( ) );
-    }
-    
-    /**
-     * Returns the {@link Service} instance which was registered with the provided {@link FullName},
-     * if it exists. If a service with the given name does not exist a
-     * NoSuchElementException is thrown.
-     * 
-     * @param configuration
-     * @return {@link Service} corresponding to provided the {@link FullName}
-     * @throws NoSuchElementException
-     */
-    public Service lookup( FullName fullName ) throws NoSuchElementException {
-      if ( !this.services.containsKey( fullName ) ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
+      if ( !this.services.containsKey( config ) ) {
+        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
       } else {
-        return this.services.get( fullName );
+        return this.services.get( config );
       }
     }
-    
+        
     /**
      * List the services registered within a give partition.
      * 
@@ -661,7 +622,7 @@ public class Component implements HasName<Component> {
       if ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
         this.localService.set( service );
       }
-      this.services.put( config.getFullName( ), service );
+      this.services.put( config, service );
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
                           service.getServiceConfiguration( ).isLocal( )

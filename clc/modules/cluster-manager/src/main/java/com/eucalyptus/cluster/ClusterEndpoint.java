@@ -79,6 +79,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
@@ -367,8 +368,9 @@ public class ClusterEndpoint implements Startable {
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
       Component walrus = Components.lookup( Walrus.class );
-      if( !walrus.lookupServices( ).isEmpty( ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), walrus.lookupServices( ).first( ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
+      NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );

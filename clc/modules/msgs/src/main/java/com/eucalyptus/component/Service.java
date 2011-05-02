@@ -75,7 +75,7 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.HasStateMachine;
 
-public interface Service extends HasFullName<ServiceConfiguration>, EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
+public interface Service extends EventListener<Event>, HasStateMachine<ServiceConfiguration, Component.State, Component.Transition> {
   
   public abstract Dispatcher getDispatcher( );
   

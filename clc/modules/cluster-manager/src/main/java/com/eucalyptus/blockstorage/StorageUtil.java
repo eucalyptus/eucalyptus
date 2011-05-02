@@ -100,8 +100,8 @@ public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
     
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( Service service : Components.lookup(Storage.class).enabledServices( ) ) {
-      service.getDispatcher( ).dispatch( message );
+    for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
+      service.lookupService( ).getDispatcher( ).dispatch( message );
     }
   }
 

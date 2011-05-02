@@ -78,14 +78,22 @@ public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializa
 public class ServiceTransitionType extends EmpyreanMessage  {
   ArrayList<ServiceInfoType> services = new ArrayList<ServiceInfoType>();
 }
-public class StartServiceType extends ServiceTransitionType {}
-public class StartServiceResponseType extends ServiceTransitionType {}
-public class StopServiceType extends ServiceTransitionType {}
-public class StopServiceResponseType extends ServiceTransitionType {}
-public class EnableServiceType extends ServiceTransitionType {}
-public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
-public class DisableServiceType extends ServiceTransitionType {}
-public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
+public class StartServiceType extends ServiceTransitionType {
+}
+public class StartServiceResponseType extends ServiceTransitionType {
+}
+public class StopServiceType extends ServiceTransitionType {
+}
+public class StopServiceResponseType extends ServiceTransitionType {
+}
+public class EnableServiceType extends ServiceTransitionType {
+}
+public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
+}
+public class DisableServiceType extends ServiceTransitionType {
+}
+public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
+}
 public class ServiceId extends EucalyptusData {
   String uuid;/** UUID of the registration **/
   String partition;/** The resource partition name **/
@@ -106,10 +114,25 @@ public class ServiceStatusType extends EucalyptusData {
   String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
+  ArrayList<ServiceStatusDetail> statusDetails = new ArrayList<ServiceStatusDetail>( );
+}
+public class ServiceStatusDetail extends EucalyptusData {
+  String   severity;
+  String   uuid;
+  String   message;
+  String   serviceFullName;
+  String   serviceName;
+  String   serviceHost;
+  String   stackTrace;
+  String   timestamp;
 }
 public class DescribeServicesType extends ServiceTransitionType {
   Boolean listAll;
-  Boolean showDetails;
+  Boolean showEvents;
+  String byType;
+  String byHost;
+  String byState;
+  String byPartition;
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );

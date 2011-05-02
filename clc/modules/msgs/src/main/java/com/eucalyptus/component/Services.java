@@ -64,6 +64,7 @@
 package com.eucalyptus.component;
 
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -81,12 +82,36 @@ public class Services {
           this.setFullName( input.getFullName( ).toString( ) );
           this.setName( input.getName( ) );
           this.setType( input.getComponentId( ).getName( ) );
-          this.setUri( input.getUri( ).toString( ) );
+          try {
+            this.setUri( input.getComponentId( ).makeExternalRemoteUri( input.getHostName( ), input.getPort( ) ).toString( ) );
+          } catch ( Exception ex ) {
+            this.setUri( input.getComponentId( ).makeExternalRemoteUri( "localhost", input.getComponentId( ).getPort( ) ).toString( ) );
+          }
         }
       };
     }
   }
-
+  
+  @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
+  public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
+    INSTANCE;
+    @Override
+    public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
+      return new ServiceStatusDetail( ) {
+        { 
+          this.setSeverity( input.getSeverity( ).toString( ) );
+          this.setUuid( input.getUuid( ) );
+          this.setTimestamp( input.getTimestamp( ).toString( ) );
+          this.setMessage( input.getMessage( ) );
+          this.setStackTrace( input.getStackTrace( ) );
+          this.setServiceFullName( input.getServiceFullName( ) );
+          this.setServiceHost( input.getServiceHost( ) );
+          this.setServiceName( input.getServiceName( ) );
+        }
+      };
+    }
+  }
+  
   @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
   public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
     INSTANCE;

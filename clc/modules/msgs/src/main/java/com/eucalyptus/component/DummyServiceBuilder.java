@@ -31,7 +31,7 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
   
   @Override
   public List<ServiceConfiguration> list( ) throws ServiceRegistrationException {
-    return this.getComponent( ).lookupServiceConfigurations( );
+    return Lists.newArrayList( this.getComponent( ).lookupServiceConfigurations( ) );
   }
   
   @Override

@@ -44,10 +44,35 @@ class DescribeServices(AWSQueryRequest):
                     ptype='boolean',
                     default=False,
                     optional=True,
-                    doc='List all services known by this host.'),
-              Param(name='ShowDetails',
-                    short_name='d',
-                    long_name='details',
+                    doc='List all services (regardless of where they are running) according to the servicing host.'),
+              Param(name='ByType',
+                    short_name='T',
+                    long_name='filter-type',
+                    ptype='string',
+                    optional=True,
+                    doc='Filter services by type.'),
+              Param(name='ByHost',
+                    short_name='H',
+                    long_name='filter-host',
+                    ptype='string',
+                    optional=True,
+                    doc='Filter services by host.'),
+              Param(name='ByState',
+                    short_name='F',
+                    long_name='filter-state',
+                    ptype='string',
+                    default='ENABLED',
+                    optional=True,
+                    doc='Filter services by state.'),
+              Param(name='ByPartition',
+                    short_name='P',
+                    long_name='filter-partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Filter services by partition.'),
+              Param(name='ShowEvents',
+                    short_name='E',
+                    long_name='events',
                     ptype='boolean',
                     default=False,
                     optional=True,
@@ -68,6 +93,7 @@ class DescribeServices(AWSQueryRequest):
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
         fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%s\t%s'
+        detail_fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
             print fmt % (service_id['euca:type'],
@@ -77,6 +103,17 @@ class DescribeServices(AWSQueryRequest):
                          s['euca:localEpoch'],
                          service_id['euca:fullName'],
                          service_id['euca:uri'])
+            details = s['euca:details']
+            if details:
+                detail_items = details['euca:item']
+                if detail_items:
+                    detail_entry = detail_items['euca:entry']
+                    print detail_fmt % (service_id['euca:type'],
+                                 service_id['euca:partition'],
+                                 service_id['euca:name'],
+                                 detail_entry)
+                             
+
 
     def main(self, **args):
         return self.send(**args)

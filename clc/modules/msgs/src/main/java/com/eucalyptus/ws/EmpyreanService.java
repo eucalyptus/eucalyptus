@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Services;
@@ -79,12 +80,14 @@ import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Functions;
 import com.google.common.collect.Collections2;
@@ -159,19 +162,19 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component c = Components.lookup( serviceInfo.getType( ) );
-        for ( Service service : c.lookupServices( ) ) {
-          String partition = service.getServiceConfiguration( ).getPartition( );
-          String name = service.getServiceConfiguration( ).getName( );
+        for ( ServiceConfiguration config : c.lookupServiceConfigurations( ) ) {
+          String partition = config.getPartition( );
+          String name = config.getName( );
           if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
-            if ( Component.State.ENABLED.equals( service.getStateMachine( ).getState( ) ) ) {
+            if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
               try {
-                c.disableService( service.getServiceConfiguration( ) );
+                c.disableService( config );
                 reply.getServices( ).add( serviceInfo );
               } catch ( ServiceRegistrationException ex ) {
                 LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
               }
             } else {
-              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + service.toString( ) );
+              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + config.toString( ) );
             }
           }
         }
@@ -184,31 +187,52 @@ public class EmpyreanService {
   
   public DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
-    for( Component comp : Components.list( ) ) {
-      if( !Boolean.TRUE.equals( request.getListAll( ) ) ) {
-        if( comp.hasLocalService( ) ) {
-          final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
-          reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
-            setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-            setLocalEpoch( reply.getBaseEpoch( ) );
-            setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-            if( Boolean.TRUE.equals( request.getShowDetails( ) ) ) {
-              getDetails( ).addAll( Collections2.transform( config.lookupDetails( ), Functions.toStringFunction( ) ) );
-            } 
-          }} );
-        }
-      } else {
-        for( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
-          reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
-            setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-            setLocalEpoch( reply.getBaseEpoch( ) );
-            try {
-              setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-            } catch ( Exception ex ) {
-              setLocalState( "n/a: " + ex.getMessage( ) );
+    final String typeFilter = request.getByType( );
+    final String hostFilter = request.getByHost( );
+    final String partitionFilter = request.getByPartition( );
+    final String stateFilter = request.getByState( );
+    for ( Component comp : Components.list( ) ) {
+      if ( typeFilter == null || ( typeFilter != null && !typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) ) {
+        if ( !Boolean.TRUE.equals( request.getListAll( ) ) || hostFilter == null || ( ( hostFilter != null && Internets.testLocal( hostFilter ) ) ) ) {
+          if ( comp.hasLocalService( ) ) {
+            final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
+            if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
+                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ) ) ) ) {
+              reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
+                {
+                  setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+                  setLocalEpoch( reply.getBaseEpoch( ) );
+                  setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+                  if ( Boolean.TRUE.equals( request.getShowEvents( ) ) ) {
+                    getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                        TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                  }
+                }
+              } );
             }
-            getDetails( ).addAll( Collections2.transform( config.lookupDetails( ), Functions.toStringFunction( ) ) );
-          }} );
+          }
+        } else {
+          for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+            if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
+                 && ( hostFilter == null || Internets.testLocal( hostFilter ) )
+                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ) ) ) ) {
+              reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
+                {
+                  setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+                  setLocalEpoch( reply.getBaseEpoch( ) );
+                  try {
+                    setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+                  } catch ( Exception ex ) {
+                    setLocalState( "n/a: " + ex.getMessage( ) );
+                  }
+                  if ( Boolean.TRUE.equals( request.getShowEvents( ) ) ) {
+                    getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                        TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+                  }
+                }
+              } );
+            }
+          }
         }
       }
     }

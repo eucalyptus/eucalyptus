@@ -22,6 +22,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -273,19 +274,29 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
     String uri;
+    URI u = null;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      u = new URI( uri );
+      u.parseServerAuthority( );
+    } catch ( URISyntaxException e ) {
+      uri = String.format( this.getExternalUriPattern( ), Internets.localhost( ), this.getPort( ) );
+      try {
+        u = new URI( uri );
+        u.parseServerAuthority( );
+      } catch ( URISyntaxException ex ) {
+        u = URI.create( uri );
+      }
     } catch ( MissingFormatArgumentException e ) {
       uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      try {
+        u = new URI( uri );
+        u.parseServerAuthority( );
+      } catch ( URISyntaxException ex ) {
+        u = URI.create( uri );        
+      }
     }
-    try {
-      URI u = new URI( uri );
-      u.parseServerAuthority( );
-      return u;
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      return URI.create( uri );
-    }
+    return u;
   }
   
   @Override

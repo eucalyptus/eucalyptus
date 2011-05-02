@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
@@ -394,9 +395,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 							throw new EucalyptusCloudException("Attempt to set secondary failed. Unable to proceed!");
 						}
 					}
-					NavigableSet<Service> hii = Components.lookup("walrus").getServices();
+					NavigableSet<ServiceConfiguration> hii = Components.lookup("walrus").lookupServiceConfigurations( );
 					boolean isOtherPrimary = false;
-					for (Service ii : hii) {
+					for (ServiceConfiguration ii : hii) {
 						isOtherPrimary |= Component.State.ENABLED.equals(ii.getStateMachine().getState()) && !ii.isLocal() ? true : false;
 					}
 					if(!isOtherPrimary) {
