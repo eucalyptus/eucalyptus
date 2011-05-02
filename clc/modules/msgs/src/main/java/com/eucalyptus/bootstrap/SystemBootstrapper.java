@@ -114,7 +114,7 @@ public class SystemBootstrapper {
     Logs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      Bootstrap.initialize( );
+      Bootstrap.init( );
       Bootstrap.Stage stage = Bootstrap.transition( );
       stage.load( );
       return true;

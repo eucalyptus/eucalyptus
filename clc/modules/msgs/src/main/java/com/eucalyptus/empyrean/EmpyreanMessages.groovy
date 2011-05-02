@@ -87,16 +87,18 @@ public class EnableServiceResponseType extends ServiceTransitionType implements 
 public class DisableServiceType extends ServiceTransitionType {}
 public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
 public class ServiceId extends EucalyptusData {
-  String uuid;/** A UUID of the registration **/
+  String uuid;/** UUID of the registration **/
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String type;/** name of the ComponentId **/
+  String fullName;/** full name of the registration **/
   String uri;
 }
 public class ServiceInfoType extends EucalyptusData {
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String type;/** name of the ComponentId **/
+  String fullName;/** full name of the registration **/
   ArrayList<String> uris = new ArrayList<String>( );
 }
 public class ServiceStatusType extends EucalyptusData {
@@ -106,6 +108,8 @@ public class ServiceStatusType extends EucalyptusData {
   ArrayList<String> details = new ArrayList<String>( );
 }
 public class DescribeServicesType extends ServiceTransitionType {
+  Boolean listAll;
+  Boolean showDetails;
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );

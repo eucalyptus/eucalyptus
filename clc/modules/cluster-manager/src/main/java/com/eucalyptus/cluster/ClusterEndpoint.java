@@ -77,7 +77,9 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.async.Callbacks;
@@ -364,9 +366,10 @@ public class ClusterEndpoint implements Startable {
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType(
-                                                      "Walrus",
-                                                      Components.lookup( "walrus" ).lookupService( "walrus" ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
+      Component walrus = Components.lookup( Walrus.class );
+      if( !walrus.lookupServices( ).isEmpty( ) ) {
+        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), walrus.lookupServices( ).first( ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
+      }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }

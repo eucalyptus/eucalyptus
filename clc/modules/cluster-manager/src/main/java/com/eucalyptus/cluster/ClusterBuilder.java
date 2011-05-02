@@ -86,15 +86,15 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
-          Clusters.getInstance( ).registerDisabled( newCluster );
           newCluster.start( );
         } else {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+            Clusters.getInstance( ).deregister( config.getName( ) );
             newCluster.start( );
           } catch ( NoSuchElementException ex ) {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).disable( config.getName( ) );
+            Clusters.getInstance( ).deregister( config.getName( ) );
             newCluster.start( );
           }
         }

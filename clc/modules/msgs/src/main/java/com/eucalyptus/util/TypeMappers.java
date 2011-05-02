@@ -22,6 +22,18 @@ public class TypeMappers {
   private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( Comparators.classes( ), Comparators.classes( ) );
   private static Map<String, Function>           mappers      = Maps.newHashMap( );
   
+  public static <A,B> B transform( A from, Class<B> to ) {
+    Class target = from.getClass( );
+    for( Class p : Classes.ancestry( from ) ) {
+      if( !knownMappers.get( p ).isEmpty( ) ) {
+        target = p;
+        break;
+      }
+    }
+    Function func = lookup( target, to );
+    return ( B ) func.apply( from );
+  }
+  
   public static <A, B> Function<A, B> lookup( Class<A> a, Class<B> b ) {
     assertThat( knownMappers.keySet( ), hasItem( a ) );
     assertThat( knownMappers.get( a ), hasItem( b ) );

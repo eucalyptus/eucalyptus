@@ -80,6 +80,9 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
@@ -90,7 +93,35 @@ public class Configuration {
   public static Logger LOG                 = Logger.getLogger( Configuration.class );
   static String        CLUSTER_KEY_FSTRING = "cc-%s";
   static String        NODE_KEY_FSTRING    = "nc-%s";
+
+  @TypeMapper
+  public enum ComponentInfoMapper implements Function<ServiceConfiguration,ComponentInfoType> {
+    INSTANCE;
+
+    @Override
+    public ComponentInfoType apply( final ServiceConfiguration input ) {
+      return new ComponentInfoType( ) {
+        {
+          this.setType( input.getComponentId( ).name( ) );
+          this.setPartition( input.getPartition( ) );
+          this.setName( input.getName( ) );
+          this.setHostName( input.getHostName( ) );
+          this.setFullName( input.getFullName( ).toString( ) );
+          try {
+            this.setState( input.lookupState( ).toString( ) );
+          } catch ( Exception ex ) {
+            this.setState( "n/a: " + ex.getMessage( ) );
+          }
+          this.setDetail( input.lookupDetails( ).isEmpty( )
+                     ? ""
+                     : input.lookupDetails( ).iterator( ).next( ).toString( ) );
+        }
+      };
+    }
+    
+  }
   
+
   public RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
     final Component component = Components.oneWhichHandles( request.getClass( ) );
     final ComponentId componentId = component.getComponentId( );
@@ -177,64 +208,31 @@ public class Configuration {
         if ( !c.hasLocalService( ) ) {
           listConfigs.add( new ComponentInfoType( ) {
             {
-              setType( c.getComponentId( ).name( ) );
-              setPartition( c.getComponentId( ).getPartition( ) );
-              setName( "" );
-              setHostName( "" );
-              setFullName( "" );
-              setState( c.getState( ).toString( ) );
-              setDetail( "" );
+              this.setType( c.getComponentId( ).name( ) );
+              this.setPartition( c.getComponentId( ).getPartition( ) );
+              this.setName( "" );
+              this.setHostName( "" );
+              this.setFullName( "" );
+              this.setState( c.getState( ).toString( ) );
+              this.setDetail( "" );
             }
           } );
         } else {
           final ServiceConfiguration config = c.getLocalServiceConfiguration( );
-          listConfigs.add( new ComponentInfoType( ) {
-            {
-              setType( config.getComponentId( ).name( ) );
-              setPartition( config.getPartition( ) );
-              setName( config.getName( ) );
-              setHostName( config.getHostName( ) );
-              setFullName( config.getFullName( ).toString( ) );
-              setState( config.lookupState( ).toString( ) );
-              setDetail( config.lookupDetails( ).isEmpty( ) || !Boolean.TRUE.equals( request.getVerbose( ) )
-                         ? ""
-                         : config.lookupDetails( ).iterator( ).next( ).toString( ) );
-            }
-          } );
+          ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
+          if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
+            info.setDetail( "" );
+          }
+          listConfigs.add( info );
         }
       }
     } else {
       for ( final ServiceConfiguration config : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
-        try {
-          listConfigs.add( new ComponentInfoType( ) {
-            {
-              setType( config.getComponentId( ).name( ) );
-              setPartition( config.getPartition( ) );
-              setName( config.getName( ) );
-              setHostName( config.getHostName( ) );
-              setFullName( config.getFullName( ).toString( ) );
-              setState( config.lookupState( ).toString( ) );
-              setDetail( config.lookupDetails( ).isEmpty( ) || !Boolean.TRUE.equals( request.getVerbose( ) )
-                ? ""
-                : config.lookupDetails( ).iterator( ).next( ).toString( ) );
-            }
-          } );
-        } catch ( final NoSuchElementException ex ) {
-          LOG.error( ex, ex );
-          listConfigs.add( new ComponentInfoType( ) {
-            {
-              setType( config.getComponentId( ).name( ) );
-              setPartition( config.getPartition( ) );
-              setName( config.getName( ) );
-              setHostName( config.getHostName( ) );
-              setFullName( config.getFullName( ).toString( ) );
-              setState( config.lookupComponent( ).getState( ).toString( ) );
-              setDetail( config.lookupDetails( ).isEmpty( ) || !Boolean.TRUE.equals( request.getVerbose( ) )
-                         ? ""
-                         : config.lookupDetails( ).iterator( ).next( ).toString( ) );
-            }
-          } );
+        ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
+        if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
+          info.setDetail( "" );
         }
+        listConfigs.add( info );
       }
     }
     return reply;

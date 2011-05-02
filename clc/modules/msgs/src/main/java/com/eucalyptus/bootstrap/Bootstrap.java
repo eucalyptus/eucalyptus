@@ -288,6 +288,7 @@ public class Bootstrap {
   private static Boolean starting     = false;
   private static Boolean finished     = false;
   private static Stage   currentStage = Stage.SystemInit;
+  private static Boolean shutdown     = false;
   
   /**
    * @return Bootstrap.currentStage
@@ -413,6 +414,10 @@ public class Bootstrap {
     return finished;
   }
   
+  public static Boolean isShuttingDown( ) {
+    return shutdown;
+  }
+  
   public static Boolean isCloudController( ) {
     return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
@@ -450,8 +455,16 @@ public class Bootstrap {
    * 
    * @throws Throwable
    */
-  public static void initialize( ) throws Throwable {
+  public static void init( ) throws Throwable {
     
+    Runtime.getRuntime( ).addShutdownHook( new Thread() {
+
+      @Override
+      public void run( ) {
+        Bootstrap.shutdown = Boolean.TRUE;
+      }
+      
+    } );
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
      * the descendants of {@link ServiceJarDiscovery}.
@@ -500,7 +513,7 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getLocalService( ).getStateMachine().isLegalTransition( transition ) ) {
+    if ( component.getLocalService( ).getStateMachine( ).isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );

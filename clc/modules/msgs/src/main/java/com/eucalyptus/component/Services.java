@@ -65,7 +65,6 @@ package com.eucalyptus.component;
 
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 
 public class Services {
@@ -79,6 +78,7 @@ public class Services {
         {
           this.setUuid( input.getFullName( ).toString( ) );
           this.setPartition( input.getPartition( ) );
+          this.setFullName( input.getFullName( ).toString( ) );
           this.setName( input.getName( ) );
           this.setType( input.getComponentId( ).getName( ) );
           this.setUri( input.getUri( ).toString( ) );
@@ -86,7 +86,7 @@ public class Services {
       };
     }
   }
-  
+
   @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
   public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
     INSTANCE;
@@ -99,7 +99,7 @@ public class Services {
   }
   
   @TypeMapper
-  public enum ServiceDispatcherMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
     INSTANCE;
     
     @Override
@@ -107,11 +107,6 @@ public class Services {
       return ServiceBuilderRegistry.lookup( input.getComponentId( ) );
     }
     
-  }
-  
-  public static <T> T transform( ServiceConfiguration config, Class<T> c ) {
-    Function<ServiceConfiguration, T> func = TypeMappers.lookup( ServiceConfiguration.class, c );
-    return func.apply( config );
   }
   
   static Service newServiceInstance( ServiceConfiguration config ) {

@@ -182,6 +182,7 @@ public class LifecycleEvents {
   public static class ServiceErrorEvent extends AbstractServiceEvent {
     ServiceErrorEvent( ServiceConfiguration serviceConfiguration, ServiceCheckRecord event ) {
       super( LifecycleEvent.Type.ERROR, serviceConfiguration, event );
+      LOG.error( this );
     }
     
   }

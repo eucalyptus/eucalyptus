@@ -8,8 +8,10 @@ import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.google.common.base.Function;
 
 /**
- * A well formed type mapper annotation is on an instance of {@link Function} and the annotation's value must be a pair of class types {@code F, T} such that
- * {@code T result = Function#apply(F)}.
+ * A well formed type mapper is on an instance of {@link Function} and the annotation's value can be: 
+ * - a pair of class types, {@code @TypeMapper(F.class, T.class})}, such that {@code T result = Function#apply(F)}.
+ * - explict from and to declarations, {@code @TypeMapper(from = F.class, to = T.class)}, such that {@code T result = Function#apply(F)}.
+ * - empty, {@code @TypeMapper}, in which case the types are intefered from the declaration of the class.
  * 
  * An off-the-cuff object-to-string example to indicate the spirit of the annotations usage:
  * 

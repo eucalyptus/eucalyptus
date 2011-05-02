@@ -106,7 +106,7 @@ public class Automata {
     S currentState = hasFsm.getStateMachine( ).getState( );
     int index = Lists.newArrayList( toStates ).indexOf( currentState );
     S[] actualStates = toStates; 
-    if( index > 0 && index < toStates.length ) {
+    if( index >= 0 && index < toStates.length ) {
       actualStates = Arrays.copyOfRange( toStates, index+1, toStates.length );
     }
     LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: " + Joiner.on( "->" ).join( actualStates ) );

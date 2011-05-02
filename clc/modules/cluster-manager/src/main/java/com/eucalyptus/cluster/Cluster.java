@@ -66,6 +66,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -136,7 +137,23 @@ import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
-  private static Logger                                  LOG                   = Logger.getLogger( Cluster.class );
+  /**
+   * 
+   */
+  private static final long                              STATE_INTERVAL_ENABLED  = 10l;
+  /**
+   * 
+   */
+  private static final long                              STATE_INTERVAL_DISABLED = 10l;
+  /**
+   * 
+   */
+  private static final long                              STATE_INTERVAL_NOTREADY = 10l;
+  /**
+   * 
+   */
+  private static final long                              STATE_INTERVAL_PENDING  = 3l;
+  private static Logger                                  LOG                     = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
@@ -144,30 +161,30 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
-  private NodeLogInfo                                    lastLog               = new NodeLogInfo( );
-  private boolean                                        hasClusterCert        = false;
-  private boolean                                        hasNodeCert           = false;
-  private final Predicate<Cluster>                       COMPONENT_IS_DISABLED = new Predicate<Cluster>( ) {
-                                                                                 
-                                                                                 @Override
-                                                                                 public boolean apply( final Cluster input ) {
-                                                                                   return Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
-                                                                                 }
-                                                                               };
-  private final Predicate<Cluster>                       COMPONENT_IS_ENABLED  = new Predicate<Cluster>( ) {
-                                                                                 
-                                                                                 @Override
-                                                                                 public boolean apply( final Cluster input ) {
-                                                                                   return Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
-                                                                                 }
-                                                                               };
-  private final Predicate<Cluster>                       COMPONENT_IS_STARTED  = new Predicate<Cluster>( ) {
-                                                                                 
-                                                                                 @Override
-                                                                                 public boolean apply( final Cluster input ) {
-                                                                                   return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( );
-                                                                                 }
-                                                                               };
+  private NodeLogInfo                                    lastLog                 = new NodeLogInfo( );
+  private boolean                                        hasClusterCert          = false;
+  private boolean                                        hasNodeCert             = false;
+  private final Predicate<Cluster>                       COMPONENT_IS_DISABLED   = new Predicate<Cluster>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public boolean apply( final Cluster input ) {
+                                                                                     return Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
+                                                                                   }
+                                                                                 };
+  private final Predicate<Cluster>                       COMPONENT_IS_ENABLED    = new Predicate<Cluster>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public boolean apply( final Cluster input ) {
+                                                                                     return Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
+                                                                                   }
+                                                                                 };
+  private final Predicate<Cluster>                       COMPONENT_IS_STARTED    = new Predicate<Cluster>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public boolean apply( final Cluster input ) {
+                                                                                     return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( );
+                                                                                   }
+                                                                                 };
   
   enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
     LOGS( LogDataCallback.class ),
@@ -318,30 +335,33 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   private void fireClockTick( final Hertz tick ) {
     try {
+      boolean initialized = this.configuration.lookupState( ).ordinal( ) > Component.State.LOADED.ordinal( );
       if ( !this.stateMachine.isBusy( ) ) {
         Callable<CheckedListenableFuture<Cluster>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
-            if ( tick.isAsserted( 3l ) ) {
+            if ( tick.isAsserted( Cluster.STATE_INTERVAL_PENDING ) ) {
               transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING, State.STARTING_NOTREADY,
                                                          State.NOTREADY, State.DISABLED );
             }
             break;
           case NOTREADY:
-            if ( tick.isAsserted( 10l ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_NOTREADY ) ) {
               transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
             }
             break;
           case DISABLED:
-            if ( tick.isAsserted( 10l ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.DISABLED.isIn( this.configuration ) ) {
               transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
+            } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
+              transition = Automata.sequenceTransitions( this, State.ENABLING,  State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS, State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
             }
             break;
           case ENABLED:
-            if ( tick.isAsserted( 10l ) && Component.State.ENABLED.apply( this.configuration ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-            } else if ( Component.State.DISABLED.apply( this.configuration ) || Component.State.NOTREADY.apply( this.configuration ) ) {
+            } else if ( initialized && Component.State.DISABLED.isIn( this.configuration ) || Component.State.NOTREADY.isIn( this.configuration ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
             }
             break;
@@ -349,7 +369,17 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             break;
         }
         if ( transition != null ) {
-          Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+          final Callable<CheckedListenableFuture<Cluster>> t = transition;
+          Threads.lookup( ClusterController.class, Cluster.class ).submit( new Runnable() {
+
+            @Override
+            public void run( ) {
+              try {
+                t.call( ).get( );
+              } catch ( Exception ex ) {
+                Cluster.this.configuration.error( ex );
+              }
+            }} );
         }
       }
     } catch ( final IllegalStateException ex ) {
@@ -443,27 +473,46 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void start( ) throws ServiceRegistrationException {
-    Clusters.getInstance( ).register( this );
+    Clusters.getInstance( ).registerDisabled( this );
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public void enable( ) throws ServiceRegistrationException {
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING,
-                                                                                                             State.STARTING_AUTHENTICATING,
-                                                                                                             State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                                             State.DISABLED,
-                                                                                                             State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                                             State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                                             State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                                             State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    try {
+      Clusters.getInstance( ).enable( this );
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING,
+                                                                                                  State.STARTING_AUTHENTICATING,
+                                                                                                  State.STARTING_NOTREADY, State.NOTREADY,
+                                                                                                  State.DISABLED,
+                                                                                                  State.ENABLING, State.ENABLING_RESOURCES,
+                                                                                                  State.ENABLING_NET, State.ENABLING_VMS,
+                                                                                                  State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
+                                                                                                  State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( NoSuchElementException ex ) {
+      this.configuration.error( ex );
+    } catch ( InterruptedException ex ) {
+      this.configuration.error( ex );
+    } catch ( ExecutionException ex ) {
+      this.configuration.error( ex );
+    }
   }
   
   public void disable( ) throws ServiceRegistrationException {
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    try {
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( Exception ex ) {
+      this.configuration.error( ex );
+    } finally {
+      try {
+        Clusters.getInstance( ).disable( this );
+      } catch ( NoSuchElementException ex ) {
+        this.configuration.error( ex );
+      }
+    }
   }
   
   public void stop( ) throws ServiceRegistrationException {

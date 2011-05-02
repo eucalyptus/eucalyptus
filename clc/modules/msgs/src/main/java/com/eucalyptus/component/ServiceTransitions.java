@@ -94,13 +94,30 @@ import com.eucalyptus.ws.util.PipelineRegistry;
 public class ServiceTransitions {
   private static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
+  public static CheckedListenableFuture<ServiceConfiguration> transitionChain( ServiceConfiguration configuration, State goalState ) {
+    switch ( goalState ) {
+      case DISABLED:
+        return disableTransitionChain( configuration );
+      case ENABLED:
+        return enableTransitionChain( configuration );
+      case STOPPED:
+        return stopTransitionChain( configuration );
+      case NOTREADY:
+        return startTransitionChain( configuration );
+      default:
+        break;
+    }
+    return null;
+  }
+
+  
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
       CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.PRIMORDIAL,
                                                                                                            Component.State.INITIALIZED, Component.State.LOADED,
-                                                                                                           Component.State.NOTREADY );
+                                                                                                           Component.State.NOTREADY, Component.State.DISABLED );
         
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
         transitionResult = result.get( );
@@ -125,6 +142,44 @@ public class ServiceTransitions {
                                                                                                            Component.State.INITIALIZED, Component.State.LOADED,
                                                                                                            Component.State.NOTREADY,
                                                                                                            Component.State.DISABLED, Component.State.ENABLED );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        transitionResult = result.get( );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        transitionResult = Futures.predestinedFailedFuture( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex.getCause( ), ex.getCause( ) );
+        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+      }
+      return transitionResult;
+    } else {
+      return Futures.predestinedFuture( config );
+    }
+  }
+  static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
+    if ( !State.DISABLED.equals( config.lookupState( ) ) ) {
+      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+      try {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED, Component.State.DISABLED );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        transitionResult = result.get( );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        transitionResult = Futures.predestinedFailedFuture( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex.getCause( ), ex.getCause( ) );
+        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+      }
+      return transitionResult;
+    } else {
+      return Futures.predestinedFuture( config );
+    }
+  }
+  static final CheckedListenableFuture<ServiceConfiguration> stopTransitionChain( final ServiceConfiguration config ) {
+    if ( !State.STOPPED.equals( config.lookupState( ) ) ) {
+      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
+      try {
+        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED, Component.State.DISABLED, Component.State.STOPPED );
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
         transitionResult = result.get( );
       } catch ( InterruptedException ex ) {
@@ -535,4 +590,5 @@ public class ServiceTransitions {
                                                                                        }
                                                                                      }
                                                                                    };
+
 }

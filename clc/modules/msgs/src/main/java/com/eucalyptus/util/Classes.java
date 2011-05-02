@@ -95,6 +95,7 @@ public class Classes {
       }
     }
   }
+
   public static List<Class> ancestry( Object o ) {
     Function<Class, Class> parent = new Function<Class, Class>( ) {
       @Override
@@ -102,16 +103,26 @@ public class Classes {
         return arg0.getSuperclass( );
       }
     };
+    Function<Class, Class[]> parentInterfaces = new Function<Class, Class[]>( ) {
+      @Override
+      public Class[] apply( Class arg0 ) {
+        return arg0.getInterfaces( );
+      }
+    };
     List<Class> ret = Lists.newArrayList( );
     for ( Class t = ( o instanceof Class
-      ? ( Class ) o
-      : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) );
+        ? ( Class ) o
+        : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) ) {
+      ret.addAll( Lists.newArrayList( parentInterfaces.apply( t ) ) );
+    }
     return ret;
   }
   
   public static List<Class> genericsToClasses( Object o ) {
     List<Class> ret = Lists.newArrayList( );
-    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
+    if( !o.getClass( ).isEnum( ) ) {
+      ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
+    }
     ret.addAll( processTypeForGenerics( o.getClass( ).getGenericInterfaces( ) ) );
     return ret;
   }

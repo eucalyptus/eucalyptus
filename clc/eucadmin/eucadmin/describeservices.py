@@ -37,6 +37,22 @@ class DescribeServices(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
+    Params = [
+              Param(name='ListAll',
+                    short_name='A',
+                    long_name='all',
+                    ptype='boolean',
+                    default=False,
+                    optional=True,
+                    doc='List all services known by this host.'),
+              Param(name='ShowDetails',
+                    short_name='d',
+                    long_name='details',
+                    ptype='boolean',
+                    default=False,
+                    optional=True,
+                    doc='Show service event details.')
+              ]
 
     def __init__(self, **args):
         AWSQueryRequest.__init__(self, **args)
@@ -51,7 +67,7 @@ class DescribeServices(AWSQueryRequest):
       
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
-        fmt = 'SERVICE%-15.15s\t%s.%s\t%s\t%s\t%s'
+        fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
             print fmt % (service_id['euca:type'],
@@ -59,6 +75,7 @@ class DescribeServices(AWSQueryRequest):
                          service_id['euca:name'],
                          s['euca:localState'],
                          s['euca:localEpoch'],
+                         service_id['euca:fullName'],
                          service_id['euca:uri'])
 
     def main(self, **args):
