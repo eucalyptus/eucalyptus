@@ -69,6 +69,7 @@ import java.security.cert.X509Certificate;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
@@ -200,7 +201,7 @@ public class BasicService extends AbstractService implements Service {
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
-    } else if ( event instanceof Hertz ) {
+    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) ) {
       ServiceConfiguration config = this.getServiceConfiguration( );
       if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
         try {
