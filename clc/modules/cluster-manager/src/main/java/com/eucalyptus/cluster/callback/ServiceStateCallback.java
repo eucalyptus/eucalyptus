@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ServiceChecks;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.event.LifecycleEvents;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.ServiceStatusType;
@@ -30,7 +30,11 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
       for ( ServiceStatusType status : serviceStatuses ) {
         if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
           LOG.debug( "Found service info: " + status );
-          for( CheckException ex : ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) ) {
+          Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
+          CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
+          if ( Component.State.NOTREADY.equals( serviceState ) ) {
+            throw new RuntimeException( ex );
+          } else {
             this.getSubject( ).getConfiguration( ).info( ex );
           }
         } else {

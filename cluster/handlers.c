@@ -3661,7 +3661,7 @@ int init_config(void) {
   config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
-  ccChangeState(ENABLED);
+  ccChangeState(DISABLED);
   config->ccStatus.localEpoch = 0;
   snprintf(config->ccStatus.details, 1024, "ERRORS=0");
   snprintf(config->ccStatus.serviceId.type, 32, "cluster");

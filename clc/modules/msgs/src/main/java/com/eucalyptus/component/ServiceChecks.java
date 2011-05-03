@@ -135,7 +135,7 @@ public class ServiceChecks {
     };
   }
   
-  private static CheckException chainCheckExceptions( List<CheckException> exs ) {
+  public static CheckException chainCheckExceptions( List<CheckException> exs ) {
     CheckException last = null;
     for ( CheckException ex : Lists.reverse( exs ) ) {
       if ( last != null ) {
