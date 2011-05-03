@@ -79,6 +79,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
+import com.eucalyptus.cluster.callback.DisableServiceCallback;
+import com.eucalyptus.cluster.callback.EnableServiceCallback;
 import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
@@ -174,14 +176,40 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     return Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
-                                                                                   }
+                                                                                     if( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+                                                                                       try {
+                                                                                        AsyncRequests.newRequest( new DisableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                        return true;
+                                                                                      } catch ( ExecutionException ex ) {
+                                                                                        Cluster.this.errors.add( ex.getCause( ) );
+                                                                                        return false;
+                                                                                      } catch ( InterruptedException ex ) {
+                                                                                        Cluster.this.errors.add( ex.getCause( ) );
+                                                                                        return false;
+                                                                                      }
+                                                                                     } else {
+                                                                                       return false;
+                                                                                     }
+                                                                                  }
                                                                                  };
   private final Predicate<Cluster>                       COMPONENT_IS_ENABLED    = new Predicate<Cluster>( ) {
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     return Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) );
+                                                                                     if( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+                                                                                       try {
+                                                                                        AsyncRequests.newRequest( new EnableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                        return true;
+                                                                                      } catch ( ExecutionException ex ) {
+                                                                                        Cluster.this.errors.add( ex.getCause( ) );
+                                                                                        return false;
+                                                                                      } catch ( InterruptedException ex ) {
+                                                                                        Cluster.this.errors.add( ex.getCause( ) );
+                                                                                        return false;
+                                                                                      }
+                                                                                     } else {
+                                                                                       return false;
+                                                                                     }
                                                                                    }
                                                                                  };
   private final Predicate<Cluster>                       COMPONENT_IS_STARTED    = new Predicate<Cluster>( ) {
@@ -326,7 +354,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.this.COMPONENT_IS_ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
-        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Refresh.SERVICEREADY );
+        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.this.COMPONENT_IS_DISABLED );
         
         this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
