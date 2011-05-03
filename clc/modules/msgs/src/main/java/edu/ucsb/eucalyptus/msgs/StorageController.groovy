@@ -142,14 +142,16 @@ public class CreateStorageVolumeType extends StorageRequestType {
 	String volumeId;
 	String size;
 	String snapshotId;
+	String parentVolumeId;
 	
 	def CreateStorageVolumeType() {
 	}
 	
-	def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId) {
+	def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId, final String parentVolumeId) {
 		this.volumeId = volumeId;
 		this.size = size;
 		this.snapshotId = snapshotId;
+		this.parentVolumeId = parentVolumeId;
 	}
 }
 
