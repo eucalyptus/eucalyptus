@@ -31,7 +31,6 @@
 import os
 import pwd
 from eucadmin.command import Command
-from eucadmin.utils import chown_recursive, chmod_recursive
 
 RootWrapPath = 'usr/lib/eucalyptus/euca_rootwrap'
 
@@ -97,7 +96,7 @@ class Check(object):
         if not os.path.isdir(d):
             try:
                 os.mkdir(d)
-                chown_recursive(d, self.euca_user_id, self.euca_user_group_id)
+                os.chown(d, self.euca_user_id, self.euca_user_group_id)
             except OSError:
                 self.messages.append('Unable to make directory: %s' % d)
                 self.status = 1
@@ -107,7 +106,7 @@ class Check(object):
             if not os.path.isdir(d):
                 try:
                     os.mkdir(d)
-                    chown_recursive(d, self.euca_user_id, self.euca_user_group_id)
+                    os.chown(d, self.euca_user_id, self.euca_user_group_id)
                 except OSError:
                     self.messages.append('Unable to make directory: %s' % d)
                     self.status = 1
