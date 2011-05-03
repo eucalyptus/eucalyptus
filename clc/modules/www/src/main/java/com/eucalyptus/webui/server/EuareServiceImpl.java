@@ -1,6 +1,6 @@
 package com.eucalyptus.webui.server;
 
-import com.eucalyptus.webui.client.EuareService;
+import com.eucalyptus.webui.client.service.EuareService;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EuareServiceImpl extends RemoteServiceServlet implements EuareService {

@@ -1,0 +1,72 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        .boundingBox {
+        	/*padding:2px;*/
+            height:100%;
+            width:100%;        	
+        }
+        .buttonDefault {
+        	font-size:70%;
+        	font-style:italic;
+        	height:100%;
+        	width:100%;
+            border:0px solid #FFFFFF;
+            background-color:transparent;
+            cursor:pointer;  	
+        }
+        .icon {
+        	vertical-align:middle;
+        }
+    </ui:style>
+    
+    <ui:style field="switchStyle" type="com.eucalyptus.webui.client.view.LogSwitch.SwitchStyle">
+        /*
+        .inactive {
+            background-image:url('themes/active/arrowup2.png');
+            background-repeat:no-repeat;
+            background-position:center center;
+        }
+        .active {
+            background-image:url('themes/active/arrowup2active.png');
+            background-repeat:no-repeat;
+            background-position:center center;
+        }
+        .clickedInactive {
+            background-image:url('themes/active/arrowdown2.png');
+            background-repeat:no-repeat;
+            background-position:center center;
+        }        
+        .clickedActive {
+            background-image:url('themes/active/arrowdown2active.png');
+            background-repeat:no-repeat;
+            background-position:center center;
+        }
+        */
+        .inactive {
+        	color:#666666;
+        }
+        .active {
+        	color:#F6C73E;
+        }
+        .clickedInactive {
+        	color:#666666;
+        	background-color:#DDDDDD;
+        	border:1px solid #AAAAAA;
+        }        
+        .clickedActive {
+            color:#F6C73E;
+            background-color:#DDDDDD;
+            border:1px solid #AAAAAA;        	
+        }               
+    </ui:style>
+    
+    <g:HTMLPanel styleName="{style.boundingBox}">
+        <g:Button styleName="{style.buttonDefault} {switchStyle.inactive}" ui:field="switchButton">
+            <img alt="Log" src="themes/active/log.png" class="{style.icon}"/>&nbsp;LOG
+        </g:Button>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

@@ -4,10 +4,58 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>Eucalyptus</title>
     <script type="text/javascript" language="javascript" src="webui.nocache.js"></script>
+    <link rel="stylesheet" type="text/css" href="reset.css" />
+    <link rel="stylesheet" type="text/css" href="themes/active/global.css" />
   </head>
 
   <body>
     <iframe src="javascript:''" id="__gwt_historyFrame" tabIndex='-1' style="position:absolute;width:0;height:0;border:0"></iframe>
 
+    <!-- To enable browser's password saving mechanism, we can't create the login form in GWT.-->
+    <div style="display:none">
+        <form id="loginForm">
+            <table style="width:100%;height:100%;">
+                <tbody>
+                    <tr>
+                        <td colspan="2" align="center">
+                            <div id="signInLabel">Please sign in your</div>
+                            <table style="width:100%;height:100%;text-align:center">
+                                <tbody>
+                                    <tr>
+                                        <td style="vertical-align:middle"><img alt="Eucalyptus" src="themes/active/logo.png" id="logoImage"/></td>
+                                        <td style="vertical-align:middle"><div id="eucaLabel"><h1>EUCALYPTUS cloud</h1></div></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr>
+                        <td style="width:30%"><div id="usernameLabel">Username</div></td>
+                        <td><input type="text" id="userName" name="username"/></td>
+                    </tr>
+                    <tr>
+                        <td/>
+                        <td><div id="formatLabel">format:&lt;user&gt;@&lt;account&gt;</div></td>
+                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr>
+                        <td><div id="passwordLabel">Password</div></td>
+                        <td><input type="password" id="password" name="password"/></td>
+                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr>
+                        <td style="text-align:right"><input type="checkbox" id="checkStaySignedIn" name="staySignedIn"/></td>
+                        <td style="vertical-align:middle"><div id="staySignedInLabel">Stay signed in</div></td>
+                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr>
+                        <td colspan="2"><input type="submit" value="Sign in"/></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+    
   </body>
 </html>

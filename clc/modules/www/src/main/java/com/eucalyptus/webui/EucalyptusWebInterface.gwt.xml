@@ -4,6 +4,8 @@
     <inherits name='com.google.gwt.user.User'/>
     <inherits name="com.google.gwt.resources.Resources" />
     <inherits name="com.google.gwt.logging.Logging"/>
+    <inherits name="com.google.gwt.activity.Activity"/>
+    <inherits name="com.google.gwt.place.Place"/>
 
     <!-- Logging -->
     <set-property name="gwt.logging.logLevel" value="INFO"/>
@@ -18,6 +20,11 @@
     <!-- Entry point -->
     <entry-point class='com.eucalyptus.webui.client.EucalyptusWebInterface'/>
     
+    <!-- Use ClientFactoryImpl by default -->
+    <replace-with class="com.eucalyptus.webui.client.ClientFactoryImpl">
+        <when-type-is class="com.eucalyptus.webui.client.ClientFactory" />
+    </replace-with>
+  
     <!-- Sources -->
     <source path='client'/>
     <source path='shared'/>

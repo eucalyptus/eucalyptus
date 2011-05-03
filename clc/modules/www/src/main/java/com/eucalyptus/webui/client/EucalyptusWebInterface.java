@@ -2,48 +2,56 @@ package com.eucalyptus.webui.client;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.eucalyptus.webui.client.mapper.WebUiActivityMapper;
+import com.eucalyptus.webui.client.mapper.WebUiPlaceHistoryMapper;
+import com.eucalyptus.webui.client.place.LoginPlace;
+import com.eucalyptus.webui.client.view.ShellViewImpl;
+import com.google.gwt.activity.shared.ActivityManager;
+import com.google.gwt.activity.shared.ActivityMapper;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.place.shared.Place;
+import com.google.gwt.place.shared.PlaceController;
+import com.google.gwt.place.shared.PlaceHistoryHandler;
 
 public class EucalyptusWebInterface implements EntryPoint {
 
   private static Logger LOG = Logger.getLogger( "EucalyptusWebInterface" );
   
-  private final EuareServiceAsync euareService = GWT.create( EuareService.class );
+  public static ShellViewImpl shell;
+  
+  private Place defaultPlace = new LoginPlace( );
+  private AppWidget appWidget = new AppWidget( );
   
   @Override
   public void onModuleLoad( ) {
-    Button button = new Button( "Click" );
-    button.addClickHandler( new ClickHandler( ) {
-
-      @Override
-      public void onClick( ClickEvent arg0 ) {
-        callEuareService( "Hello" );
+    GWT.setUncaughtExceptionHandler(new GWT.UncaughtExceptionHandler() {
+      public void onUncaughtException(Throwable e) {
+        LOG.log(Level.SEVERE, e.getMessage(), e);
       }
-      
     });
-    
-    RootPanel.get( ).add( button );
+    // Create ClientFactory using deferred binding so we can replace with different
+    // impls in gwt.xml
+    ClientFactory clientFactory = GWT.create( ClientFactory.class );
+    EventBus eventBus = clientFactory.getEventBus();
+    PlaceController placeController = clientFactory.getPlaceController( );
+
+    // Start ActivityManager for the main widget with our ActivityMapper
+    ActivityMapper activityMapper = new WebUiActivityMapper( clientFactory );
+    ActivityManager activityManager = new ActivityManager( activityMapper, eventBus );
+    activityManager.setDisplay( appWidget );
+
+    // Start PlaceHistoryHandler with our PlaceHistoryMapper
+    WebUiPlaceHistoryMapper historyMapper= GWT.create(WebUiPlaceHistoryMapper.class);
+    PlaceHistoryHandler historyHandler = new PlaceHistoryHandler(historyMapper);
+    historyHandler.register(placeController, eventBus, defaultPlace);
+
+    shell = ( ShellViewImpl ) clientFactory.getStartView( );
+    //RootLayoutPanel.get().add(appWidget);
+    // Goes to place represented on URL or default place
+    historyHandler.handleCurrentHistory( );
+    //RootLayoutPanel.get( ).add( shell = new ShellViewImpl( ) );
   }
-
-  private void callEuareService( String message ) {
-    euareService.test( message, new AsyncCallback<String>() {
-
-      @Override
-      public void onFailure( Throwable e ) {
-        LOG.log( Level.WARNING, "Failed to call the service: " + e.getMessage( ) );
-      }
-
-      @Override
-      public void onSuccess( String result ) {
-        LOG.log( Level.INFO, "Got from server: " + result );
-      }
-      
-    });
-  }
+  
 }

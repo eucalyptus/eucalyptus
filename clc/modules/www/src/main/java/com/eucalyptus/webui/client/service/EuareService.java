@@ -1,4 +1,4 @@
-package com.eucalyptus.webui.client;
+package com.eucalyptus.webui.client.service;
 
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
