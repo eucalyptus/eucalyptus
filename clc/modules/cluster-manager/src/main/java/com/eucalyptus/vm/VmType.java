@@ -63,28 +63,21 @@
  */
 package com.eucalyptus.vm;
 
-import java.io.Serializable;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import javax.persistence.Column;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cloud.VirtualMachineType;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -205,7 +198,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
 
   @Override
   public String getOwnerAccountId( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.getAccountId( );
+    return FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( );
   }
 
   @Override
@@ -217,7 +210,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountId( ) )
+                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
   }
 

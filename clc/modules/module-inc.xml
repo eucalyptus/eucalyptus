@@ -182,22 +182,6 @@
 			<javac target="1.5" debug="true" />
 		</groovyc>
 	</target>
-	<target name="builder-test">
-		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
-			<isset property="builder.suffix" />
-		</condition>
-        <echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
-		<uptodate property="build.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${test.dir}" includes="**/*" />
-		</uptodate>
-	    <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
-		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
-		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-			<javac target="1.5" debug="true" />
-		</groovyc>
-	</target>
 	<!--================================== jar target ==================================-->
 	<target name="jar">
 		<mkdir dir="${target.dir}" />

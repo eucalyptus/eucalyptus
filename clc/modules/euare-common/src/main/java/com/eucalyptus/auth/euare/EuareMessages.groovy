@@ -2,12 +2,13 @@ package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
-import java.util.Date;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.Euare;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.Euare;
+import java.util.Date;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {
@@ -508,6 +509,7 @@ public class SigningCertificateType extends EuareMessage {
   String userName;
   String certificateId;
   String certificateBody;
+  String privateKey;
   String status;
   Date uploadDate;
   public SigningCertificateType() {  }
@@ -624,6 +626,7 @@ public class ListServerCertificatesType extends EuareMessage {
 }
 public class ErrorResponseType extends EuareMessage {
   String requestId;
+  HttpResponseStatus httpStatus;
   public ErrorResponseType() {  }
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>();
 }
@@ -684,4 +687,167 @@ public class ListUsersType extends EuareMessage {
   String marker;
   BigInteger maxItems;
   public ListUsersType() {  }
+}
+
+/**
+ * Eucalyptus extended messages for account management
+ */
+public class CreateAccountType extends EuareMessage {
+  String accountName;
+  public CreateUserType() {  }
+}
+public class CreateAccountResponseType extends EuareMessage {
+  CreateAccountResultType createAccountResult = new CreateAccountResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateAccountResponseType() {  }
+}
+public class CreateAccountResultType extends EucalyptusData {
+  AccountType account = new AccountType( );
+  public CreateAccountResultType() {  }
+}
+public class AccountType extends EuareMessage {
+  String accountName;
+  String accountId;
+  public AccountType() {  }
+}
+
+public class DeleteAccountType extends EuareMessage {
+  String accountName;
+  Boolean recursive;
+  public DeleteAccountType() {  }
+}
+public class DeleteAccountResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteAccountResponseType() {  }
+}
+
+public class ListAccountsType extends EuareMessage {
+  public ListAccountsType() {  }
+}
+public class ListAccountsResponseType extends EuareMessage {
+  ListAccountsResultType listAccountsResult = new ListAccountsResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountsResponseType() {  }
+}
+public class ListAccountsResultType extends EucalyptusData {
+  AccountListTypeType accounts = new AccountListTypeType( );
+  public ListAccountsResultType() {   }
+}
+public class AccountListTypeType extends EucalyptusData {
+  public AccountListTypeType() {  }
+  ArrayList<AccountType> memberList = new ArrayList<AccountType>();
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATESIGNINGCERTIFICATE )
+public class CreateSigningCertificateType extends EuareMessage {
+  String userName;
+  public CreateSigningCertificateType() {  }
+}
+public class CreateSigningCertificateResponseType extends EuareMessage {
+  CreateSigningCertificateResultType createSigningCertificateResult = new CreateSigningCertificateResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateSigningCertificateResponseType() {  }
+}
+public class CreateSigningCertificateResultType extends EucalyptusData {
+  SigningCertificateType certificate = new SigningCertificateType( );
+  public CreateSigningCertificateResultType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERINFO )
+public class GetUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  public GetUserInfoType() {  }
+}
+public class GetUserInfoResponseType extends EuareMessage {
+  GetUserInfoResultType getUserInfoResult = new GetUserInfoResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetUserInfoResponseType() {  }
+}
+public class GetUserInfoResultType extends EucalyptusData {
+  UserInfoListTypeType infos = new UserInfoListTypeType( );
+  public GetUserInfoResultType() {  }
+}
+public class UserInfoListTypeType extends EucalyptusData {
+  ArrayList<UserInfoType> memberList = new ArrayList<UserInfoType>();
+  public UserInfoListTypeType() {  }
+}
+public class UserInfoType extends EuareMessage  {
+  String key;
+  String value;
+  public UserInfoType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSERINFO )
+public class UpdateUserInfoType extends EuareMessage {
+  String userName;
+  String infoKey;
+  String infoValue;
+  public UpdateUserInfoType() {  }
+}
+public class UpdateUserInfoResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public UpdateUserInfoResponseType() {  }
+}
+public class PutAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public PutAccountPolicyType() {  }
+}
+public class PutAccountPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public PutAccountPolicyResponseType() {  }
+}
+public class ListAccountPoliciesType extends EuareMessage {
+  String accountName;
+  String marker;
+  BigInteger maxItems;
+  public ListAccountPoliciesType() {  }
+}
+public class ListAccountPoliciesResponseType extends EuareMessage {
+  ListAccountPoliciesResultType listAccountPoliciesResult = new ListAccountPoliciesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountPoliciesResponseType() {  }
+}
+public class ListAccountPoliciesResultType extends EucalyptusData {
+  PolicyNameListTypeType policyNames = new PolicyNameListTypeType( );
+  Boolean isTruncated;
+  String marker;
+  public ListAccountPoliciesResultType() {  }
+}
+public class GetAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  public GetAccountPolicyType() {  }
+}
+public class GetAccountPolicyResponseType extends EuareMessage {
+  GetAccountPolicyResultType getAccountPolicyResult = new GetAccountPolicyResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetAccountPolicyResponseType() {  }
+}
+public class GetAccountPolicyResultType extends EucalyptusData {
+  String accountName;
+  String policyName;
+  String policyDocument;
+  public GetAccountPolicyResultType() {  }
+}
+public class DeleteAccountPolicyType extends EuareMessage {
+  String accountName;
+  String policyName;
+  public DeleteAccountPolicyType() {  }
+}
+public class DeleteAccountPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteAccountPolicyResponseType() {  }
+}
+public class GetLdapSyncStatusType extends EuareMessage {
+  public GetLdapSyncStatusType() {  }
+}
+public class GetLdapSyncStatusResponseType extends EuareMessage {
+  GetLdapSyncStatusResultType getLdapSyncStatusResult = new GetLdapSyncStatusResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetLdapSyncStatusResponseType() {  }
+}
+public class GetLdapSyncStatusResultType extends EucalyptusData {
+  Boolean syncEnabled;
+  Boolean inSync;
+  public GetLdapSyncStatusResultType() {  }
 }

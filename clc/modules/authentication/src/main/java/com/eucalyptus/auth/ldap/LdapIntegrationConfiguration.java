@@ -29,25 +29,25 @@ public class LdapIntegrationConfiguration {
   
   // Accounting groups
   private String accountingGroupBaseDn;
-  private SetFilter accountingGroups = new SetFilter( );
   private String accountingGroupIdAttribute;
   private String groupsAttribute;
+  private Selection accountingGroupsSelection = new Selection( );
   
   // Or group partitions
   private Map<String, Set<String>> groupsPartition = Maps.newHashMap( );
   
   // Selected groups
   private String groupBaseDn;
-  private SetFilter groups = new SetFilter( );
   private String groupIdAttribute;
   private String usersAttribute;
+  private Selection groupsSelection = new Selection( );
   
   // Selected users
   private String userBaseDn;
-  private SetFilter users = new SetFilter( );
   private String userIdAttribute;
   private String passwordAttribute;
-  private Set<String> userInfoAttributes = Sets.newHashSet( );
+  private Map<String, String> userInfoAttributes = Maps.newHashMap( );
+  private Selection usersSelection = new Selection( );
   
   public LdapIntegrationConfiguration( ) {
   }
@@ -70,7 +70,7 @@ public class LdapIntegrationConfiguration {
       sb.append( '\t' ).append( "base-dn:" ).append( this.accountingGroupBaseDn ).append( '\n' );
       sb.append( '\t' ).append( "id-attribute:" ).append( this.accountingGroupIdAttribute ).append( '\n' );
       sb.append( '\t' ).append( "member-attribute:" ).append( this.groupsAttribute ).append( '\n' );
-      sb.append( '\t' ).append( "select:" ).append( this.accountingGroups ).append( '\n' );
+      sb.append( '\t' ).append( "selection:" ).append( this.accountingGroupsSelection ).append( '\n' );
     } else {
       sb.append( "groups-partition:\n" );
       sb.append( '\t' ).append( this.groupsPartition ).append( '\n' );
@@ -79,13 +79,13 @@ public class LdapIntegrationConfiguration {
     sb.append( '\t' ).append( "base-dn:" ).append( this.groupBaseDn ).append( '\n' );
     sb.append( '\t' ).append( "id-attribute:" ).append( this.groupIdAttribute ).append( '\n' );
     sb.append( '\t' ).append( "member-attribute:" ).append( this.usersAttribute ).append( '\n' );
-    sb.append( '\t' ).append( "select:" ).append( this.groups ).append( '\n' );
+    sb.append( '\t' ).append( "selection:" ).append( this.groupsSelection ).append( '\n' );
     sb.append( "users:\n" );
     sb.append( '\t' ).append( "base-dn:" ).append( this.userBaseDn ).append( '\n' );
     sb.append( '\t' ).append( "id-attribute:" ).append( this.userIdAttribute ).append( '\n' );
     sb.append( '\t' ).append( "password-attribute:" ).append( this.passwordAttribute ).append( '\n' );
     sb.append( '\t' ).append( "user-info-attributes:" ).append( this.userInfoAttributes ).append( '\n' );
-    sb.append( '\t' ).append( "select:" ).append( this.users ).append( '\n' );
+    sb.append( '\t' ).append( "selection:" ).append( this.usersSelection ).append( '\n' );
     return sb.toString( );
   }
   
@@ -177,22 +177,6 @@ public class LdapIntegrationConfiguration {
     return syncInterval;
   }
 
-  public void setAccountingGroups( SetFilter accountingGroups ) {
-    this.accountingGroups = accountingGroups;
-  }
-
-  public SetFilter getAccountingGroups( ) {
-    return accountingGroups;
-  }
-
-  public void setGroups( SetFilter groups ) {
-    this.groups = groups;
-  }
-
-  public SetFilter getGroups( ) {
-    return groups;
-  }
-
   public void setGroupsPartition( Map<String, Set<String>> groupsPartition ) {
     this.groupsPartition = groupsPartition;
   }
@@ -201,19 +185,11 @@ public class LdapIntegrationConfiguration {
     return groupsPartition;
   }
 
-  public void setUsers( SetFilter users ) {
-    this.users = users;
-  }
-
-  public SetFilter getUsers( ) {
-    return users;
-  }
-
-  public void setUserInfoAttributes( Set<String> userInfoAttributes ) {
+  public void setUserInfoAttributes( Map<String, String> userInfoAttributes ) {
     this.userInfoAttributes = userInfoAttributes;
   }
 
-  public Set<String> getUserInfoAttributes( ) {
+  public Map<String, String> getUserInfoAttributes( ) {
     return userInfoAttributes;
   }
 
@@ -271,6 +247,30 @@ public class LdapIntegrationConfiguration {
 
   public String getAccountingGroupBaseDn( ) {
     return accountingGroupBaseDn;
+  }
+
+  public void setAccountingGroupsSelection( Selection accountingGroupsSelection ) {
+    this.accountingGroupsSelection = accountingGroupsSelection;
+  }
+
+  public Selection getAccountingGroupsSelection( ) {
+    return accountingGroupsSelection;
+  }
+
+  public void setGroupsSelection( Selection groupsSelection ) {
+    this.groupsSelection = groupsSelection;
+  }
+
+  public Selection getGroupsSelection( ) {
+    return groupsSelection;
+  }
+
+  public void setUsersSelection( Selection usersSeletion ) {
+    this.usersSelection = usersSeletion;
+  }
+
+  public Selection getUsersSelection( ) {
+    return usersSelection;
   }
 
 }

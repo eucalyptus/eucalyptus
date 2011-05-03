@@ -3,15 +3,17 @@ package com.eucalyptus.auth.entities;
 import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -20,7 +22,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_cert" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -37,6 +39,10 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   @Column( name = "auth_certificate_revoked" )
   Boolean revoked;
   
+  // The certificate
+  @Column( name = "auth_certificate_id" )
+  String certificateId;
+
   // The certificate
   @Lob
   @Column( name = "auth_certificate_pem" )
@@ -60,10 +66,17 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public static CertificateEntity newInstanceWithId( final String id ) {
     CertificateEntity c = new CertificateEntity( );
-    c.setId( id );
+    c.certificateId = id;
     return c;
   }
-
+  
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.certificateId == null ) {
+      this.certificateId = Crypto.getHmacProvider( ).generateQueryId( this.pem );
+    }
+  }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -128,6 +141,10 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public void setUser( UserEntity user ) {
     this.user = user;
+  }
+
+  public String getCertificateId( ) {
+    return this.certificateId;
   }
   
 }

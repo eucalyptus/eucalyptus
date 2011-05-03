@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,13 +63,12 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
-public class Reporting extends ComponentId {
-
+public class Reporting extends ComponentId.Unpartioned {
+  
   @Override
   public Boolean hasDispatcher( ) {
     return false;
@@ -77,17 +76,12 @@ public class Reporting extends ComponentId {
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class, Any.class );
-  }
-  
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-  
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+        this.add( Any.class );
+      }
+    };
   }
   
 }

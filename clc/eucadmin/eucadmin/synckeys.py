@@ -32,13 +32,8 @@ import os
 import sys
 import socket
 import shutil
-
-import command
-
-def mklist(v):
-    if not isinstance(v, (list, tuple)):
-        v = [v]
-    return v
+from boto.utils import mklist
+from eucadmin.command import Command
 
 SyncMethods = ['local', 'rsync', 'scp', 'smb']
 
@@ -56,7 +51,7 @@ class SyncKeys(object):
         self.use_scp = use_scp
         self.use_smb = use_smb
         self.files = []
-        self.is_remote = True
+        self.is_local = self.check_local()
 
     def error(self, msg):
         print 'Error: %s' % msg
@@ -77,13 +72,13 @@ class SyncKeys(object):
         if not_found:
             self.warning("Can't find %s in %s" % (not_found, self.src_dirs))
 
-    def check_remote(self):
-        if remote_host == '127.0.0.1':
-            self.is_remote = False
-        elif remote_host == 'localhost':
-            self.is_remote = False
-        elif remote_host == socket.gethostname():
-            self.is_remote = False
+    def check_local(self):
+        if self.remote_host == '127.0.0.1':
+            self.is_remote = True
+        elif self.remote_host == 'localhost':
+            self.is_remote = True
+        elif self.remote_host == socket.gethostname():
+            self.is_remote = True
 
     def sync_local(self):
         for fn in self.files:
@@ -91,7 +86,7 @@ class SyncKeys(object):
                 self.error('cannot find cluster credentials')
             else:
                 try:
-                    shutil.copystat(fn, self.dst_dir)
+                    shutil.copy2(fn, self.dst_dir)
                 except:
                     self.error('cannot copy %s to %s' % (fn, self.dst_dir))
 
@@ -102,8 +97,8 @@ class SyncKeys(object):
         print 'Trying rsync to sync keys with %s' % self.remote_host
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
-        cmd += ' %s:%s/' % (self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
@@ -115,7 +110,7 @@ class SyncKeys(object):
         euca_user = os.environ.get('EUCA_USER', None)
         if not euca_user:
             try:
-                pwd.getpwname('eucalyptus')
+                pwd.getpwnam('eucalyptus')
                 euca_user = 'eucalyptus'
             except KeyError:
                 self.error('EUCA_USER is not defined!')
@@ -130,10 +125,24 @@ class SyncKeys(object):
         cmd = 'sudo -u %s scp ' % euca_user
         cmd += ' '.join(self.files)
         cmd += ' %s@%s:%s' % (euca_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd, test=True)
+        cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'
             return True
         else:
             print 'failed.'
             return False
+
+    def sync(self):
+        self.get_file_list()
+        if self.check_local():
+            self.sync_local()
+            return True
+        else:
+            if self.use_rsync and self.sync_rsync():
+                return True
+            if self.use_scp and self.sync_scp():
+                return True
+            return False
+            
+        

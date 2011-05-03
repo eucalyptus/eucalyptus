@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.crypto.Hmacs;
 
 public class HsqldbSource implements DatabaseSource {
@@ -41,7 +42,7 @@ public class HsqldbSource implements DatabaseSource {
         if ( props == null ) {
           props = new Properties( );
           props.setProperty( "user", "sa" );
-          props.setProperty( "password", Hmacs.generateSystemSignature( ) );
+          props.setProperty( "password", SystemIds.databasePassword( ) );
         }
       }
     }

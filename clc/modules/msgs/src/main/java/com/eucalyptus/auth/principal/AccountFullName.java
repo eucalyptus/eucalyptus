@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -78,7 +78,7 @@ public class AccountFullName implements FullName {
   private final String qName;
 
   protected AccountFullName( AccountFullName accountFn, String... relativePath ) {
-    this.accountId = accountFn.getAccountId( );
+    this.accountId = accountFn.getAccountNumber( );
     this.name = accountFn.getName( );
     this.authority = accountFn.getAuthority( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
@@ -86,14 +86,14 @@ public class AccountFullName implements FullName {
   }
   protected AccountFullName( Account account, String... relativePath ) {
     Assertions.assertNotNull( account );
-    this.accountId = account.getId( );
+    this.accountId = account.getAccountNumber( );
     this.name = accountId;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountId ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
   }
 
-  public String getAccountId( ) {
+  public String getAccountNumber( ) {
     return this.accountId;
   }
 

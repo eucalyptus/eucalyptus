@@ -73,13 +73,13 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
-        String userId = requestUser.getId( );
+        String userId = requestUser.getUserId( );
         Account account = requestUser.getAccount( );
         
         // Check global (inter-account) authorizations first
         Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
         if ( ( decision == Decision.DENY )
-            || ( decision == Decision.DEFAULT && resourceAccount.getId( ) != null && !resourceAccount.getId( ).equals( account.getId( ) ) ) ) {
+            || ( decision == Decision.DEFAULT && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) ) {
           LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED ); 
         }
@@ -112,7 +112,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateQuota(java.lang.Integer, java.lang.Class, java.lang.String)
    */
   @Override
-  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Integer quantity) throws AuthException {
+  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException {
     try {
       // System admins are not restricted by quota limits.
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
@@ -280,7 +280,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @param quantity The quantity to allocate.
    * @throws AuthException for any error.
    */
-  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Integer quantity ) throws AuthException {
+  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Long quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
       LOG.debug( "YE " + "evaluate quota " + auth );
@@ -327,11 +327,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     Group group = auth.getGroup( );
     switch ( scope ) {
       case ACCOUNT:
-        return group.getAccount( ).getId( );
+        return group.getAccount( ).getAccountNumber( );
       case GROUP:
-        return group.getId( );
+        return group.getGroupId( );
       case USER:
-        return group.getUsers( ).get( 0 ).getId( );
+        return group.getUsers( ).get( 0 ).getUserId( );
     }
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }

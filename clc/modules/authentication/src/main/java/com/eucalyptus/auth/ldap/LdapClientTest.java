@@ -2,9 +2,12 @@ package com.eucalyptus.auth.ldap;
 
 import java.util.List;
 import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.LdapName;
 
 public class LdapClientTest {
 
@@ -18,15 +21,21 @@ public class LdapClientTest {
     lic.setUserBaseDn( "ou=People,dc=eucalyptus,dc=com" );
     
     LdapClient client = new LdapClient( lic );
-    NamingEnumeration<SearchResult> results = client.search( lic.getUserBaseDn( ), new BasicAttributes( ), new String[]{ "displayName" } );
+    NamingEnumeration<SearchResult> results = client.search( lic.getUserBaseDn( ), "objectClass=inetOrgPerson", new String[]{ "displayName" } );
     while ( results.hasMore( ) ) {
-      SearchResult result = results.next( );
-      System.out.println( result.getName( ) + ", " + result.getClassName( ) + ", " + result.getNameInNamespace( ) + ", " + result.getAttributes( ) );
-      System.out.println( result.getAttributes( ).get( "uid" ).get( ) );
+      SearchResult r = results.next( );
+      System.out.println( r.getNameInNamespace( ) + " -- " + r.getAttributes( ) );
     }
-    results = client.search( lic.getGroupBaseDn( ), new BasicAttributes( ), new String[]{ "cn", "member" } );
-    while ( results.hasMore( ) ) {
-      System.out.println( results.next( ) );
+    
+    System.out.println( "" );
+    
+    LdapContext context = client.getContext( );
+    try {
+      Attributes attrs = context.getAttributes( new LdapName( "uid=stevejobs,ou=People,dc=eucalyptus,dc=com" ), new String[]{ "displayName" } );
+      System.out.println( attrs );
+      System.out.println( attrs.get( "displayName" ).get( ) );
+    } catch ( NamingException e ) {
+      e.printStackTrace( );
     }
   }
   

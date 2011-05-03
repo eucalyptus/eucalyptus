@@ -101,6 +101,14 @@ if test -z "$APACHE2_MODULE_DIR"; then
         APACHE2_MODULE_DIR="${AXIS2C_HOME}/lib"
 fi
 
+AM_PATH_PYTHON([2.5])
+if ! echo "$PYTHON_VERSION" | grep -q '^2\.'; then
+        # We picked up python 3
+        echo "Found Python version $PYTHON_VERSION; expected version 2.x"
+        echo "Specify a path to Python 2 with the PYTHON environment variable."
+        exit 1
+fi
+
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
@@ -109,28 +117,28 @@ if test -n "${AXIS2C_HOME}" ; then
                 done
         fi
         if test -d "${AXIS2C_HOME}"/lib ; then
-                LIBS="-L${AXIS2C_HOME}/lib ${LIBS}"
+                LDFLAGS="-L${AXIS2C_HOME}/lib ${LDFLAGS}"
         fi
         if test -d "${AXIS2C_HOME}"/modules/rampart ; then
-                LIBS="-L${AXIS2C_HOME}/modules/rampart ${LIBS}"
+                LDFLAGS="-L${AXIS2C_HOME}/modules/rampart ${LDFLAGS}"
         fi
 fi
 if test -n "${LIBVIRT_HOME}" ; then
         if test -d "${LIBVIRT_HOME}"/include ; then
                 INCLUDES="${INCLUDES} -I${LIBVIRT_HOME}/include"
-                LIBS="-L${LIBVIRT_HOME}/lib ${LIBS}"
+                LDFLAGS="-L${LIBVIRT_HOME}/lib ${LDFLAGS}"
         fi
 fi
 if test -n "${VDDK_HOME}" ; then
         if test -d "${VDDK_HOME}"/include/ ; then
                 # Using tarball direct from VMware
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
-                AS_IF([test "x$build_cpu" = "xx86_64"], [LIBS="-L${VDDK_HOME}/lib64 ${LIBS}"],
-                      [LIBS="-L${VDDK_HOME}/lib32 ${LIBS}"])
+                AS_IF([test "x$build_cpu" = "xx86_64"], [LDFLAGS="-L${VDDK_HOME}/lib64 ${LDFLAGS}"],
+                      [LDFLAGS="-L${VDDK_HOME}/lib32 ${LDFLAGS}"])
         elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
                 # Using installed tarball
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LIBS="-L${VDDK_HOME}/lib ${LIBS}"
+                LDFLAGS="-L${VDDK_HOME}/lib ${LDFLAGS}"
         fi
 fi
 
@@ -256,9 +264,10 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
-                 tools/euca_conf:tools/euca_conf.in
+		 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
+		 clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
-                 clc/modules/bootstrap/arguments.ggo:clc/modules/bootstrap/arguments.ggo.in])
+                 clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
@@ -280,6 +289,7 @@ AC_SUBST(LIBS)
 AC_SUBST(INCLUDES)
 AC_SUBST(EXTENSIONS)
 AC_SUBST(INTERFACE_THEME)
+AC_SUBST(PYTHON)
 
 
 

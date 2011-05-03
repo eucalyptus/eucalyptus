@@ -53,195 +53,75 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+
 package com.eucalyptus.component;
 
-import java.net.URI;
+import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.NoSuchElementException;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.Internets;
-import edu.emory.mathcs.backport.java.util.Arrays;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 
-public class Service implements ComponentInformation, HasParent<Component>, HasFullName<Service> {
-  public static String               LOCAL_HOSTNAME = "@localhost";
-  private final String               name;
-  private final ServiceEndpoint      endpoint;
-  private final Dispatcher           dispatcher;
-  private final ServiceConfiguration serviceConfiguration;
-  private final ComponentId          id;
-  private final Component.State      state          = State.ENABLED/** ASAP:FIXME:GRZE **/
-                                                    ;
-  private final FullName             fullName;
+public interface Service extends HasParent<Component>, HasFullName<Service> {
   
-  public final ServiceId getServiceId( ) {
-    return new ServiceId( ) {
-      {
-        this.setUuid( serviceConfiguration.getId( ) );
-        this.setPartition( serviceConfiguration.getPartition( ) );
-        this.setName( serviceConfiguration.getName( ) );
-        this.setType( serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( serviceConfiguration.getUri( ) );
-      }
-    };
-  }
+  public abstract Dispatcher getDispatcher( );
   
-  public Service( ComponentId id, ServiceConfiguration serviceConfig ) {
-    this.id = id;
-    this.serviceConfiguration = serviceConfig;
-    this.fullName = this.id.getMyFullName( this.serviceConfiguration );
-    if ( "cluster".equals( id.getName( ) ) && Components.lookup( "eucalyptus" ).isLocal( ) ) /*ASAP: fix this disgusting hack.*/{
-      this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-      URI uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      this.endpoint = new ServiceEndpoint( this, false, uri );
-    } else if ( serviceConfig.isLocal( ) ) {
-      URI uri = this.id.getLocalEndpointUri( );
-      this.name = id.getName( ) + LOCAL_HOSTNAME;
-      this.endpoint = new ServiceEndpoint( this, true, uri );
-    } else {
-      Boolean local = false;
-      try {
-        if ( serviceConfig.getHostName( ) != null ) {
-          local = Internets.testLocal( serviceConfig.getHostName( ) );
-        } else {
-          local = true;
-        }
-      } catch ( Exception e ) {
-        local = true;
-      }
-      URI uri = null;
-      if ( !local ) {
-        this.name = id.getName( ) + "@" + serviceConfig.getHostName( );
-        uri = this.id.makeRemoteUri( serviceConfig.getHostName( ), serviceConfig.getPort( ) );
-      } else {
-        this.name = id.getName( ) + LOCAL_HOSTNAME;
-        uri = this.id.getLocalEndpointUri( );
-      }
-      this.endpoint = new ServiceEndpoint( this, local, uri );
-    }
-    this.dispatcher = DispatcherFactory.build( Components.lookup( id ), this );
-  }
-  
-  public Boolean isLocal( ) {
-    return this.endpoint.isLocal( );
-  }
-  
-  public KeyPair getKeys( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.id ).getKeyPair( );
-  }
-  
-  public X509Certificate getCertificate( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.id ).getCertificate( );
-  }
-  
-  public URI getUri( ) {
-    return this.endpoint.get( );
-  }
-  
-  public String getHost( ) {
-    return this.endpoint.get( ).getHost( );
-  }
-  
-  public Integer getPort( ) {
-    return this.endpoint.get( ).getPort( );
-  }
-  
-  public String getName( ) {
-    return this.name;
-  }
-  
-  public ServiceEndpoint getEndpoint( ) {
-    return this.endpoint;
-  }
-  
-  public Dispatcher getDispatcher( ) {
-    return this.dispatcher;
-  }
-  
-  /**
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   * @param that
-   * @return
-   */
-  @Override
-  public int compareTo( Service that ) {
-    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
-        return this.getName( ).compareTo( that.getName( ) );
-      } else {
-        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
-      }
-    } else {
-      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
-    }
-  }
-  
-  /**
-   * @return the service configuration
-   */
-  public ServiceConfiguration getServiceConfiguration( ) {
-    return this.serviceConfiguration;
-  }
-  
-  /**
-   * @return the parent
-   */
-  public Component getParent( ) {
-    return Components.lookup( this.id );
-  }
-  
-  /**
-   * @see java.lang.Object#toString()
-   * @return
-   */
-  @Override
-  public String toString( ) {
-    return String.format( "Service %s name=%s endpoint=%s serviceConfiguration=%s\n",
-                          this.id, this.name, this.endpoint, this.serviceConfiguration );
-  }
-  
-  /**
-   * @return the state
-   */
-  public Component.State getState( ) {
-    if ( this.serviceConfiguration.isLocal( ) ) {
-      return this.getParent( ).getState( );
-    } else {
-      return this.state;
-    }
-  }
+  public abstract String toString( );
   
   /** ASAP:FIXME:GRZE **/
-  public List<String> getDetails( ) {
-    return Arrays.asList( this.toString( ).split( "\n" ) );
-  }
+  public abstract List<String> getDetails( );
   
+  public abstract void enqueue( Request request );
+  
+  public abstract State getState( );
+  
+  public abstract ServiceId getServiceId( );
+  
+  public abstract Boolean isLocal( );
+  
+  public abstract KeyPair getKeys( );
+  
+  public abstract X509Certificate getCertificate( );
+  
+  public abstract ServiceConfiguration getServiceConfiguration( );
+  
+  public abstract Component getComponent( );
+  
+  public abstract ComponentId getComponentId( );
+  
+  public abstract boolean checkTransition( Transition transition );
+  
+  public abstract State getGoal( );
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transitionSelf( );
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
+  
+  public abstract CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException;
+  
+  InetSocketAddress getSocketAddress( );
+  
+  public abstract void setGoal( State state );
+
   /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.util.HasFullName#getPartition()
+   * TODO: DOCUMENT Service.java
    * @return
    */
-  @Override
-  public String getPartition( ) {
-    return this.fullName.getPartition( );
-  }
-  
-  @Override
-  public FullName getFullName( ) {
-    return this.fullName;
-  }
+  ServiceEndpoint getEndpoint( );
   
 }

@@ -70,8 +70,8 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
   private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
-  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentHashMap( );
-  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentHashMap( );
+  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
+  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
 
   public static void addBuilder( Class c, ServiceBuilder b ) {
     LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
@@ -92,12 +92,16 @@ public class ServiceBuilderRegistry {
   }
 
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
+    if( !componentBuilders.containsKey( componentId ) ) {
+      Component comp = Components.lookup( componentId );
+      componentBuilders.put( componentId, new DummyServiceBuilder( comp ) );
+    }
     return componentBuilders.get( componentId );
   }  
 
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
     try {
-      return componentBuilders.get( componentIdClass.newInstance( ) );
+      return lookup( componentIdClass.newInstance( ) );
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
       throw new RuntimeException( ex );

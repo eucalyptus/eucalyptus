@@ -1,10 +1,13 @@
 package com.eucalyptus.auth.util;
 
+import java.io.UnsupportedEncodingException;
 import java.security.KeyPair;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.crypto.util.B64.url;
 
 public class X509CertHelper {
   
@@ -16,10 +19,28 @@ public class X509CertHelper {
     return PEMFiles.getCert( B64.url.dec( x509PemString ) );
   }
   
-  public static X509Certificate createCertificate( String userName ) throws Exception {
-    KeyPair keyPair = Certs.generateKeyPair( );
-    X509Certificate x509 = Certs.generateCertificate( keyPair, userName );
-    x509.checkValidity( );
-    return x509;
+  public static String certificateToPem( X509Certificate x509 ) {
+    try {
+      return new String( PEMFiles.getBytes( x509 ), "UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return new String( PEMFiles.getBytes( x509 ) );
+    }
   }
+  
+  public static X509Certificate pemToCertificate( String pem ) {
+    try {
+      return PEMFiles.getCert( pem.getBytes( "UTF-8" ) );
+    } catch ( UnsupportedEncodingException e ) {
+      return PEMFiles.getCert( pem.getBytes( ) );
+    }
+  }
+  
+  public static String privateKeyToPem( PrivateKey pk ) {
+    try {
+      return new String( PEMFiles.getBytes( pk ), "UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return new String( PEMFiles.getBytes( pk ) );
+    }
+  }
+  
 }

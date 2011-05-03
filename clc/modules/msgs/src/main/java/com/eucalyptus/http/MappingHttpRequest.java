@@ -64,6 +64,7 @@
 package com.eucalyptus.http;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,6 +75,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -121,16 +123,17 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     }
   }
   
-  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceEndpoint serviceEndpoint, final Object source ) {
+  public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceConfiguration serviceConfiguration, final Object source ) {
     super( httpVersion );
     this.method = method;
-    this.uri = serviceEndpoint.getUri( ).toString( );
-    this.servicePath = serviceEndpoint.getServicePath( );
+    URI fullUri = serviceConfiguration.getUri( );
+    this.uri = fullUri.toString( );
+    this.servicePath = fullUri.getPath( );
     this.query = null;
     this.parameters = null;
     this.formFields = null;
     super.setMessage( source );
-    this.addHeader( HttpHeaders.Names.HOST, serviceEndpoint.getUri( ).getHost( ) + ":" + serviceEndpoint.getUri( ).getPort( ) );
+    this.addHeader( HttpHeaders.Names.HOST, fullUri.getHost( ) + ":" + fullUri.getPort( ) );
   }
   
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath,

@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -22,7 +22,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_policy" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -71,7 +71,7 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     p.setId( id );
     return p;
   }
-
+  
   public String getText( ) {
     return this.text;
   }
@@ -115,5 +115,19 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     sb.append( "name=" ).append( this.getName( ) );
     return sb.toString( );
   }
+  
+  /**
+   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
+   * supporting currently hand-coded proxy classes. Don't share this value with the user.
+   * 
+   * TODO: remove this if possible.
+   * 
+   * @return
+   * @see {@link AbstractPersistent#getId()}
+   */
+  public String getPolicyId( ) {
+    return this.getId( );
+  }
+
   
 }

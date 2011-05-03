@@ -63,16 +63,17 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-
-public class ComponentService extends ComponentId {
+public class ComponentService extends ComponentId.Unpartioned {
   
   public ComponentService( ) {
     super( "Component" );
   }
-
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://ComponentInternal";
@@ -82,19 +83,13 @@ public class ComponentService extends ComponentId {
   public Boolean hasDispatcher( ) {
     return false;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return true;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return false;
-  }
-
+    
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Any.LIST;
+    return new ArrayList( ) {
+      {
+        this.add( Any.class );
+      }
+    };
   }
 }

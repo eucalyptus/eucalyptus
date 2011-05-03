@@ -65,7 +65,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -80,14 +80,19 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
 @Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Column( name = "parentvolume" )
+  @Column( name = "metadata_snapshot_vol_size" )
+  private Integer  volumeSize;
+  @Column( name = "metadata_snapshot_parentvolume", updatable=false )
   private String   parentVolume;
-  @Column( name = "cluster" )
-  private String   cluster;
+  @Column( name = "metadata_snapshot_vol_sc", updatable=false )
+  private String   volumeSc;
+  @Column( name = "metadata_snapshot_vol_partition", updatable=false )
+  private String   volumePartition;
   @Transient
   private FullName fullName;
   
@@ -95,15 +100,22 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( );
   }
   
-  private Snapshot( final UserFullName userFullName, final String displayName ) {
+  public Snapshot( final UserFullName userFullName, final String displayName ) {
     super( userFullName, displayName );
   }
   
-  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume ) {
+  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
     this( userFullName, displayName );
     this.parentVolume = parentVolume;
+    this.volumeSc = volumeSc;
+    this.volumePartition = volumePartition;
     super.setState( State.NIHIL );
     super.setCreationTime( new Date( ) );
+  }
+  
+  public Snapshot( final String accountId, final String displayName ) {
+    this.setOwnerAccountId( accountId );
+    this.setDisplayName( displayName );
   }
   
   public static Snapshot named( final String snapshotId ) {
@@ -115,11 +127,23 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   }
   
   public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
-    return new Snapshot( userFullName, snapshotId );
+    //return new Snapshot( userFullName, snapshotId );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountNumber( );
+    }
+    Snapshot v = new Snapshot( accountId, snapshotId );
+    return v;
   }
   
   public static Snapshot ownedBy( final UserFullName userFullName ) {
-    return new Snapshot( userFullName, null );
+    //return new Snapshot( userFullName, null );
+    String accountId = null;
+    if ( userFullName != null ) {
+      accountId = userFullName.getAccountNumber( );
+    }
+    Snapshot v = new Snapshot( accountId, null );
+    return v;
   }
   
   public String mapState( ) {
@@ -160,16 +184,8 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     return parentVolume;
   }
   
-  public void setParentVolume( final String parentVolume ) {
+  protected void setParentVolume( final String parentVolume ) {
     this.parentVolume = parentVolume;
-  }
-  
-  public String getCluster( ) {
-    return cluster;
-  }
-  
-  public void setCluster( String cluster ) {
-    this.cluster = cluster;
   }
   
   @Override
@@ -190,6 +206,38 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
                                        .namespace( this.getOwnerAccountId( ) )
                                        .relativeId( "snapshot", this.getDisplayName( ) )
       : this.fullName;
+  }
+  
+  public Integer getVolumeSize( ) {
+    return this.volumeSize;
+  }
+  
+  public void setVolumeSize( Integer integer ) {
+    this.volumeSize = integer;
+  }
+  
+  public void setPartition( String partition ) {
+    this.volumePartition = partition;
+  }
+  
+  public String getVolumeCluster( ) {
+    return this.volumeSc;
+  }
+  
+  public void setVolumeCluster( String volumeCluster ) {
+    this.volumeSc = volumeCluster;
+  }
+  
+  public String getVolumePartition( ) {
+    return this.volumePartition;
+  }
+  
+  public void setVolumePartition( String volumePartition ) {
+    this.volumePartition = volumePartition;
+  }
+
+  public String getVolumeSc( ) {
+    return this.volumeSc;
   }
   
 }

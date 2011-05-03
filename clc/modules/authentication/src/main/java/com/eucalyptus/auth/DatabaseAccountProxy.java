@@ -47,14 +47,14 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
+  public String getAccountNumber( ) {
+    return this.delegate.getAccountNumber( );
   }
 
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( AccountEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<AccountEntity>( ) {
+      Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
         public void fire( AccountEntity t ) throws Throwable {
           t.setName( name );
         }
@@ -140,8 +140,8 @@ public class DatabaseAccountProxy implements Account {
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       AccountEntity account = db.getUnique( new AccountEntity( this.delegate.getName( ) ) );
-      db.recast( GroupEntity.class ).add( newGroup );
-      db.recast( UserEntity.class ).add( newUser );
+      newGroup = db.recast( GroupEntity.class ).merge( newGroup );
+      newUser = db.recast( UserEntity.class ).merge( newUser );
       newGroup.setAccount( account );
       newGroup.getUsers( ).add( newUser );
       newUser.getGroups( ).add( newGroup );
@@ -233,8 +233,9 @@ public class DatabaseAccountProxy implements Account {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
       GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
+      boolean hasResAttached = group.getUsers( ).size( ) > 0 || group.getPolicies( ).size( ) > 0;
       db.commit( );
-      return ( group.getUsers( ).size( ) > 0 || group.getPolicies( ).size( ) > 0 );
+      return hasResAttached;
     } catch ( Throwable e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check group " + groupName + " in " + accountName );
@@ -305,7 +306,7 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getId( );
+    String accountId = this.delegate.getAccountNumber( );
     if ( resourceType == null ) {
       throw new AuthException( "Empty resource type" );
     }
@@ -324,7 +325,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );
@@ -341,7 +342,7 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getId( );
+    String accountId = this.delegate.getAccountNumber( );
     if ( resourceType == null ) {
       throw new AuthException( "Empty resource type" );
     }
@@ -358,7 +359,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );

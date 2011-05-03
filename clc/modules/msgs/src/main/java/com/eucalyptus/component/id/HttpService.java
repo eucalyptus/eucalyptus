@@ -63,16 +63,17 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-
-public class HttpService extends ComponentId {
-
+public class HttpService extends ComponentId.Unpartioned {
+  
   public HttpService( ) {
     super( "Jetty" );
   }
-
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://HttpServer";
@@ -82,17 +83,7 @@ public class HttpService extends ComponentId {
   public Boolean hasDispatcher( ) {
     return true;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
-
+  
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
@@ -102,9 +93,15 @@ public class HttpService extends ComponentId {
   public Boolean hasCredentials( ) {
     return true;
   }
-
+  
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
+    
   }
+  
 }

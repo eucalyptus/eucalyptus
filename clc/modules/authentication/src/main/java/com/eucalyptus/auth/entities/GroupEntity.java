@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -12,10 +12,12 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
@@ -25,7 +27,7 @@ import com.google.common.collect.Lists;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -33,6 +35,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
+
+  // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_group_id_external" )
+  String groupId;
 
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
@@ -77,12 +83,19 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.userGroup = userGroup;
   }
 
-  public static GroupEntity newInstanceWithId( final String id ) {
+  public static GroupEntity newInstanceWithGroupId( final String id ) {
     GroupEntity g = new GroupEntity( );
-    g.setId( id );
+    g.groupId = id;
     return g;
   }
 
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.groupId == null ) {
+      this.groupId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );
+    }
+  }
+  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -101,18 +114,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
-    sb.append( "userGroup=" ).append( this.isUserGroup( ) ).append( ", " );
-    sb.append( "account=" ).append( this.getAccount( ).getName( ) ).append( ", " );
-    sb.append( "users=[");
-    for ( UserEntity u : this.getUsers( ) ) {
-      sb.append( u.getName( ) ).append( ' ' );
-    }
-    sb.append( ']' );
-    sb.append( "policies=[\n");
-    for ( PolicyEntity p : this.getPolicies( ) ) {
-      sb.append( p.getText( ) ).append( '\n' );
-    }
-    sb.append( ']' );
+    sb.append( "userGroup=" ).append( this.isUserGroup( ) );
     sb.append( ")" );
     return sb.toString( );
   }
@@ -155,6 +157,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   
   public List<UserEntity> getUsers( ) {
     return this.users;
+  }
+
+  public String getGroupId( ) {
+    return this.groupId;
   }
   
 }

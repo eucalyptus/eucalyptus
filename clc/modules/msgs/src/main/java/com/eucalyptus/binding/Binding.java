@@ -105,10 +105,14 @@ public class Binding {
   private Map<String, String> classToElementMap   = Maps.newHashMap( );
   private Map<String, String> classToNamespaceMap = Maps.newHashMap( );
   
-  protected Binding( final String name ) throws BindingException {
+  protected Binding( final String name ) {
     this.name = name;
   }
   
+  public boolean hasElementClass( String elementName ) throws BindingException {
+    return this.elementToClassMap.containsKey( elementName );
+    
+  }
   public Class getElementClass( String elementName ) throws BindingException {
     if ( !this.elementToClassMap.containsKey( elementName ) ) {
       BindingException ex = new BindingException( "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );

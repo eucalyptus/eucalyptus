@@ -954,7 +954,7 @@ static int init (void)
 	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
 	tmp = getConfString(configFiles, 2, "VNET_MODE");
 	
-	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL);
+	vnetInit(nc_state.vnetconfig, tmp, nc_state.home, nc_state.config_network_path, NC, hypervisor, hypervisor, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, bridge, NULL, NULL);
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
@@ -1500,38 +1500,143 @@ void parse_target(char *dev_string) {
 
 char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
-    char *retval;
+    char *retval=NULL;
+    int pid, status, rc, len, rbytes, filedes[2];
     
     snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    if ((retval = system_output(buf)) == NULL) {
+    
+    rc = pipe(filedes);
+    if (rc) {
+      logprintfl(EUCAERROR, "connect_iscsi_target: cannot create pipe\n");
+      return(NULL);
+    }
+
+    pid = fork();
+    if (!pid) {
+      close(filedes[0]);
+
+      if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
-    } else {
+	len = 0;
+      } else {
 	logprintfl (EUCAINFO, "Attached device: %s\n", retval);
-    } 
+	len = strlen(retval);
+      } 
+      rc = write(filedes[1], &len, sizeof(int));
+      if (retval) {
+	rc = write(filedes[1], retval, sizeof(char) * len);
+      }
+
+      if (rc == len) {
+	exit(0);
+      }
+      exit(1);
+
+    } else {
+      close(filedes[1]);
+
+      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
+      if (rbytes <= 0) {
+	kill(pid, SIGKILL);
+      } else {
+	retval = malloc(sizeof(char) * (len+1));
+	bzero(retval, len+1);
+	rbytes = timeread(filedes[0], retval, len, 15);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	}
+      }
+      
+      rc = timewait(pid, &status, 15);
+      if (rc) {
+	rc = WEXITSTATUS(status);
+      } else {
+	kill(pid, SIGKILL);
+      }
+    }
     return retval;
 }
 
 int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
+  int pid, retval, status;
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
+    pid = fork();
+    if (!pid) {
+      if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
-	return -1;
+	exit(1);
+      }
+      exit(0);
+    } else {
+      retval = timewait(pid, &status, 15);
+      if (retval) {
+	retval = WEXITSTATUS(status);
+      } else {
+	kill(pid, SIGKILL);
+	retval = -1;
+      }
     }
-    return 0;
+    return retval;
 }
 
 char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
     char buf [MAX_PATH];
-    char *retval;
+    char *retval=NULL;
+    int pid, status, rc, len, rbytes, filedes[2];
     
     snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    if ((retval = system_output(buf)) == NULL) {
+    
+    rc = pipe(filedes);
+    if (rc) {
+      logprintfl(EUCAERROR, "get_iscsi_target: cannot create pipe\n");
+      return(NULL);
+    }
+
+    pid = fork();
+    if (!pid) {
+      close(filedes[0]);
+
+      if ((retval = system_output(buf)) == NULL) {
 	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
-    } else {
+	len = 0;
+      } else {
 	logprintfl (EUCAINFO, "Device: %s\n", retval);
-    } 
+	len = strlen(retval);
+      } 
+      rc = write(filedes[1], &len, sizeof(int));
+      if (retval) {
+	rc = write(filedes[1], retval, sizeof(char) * len);
+      }
+
+      if (rc == len) {
+	exit(0);
+      }
+      exit(1);
+
+    } else {
+      close(filedes[1]);
+
+      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
+      if (rbytes <= 0) {
+	kill(pid, SIGKILL);
+      } else {
+	retval = malloc(sizeof(char) * (len+1));
+	bzero(retval, len+1);
+	rbytes = timeread(filedes[0], retval, len, 15);
+	if (rbytes <= 0) {
+	  kill(pid, SIGKILL);
+	}
+      }
+      
+      rc = timewait(pid, &status, 15);
+      if (rc) {
+	rc = WEXITSTATUS(status);
+      } else {
+	kill(pid, SIGKILL);
+      }
+    }
     return retval;
 }
 

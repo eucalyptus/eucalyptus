@@ -82,8 +82,8 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -109,11 +109,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
     this( namespacePattern );
     this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
-    try {
-      this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
-    } catch ( BindingException ex ) {
-      LOG.error( "Marshalling Handler implementation problem: failed to find default binding specified for namespace " + this.defaultBindingNamespace + " because of: " + ex.getMessage( ), ex );
-    }
+    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.defaultBindingNamespace ) );
   }
   
   @Override
@@ -142,11 +138,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
-    try {
-      this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
-    } catch ( BindingException ex ) {
-      LOG.error( "Failed to find binding for namespace: " + namespace, Exceptions.filterStackTrace( ex ) );
-    }
+    this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( this.namespace ) );
   }
   
   private void setNamespaceVersion( String bindingVersion ) {
@@ -193,7 +185,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
             }
           } catch ( Exception e ) {
             LOG.debug( e );
-            if ( LogLevels.DEBUG ) {
+            if ( Logs.DEBUG ) {
               LOG.error( e, e );
             }
             throw e;
@@ -222,6 +214,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
    */
   public Binding getBinding( ) {
     return this.binding;
+  }
+
+  public Binding getDefaultBinding( ) {
+    return this.defaultBinding;
   }
   
 }

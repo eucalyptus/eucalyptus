@@ -183,6 +183,8 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   ncMetadata ccMeta;
   
   bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
+
+  EUCA_MESSAGE_UNMARSHAL(bundleInstanceType, bit, (&ccMeta));
   
   ccMeta.correlationId = adb_bundleInstanceType_get_correlationId(bit, env);
   ccMeta.userId = adb_bundleInstanceType_get_userId(bit, env);
@@ -233,6 +235,8 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   ncMetadata ccMeta;
   
   bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
+
+  EUCA_MESSAGE_UNMARSHAL(cancelBundleTaskType, bit, (&ccMeta));
   
   ccMeta.correlationId = adb_cancelBundleTaskType_get_correlationId(bit, env);
   ccMeta.userId = adb_cancelBundleTaskType_get_userId(bit, env);

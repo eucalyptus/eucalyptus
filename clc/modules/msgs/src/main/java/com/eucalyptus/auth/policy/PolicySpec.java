@@ -90,6 +90,10 @@ public class PolicySpec {
   public static final String IAM_UPDATEUSER = "updateuser";
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
+  // Eucalyptus extension
+  public static final String IAM_CREATESIGNINGCERTIFICATE = "createsigningcertificate";
+  public static final String IAM_GETUSERINFO = "getuserinfo";
+  public static final String IAM_UPDATEUSERINFO = "updateuserinfo";
 
   public static final Set<String> IAM_ACTIONS = Sets.newHashSet( );
   
@@ -136,6 +140,10 @@ public class PolicySpec {
     IAM_ACTIONS.add( IAM_UPDATEUSER );
     IAM_ACTIONS.add( IAM_UPLOADSERVERCERTIFICATE );
     IAM_ACTIONS.add( IAM_UPLOADSIGNINGCERTIFICATE );
+    
+    IAM_ACTIONS.add( IAM_CREATESIGNINGCERTIFICATE );
+    IAM_ACTIONS.add( IAM_GETUSERINFO );
+    IAM_ACTIONS.add( IAM_UPDATEUSERINFO );
   }
   
   // EC2 actions, based on API version 2010-08-31
@@ -375,6 +383,10 @@ public class PolicySpec {
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
+  
+  public static String qualifiedName( String vendor, String name ) {
+    return vendor + ":" + name;
+  }
   
   /**
    * Map request to policy language's action string.

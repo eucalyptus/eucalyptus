@@ -63,25 +63,22 @@
 
 package com.eucalyptus.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.id.Any;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Lists;
 
-public class PropertiesService extends ComponentId {
-
+public class PropertiesService extends ComponentId.Unpartioned {
   
   public PropertiesService( ) {
     super( "Properties" );
   }
   
-  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://PropertiesInternal";
-  }
-
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
   }
   
   @Override
@@ -90,8 +87,12 @@ public class PropertiesService extends ComponentId {
   }
   
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Any.class );
+      }
+    };
   }
   
 }

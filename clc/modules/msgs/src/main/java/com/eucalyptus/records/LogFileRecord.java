@@ -2,13 +2,13 @@ package com.eucalyptus.records;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Logs;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records_logs" )
 @DiscriminatorValue( value = "base" )
@@ -23,7 +23,7 @@ public class LogFileRecord extends BaseRecord {
 
   public LogFileRecord( EventClass eventClass, EventType type, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
     super( type, eventClass, creator, callerStack, userId, correlationId, other );
-    if ( LogLevels.DEBUG ) {
+    if ( Logs.DEBUG ) {
       if ( callerStack != null && callerStack.getFileName( ) != null ) {
         this.caller = String.format( "   [%s.%s.%s]", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
       } else {
@@ -38,7 +38,7 @@ public class LogFileRecord extends BaseRecord {
 
   @Override
   public String toString( ) {
-    if ( LogLevels.DEBUG ) {
+    if ( Logs.DEBUG ) {
       String leadIn = String.format( "%s %s %s ",
                                         ( this.getUserId( ) != null
                                           ? this.getUserId( )

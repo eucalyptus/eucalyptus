@@ -74,48 +74,65 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Components {
-  private static Logger                            LOG                  = Logger
+  private static Logger                    LOG                  = Logger
                                                                                                                                       .getLogger( Components.class );
-  private static ConcurrentMap<Class, Map>         componentInformation = new ConcurrentHashMap<Class, Map>( ) {
-                                                                          {
-                                                                            put( Service.class, new ConcurrentHashMap<String, Service>( ) );
-                                                                            put( Component.class, new ConcurrentHashMap<String, Component>( ) );
-                                                                            put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
-                                                                          }
-                                                                        };
+  private static ConcurrentMap<Class, Map> componentInformation = new ConcurrentHashMap<Class, Map>( ) {
+                                                                  {
+                                                                    put( MessagableService.class, new ConcurrentHashMap<String, MessagableService>( ) );
+                                                                    put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                    put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
+                                                                  }
+                                                                };
   
-  public static List<Component> listEnabled( ) {
-    List<Component> components = Lists.newArrayList( );
-    if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
-      for ( Component comp : Components.list( ) ) {
-        if ( comp.getComponentId( ).isCloudLocal( ) ) {
-          components.add( comp );
-        }
-      }
-    }
-    for ( Component comp : Components.list( ) ) {
-      if ( comp.isRunningLocally( ) ) {
-        if ( !comp.getComponentId( ).isCloudLocal( ) ) {
-          components.add( comp );
-        }
-      }
-    }
-    return components;
+  public static List<ComponentId> toIds( List<Component> components ) {
+    return Lists.transform( components, Functions.COMPONENT_TO_COMPONENTID );
   }
-
+  
+  /**
+   * Components which are staticly determined as ones to load. This determination is made
+   * independent of access to the database; i.e. only the command line flags and presence/absence of
+   * files determines this list.
+   * 
+   * @return
+   */
+  public static List<Component> whichCanLoad( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.shouldBootstrapLocally( ) ) );
+  }
+  
+  /**
+   * Component has a service instance which is present locally, independent of the service's state.
+   * 
+   * @return
+   */
+  public static List<Component> whichAreEnabledLocally( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.areEnabledLocally( ) ) );
+  }
+  
+  /**
+   * Component has a service instance which is present locally and the service is ENABLED.
+   * 
+   * @return
+   */
+  public static List<Component> whichAreEnabled( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.areEnabled( ) ) );
+  }
+  
   @SuppressWarnings( "unchecked" )
-  public static List<Component> list( ) {
+  public static List<Component> list( ) {//TODO:GRZE:ASAP: review all usage of this and replace with Components.whichAre...
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
@@ -137,7 +154,7 @@ public class Components {
   
   static void dumpState( ) {
     for ( Class c : componentInformation.keySet( ) ) {
-      for ( Entry<String, ComponentInformation> e : (Set<Entry<String, ComponentInformation>>)componentInformation.get( c ).entrySet( ) ) {
+      for ( Entry<String, ComponentInformation> e : ( Set<Entry<String, ComponentInformation>> ) componentInformation.get( c ).entrySet( ) ) {
         LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTRY_DUMP, c.getSimpleName( ), e.getKey( ), e.getValue( ).getClass( )
                                                                                                                           .getCanonicalName( ) ) );
       }
@@ -205,11 +222,11 @@ public class Components {
   public static <T extends ComponentId> Component lookup( Class<T> componentId ) throws NoSuchElementException {
     return Components.lookup( ComponentIds.lookup( componentId ) );
   }
-
+  
   public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
     return Components.lookup( Component.class, componentId.getName( ) );
   }
-
+  
   public static boolean contains( String componentName ) {
     return Components.contains( Component.class, componentName );
   }
@@ -217,161 +234,130 @@ public class Components {
   public static Component create( ComponentId id ) throws ServiceRegistrationException {
     Component c = new Component( id );
     register( c );
+    Mbeans.register( c );
     return c;
-  }
-
-  private final static Function<Component, String> componentToString = componentToString( );
-  
-  public static Function<Component, String> componentToString( ) {
-    if ( componentToString != null ) {
-      return componentToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Component, String>( ) {
-          
-          @Override
-          public String apply( Component comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isLocal( ) ).append( "\n" );
-            buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunningLocally( ) ).append( "\n" );
-            buf.append( "-> Builder:            "
-                        + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
-            buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".disable" )
-                        + "/"
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".remote" ) ).append( "\n" );
-            for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
-              buf.append( "-> " + b.toString( ) ).append( "\n" );
-            }
-            buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( Service s : comp.lookupServices( ) ) {
-              buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
-              buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
-                          + s.getDispatcher( ).getAddress( ) ).append( "\n" );
-              buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
-              buf.append( "|-> Service config:   "
-                          + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
-            //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
-            }
-            return buf.toString( );
-          }
-        };
-      }
-    }
   }
   
   public static Component oneWhichHandles( Class c ) {
     return ServiceBuilderRegistry.handles( c ).getComponent( );
   }
   
-  private static final Callback.Success<Component> componentPrinter = componentPrinter( );
-  
-  public static Callback.Success<Component> componentPrinter( ) {
-    if ( componentPrinter != null ) {
-      return componentPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Component>( ) {
-          
-          @Override
-          public void fire( Component comp ) {
-            LOG.info( componentToString.apply( comp ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private static final Function<Dispatcher, String> dispatcherToString = dispatcherToString( );
-  
-  public static Function<Dispatcher, String> dispatcherToString( ) {
-    if ( dispatcherToString != null ) {
-      return dispatcherToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Dispatcher, String>( ) {
-          
-          @Override
-          public String apply( Dispatcher comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( "-> Dispatcher key=" ).append( comp.getName( ) ).append( " entry=" ).append( comp );
-            return buf.toString( );
-          }
-        };
-      }
-    }
-  }
-  
-  private static final Callback.Success<Dispatcher> dispatcherPrinter = dispatcherPrinter( );
-  
-  public static Callback.Success<Dispatcher> dispatcherPrinter( ) {
-    if ( dispatcherPrinter != null ) {
-      return dispatcherPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Dispatcher>( ) {
-          
-          @Override
-          public void fire( Dispatcher arg0 ) {
-            LOG.info( dispatcherToString.apply( arg0 ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private final static Callback.Success<Component> configurationPrinter = configurationPrinter( );
-  
-  public static Callback.Success<Component> configurationPrinter( ) {
-    if ( configurationPrinter != null ) {
-      return configurationPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Component>( ) {
-          @Override
-          public void fire( Component comp ) {
-            LOG.info( configurationToString.apply( comp ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private final static Function<Component, String>    configurationToString = configurationToString( );
-  private static final Function<Bootstrapper, String> bootstrapperToString  = new Function<Bootstrapper, String>( ) {
+  public static class Functions {
+    public static Function<Component, ComponentId> COMPONENT_TO_COMPONENTID = new Function<Component, ComponentId>( ) {
+                                                                              
                                                                               @Override
-                                                                              public String apply( Bootstrapper b ) {
-                                                                                return b.getClass( ).getName( )
-                                                                                       + " provides=" + b.getProvides( )
-                                                                                       + " deplocal=" + b.getDependsLocal( )
-                                                                                       + " depremote=" + b.getDependsRemote( );
+                                                                              public ComponentId apply( Component input ) {
+                                                                                return input.getComponentId( );
                                                                               }
                                                                             };
-  
-  public static Function<Component, String> configurationToString( ) {
-    if ( configurationToString != null ) {
-      return configurationToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Component, String>( ) {
-          
-          @Override
-          public String apply( Component comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( String.format( "%s -> disable/remote cli:   %s/%s",
-                                       comp.getName( ),
-                                       System.getProperty( String.format( "euca.%s.disable", comp.getComponentId( ).name( ) ) ),
-                                       System.getProperty( String.format( "euca.%s.remote", comp.getComponentId( ).name( ) ) ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> enabled/local/init:   %s/%s/%s",
-                                       comp.getName( ), comp.isAvailableLocally( ), comp.isLocal( ), comp.isRunningLocally( ) ) ).append( "\n" );
-            buf.append( String.format( "%s -> bootstrappers:        %s", comp.getName( ),
-                                       Iterables.transform( comp.getBootstrapper( ).getBootstrappers( ), bootstrapperToString ) ) ).append( "\n" );
-            return buf.toString( );
-          }
-        };
-        
+    
+    public static Function<Component, ComponentId> componentToId( ) {
+      return COMPONENT_TO_COMPONENTID;
+    }
+    
+    public static Function<Component, String> componentToString = componentToString( );
+    
+    public static Function<Component, String> componentToString( ) {
+      if ( componentToString != null ) {
+        return componentToString;
+      } else {
+        synchronized ( Components.class ) {
+          return new Function<Component, String>( ) {
+            
+            @Override
+            public String apply( Component comp ) {
+              final StringBuilder buf = new StringBuilder( );
+              buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
+              for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
+                buf.append( "-> " + b.toString( ) ).append( "\n" );
+              }
+              buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
+              for ( Service s : comp.getServices( ) ) {
+                try {
+                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
+                  buf.append( "|-> Service config:   " ).append( s.getServiceConfiguration( ) ).append( "\n" );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
+                }
+              }
+              return buf.toString( );
+            }
+          };
+        }
       }
     }
+
+    public static Function<Service, ServiceConfiguration> serviceToServiceConfiguration( ) {
+      return new Function<Service, ServiceConfiguration>( ) {
+        
+        @Override
+        public ServiceConfiguration apply( Service input ) {
+          return input.getServiceConfiguration( );
+        }
+      };
+    }
+    
   }
+  
+  public static class Predicates {
+    public static final Predicate<Service> enabledService( ) {
+      return new Predicate<Service>( ) {
+        
+        @Override
+        public boolean apply( Service arg0 ) {
+          return Component.State.ENABLED.equals( arg0.getState( ) );
+        }
+      };
+    }
+    
+    public static Predicate<Service> serviceInPartition( String partitionName ) {
+      return new Predicate<Service>( ) {
+        
+        @Override
+        public boolean apply( Service arg0 ) {
+          return Component.State.ENABLED.equals( arg0.getState( ) );
+        }
+      };
+    }
+    
+    private static Predicate<Component> BOOTSTRAP_LOCALS = new Predicate<Component>( ) {
+                                                           
+                                                           @Override
+                                                           public boolean apply( Component c ) {
+                                                             return ComponentIds.shouldBootstrapLocally( c.getComponentId( ) );
+                                                           }
+                                                         };
+    
+    public static Predicate<Component> shouldBootstrapLocally( ) {
+      return BOOTSTRAP_LOCALS;
+    }
+    
+    private static Predicate<Component> ARE_ENABLED_LOCAL = new Predicate<Component>( ) {
+                                                            
+                                                            @Override
+                                                            public boolean apply( Component c ) {
+                                                              boolean cloudLocal = Bootstrap.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
+                                                              boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
+                                                              boolean runningLocal = c.isEnabledLocally( );
+                                                              return cloudLocal || alwaysLocal || runningLocal;
+                                                            }
+                                                          };
+    
+    public static Predicate<Component> areEnabledLocally( ) {
+      return ARE_ENABLED_LOCAL;
+    }
+    
+    private static Predicate<Component> ARE_ENABLED = new Predicate<Component>( ) {
+                                                      
+                                                      @Override
+                                                      public boolean apply( Component c ) {
+                                                        return c.isEnabledLocally( );
+                                                      }
+                                                    };
+    
+    public static Predicate<Component> areEnabled( ) {
+      return ARE_ENABLED;
+    }
+  }
+  
 }

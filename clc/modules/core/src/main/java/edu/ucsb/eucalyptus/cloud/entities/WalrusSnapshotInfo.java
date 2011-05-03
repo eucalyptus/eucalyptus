@@ -65,21 +65,22 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
-import javax.persistence.*;
 
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "WalrusSnapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class WalrusSnapshotInfo {
-    @Id
-    @GeneratedValue
-    @Column(name = "walrus_snapshot_id")
-    private Long id = -1l;
+public class WalrusSnapshotInfo extends AbstractPersistent {
     @Column(name ="snapshot_name", unique=true)
     private String snapshotId;
     @Column(name = "snapshot_bucket")

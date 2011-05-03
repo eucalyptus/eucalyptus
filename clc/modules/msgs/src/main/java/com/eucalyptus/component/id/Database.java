@@ -63,25 +63,28 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Internets;
+import com.google.common.collect.Lists;
 
-public class Database extends ComponentId {
-
+public class Database extends ComponentId.Unpartioned {
+  
   public Database( ) {
     super( "Db" );
   }
-
+  
   @Override
   public Integer getPort( ) {
     return 8777;
   }
-
+  
   @Override
   public String getLocalEndpointName( ) {
-    return "mysql://127.0.0.1:8777/eucalyptus";
+    return "mysql://" + Internets.localhost( ) + ":8777/eucalyptus";
   }
-
+  
   @Override
   public String getUriPattern( ) {
     return "mysql://%s:%d/eucalyptus";
@@ -91,24 +94,18 @@ public class Database extends ComponentId {
   public Boolean hasDispatcher( ) {
     return false;
   }
-
-  @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
   
   @Override
   public Boolean hasCredentials( ) {
     return true;
   }
-
+  
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
 }

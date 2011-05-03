@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -112,7 +112,7 @@ public class Lookups {
           throw new NoSuchElementException( "Failed to lookup requested " + type + " with id " + identifier + " using " + lookupFunction.getClass( ) ); 
         }
         Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
-        if( !Permissions.isAuthorized( type.resource( ), identifier, owningAccount, action, requestUser ) ) {
+        if( !Permissions.isAuthorized( type.vendor( ), type.resource( ), identifier, owningAccount, action, requestUser ) ) {
           throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
         }
         return requestedObject;
@@ -126,7 +126,7 @@ public class Lookups {
     }
   }
   
-  public static boolean checkPrivilege( BaseMessage request, String resourceType, String resourceId, FullName resourceOwner ) {
+  public static boolean checkPrivilege( BaseMessage request, String vendor, String resourceType, String resourceId, FullName resourceOwner ) {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     User requestUser = ctx.getUser( );
@@ -138,10 +138,10 @@ public class Lookups {
       return false;
     }
     return ( ctx.hasAdministrativePrivileges( ) ||
-             Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser ));
+             Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser ));
   }
   
-  public static boolean checkPrivilege( String action, String resourceType, String resourceId, String resourceOwnerAccountId ) {
+  public static boolean checkPrivilege( String action, String vendor, String resourceType, String resourceId, String resourceOwnerAccountId ) {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = null;
@@ -151,7 +151,7 @@ public class Lookups {
       LOG.error( e, e );
       return false;
     }
-    return Permissions.isAuthorized( resourceType, resourceId, account, action, requestUser );
+    return Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser );
   }
   
 }

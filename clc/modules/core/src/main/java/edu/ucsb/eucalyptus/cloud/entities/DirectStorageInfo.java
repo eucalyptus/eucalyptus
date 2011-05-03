@@ -63,33 +63,32 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-import javax.persistence.*;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "direct_storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton=false, deferred = true)
-public class
-DirectStorageInfo {
+public class DirectStorageInfo extends AbstractPersistent {
 	private static Logger LOG = Logger.getLogger( DirectStorageInfo.class );
 
-	@Id
-	@GeneratedValue
-	@Column( name = "storage_direct_id" )
-	private Long id = -1l;
 	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
@@ -120,11 +119,6 @@ DirectStorageInfo {
 		this.storageInterface = storageInterface;
 		this.volumesDir = volumesDir;
 		this.zeroFillVolumes = zeroFillVolumes;
-	}
-
-	public Long getId()
-	{
-		return id;
 	}
 
 	public String getName() {
@@ -191,7 +185,7 @@ DirectStorageInfo {
 	}
 
 	public static DirectStorageInfo getStorageInfo() {
-		EntityWrapper<DirectStorageInfo> storageDb = new EntityWrapper<DirectStorageInfo>(StorageProperties.DB_NAME);
+		EntityWrapper<DirectStorageInfo> storageDb = EntityWrapper.get(DirectStorageInfo.class);
 		DirectStorageInfo conf = null;
 		try {
 			conf = storageDb.getUnique(new DirectStorageInfo(StorageProperties.NAME));

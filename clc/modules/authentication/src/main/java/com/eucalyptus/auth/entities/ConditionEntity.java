@@ -5,7 +5,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
  * @author wenye
  *
  */
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_condition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -74,8 +74,7 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
     sb.append( "Condition(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "type=" ).append( this.getType( ) ).append( ", " );
-    sb.append( "key=" ).append( this.getKey( ) ).append( ", " );
-    sb.append( "values=" ).append( this.getValues( ) );
+    sb.append( "key=" ).append( this.getKey( ) );
     sb.append( ")" );
     return sb.toString( );
   }
@@ -106,6 +105,19 @@ public class ConditionEntity extends AbstractPersistent implements Serializable 
   
   public void setStatement( StatementEntity statement ) {
     this.statement = statement;
+  }
+
+  /**
+   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
+   * supporting currently hand-coded proxy classes. Don't share this value with the user.
+   *
+   * TODO: remove this if possible.
+   * 
+   * @return
+   * @see {@link AbstractPersistent#getId()}
+   */
+  public String getConditionId( ) {
+    return this.getId( );
   }
 
 }

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -80,9 +80,9 @@ import javax.persistence.EntityNotFoundException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.Authentication;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerBuilder;
@@ -1102,7 +1102,7 @@ public class OverlayManager implements LogicalStorageManager {
 			try {
         List<ClusterConfiguration> partitionConfigs = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
         ClusterConfiguration clusterConfig = partitionConfigs.get( 0 );
-				PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
+				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      

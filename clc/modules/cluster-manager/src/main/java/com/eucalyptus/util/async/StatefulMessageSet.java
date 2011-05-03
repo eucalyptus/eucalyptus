@@ -1,21 +1,19 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                                  LOG           = Logger.getLogger( StatefulMessageSet.class );
-  private Multimap<E, Request>                           messages      = Multimaps.newArrayListMultimap( );
+  private Multimap<E, Request>                           messages      = ArrayListMultimap.create( );
   private ConcurrentLinkedQueue<CheckedListenableFuture> pendingEvents = new ConcurrentLinkedQueue<CheckedListenableFuture>( );
   private E[]                                            states;
   private E                                              state;
@@ -65,11 +63,11 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
           public CheckedListenableFuture apply( Cluster c ) {
             EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ).info( );
-            return Callbacks.newRequest( callback.newInstance( ).regardingUserRequest( callback.getRequest( ) ) ).dispatch( c.getServiceEndpoint( ) );
+            return Callbacks.newRequest( callback.newInstance( ).regardingUserRequest( callback.getRequest( ) ) ).dispatch( c.getConfiguration( ) );
           }
         } ) );
       } else {
-        this.pendingEvents.add( event.dispatch( cluster.getServiceEndpoint( ) ) );
+        this.pendingEvents.add( event.dispatch( cluster.getConfiguration( ) ) );
         EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ).info( );
       }
     }

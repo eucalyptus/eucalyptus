@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -86,15 +86,15 @@ public class MembershipConfiguration {
   private static Integer       oobThreadPoolKeepAliveTime = 5000;
   
   public static ThreadPool getThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class );
+    return Threads.lookup( Empyrean.class, HostManager.class );
   }
   
   public static ThreadPool getNormalThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class, "normal-pool" );
+    return Threads.lookup( Empyrean.class, HostManager.class, "normal-pool" );
   }
   
   public static ThreadPool getOOBThreadPool( ) {
-    return Threads.lookup( Empyrean.class, MembershipManager.class, "oob-pool" );
+    return Threads.lookup( Empyrean.class, HostManager.class, "oob-pool" );
   }
   
   public static String getMulticastAddress( ) {

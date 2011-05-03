@@ -93,7 +93,7 @@ import com.google.common.collect.Lists;
 public class InternalWsSecHandler extends WsSecHandler {
 
   public InternalWsSecHandler( ) throws GeneralSecurityException {
-    super( new CredentialProxy( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ), SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getPrivateKey( ) ) );
+    super( new CredentialProxy( Eucalyptus.class ) );
   }
 
   @Override
@@ -121,8 +121,6 @@ public class InternalWsSecHandler extends WsSecHandler {
           throw new WSSecurityException( WSSecurityException.FAILED_AUTHENTICATION );
         }
       }
-      // YE TODO: will there be a problem, e.g. the system admin is not ready?
-      //Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Accounts.lookupSystemAdmin( ) );
       Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.SYSTEM_USER );
     }
   }

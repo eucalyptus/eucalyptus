@@ -64,19 +64,20 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 
-import javax.persistence.*;
-
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEMetaInfo" )
-@Entity
+@Entity @javax.persistence.Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "storage", description = "Storage controller AOE meta info", singleton=false, deferred = true)
 public class AOEMetaInfo extends LVMMetaInfo {

@@ -64,7 +64,9 @@ package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -81,6 +83,9 @@ import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -100,7 +105,31 @@ import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 
 public class ClusterEndpoint implements Startable {
   
-  private static Logger LOG = Logger.getLogger( ClusterEndpoint.class );
+  private static Logger                                LOG              = Logger.getLogger( ClusterEndpoint.class );
+  
+  private Map<String, Supplier<List<ClusterInfoType>>> describeKeywords = new HashMap<String, Supplier<List<ClusterInfoType>>>( ) {
+                                                                          {
+                                                                            put( "coredump", new Supplier<List<ClusterInfoType>>( ) {
+                                                                              
+                                                                              @Override
+                                                                              public List<ClusterInfoType> get( ) {
+                                                                                return dumpInfo.apply( "IGNORED" );
+                                                                              }
+                                                                              
+                                                                            } );
+                                                                            put( "verbose", new Supplier<List<ClusterInfoType>>( ) {
+                                                                              
+                                                                              @Override
+                                                                              public List<ClusterInfoType> get( ) {
+                                                                                List<ClusterInfoType> verbose = Lists.newArrayList( );
+                                                                                for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+                                                                                  verbose.addAll( describeSystemInfo.apply( c ) );
+                                                                                }
+                                                                                return verbose;
+                                                                              }
+                                                                            } );
+                                                                          }
+                                                                        };
   
   public void start( ) throws MuleException {
     Clusters.getInstance( );
@@ -115,23 +144,40 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
     DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
-    if ( Contexts.lookup().hasAdministrativePrivileges() && request.getAvailabilityZoneSet( ).lastIndexOf( "help" ) == 0 ) {
-      reply.getAvailabilityZoneInfo( ).addAll( this.addHelpInfo( ) );
-      return reply;
-    }
     List<String> args = request.getAvailabilityZoneSet( );
-    if ( args.isEmpty( ) || args.contains( "verbose" ) || args.contains( "certs" ) || args.contains( "logs" ) || args.contains( "keys" ) ) {
-      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        this.getDescriptionEntry( reply, c, request );
+    
+    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+      for ( String keyword : describeKeywords.keySet( ) ) {
+        if ( args.remove( keyword ) ) {
+          reply.getAvailabilityZoneInfo( ).addAll( describeKeywords.get( keyword ).get( ) );
+          return reply;
+        }
       }
     } else {
-      for ( String clusterName : request.getAvailabilityZoneSet( ) ) {
+      for ( String keyword : describeKeywords.keySet( ) ) {
+        args.remove( keyword );
+      }
+    }
+    
+    if ( args.isEmpty( ) ) {
+      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+        reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+      }
+    } else {
+      for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          Cluster c = Clusters.getInstance( ).lookup( clusterName );
-          this.getDescriptionEntry( reply, c, request );
+          Cluster c = Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+            @Override
+            public boolean apply( Cluster input ) {
+              return partitionName.equals( input.getConfiguration( ).getPartition( ) );
+            }
+          } );
+          reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
         } catch ( NoSuchElementException e ) {
-          if ( clusterName.equals( "coredump" ) ) {
-            reply.getAvailabilityZoneInfo( ).addAll( this.dumpState( ) );
+          try {
+            Cluster c = Clusters.getInstance( ).lookup( partitionName );
+            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+          } catch ( NoSuchElementException ex ) {
           }
         }
       }
@@ -139,28 +185,16 @@ public class ClusterEndpoint implements Startable {
     return reply;
   }
   
-  private void getDescriptionEntry( DescribeAvailabilityZonesResponseType reply, Cluster c, DescribeAvailabilityZonesType request ) {
-    boolean admin = Contexts.lookup().hasAdministrativePrivileges();
-    List<String> args = request.getAvailabilityZoneSet( );
+  private List<ClusterInfoType> getDescriptionEntry( Cluster c, List<String> args ) {
+    List<ClusterInfoType> ret = Lists.newArrayList( );
     String clusterName = c.getName( );
-    reply.getAvailabilityZoneInfo( ).add( new ClusterInfoType( c.getConfiguration( ).getName( ), c.getConfiguration( ).getHostName( ) ) );
+    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), c.getConfiguration( ).getHostName( ) + " "
+                                                                                                      + c.getConfiguration( ).getFullName( ) ) );
     NavigableSet<String> tagList = new ConcurrentSkipListSet<String>( );
     if ( tagList.size( ) == 1 )
       tagList = c.getNodeTags( );
     else tagList.retainAll( c.getNodeTags( ) );
-    if ( admin ) {
-      if ( args.contains( "verbose" ) ) {
-        reply.getAvailabilityZoneInfo( ).addAll( this.addSystemInfo( c ) );
-      } else if ( args.contains( "certs" ) ) {
-        for ( String tag : tagList ) {
-          reply.getAvailabilityZoneInfo( ).addAll( this.addCertInfo( tag, c ) );
-        }
-      } else if ( args.contains( "logs" ) ) {
-        for ( String tag : tagList ) {
-          reply.getAvailabilityZoneInfo( ).addAll( this.addLogInfo( tag, c ) );
-        }
-      }
-    }
+    return ret;
   }
   
   private static String INFO_FSTRING  = "|- %s";
@@ -175,145 +209,166 @@ public class ClusterEndpoint implements Startable {
     return new ClusterInfoType( String.format( INFO_FSTRING, left ), right );
   }
   
-  private List<ClusterInfoType> dumpState( ) {
-    List<ClusterInfoType> retList = Lists.newArrayList( );
-    retList.add( new ClusterInfoType( "================== Addresses", "" ) );
-    for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-      String val = addr.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Disabled Addresses", "" ) );
-    for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-      String val = addr.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== VMs", "" ) );
-    for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-      String val = vm.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
-    for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-      String val = vm.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Clusters", "" ) );
-    for ( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
-      String val = cluster.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Networks", "" ) );
-    for ( Network network : Networks.getInstance( ).listValues( ) ) {
-      String val = network.toString( );
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Configurations", "" ) );
-    for ( String val : Iterables.transform( Components.list( ), Components.configurationToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for ( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
-    for ( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Bootstrappers", "" ) );
-    for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-      retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
-      LOG.info( stage.describe( ) );
-    }
-    retList.add( new ClusterInfoType( "================== Configurations", "" ) );
-    for( String val : Iterables.transform( Components.list( ), Components.configurationToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Components", "" ) );
-    for( String val : Iterables.transform( Components.list( ), Components.componentToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Dispatchers", "" ) );
-    for( String val : Iterables.transform( ServiceDispatcher.values( ), Components.dispatcherToString( ) ) ) {
-      retList.add( new ClusterInfoType( val, "" ) );
-      LOG.info( val );
-    }
-    retList.add( new ClusterInfoType( "================== Bootstrappers", "" ) );
-    for( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-      retList.add( new ClusterInfoType( stage.name( ), stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ", "" ) ) );
-      LOG.info( stage.describe( ) );
-    }
-    return retList;
-  }
+  private static Function<String, List<ClusterInfoType>>  dumpInfo           = new Function<String, List<ClusterInfoType>>( ) {
+                                                                               
+                                                                               @Override
+                                                                               public List<ClusterInfoType> apply( String sdfsdf ) {
+                                                                                 List<ClusterInfoType> retList = Lists.newArrayList( );
+                                                                                 retList.add( new ClusterInfoType( "================== Addresses", "" ) );
+                                                                                 for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
+                                                                                   String val = addr.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Disabled Addresses", "" ) );
+                                                                                 for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
+                                                                                   String val = addr.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== VMs", "" ) );
+                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+                                                                                   String val = vm.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
+                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+                                                                                   String val = vm.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Clusters", "" ) );
+                                                                                 for ( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+                                                                                   String val = cluster.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
+                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
+                                                                                   String val = network.toString( );
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.info( val );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers",
+                                                                                                                   "" ) );
+                                                                                 for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+                                                                                   retList.add( new ClusterInfoType(
+                                                                                                                     stage.name( ),
+                                                                                                                     stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ",
+                                                                                                                                                                          "" ) ) );
+                                                                                   LOG.info( stage.describe( ) );
+                                                                                 }
+                                                                                 retList.add( new ClusterInfoType( "================== Components", "" ) );
+                                                                                 for ( String val : Iterables.transform( Components.list( ),
+                                                                                                                         Components.Functions.componentToString( ) ) ) {
+                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+                                                                                   LOG.trace( val );
+                                                                                 }
+                                                                                 return retList;
+                                                                               }
+                                                                             };
   
-  private Collection<ClusterInfoType> addHelpInfo( ) {
-    List<ClusterInfoType> helpInfo = new ArrayList<ClusterInfoType>( );
-    helpInfo.add( t( "sub-command", "effect & arguments" ) );
-    helpInfo.add( s( "logs     [SERVICE_TAGS...]", "get log files from the system." ) );
-    helpInfo.add( s( "certs    [SERVICE_TAGS...]", "get log files from the system." ) );
-    helpInfo.add( s( "verbose", "get log files from the system." ) );
-    return helpInfo;
-  }
+  private static Function<Cluster, List<ClusterInfoType>> describeSystemInfo = new Function<Cluster, List<ClusterInfoType>>( ) {
+                                                                               @Override
+                                                                               public List<ClusterInfoType> apply( Cluster cluster ) {
+                                                                                 List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
+                                                                                 try {
+                                                                                   info.add( new ClusterInfoType(
+                                                                                                                  cluster.getConfiguration( ).getPartition( ),
+                                                                                                                  cluster.getConfiguration( ).getHostName( )
+                                                                                                                      + " "
+                                                                                                                      + cluster.getConfiguration( ).getFullName( ) ) );
+                                                                                   info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ),
+                                                                                                                  HEADER_STRING ) );
+                                                                                   for ( VmType v : VmTypes.list( ) ) {
+                                                                                     VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v.getName( ) );
+                                                                                     info.add( s( v.getName( ),
+                                                                                                  String.format( STATE_FSTRING, va.getAvailable( ),
+                                                                                                                 va.getMax( ), v.getCpu( ), v.getMemory( ),
+                                                                                                                 v.getDisk( ) ) ) );
+                                                                                   }
+                                                                                 } catch ( Exception e ) {
+                                                                                   LOG.error( e, e );
+                                                                                 }
+                                                                                 
+                                                                                 return info;
+                                                                               }
+                                                                             };
   
-  private List<ClusterInfoType> addSystemInfo( final Cluster cluster ) {
-    List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
-    try {
-      info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ), HEADER_STRING ) );
-      for ( VmType v : VmTypes.list( ) ) {
-        VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v.getName( ) );
-        info.add( s( v.getName( ), String.format( STATE_FSTRING, va.getAvailable( ), va.getMax( ), v.getCpu( ), v.getMemory( ), v.getDisk( ) ) ) );
-      }
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-    }
-    
-    return info;
-  }
+  private static Function<String, List<ClusterInfoType>>  describeLogInfo    = new Function<String, List<ClusterInfoType>>( ) {
+                                                                               
+                                                                               @Override
+                                                                               public List<ClusterInfoType> apply( String serviceTag ) {
+                                                                                 List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
+                                                                                 if ( Clusters.getInstance( ).contains( serviceTag ) ) {
+                                                                                   Cluster c = Clusters.getInstance( ).lookup( serviceTag );
+                                                                                   NodeLogInfo logInfo = c.getLastLog( );
+                                                                                   info.add( t( c.getConfiguration( ).getFullName( ).toString( ),
+                                                                                                " state=" + c.getState( ) ) );
+                                                                                   if ( !logInfo.getCcLog( ).isEmpty( ) )
+                                                                                     info.add( s( "cc.log\n", logInfo.getCcLog( ) ) );
+                                                                                   info.add( t( c.getConfiguration( ).getFullName( ).toString( ),
+                                                                                                " state=" + c.getState( ) ) );
+                                                                                   info.add( s( "axis2.log\n", logInfo.getAxis2Log( ) ) );
+                                                                                   info.add( t( c.getConfiguration( ).getFullName( ).toString( ),
+                                                                                                " state=" + c.getState( ) ) );
+                                                                                   info.add( s( "httpd.log\n", logInfo.getHttpdLog( ) ) );
+                                                                                 } else {
+                                                                                   for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+                                                                                     if ( c.getNode( serviceTag ) != null ) {
+                                                                                       NodeInfo node = c.getNode( serviceTag );
+                                                                                       NodeLogInfo logInfo = node.getLogs( );
+                                                                                       info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
+                                                                                       if ( !logInfo.getNcLog( ).isEmpty( ) )
+                                                                                         info.add( s( "nc.log\n", logInfo.getNcLog( ) ) );
+                                                                                       info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
+                                                                                       info.add( s( "axis2.log\n", logInfo.getAxis2Log( ) ) );
+                                                                                       info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
+                                                                                       info.add( s( "httpd.log\n", logInfo.getHttpdLog( ) ) );
+                                                                                     }
+                                                                                   }
+                                                                                 }
+                                                                                 return info;
+                                                                               };
+                                                                             };
   
-  private List<ClusterInfoType> addLogInfo( final String serviceTag, final Cluster cluster ) {
-    List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
-    NodeInfo node = cluster.getNode( serviceTag );
-    NodeLogInfo logInfo = node.getLogs( );
-    info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
-    if ( !logInfo.getNcLog( ).isEmpty( ) )
-      info.add( s( "nc.log\n", logInfo.getNcLog( ) ) );
-    if ( !logInfo.getNcLog( ).isEmpty( ) )
-      info.add( s( "cc.log\n", logInfo.getCcLog( ) ) );
-    info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
-    info.add( s( "axis2.log\n", logInfo.getAxis2Log( ) ) );
-    info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
-    info.add( s( "httpd.log\n", logInfo.getHttpdLog( ) ) );
-    return info;
-  }
+  private static Function<String, List<ClusterInfoType>>  describeCertInfo   = new Function<String, List<ClusterInfoType>>( ) {
+                                                                               
+                                                                               @Override
+                                                                               public List<ClusterInfoType> apply( String serviceTag ) {
+                                                                                 List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
+                                                                                 if ( Clusters.getInstance( ).contains( serviceTag ) ) {
+                                                                                   Cluster c = Clusters.getInstance( ).lookup( serviceTag );
+                                                                                   info.add( t( c.getConfiguration( ).getFullName( ).toString( ),
+                                                                                                " state=" + c.getState( ) ) );
+                                                                                   info.add( s( "CC cert\n", c.getClusterCertificate( ).toString( ) ) );
+                                                                                   info.add( s( "NC cert\n", c.getNodeCertificate( ).toString( ) ) );
+                                                                                 } else {
+                                                                                   for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+                                                                                     if ( c.getNode( serviceTag ) != null ) {
+                                                                                       NodeInfo node = c.getNode( serviceTag );
+                                                                                       info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
+                                                                                       NodeCertInfo certInfo = node.getCerts( );
+                                                                                       info.add( s( "CC cert\n", certInfo.getCcCert( ) ) );
+                                                                                       info.add( s( "NC cert\n", certInfo.getCcCert( ) ) );
+                                                                                     }
+                                                                                   }
+                                                                                 }
+                                                                                 return info;
+                                                                               }
+                                                                             };
   
-  private Collection<ClusterInfoType> addCertInfo( final String serviceTag, final Cluster c ) {
-    List<ClusterInfoType> info = new ArrayList<ClusterInfoType>( );
-    NodeInfo node = c.getNode( serviceTag );
-    info.add( t( node.getName( ), "last-seen=" + node.getLastSeen( ) ) );
-    NodeCertInfo certInfo = node.getCerts( );
-    info.add( s( "CC cert\n", certInfo.getCcCert( ) ) );
-    info.add( s( "NC cert\n", certInfo.getCcCert( ) ) );
-    return info;
-  }
-  
-  public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {
+  public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
     reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType( "Walrus", Components.lookup( "walrus" ).lookupService( "walrus" ).getUri( ).toASCIIString( ) ) );
+      reply.getRegionInfo( ).add( new RegionInfoType(
+                                                      "Walrus",
+                                                      Components.lookup( "walrus" ).lookupService( "walrus" ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
     return reply;
   }

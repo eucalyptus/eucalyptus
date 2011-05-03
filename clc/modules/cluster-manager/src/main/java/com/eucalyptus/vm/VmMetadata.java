@@ -68,11 +68,11 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
-import com.google.common.base.Join;
+import com.google.common.base.Joiner;
 
 public class VmMetadata {
   private static Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
@@ -97,7 +97,7 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Join.join( "\n",
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
                                                                                                                                                              keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
@@ -108,7 +108,7 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Join.join( "\n",
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
                                                                                                                                                              keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
@@ -123,7 +123,7 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Join.join( "\n",
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
                                                                                                                                                              keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
@@ -147,11 +147,11 @@ public class VmMetadata {
         return null;
       }
     } catch ( Throwable ex ) {
-      String errorMsg = "Metadata request failed: " + path + ( LogLevels.DEBUG
+      String errorMsg = "Metadata request failed: " + path + ( Logs.DEBUG
         ? " cause: " + ex.getMessage( )
         : "" );
       LOG.error( errorMsg, ex );
-      return LogLevels.DEBUG
+      return Logs.DEBUG
         ? Exceptions.string( errorMsg, ex ).getBytes( )
         : errorMsg.getBytes( );
     }

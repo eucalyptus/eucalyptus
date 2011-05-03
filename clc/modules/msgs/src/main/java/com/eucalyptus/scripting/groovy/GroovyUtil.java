@@ -9,11 +9,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Map;
 
+import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 
 import org.apache.log4j.Logger;
@@ -56,11 +59,17 @@ public class GroovyUtil {
     }
   }
 
-  public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {
+  public static <T> T evaluateScript( SubDirectory dir, String fileName ) throws ScriptExecutionFailedException {
+    fileName = dir + File.separator + fileName;
+    String fileNameWExt = fileName + ".groovy";
+    if( !new File( fileName ).exists( ) && new File( fileNameWExt ).exists( ) ) {
+      fileName = fileNameWExt;
+    }
     FileReader fileReader = null;
     try {
-      fileReader = new FileReader( SubDirectory.SCRIPTS + File.separator + fileName + (fileName.endsWith(".groovy")?"":".groovy") );
-      return getGroovyEngine().eval( fileReader );
+      fileReader = new FileReader( fileName );
+      T ret = ( T ) getGroovyEngine().eval( fileReader );
+      return ret;
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + fileName, e );
@@ -74,11 +83,27 @@ public class GroovyUtil {
     }
   }
 
+  public static Object evaluateScript( String fileName ) throws ScriptExecutionFailedException {
+    return evaluateScript( SubDirectory.SCRIPTS, fileName );
+  }
+
   public static int exec( final String code ) throws ScriptExecutionFailedException {
     try {
       return (Integer) getGroovyEngine().eval( "p=hi.execute();p.waitFor();System.out.print(p.in.text);System.err.print(p.err.text);p.exitValue()", new SimpleScriptContext() {{
         setAttribute( "hi", code, ENGINE_SCOPE );
       }});
+    } catch ( Throwable e ) {
+      LOG.debug( e, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
+    }
+  }
+
+  public static Object eval( String code, Map context ) throws ScriptExecutionFailedException {
+    try {
+      Bindings bindings = new SimpleBindings(context);
+      SimpleScriptContext scriptContext = new SimpleScriptContext();
+      scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
+      return getGroovyEngine().eval( code, scriptContext );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );

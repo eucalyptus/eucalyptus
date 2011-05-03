@@ -65,32 +65,29 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.ArrayList;
+import java.util.List;
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.entities.AbstractPersistent;
 import edu.ucsb.eucalyptus.msgs.AccessControlListType;
 import edu.ucsb.eucalyptus.msgs.Grant;
 import edu.ucsb.eucalyptus.msgs.Grantee;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import edu.ucsb.eucalyptus.util.UserManagement;
 
-import javax.persistence.*;
-
-import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Grants" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class GrantInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "grant_id" )
-	private Long id = -1l;
+public class GrantInfo extends AbstractPersistent {
 	@Column(name="user_id")
 	private String userId; // Actually refer to the owner account ID
 	@Column(name="grantGroup")
@@ -108,11 +105,6 @@ public class GrantInfo {
 
 	public GrantInfo(){
 		canRead = canWrite = canReadACP = canWriteACP = false;
-	}
-
-	public Long getId()
-	{
-		return this.id;
 	}
 
 	public boolean canRead() {
@@ -185,7 +177,7 @@ public class GrantInfo {
 						if(id == null || id.length() == 0)
 							continue;
 						try {
-							displayName = Accounts.lookupUserByAccessKeyId(id).getId();
+							displayName = Accounts.lookupUserByAccessKeyId(id).getUserId();
 						} catch ( AuthException e ) {
               LOG.warn(e,e);
             }

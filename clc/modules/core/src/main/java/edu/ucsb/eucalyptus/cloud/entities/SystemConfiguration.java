@@ -71,7 +71,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
@@ -86,6 +86,7 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ForwardImages;
@@ -95,17 +96,13 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "config", description = "Basic system configuration." )
-public class SystemConfiguration {
+public class SystemConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
-  @Id
-  @GeneratedValue
-  @Column( name = "system_info_id" )
-  private Long    id = -1l;
   @ConfigurableField( description = "Hostname of the cloud controller." )
   @Column( name = "system_info_cloud_host" )
   private String  cloudHost;
@@ -148,10 +145,6 @@ public class SystemConfiguration {
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
     this.cloudHost = cloudHost;
-  }
-  
-  public Long getId( ) {
-    return id;
   }
   
   public String getDefaultKernel( ) {
@@ -288,11 +281,9 @@ public class SystemConfiguration {
         }
       }
       if( cloudHost == null ) {
-        try {
-          cloudHost = Internets.getAllAddresses( ).get( 0 );
-        } catch ( SocketException e ) {}
+        cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
       }
-      return String.format( "http://%s:"+System.getProperty("euca.ws.port")+"/services/Eucalyptus", cloudHost );
+      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
     } catch ( PersistenceException e ) {
       return "http://127.0.0.1:8773/services/Eucalyptus";
     }
@@ -326,9 +317,7 @@ public class SystemConfiguration {
     } catch ( PersistenceException e ) {
     }
     if( cloudHost == null ) {
-      try {
-        cloudHost = Internets.getAllAddresses( ).get( 0 );
-      } catch ( SocketException e ) {}
+      cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
     }
     return cloudHost;
   }
@@ -336,12 +325,10 @@ public class SystemConfiguration {
   public static String getInternalIpAddress ()
   {
     String ipAddr = null;
-    try {
-      for( String addr : Internets.getAllAddresses( ) ) {
-        ipAddr = addr;
-        break;
-      }
-    } catch ( SocketException e ) {}
+    for( String addr : Internets.getAllAddresses( ) ) {//TODO:GRZE:FIXTHISDFSDFSDF
+      ipAddr = addr;
+      break;
+    }
     return ipAddr == null ? "127.0.0.1" : ipAddr;
   }
 

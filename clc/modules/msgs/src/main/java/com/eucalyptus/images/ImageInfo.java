@@ -73,7 +73,7 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
@@ -106,7 +106,7 @@ import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -230,7 +230,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       Transactions.one( new ImageInfo( this.displayName ), new JoinTx<ImageInfo>( ) {
         @Override
         public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
-          LaunchPermission imgAuth = new LaunchPermission( t, account.getId( ) );
+          LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
 //            db.recast( LaunchPermission.class ).add( imgAuth );
             t.getPermissions( ).add( imgAuth );
@@ -332,7 +332,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
           LaunchPermission imgAuth;
-          t.getPermissions( ).remove( new LaunchPermission( t, account.getId( ) ) );
+          t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
         }
       } );
     } catch ( TransactionException e ) {
@@ -405,7 +405,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.fullName == null
       ? this.fullName = FullName.create.vendor( "euca" )
                                        .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountId( ) )
+                                       .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountNumber( ) )
                                        .relativeId( "image", this.getDisplayName( ) )
       : this.fullName;
   }

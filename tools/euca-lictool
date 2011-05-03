@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+
+use strict;
+use Getopt::Long;
+
+my $EUCALYPTUS = $ENV{'EUCALYPTUS'};
+my $CERT = "$EUCALYPTUS/var/lib/eucalyptus/keys/cloud-cert.pem";
+my $TEMPLATE = "$EUCALYPTUS/usr/share/eucalyptus/lic_template";
+my $FORMAT = "RSA/ECB/PKCS1Padding";
+my $PASS_LINE = qr/"auth-credentials"\s*:\s*"(.*)"/;
+
+my $USAGE = <<END;
+
+This is a tool to help create the LDAP integration configuration.
+
+Usage: euca-lictool <options>
+
+Options:
+  --password <password>      : set the password for result LIC
+  --out      <output path>   : output to a file
+  --passonly                 : print encrypted password only, no LIC template
+  --custom <custom lic path> : use a custom LIC file instead of installed LIC template
+  --nocomment                : remove comments from the LIC template
+
+Examples:
+
+# create a LIC template with encrypted password, print to STDOUT
+\$ euca-lictool --password secret > example.lic
+
+# create a LIC template with encrypted password, print to a file
+\$ euca-lictool --password secret --out example.lic
+
+# only print the encrypted password
+\$ euca-lictool --password secret --passonly
+
+# use an existing LIC and replace the credential field with encrypted password
+\$ euca-lictool --password secret --custom my.lic --out mynew.lic
+
+# create a LIC template with encrypted password and with comments removed
+\$ euca-lictool --password secret --out example.lic --nocomment
+
+# encrypt password in an existing LIC file and output the new file
+\$ euca-lictool --custom my.lic
+
+# encrypt password in an existing LIC file in place
+\$ euca-lictool --custom my.lic --out my.lic
+END
+
+sub print_usage {
+  print STDERR $USAGE."\n";
+  exit(1);
+}
+
+sub encrypt {
+  my($clear) = @_;
+  my $crypt = `echo -n $clear | openssl rsautl -encrypt -inkey $CERT -certin | openssl base64 | tr -d '\n'`;
+  if ($? != 0 or $crypt eq "") {
+    print STDERR "Failed to encrypt password";
+    exit(1);
+  }
+  $crypt = "{$FORMAT}".$crypt;
+  return $crypt;
+}
+
+my $password = "";
+my $outfile = "";
+my $passonly = 0;
+my $custom_template = "";
+my $remove_comment = 0;
+
+my $result = GetOptions("password=s" => \$password,
+                        "out=s"      => \$outfile,
+                        "passonly"   => \$passonly,
+                        "custom=s"   => \$custom_template,
+                        "nocomment"  => \$remove_comment);
+
+if (not $result) {
+  print_usage;
+}
+
+# password is either from command line or from user provided LIC
+if ($password eq "" and $custom_template eq "") {
+  print_usage;
+}
+
+if ($EUCALYPTUS eq "") {
+  $EUCALYPTUS = "/";
+}
+
+my $encrypted = "";
+if ($password ne "") {
+  $encrypted = encrypt($password);
+}
+
+my $input_file;
+if ($custom_template eq "") {
+  $input_file = $TEMPLATE;
+} else {
+  $input_file = $custom_template;
+}
+my @lic = ();
+open TEMP, "<$input_file" or die "Can not open $input_file: $!";
+while (<TEMP>) {
+  if (/$PASS_LINE/) {
+    if ($encrypted eq "") {
+      $encrypted = encrypt($1);
+    }
+    s/$PASS_LINE/"auth-credentials":"$encrypted"/g;
+  } elsif (/\"_comment\":/) {
+    next if ($remove_comment);
+  }
+  push(@lic, $_);
+}
+close TEMP;
+
+if ($passonly) {
+  print $encrypted;
+  exit(0);
+}
+
+my $lic_out = join("", @lic);
+if ($outfile eq "") {
+  print $lic_out;
+} else {
+  open OUT, ">$outfile" or die "Can not open $outfile to write: $!";
+  print OUT $lic_out;
+  close OUT;
+}

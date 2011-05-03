@@ -6,6 +6,10 @@ import java.util.UUID;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -21,17 +25,27 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
 public class Context {
-  private static Logger            LOG       = Logger.getLogger( Context.class );
-  
+  private static Logger            LOG           = Logger.getLogger( Context.class );
   private final String             correlationId;
   private Long                     creationTime;
-  private BaseMessage              request   = null;
+  private BaseMessage              request       = null;
   private final MappingHttpRequest httpRequest;
   private final Channel            channel;
-  private WeakReference<MuleEvent> muleEvent = new WeakReference<MuleEvent>( null );
-  private User                     user      = null;
-  private Subject                  subject   = null;
-  private Map<String, Contract>    contracts = Maps.newHashMap( );
+  private WeakReference<MuleEvent> muleEvent     = new WeakReference<MuleEvent>( null );
+  private User                     user          = null;
+  private Subject                  subject       = null;
+  private Map<String, Contract>    contracts     = Maps.newHashMap( );
+  
+  protected Context( String dest, final BaseMessage msg ) {
+    this.correlationId = msg.getCorrelationId( );
+    this.creationTime = System.nanoTime( );
+    this.httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, dest ) {{
+      this.setCorrelationId( msg.getCorrelationId( ) );
+      this.message = msg;
+    }};
+    this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
+    EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
+  }
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
@@ -66,7 +80,7 @@ public class Context {
   }
   
   public BaseMessage getRequest( ) {
-    if( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
+    if ( this.request == null && this.httpRequest != null && this.httpRequest.getMessage( ) != null ) {
       this.request = ( BaseMessage ) this.httpRequest.getMessage( );
     }
     return check( this.request );
@@ -74,7 +88,7 @@ public class Context {
   
   public void setUser( User user ) {
     if ( user != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getId( ) ).debug( );
+      EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getUserId( ) ).debug( );
       this.user = user;
     }
   }
@@ -82,13 +96,15 @@ public class Context {
   public UserFullName getUserFullName( ) {
     return UserFullName.getInstance( this.getUser( ) );
   }
-
+  
   public UserFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if( this.getRequest( ) != null && FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( effectiveUserId ) ) {
-      return FakePrincipals.SYSTEM_USER_ERN;/** system **/
+    if ( this.getRequest( ) != null && FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( effectiveUserId ) ) {
+      return FakePrincipals.SYSTEM_USER_ERN;
+      /** system **/
     } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return FakePrincipals.NOBODY_USER_ERN;/** unset **/
+      return FakePrincipals.NOBODY_USER_ERN;
+      /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
         return Accounts.lookupUserFullNameByName( effectiveUserId );
@@ -154,12 +170,12 @@ public class Context {
   public Map<String, Contract> getContracts( ) {
     return this.contracts;
   }
-
+  
   public Account getAccount( ) {
     try {
       return this.user.getAccount( );
     } catch ( AuthException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
     }
   }

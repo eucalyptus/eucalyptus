@@ -63,15 +63,12 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.google.common.collect.Lists;
 
-public class Notifications extends ComponentId {
-  
-  @Override
-  public Boolean isCloudLocal( ) {
-    return true;
-  }
+public class Notifications extends ComponentId.Unpartioned {
   
   @Override
   public Boolean hasDispatcher( ) {
@@ -79,14 +76,12 @@ public class Notifications extends ComponentId {
   }
   
   @Override
-  public Boolean isAlwaysLocal( ) {
-    return false;
-  }
-
-  @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Eucalyptus.LIST;
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
- 
-
+  
 }

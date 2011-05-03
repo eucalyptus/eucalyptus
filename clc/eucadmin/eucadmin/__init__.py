@@ -28,55 +28,38 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import boto
-import os
-import sys
+from boto.roboto.awsqueryservice import AWSQueryService
+from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.param import Param
 import re
-import urlparse
-from boto.ec2.regioninfo import RegionInfo
 
 __version__ = '1.0a'
 
-class EucAdmin:
-    
-  def __init__(self, path='/services/Configuration'):
-      if not 'EC2_ACCESS_KEY' in os.environ:
-          print 'Environment variable EC2_ACCESS_KEY is unset.'
-          sys.exit(1)
-      if not 'EC2_SECRET_KEY' in os.environ:
-          print 'Environment variable EC2_SECRET_KEY is unset.'
-          sys.exit(1)
-      if not 'EC2_URL' in os.environ:
-          print 'Environment variable EC2_URL is unset.'
-          sys.exit(1)
-      self.path = path
-      self.region='eucalyptus'
-      self.access_key = os.getenv('EC2_ACCESS_KEY')
-      self.secret_key = os.getenv('EC2_SECRET_KEY')
-      self.url = os.getenv('EC2_URL')
-      self.parsed = urlparse.urlparse(self.url)
-      self.connection = boto.connect_euca(self.parsed.hostname,
-                                          self.access_key,
-                                          self.secret_key,
-                                          path=self.path)
-      self.connection.APIVersion = 'eucalyptus'
-    
-  def get_connection(self):
-      return self.conn
+class EucAdmin(AWSQueryService):
 
-  def handle_error(self,ex):
-      s = ""
-      if not hasattr(ex,"errors"):
-          s = 'ERROR %s' % (ex)
-      else:
-          if ex.errors.__len__() != 0:
-              for i in ex.errors:
-                  s = '%sERROR %s %s %s: %s\n' % (s,ex.status,
-                                                  ex.reason,
-                                                  i[0], i[1])
-          else:
-              s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
-          while s.count("\n") != 3:
-              s = re.sub(".*Exception.*\n", ": ", s)
-      print s.replace("\n","")
-      sys.exit(1)
+    Name = 'eucadmin'
+    Description = 'Eucalyptus Administration Services'
+    APIVersion = 'eucalyptus'
+    Authentication = 'sign-v2'
+    Path = '/services/Configuration'
+    Port = 8773
+    Provider = 'aws'
+    EnvURL = 'EC2_URL'
+
+    def handle_error(self, ex):
+        s = ""
+        if not hasattr(ex,"errors"):
+            s = 'ERROR %s' % (ex)
+        else:
+            if ex.errors.__len__() != 0:
+                for i in ex.errors:
+                    s = '%sERROR %s %s %s: %s\n' % (s, ex.status,
+                                                    ex.reason,
+                                                    i[0], i[1])
+            else:
+                s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
+            while s.count("\n") != 3:
+                s = re.sub(".*Exception.*\n", ": ", s)
+        print s.replace("\n","")
+        sys.exit(1)
+

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,23 +64,20 @@
 package com.eucalyptus.network;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
+import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule_ip_range" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange {
-  @Id
-  @GeneratedValue
-  @Column( name = "metadata_network_rule_ip_range_id" )
-  Long id = -1l;
+public class IpRange extends AbstractPersistent {
   @Column( name = "metadata_network_rule_ip_range_value" )
   String value;
   public IpRange(){
@@ -89,12 +86,6 @@ public class IpRange {
     this.value = value;
   }
 
-  public Long getId( ) {
-    return this.id;
-  }
-  public void setId( Long id ) {
-    this.id = id;
-  }
   public String getValue( ) {
     return this.value;
   }

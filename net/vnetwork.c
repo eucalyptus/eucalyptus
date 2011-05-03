@@ -86,7 +86,7 @@ permission notice:
 
 char *iptablesCache=NULL;
 
-int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp) {
+int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *macPrefix) {
   uint32_t nw=0, nm=0, unw=0, unm=0, dns=0, bc=0, rt=0, rc=0, slashnet=0, *ips=NULL, *nms=NULL;
   int vlan=0, numaddrs=1, len, i;
   char cmd[256];
@@ -182,6 +182,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       return(1);
     }
     
+    if (macPrefix) strncpy(vnetconfig->macPrefix, macPrefix, 5);
     if (path) strncpy(vnetconfig->path, path, MAX_PATH);
     if (eucahome) strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
     if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
@@ -203,16 +204,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	free(ipbuf);
       }
     }
-    /*
-    if (cloudIp) {
-      char *ipbuf=NULL;
-      ipbuf = host2ip(cloudIp);
-      if (ipbuf) {
-	vnetconfig->cloudIp = dot2hex(ipbuf);
-	free(ipbuf);
-      }
-    }
-    */
+
     vnetconfig->tunnels.localIpId = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
@@ -236,7 +228,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     bzero(vnetconfig->networks, sizeof(networkEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 16);
     bzero(vnetconfig->publicips, sizeof(publicip) * NUMBER_OF_PUBLIC_IPS);
-    
+  
     if (role != NC) {
       if (network) nw = dot2hex(network);
       if (netmask) nm = dot2hex(netmask);
@@ -1099,9 +1091,9 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     inip = dot2hex(outprivip);
     found=0;
     for (i=2; i<vnetconfig->numaddrs-2 && !found; i++) {
-      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+      //      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
       if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
-	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
+	//	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
 	vnetconfig->networks[0].addrs[i].active = 1;
 	found++;
 	ret=0;
@@ -1117,17 +1109,21 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
       }
     }
   } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
-    rc = instId2mac(instId, outmac);
-    if (rc) {
-      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-      return(1);
+    if (!strlen(outmac)) {
+      rc = instId2mac(vnetconfig, instId, outmac);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+	return(1);
+      }
     }
     ret = 0;
   } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    rc = instId2mac(instId, outmac);
-    if (rc) {
-      logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
-      return(1);
+    if (!strlen(outmac)) {
+      rc = instId2mac(vnetconfig, instId, outmac);
+      if (rc) {
+	logprintfl(EUCAERROR, "vnetGenerateNetworkParams(): unable to convert instanceId (%s) to mac address\n", instId);
+	return(1);
+      }
     }
  
     if (nidx == -1) {
@@ -2269,7 +2265,8 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
 	if (!strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
 	  char *theipstr=NULL, *themacstr=NULL;
 	  theipstr = hex2dot(theip);
-	  themacstr = ipdot2macdot(theipstr, "D0:0D");
+	  //	  themacstr = ipdot2macdot(theipstr, "D0:0D");
+	  themacstr = ipdot2macdot(theipstr, vnetconfig->macPrefix);
 	  if (theipstr && themacstr) {
 	    vnetRefreshHost(vnetconfig, themacstr, theipstr, 0, -1);
 	    free(themacstr);
@@ -2493,11 +2490,11 @@ int vnetStopNetwork(vnetConfig *vnetconfig, int vlan, char *userName, char *netN
   return(vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));
 }
 
-int instId2mac(char *instId, char *outmac) {
+int instId2mac(vnetConfig *vnetconfig, char *instId, char *outmac) {
   char *p, dst[24];
   int i;
 
-  if (!instId || !outmac) {
+  if (!vnetconfig || !instId || !outmac) {
     return(1);
   }
   dst[0] = '\0';
@@ -2509,7 +2506,8 @@ int instId2mac(char *instId, char *outmac) {
   }
   p += 2;
   if (strlen(p) == 8) {
-    strncat(dst, "D0:0D", 5);
+    //    strncat(dst, "D0:0D", 5);
+    strncat(dst, vnetconfig->macPrefix, 5);
     for (i=0; i<4; i++) {
       strncat(dst, ":", 1);
       strncat(dst, p, 2);

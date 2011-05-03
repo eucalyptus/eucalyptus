@@ -55,7 +55,8 @@ build: deps extras
 	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
 	@make -C modules/storage-controller/native
 	@make -C modules/storage-san/native
-	@make -C modules/bootstrap
+	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 build-test: deps extras
 	@# we need JAVA_HOME
@@ -70,7 +71,8 @@ build-test: deps extras
 	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
 	@make -C modules/storage-controller/native
 	@make -C modules/storage-san/native
-	@make -C modules/bootstrap
+	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 build-test: deps extras
 	@# we need JAVA_HOME
@@ -84,36 +86,42 @@ build-test: deps extras
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C modules/storage-controller/native
-	@make -C modules/bootstrap
+	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 clean:
 	$(ANT) clean
-	make -C modules/bootstrap clean
+	make -C modules/bootstrap/src/main/native clean
 	make -C modules/storage-controller/native clean
 	make -C modules/storage-san/native clean
+	make -C eucadmin clean
 
 distclean: clean
 	$(ANT) distclean
-	make -C modules/bootstrap distclean
+	make -C modules/bootstrap/src/main/native distclean
 	make -C modules/storage-controller/native distclean
 	make -C modules/storage-san/native distclean
+	make -C eucadmin distclean
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
 	@make -C modules/storage-controller/native install
-	@make -C modules/bootstrap install
+	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 install: build
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
 	@make -C modules/storage-controller/native install
 	@make -C modules/storage-san/native install
-	@make -C modules/bootstrap install
+	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) install
 	@make -C modules/storage-controller/native install
 	@make -C modules/storage-san/native install
-	@make -C modules/bootstrap install
+	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 
 deploy: install
@@ -121,7 +129,8 @@ deploy: install
 uninstall:
 	make -C modules/storage-controller/native uninstall
 	make -C modules/storage-san/native uninstall
-	make -C modules/bootstrap uninstall
+	make -C modules/bootstrap/src/main/native uninstall
+	make -C eucadmin uninstall
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
 	$(RM) -rf $(DESTDIR)$(vardir)/eucalyptus/webapps

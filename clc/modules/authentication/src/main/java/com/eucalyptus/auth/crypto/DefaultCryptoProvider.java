@@ -30,7 +30,7 @@ import com.eucalyptus.records.EventType;
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
   public static String  KEY_SIGNING_ALGORITHM = "SHA512WithRSA";
-  public static int     KEY_SIZE              = 2048;
+  public static int     KEY_SIZE              = 2048;//TODO:GRZE:RELEASE: configurable
   public static String  PROVIDER              = "BC";
   private static Logger LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
   
@@ -61,7 +61,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateQueryId( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" ).substring( 0, 21 ).toUpperCase( );//NOTE: this MUST be 21-alnums upper case.
   }
   
   /**
@@ -69,7 +69,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
    */
   @Override
   public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, true ).replaceAll( "\\p{Punct}", "" );
+    return this.getDigestBase64( userName, Digest.SHA384, true ).replaceAll( "\\p{Punct}", "" ).substring( 0, 40 );//NOTE: this MUST be 40-chars from base64.
   }
   
   /**
@@ -170,6 +170,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
       EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
       SecureRandom random = new SecureRandom( );
+    //TODO: RELEASE: see line:110
       random.setSeed( System.currentTimeMillis( ) );
       keyGen.initialize( KEY_SIZE, random );
       KeyPair keyPair = keyGen.generateKeyPair( );

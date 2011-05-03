@@ -1,23 +1,3 @@
-package edu.ucsb.eucalyptus.msgs
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.jibx.runtime.BindingDirectory;
-import org.jibx.runtime.IBindingFactory;
-import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.*;
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
-import com.eucalyptus.empyrean.Empyrean;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
 /*******************************************************************************
  *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -80,6 +60,26 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  *******************************************************************************
  * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package edu.ucsb.eucalyptus.msgs;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.jibx.runtime.BindingDirectory;
+import org.jibx.runtime.IBindingFactory;
+import org.jibx.runtime.IMarshallingContext;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.id.*;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.empyrean.Empyrean;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 
 public class HeartbeatType extends EucalyptusMessage {
@@ -111,7 +111,7 @@ public class ComponentType extends EucalyptusData {
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
     final ComponentId c = ComponentId.lookup( component );
-    return new EphemeralConfiguration( name, c, realUri );
+    return ServiceConfigurations.createEphemeral( name, c, realUri );
   }
 }
 public class ComponentProperty extends EucalyptusData {

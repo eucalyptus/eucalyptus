@@ -16,7 +16,8 @@ import org.hibernate.event.EventListeners;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
@@ -40,8 +41,10 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
     EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
+    Assertions.assertNotNull( anemf, "Failed to find persistence context for ctx=" + ctx );
     try {
       this.em = anemf.createEntityManager( );
+      Assertions.assertNotNull( this.em, "Failed to build entity manager for persistence context ctx=" + ctx );
       this.delegate = this.em.getTransaction( );
       this.delegate.begin( );
       this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );

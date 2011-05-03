@@ -60,20 +60,21 @@
 *******************************************************************************/
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.entities.AbstractPersistent;
 
-import javax.persistence.*;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_stats_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class WalrusStatsInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "walrus_stats_info_id" )
-	private Long id = -1l;
+public class WalrusStatsInfo extends AbstractPersistent {
 	@Column(name = "walrus_name")
 	private String name;
 	@Column( name = "number_buckets" )
@@ -93,10 +94,6 @@ public class WalrusStatsInfo {
 		this.name = name;
 		this.numberOfBuckets = numberOfBuckets;
 		this.totalSpaceUsed = totalSpaceUsed;
-	}
-
-	public Long getId() {
-		return id;
 	}
 
 	public String getName() {

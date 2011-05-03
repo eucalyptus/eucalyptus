@@ -60,27 +60,27 @@
  *******************************************************************************/
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 
-import javax.persistence.*;
-
-@Entity
+@Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "walrus", description = "Walrus configuration.", deferred = true)
-public class WalrusInfo {
-	@Id
-	@GeneratedValue
-	@Column( name = "walrus_info_id" )
-	private Long id = -1l;
+public class WalrusInfo extends AbstractPersistent {
 	@Column(name = "walrus_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Path to buckets storage", displayName = "Buckets Path" )
@@ -114,10 +114,6 @@ public class WalrusInfo {
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
-	}
-
-	public Long getId() {
-		return id;
 	}
 
 	public String getName() {
@@ -194,11 +190,11 @@ public class WalrusInfo {
 	}
 
 	public static WalrusInfo getWalrusInfo() {
-		EntityWrapper<WalrusInfo> db = new EntityWrapper<WalrusInfo>(WalrusProperties.DB_NAME);
+		EntityWrapper<WalrusInfo> db = EntityWrapper.get(WalrusInfo.class);
 		WalrusInfo walrusInfo;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
-		} catch(EucalyptusCloudException ex) {
+		} catch(Exception ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_USER, 

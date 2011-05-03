@@ -64,14 +64,16 @@
  */
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import javax.persistence.Column;
+import org.hibernate.annotations.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import javax.persistence.*;
-
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "AOEVolumeInfo" )
-@Entity
+@Entity @javax.persistence.Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AOEVolumeInfo extends LVMVolumeInfo {
     @Column(name="vbladepid")

@@ -65,6 +65,7 @@ package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.principal.User;
@@ -73,6 +74,7 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpResponse;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+@ChannelPipelineCoverage("all")
 public class InternalOnlyHandler implements ChannelUpstreamHandler {
   
   @Override

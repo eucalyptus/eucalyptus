@@ -18,7 +18,11 @@
 	<!-- <disk type='file' device='disk'>
 	     <source file='fully_qualified_path_to_secondary_disk'/>
 	     <target dev='vda' bus='virtio'/>
-	</disk> -->
+	</disk> 
+   	<disk type='file' device='floppy'>
+             <source file='fully_qualified_path_to_floppy_disk'/>
+             <target dev='fda'/>
+        </disk> -->
         <disk type='file' device='cdrom'>
             <source file='fully_qualified_path_to_iso'/>
             <target dev='hdc'/>
