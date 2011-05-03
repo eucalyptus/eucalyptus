@@ -67,6 +67,7 @@ package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
@@ -82,6 +83,10 @@ import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -95,7 +100,6 @@ import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
 import edu.ucsb.eucalyptus.msgs.BundleTask;
@@ -390,7 +394,12 @@ public class VmControl {
   public BundleInstanceResponseType bundleInstance( final BundleInstanceType request ) throws EucalyptusCloudException {
     final BundleInstanceResponseType reply = request.getReply( );//TODO: check if the instance has platform windows.
     reply.set_return( true );
-    final String walrusUrl = SystemConfiguration.getWalrusUrl( );
+    Component walrus = Components.lookup( Walrus.class );
+    NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+    if( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
+      throw new EucalyptusCloudException( "Failed to bundle instance because there is no available walrus service at the moment." );
+    }
+    final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );
     final String instanceId = request.getInstanceId( );
     final Context ctx = Contexts.lookup( );
     final User user = ctx.getUser( );
