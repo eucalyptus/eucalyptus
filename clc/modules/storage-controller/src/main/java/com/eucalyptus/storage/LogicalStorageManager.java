@@ -96,6 +96,8 @@ public interface LogicalStorageManager {
 
 	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
+	public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
+
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
