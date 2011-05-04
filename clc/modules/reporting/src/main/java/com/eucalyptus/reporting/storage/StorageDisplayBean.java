@@ -57,19 +57,6 @@ public class StorageDisplayBean
 				INTERNAL_UNITS.getSizeTimeTimeUnit(), units.getSizeTimeTimeUnit());
 	}
 
-	public Long getObjectsSizeMax()
-	{
-		return UnitUtil.convertSize(summary.getObjectsMegsMax(),
-				INTERNAL_UNITS.getSizeUnit(), units.getSizeUnit());
-	}
-
-	public Long getObjectsSizeTime()
-	{
-		return UnitUtil.convertSizeTime(summary.getObjectsMegsSecs(),
-				INTERNAL_UNITS.getSizeTimeSizeUnit(), units.getSizeTimeSizeUnit(),
-				INTERNAL_UNITS.getSizeTimeTimeUnit(), units.getSizeTimeTimeUnit());
-	}
-	
 	public Units getUnits()
 	{
 		return units;

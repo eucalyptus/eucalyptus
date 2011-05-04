@@ -2,9 +2,9 @@ package com.eucalyptus.reporting.storage;
 
 import java.util.*;
 
-import com.eucalyptus.reporting.*;
+import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
@@ -82,10 +82,8 @@ public class FalseDataGenerator
 		Map<String, StorageUsageSummary> summary = usageLog.scanSummarize(new Period(START_TIME, MAX_MS), GroupByCriterion.USER);
 		for (String key: summary.keySet()) {
 			StorageUsageSummary sus = summary.get(key);
-			long totalSize = sus.getObjectsMegsMax()
-					+ sus.getSnapshotsMegsMax() + sus.getVolumesMegsMax();
-			long totalTime = sus.getObjectsMegsSecs()
-					+ sus.getSnapshotsMegsSecs() + sus.getVolumesMegsSecs();
+			long totalSize = sus.getSnapshotsMegsMax() + sus.getVolumesMegsMax();
+			long totalTime = sus.getSnapshotsMegsSecs() + sus.getVolumesMegsSecs();
 			System.out.printf("%s: %d,%d\n", key, totalSize, totalTime);
 		}
 
@@ -113,10 +111,8 @@ public class FalseDataGenerator
 			summary = usageLog.scanSummarize(new Period(lowerBound, upperBound), GroupByCriterion.USER);
 			for (String userId: summary.keySet()) {
 				StorageUsageSummary sus = summary.get(userId);
-				long totalSize = sus.getObjectsMegsMax() + sus.getSnapshotsMegsMax()
-						+ sus.getVolumesMegsMax();
-				long totalTime = sus.getObjectsMegsSecs() + sus.getSnapshotsMegsSecs()
-						+ sus.getVolumesMegsSecs();
+				long totalSize = sus.getSnapshotsMegsMax() + sus.getVolumesMegsMax();
+				long totalTime = sus.getSnapshotsMegsSecs() + sus.getVolumesMegsSecs();
 
 				final double sizeError = (double)totalSize / adjustedCorrectSize;
 				final double timeError = (double)totalTime / adjustedCorrectTime;;

@@ -93,6 +93,7 @@ public class CommandServlet
 			method = Class.forName(className)
 					.getDeclaredMethod(methodName, params);
 		} catch (Exception ex) {
+			LOG.error(ex);
 			throw new ServletException(ex);
 		}
 

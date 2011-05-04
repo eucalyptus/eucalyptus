@@ -13,6 +13,7 @@ import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.reporting.queue.mq.QueueBroker;
+import com.eucalyptus.reporting.s3.S3EventListener;
 import com.eucalyptus.reporting.storage.StorageEventListener;
 import com.eucalyptus.reporting.storage.StorageEventPoller;
 
@@ -28,6 +29,7 @@ public class ReportingBootstrapper
 	private StorageEventPoller storagePoller;
 	private StorageEventListener storageListener;
 	private InstanceEventListener instanceListener;
+	private S3EventListener s3Listener;
 	private QueueFactory queueFactory;
 	private QueueBroker queueBroker;
 	private Timer timer;
@@ -126,7 +128,18 @@ public class ReportingBootstrapper
 			}
 			instanceReceiver.addEventListener(instanceListener);
 
-      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
+
+			QueueReceiver s3Receiver =
+				queueFactory.getReceiver(QueueIdentifier.S3);
+			if (s3Listener == null) {
+				s3Listener = new S3EventListener();
+				log.info("New s3 listener instantiated");
+			} else {
+				log.info("Used existing s3 listener");
+			}
+			s3Receiver.addEventListener(s3Listener);
+
+			ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
 
         @Override
         public void fireEvent( Event event ) {

@@ -32,7 +32,8 @@ public class QueueFactory
 	public enum QueueIdentifier
 	{
 		INSTANCE("InstanceQueue"),
-		STORAGE("StorageQueue");
+		STORAGE("StorageQueue"),
+		S3("S3");
 		
 		private final String queueName;
 

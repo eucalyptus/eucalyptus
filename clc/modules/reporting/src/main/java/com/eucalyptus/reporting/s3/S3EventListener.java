@@ -1,4 +1,4 @@
-package com.eucalyptus.reporting.storage;
+package com.eucalyptus.reporting.s3;
 
 import java.util.*;
 
@@ -8,47 +8,47 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.Event;
-import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.S3Event;
 
-public class StorageEventListener
+public class S3EventListener
 	implements EventListener<Event>
 {
-	private static Logger LOG = Logger.getLogger( StorageEventListener.class );
+	private static Logger LOG = Logger.getLogger( S3EventListener.class );
 	
 	private static long WRITE_INTERVAL_MS = 10800000l; //write every 3 hrs
 
-	private Map<UsageDataKey, StorageUsageData> usageDataMap;
+	private Map<UsageDataKey, S3UsageData> usageDataMap;
 	private long lastStoredMs = 0l;
 
-	public StorageEventListener()
+	public S3EventListener()
 	{
 	}
 	
 	@Override
 	public void fireEvent(Event event)
 	{
-		if (event instanceof StorageEvent) {
-			StorageEvent storageEvent = (StorageEvent) event;
+		if (event instanceof S3Event) {
+			S3Event s3Event = (S3Event) event;
 			long timeMillis = getCurrentTimeMillis();
 
-			final StorageUsageLog usageLog = StorageUsageLog.getStorageUsageLog();
+			final S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
 
-			EntityWrapper<StorageUsageSnapshot> entityWrapper =
-				EntityWrapper.get( StorageUsageSnapshot.class );
+			EntityWrapper<S3UsageSnapshot> entityWrapper =
+				EntityWrapper.get( S3UsageSnapshot.class );
 			try {
 
-				LOG.info("Receive event:" + storageEvent.toString());
+				LOG.info("Receive event:" + s3Event.toString());
 
 				/* Load usageDataMap if starting up
 				 */
 				if (usageDataMap == null) {
-					this.usageDataMap = new HashMap<UsageDataKey, StorageUsageData>();
+					this.usageDataMap = new HashMap<UsageDataKey, S3UsageData>();
 					// TODO: optimize so we don't have to scan entire log on
 					// startup
-					Iterator<StorageUsageSnapshot> iter = usageLog
+					Iterator<S3UsageSnapshot> iter = usageLog
 							.scanLog(new Period(0l, Long.MAX_VALUE));
 					while (iter.hasNext()) {
-						StorageUsageSnapshot snapshot = iter.next();
+						S3UsageSnapshot snapshot = iter.next();
 						UsageDataKey key = new UsageDataKey(
 								snapshot.getSnapshotKey());
 						usageDataMap.put(key, snapshot.getUsageData());
@@ -61,39 +61,36 @@ public class StorageEventListener
 				
 				/* Update usageDataMap
 				 */
-				UsageDataKey key = new UsageDataKey(storageEvent.getOwnerId(),
-						storageEvent.getAccountId(),
-						storageEvent.getClusterName(),
-						storageEvent.getAvailabilityZone());
-				StorageUsageData usageData;
+				UsageDataKey key = new UsageDataKey(s3Event.getOwnerId(),
+						s3Event.getAccountId());
+				S3UsageData usageData;
 				if (usageDataMap.containsKey(key)) {
 					usageData = usageDataMap.get(key);
 				} else {
-					usageData = new StorageUsageData();
+					usageData = new S3UsageData();
 					usageDataMap.put(key, usageData);
 				}
-				long addAmountMegs = (storageEvent.isCreateOrDelete())
-						? storageEvent.getSizeMegs()
-						: -storageEvent.getSizeMegs();
-				long addNum = (storageEvent.isCreateOrDelete()) ? 1 : -1;
-				switch(storageEvent.getEventType()) {
-					case EbsSnapshot:
-						Long newSnapshotsNum =
-							addLong(usageData.getSnapshotsNum(), addNum);
-						usageData.setSnapshotsNum(newSnapshotsNum);
-						Long newSnapshotsMegs =
-							addLong(usageData.getSnapshotsMegs(), addAmountMegs);
-						usageData.setSnapshotsMegs(newSnapshotsMegs);
-						break;
-					case EbsVolume:
-						Long newVolumesNum =
-							addLong(usageData.getVolumesNum(), addNum);
-						usageData.setVolumesNum(newVolumesNum);
-						Long newVolumesMegs =
-							addLong(usageData.getVolumesMegs(), addAmountMegs);
-						usageData.setVolumesMegs(newVolumesMegs);						
-						break;
+				long addNum = (s3Event.isCreateOrDelete()) ? 1 : -1;
 
+				if (s3Event.isObjectOrBucket()) {
+					
+					long addAmountMegs = (s3Event.isCreateOrDelete())
+						? s3Event.getSizeMegs()
+						: -s3Event.getSizeMegs();
+
+					Long newObjectsNum =
+						addLong(usageData.getObjectsNum(), addNum);
+					usageData.setObjectsNum(newObjectsNum);
+					Long newObjectsMegs =
+						addLong(usageData.getObjectsMegs(), addAmountMegs);
+					usageData.setObjectsMegs(newObjectsMegs);
+					
+				} else {
+					
+					Long newBucketsNum =
+						addLong(usageData.getBucketsNum(), addNum);
+					usageData.setBucketsNum(newBucketsNum);
+					
 				}
 
 				/* Write data to DB
@@ -104,18 +101,18 @@ public class StorageEventListener
 					//TODO: move to thread
 					//TODO: how do we know there's an all-snapshot during the report period?
 					for (UsageDataKey udk: usageDataMap.keySet()) {
-						SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
-						StorageUsageSnapshot sus =
-							new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
+						S3SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
+						S3UsageSnapshot sus =
+							new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
 						System.out.println("Storing:" + sus);
 						entityWrapper.add(sus);						
 					}
 				} else {
 					/* Write this snapshot
 					 */
-					SnapshotKey snapshotKey = key.newSnapshotKey(timeMillis);
-					StorageUsageSnapshot sus =
-						new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
+					S3SnapshotKey snapshotKey = key.newSnapshotKey(timeMillis);
+					S3UsageSnapshot sus =
+						new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
 					System.out.println("Storing:" + sus);
 					entityWrapper.add(sus);
 				}
@@ -155,24 +152,17 @@ public class StorageEventListener
 	{
 		private final String ownerId;
 		private final String accountId;
-		private final String clusterName;
-		private final String availabilityZone;
 
-		public UsageDataKey(String ownerId, String accountId, String clusterName,
-				String availabilityZone)
+		public UsageDataKey(String ownerId, String accountId)
 		{
 			this.ownerId = ownerId;
 			this.accountId = accountId;
-			this.clusterName = clusterName;
-			this.availabilityZone = availabilityZone;
 		}
 		
-		public UsageDataKey(SnapshotKey key)
+		public UsageDataKey(S3SnapshotKey key)
 		{
 			this.ownerId = key.getOwnerId();
 			this.accountId = key.getAccountId();
-			this.clusterName = key.getClusterName();
-			this.availabilityZone = key.getAvailabilityZone();
 		}
 
 		public String getOwnerId()
@@ -185,19 +175,9 @@ public class StorageEventListener
 			return accountId;
 		}
 
-		public String getClusterName()
+		public S3SnapshotKey newSnapshotKey(long timestampMs)
 		{
-			return clusterName;
-		}
-
-		public String getAvailabilityZone()
-		{
-			return availabilityZone;
-		}
-		
-		public SnapshotKey newSnapshotKey(long timestampMs)
-		{
-			return new SnapshotKey(ownerId, accountId, clusterName, availabilityZone, timestampMs);
+			return new S3SnapshotKey(ownerId, accountId, timestampMs);
 		}
 
 		@Override
@@ -208,12 +188,6 @@ public class StorageEventListener
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result
 					+ ((accountId == null) ? 0 : accountId.hashCode());
-			result = prime
-					* result
-					+ ((availabilityZone == null) ? 0 : availabilityZone
-							.hashCode());
-			result = prime * result
-					+ ((clusterName == null) ? 0 : clusterName.hashCode());
 			result = prime * result
 					+ ((ownerId == null) ? 0 : ownerId.hashCode());
 			return result;
@@ -236,16 +210,6 @@ public class StorageEventListener
 					return false;
 			} else if (!accountId.equals(other.accountId))
 				return false;
-			if (availabilityZone == null) {
-				if (other.availabilityZone != null)
-					return false;
-			} else if (!availabilityZone.equals(other.availabilityZone))
-				return false;
-			if (clusterName == null) {
-				if (other.clusterName != null)
-					return false;
-			} else if (!clusterName.equals(other.clusterName))
-				return false;
 			if (ownerId == null) {
 				if (other.ownerId != null)
 					return false;
@@ -254,11 +218,11 @@ public class StorageEventListener
 			return true;
 		}
 
-		private StorageEventListener getOuterType()
+		private S3EventListener getOuterType()
 		{
-			return StorageEventListener.this;
+			return S3EventListener.this;
 		}
 
-
+		
 	}
 }

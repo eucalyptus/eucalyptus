@@ -1,4 +1,4 @@
-package com.eucalyptus.reporting.storage;
+package com.eucalyptus.reporting.s3;
 
 import java.util.*;
 
@@ -11,29 +11,29 @@ import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceAttributes;
 
 /**
- * <p>StorageUsageLog is the main API for accessing storage usage information.
+ * <p>S3UsageLog is the main API for accessing storage usage information.
  * 
  * @author tom.werges
  */
-public class StorageUsageLog
+public class S3UsageLog
 {
-	private static Logger log = Logger.getLogger( StorageUsageLog.class );
+	private static Logger log = Logger.getLogger( S3UsageLog.class );
 
-	private static StorageUsageLog instance;
+	private static S3UsageLog instance;
 	
-	private StorageUsageLog()
+	private S3UsageLog()
 	{
 	}
 	
-	public static StorageUsageLog getStorageUsageLog()
+	public static S3UsageLog getS3UsageLog()
 	{
 		if (instance == null) {
-			instance = new StorageUsageLog();
+			instance = new S3UsageLog();
 		}
 		return instance;
 	}
 
-	public Iterator<StorageUsageSnapshot> scanLog(Period period)
+	public Iterator<S3UsageSnapshot> scanLog(Period period)
 	{
 		EntityWrapper<InstanceAttributes> entityWrapper =
 			EntityWrapper.get( InstanceAttributes.class );
@@ -44,7 +44,7 @@ public class StorageUsageLog
 			 */
 			@SuppressWarnings("rawtypes")
 			Iterator iter = entityWrapper.createQuery(
-				"from StorageUsageSnapshot as sus"
+				"from S3UsageSnapshot as sus"
 				+ " where sus.key.timestampMs > ?"
 				+ " and sus.key.timestampMs < ?"
 				+ " order by sus.key.timestampMs")
@@ -52,7 +52,7 @@ public class StorageUsageLog
 				.setLong(1, period.getEndingMs())
 				.iterate();
 
-			return new StorageUsageSnapshotIterator(iter);
+			return new S3UsageSnapshotIterator(iter);
 		} catch (Exception ex) {
 			log.error(ex);
 			throw new RuntimeException(ex);
@@ -60,12 +60,12 @@ public class StorageUsageLog
 
 	}
 	
-	private class StorageUsageSnapshotIterator
-			implements Iterator<StorageUsageSnapshot>
+	private class S3UsageSnapshotIterator
+			implements Iterator<S3UsageSnapshot>
 	{
 		private final Iterator resultSetIter;
 
-		StorageUsageSnapshotIterator(Iterator resultSetIter)
+		S3UsageSnapshotIterator(Iterator resultSetIter)
 		{
 			this.resultSetIter = resultSetIter;
 		}
@@ -77,9 +77,9 @@ public class StorageUsageLog
 		}
 
 		@Override
-		public StorageUsageSnapshot next()
+		public S3UsageSnapshot next()
 		{
-			return (StorageUsageSnapshot) resultSetIter.next();
+			return (S3UsageSnapshot) resultSetIter.next();
 		}
 
 		@Override
@@ -91,17 +91,13 @@ public class StorageUsageLog
 	}
 
 	private static String getAttributeValue(GroupByCriterion criterion,
-			SnapshotKey key)
+			S3SnapshotKey key)
 	{
 		switch (criterion) {
 			case ACCOUNT:
 				return key.getAccountId();
 			case USER:
 				return key.getOwnerId();
-			case CLUSTER:
-				return key.getClusterName();
-			case AVAILABILITY_ZONE:
-				return key.getAvailabilityZone();
 			default:
 				return key.getOwnerId();
 		}
@@ -110,11 +106,11 @@ public class StorageUsageLog
 	private class SummaryInfo
 	{
 		private long lastTimestamp;
-		private StorageUsageSummary summary;
-		private StorageUsageData lastData;
+		private S3UsageSummary summary;
+		private S3UsageData lastData;
 		
-		SummaryInfo(long lastTimestamp, StorageUsageSummary summary,
-				StorageUsageData lastData)
+		SummaryInfo(long lastTimestamp, S3UsageSummary summary,
+				S3UsageData lastData)
 		{
 			this.lastTimestamp = lastTimestamp;
 			this.summary = summary;
@@ -131,45 +127,45 @@ public class StorageUsageLog
 			this.lastTimestamp = lastTimestamp;
 		}
 
-		StorageUsageSummary getSummary()
+		S3UsageSummary getSummary()
 		{
 			return summary;
 		}
 
-		StorageUsageData getLastData()
+		S3UsageData getLastData()
 		{
 			return lastData;
 		}
 
-		void setLastData(StorageUsageData lastData)
+		void setLastData(S3UsageData lastData)
 		{
 			this.lastData = lastData;
 		}
 
 	}
 
-	public Map<String, StorageUsageSummary> scanSummarize(Period period,
+	public Map<String, S3UsageSummary> scanSummarize(Period period,
 			GroupByCriterion criterion)
 	{
 		final Map<String, SummaryInfo> infoMap =
 			new HashMap<String, SummaryInfo>();
 		
-		Iterator<StorageUsageSnapshot> iter = scanLog(period);
+		Iterator<S3UsageSnapshot> iter = scanLog(period);
 		while (iter.hasNext()) {
-			StorageUsageSnapshot snapshot = iter.next();
+			S3UsageSnapshot snapshot = iter.next();
 			long timestampMs = snapshot.getSnapshotKey().getTimestampMs().longValue();
 			String critVal = getAttributeValue(criterion, snapshot.getSnapshotKey());
 			if (infoMap.containsKey(critVal)) {
 				SummaryInfo info = infoMap.get(critVal);
-				StorageUsageData lastData = info.getLastData();
+				S3UsageData lastData = info.getLastData();
 				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
-				info.getSummary().updateValues(lastData.getVolumesMegs(),
-						lastData.getSnapshotsMegs(), durationSecs);
+				info.getSummary().updateValues(lastData.getObjectsMegs(), lastData.getBucketsNum(),
+						durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
 			} else {
 				SummaryInfo info = new SummaryInfo(timestampMs,
-						new StorageUsageSummary(), snapshot.getUsageData());
+						new S3UsageSummary(), snapshot.getUsageData());
 				infoMap.put(critVal, info);
 			}
 		}
@@ -178,13 +174,13 @@ public class StorageUsageLog
 	}
 
 	/**
-	 * <p>Convert Map<String,SummaryInfo> to Map<String, StorageUsageSummary>. 
+	 * <p>Convert Map<String,SummaryInfo> to Map<String, S3UsageSummary>. 
 	 */
-	private static Map<String, StorageUsageSummary> convertOneCriterion(
+	private static Map<String, S3UsageSummary> convertOneCriterion(
 			Map<String, SummaryInfo> infoMap)
 	{
-		final Map<String, StorageUsageSummary> resultMap =
-			new HashMap<String, StorageUsageSummary>();
+		final Map<String, S3UsageSummary> resultMap =
+			new HashMap<String, S3UsageSummary>();
 		for (String key: infoMap.keySet()) {
 			resultMap.put(key, infoMap.get(key).getSummary());
 		}
@@ -193,29 +189,29 @@ public class StorageUsageLog
 
 	/**
 	 * <p>Convert Map<String, Map<String, SummaryInfo>> to
-	 *  Map<String, Map<String, StorageUsageSummary>>.
+	 *  Map<String, Map<String, S3UsageSummary>>.
 	 */
-	private static Map<String, Map<String, StorageUsageSummary>> convertTwoCriteria(
+	private static Map<String, Map<String, S3UsageSummary>> convertTwoCriteria(
 			Map<String, Map<String, SummaryInfo>> infoMap)
 	{
-		final Map<String, Map<String, StorageUsageSummary>> results =
-			new HashMap<String, Map<String, StorageUsageSummary>>();
+		final Map<String, Map<String, S3UsageSummary>> results =
+			new HashMap<String, Map<String, S3UsageSummary>>();
 		for (String key: infoMap.keySet()) {
 			results.put(key, convertOneCriterion(infoMap.get(key)));
 		}
 		return results;
 	}
 	
-	public Map<String, Map<String, StorageUsageSummary>> scanSummarize(
+	public Map<String, Map<String, S3UsageSummary>> scanSummarize(
 			Period period, GroupByCriterion outerCriterion,
 			GroupByCriterion innerCriterion)
 	{
 		final Map<String, Map<String, SummaryInfo>> infoMap =
 			new HashMap<String, Map<String, SummaryInfo>>();
 
-		Iterator<StorageUsageSnapshot> iter = scanLog(period);
+		Iterator<S3UsageSnapshot> iter = scanLog(period);
 		while (iter.hasNext()) {
-			StorageUsageSnapshot snapshot = iter.next();
+			S3UsageSnapshot snapshot = iter.next();
 			long timestampMs = snapshot.getSnapshotKey().getTimestampMs().longValue();
 			String outerCritVal = getAttributeValue(outerCriterion,
 					snapshot.getSnapshotKey());
@@ -229,16 +225,16 @@ public class StorageUsageLog
 			String innerCritVal = getAttributeValue(innerCriterion, snapshot.getSnapshotKey());
 			if (innerMap.containsKey(innerCritVal)) {
 				SummaryInfo info = innerMap.get(innerCritVal);
-				StorageUsageData lastData = info.getLastData();
+				S3UsageData lastData = info.getLastData();
 				long durationSecs = (timestampMs - info.getLastTimestamp()) / 1000;
 				System.out.println("info:" + info + " summary:" + info.getSummary() + " lastData:" + lastData);
-				info.getSummary().updateValues(lastData.getVolumesMegs(),
-						lastData.getSnapshotsMegs(), durationSecs);
+				info.getSummary().updateValues(lastData.getObjectsMegs(),
+						lastData.getBucketsNum(), durationSecs);
 				info.setLastTimestamp(timestampMs);
 				info.setLastData(snapshot.getUsageData());
 			} else {
 				SummaryInfo info = new SummaryInfo(timestampMs,
-						new StorageUsageSummary(), snapshot.getUsageData());
+						new S3UsageSummary(), snapshot.getUsageData());
 				innerMap.put(innerCritVal, info);
 			}
 		}
@@ -250,14 +246,14 @@ public class StorageUsageLog
 	{
 		log.info(String.format("purge earlierThan:%d ", earlierThanMs));
 
-		EntityWrapper<StorageUsageSnapshot> entityWrapper =
-			EntityWrapper.get(StorageUsageSnapshot.class);
+		EntityWrapper<S3UsageSnapshot> entityWrapper =
+			EntityWrapper.get(S3UsageSnapshot.class);
 		Session sess = null;
 		try {
 			
 			/* Delete older instance snapshots
 			 */
-			entityWrapper.createSQLQuery("DELETE FROM storage_usage_snapshot "
+			entityWrapper.createSQLQuery("DELETE FROM s3_usage_snapshot "
 				+ "WHERE timestamp_ms < ?")
 				.setLong(0, new Long(earlierThanMs))
 				.executeUpdate();

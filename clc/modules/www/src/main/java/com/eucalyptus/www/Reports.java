@@ -45,6 +45,8 @@ import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceDisplayBean;
 import com.eucalyptus.reporting.instance.InstanceDisplayDb;
+import com.eucalyptus.reporting.s3.S3DisplayBean;
+import com.eucalyptus.reporting.s3.S3DisplayDb;
 import com.eucalyptus.reporting.storage.StorageDisplayBean;
 import com.eucalyptus.reporting.storage.StorageDisplayDb;
 import com.eucalyptus.reporting.units.Units;
@@ -67,6 +69,8 @@ public class Reports extends HttpServlet {
   private static String NESTED_STORAGE_REPORT_FILENAME  = "nested_storage.jrxml";
   private static String INSTANCE_REPORT_FILENAME        = "instance.jrxml";
   private static String NESTED_INSTANCE_REPORT_FILENAME = "nested_instance.jrxml";
+  private static String S3_REPORT_FILENAME              = "s3.jrxml";
+  private static String NESTED_S3_REPORT_FILENAME       = "nested_s3.jrxml";
   
   enum Param {
     name, type, session, /*page,*/flush( false ), start( false ), end( false ), component( false ),
@@ -217,7 +221,9 @@ public class Reports extends HttpServlet {
 
         String scriptName = Param.name.get( req );
         JasperPrint jasperPrint = null;
-        if (scriptName.equals("user_vms") || scriptName.equals("user_storage")) {
+        if (scriptName.equals("user_vms") || scriptName.equals("user_storage")
+        		||  scriptName.equals("user_s3"))
+        {
 
         	long start = Long.parseLong(Param.start.get(req));
         	long end = Long.parseLong(Param.end.get(req));
@@ -284,6 +290,26 @@ public class Reports extends HttpServlet {
     			jasperPrint =
     				JasperFillManager.fillReport(report, params, dataSource);
     			
+    		} else if (scriptName.equals("user_s3")) {
+
+    			S3DisplayDb dbStorage = S3DisplayDb.getInstance();
+    			File jrxmlFile = null;
+    			JRDataSource dataSource = null;
+            	if (groupById == 0) {
+            		List<S3DisplayBean> list =
+            			dbStorage.search(period, criterion, displayUnits);
+            		dataSource = new JRBeanCollectionDataSource(list);
+            		jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + S3_REPORT_FILENAME);
+            	} else {
+            		List<S3DisplayBean> list =
+            			dbStorage.searchGroupBy(period, groupByCriterion, criterion, displayUnits);
+            		dataSource = new JRBeanCollectionDataSource(list);
+            		jrxmlFile = new File(SubDirectory.REPORTS.toString() + File.separator + NESTED_S3_REPORT_FILENAME);
+            	}
+    			JasperReport report =
+    				JasperCompileManager.compileReport(jrxmlFile.getAbsolutePath());
+    			jasperPrint =
+    				JasperFillManager.fillReport(report, params, dataSource);
     		}
 
         } else {

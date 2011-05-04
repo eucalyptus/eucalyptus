@@ -364,8 +364,10 @@ public class FalseDataGenerator
 			this.fakeCurrentTimeMillis = currentTimeMillis;
 		}
 		
+		@Override
 		protected long getCurrentTimeMillis()
 		{
+			System.out.println("Fake time millis:" + fakeCurrentTimeMillis);
 			return fakeCurrentTimeMillis;
 		}
 	}

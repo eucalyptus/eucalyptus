@@ -81,14 +81,6 @@ public class StorageEventPoller
 						: -storageEvent.getSizeMegs();
 				long addNum = (storageEvent.isCreateOrDelete()) ? 1 : -1;
 				switch(storageEvent.getEventType()) {
-					case S3Object:
-						Long newObjectsNum =
-							addLong(usageData.getObjectsNum(), addNum);
-						usageData.setObjectsNum(newObjectsNum);
-						Long newObjectsMegs =
-							addLong(usageData.getObjectsMegs(), addAmountMegs);
-						usageData.setObjectsMegs(newObjectsMegs);
-						break;
 					case EbsSnapshot:
 						Long newSnapshotsNum =
 							addLong(usageData.getSnapshotsNum(), addNum);

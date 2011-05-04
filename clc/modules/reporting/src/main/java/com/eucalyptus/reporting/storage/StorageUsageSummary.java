@@ -17,8 +17,6 @@ public class StorageUsageSummary
 	private long volumesMegsSecs;
 	private long snapshotsMegsMax;
 	private long snapshotsMegsSecs;
-	private long objectsMegsMax;
-	private long objectsMegsSecs;
 
 	public StorageUsageSummary()
 	{
@@ -26,8 +24,6 @@ public class StorageUsageSummary
 		this.volumesMegsSecs   = 0l;
 		this.snapshotsMegsMax  = 0l;
 		this.snapshotsMegsSecs = 0l;
-		this.objectsMegsMax    = 0l;
-		this.objectsMegsSecs   = 0l;
 	}
 
 	public long getVolumesMegsMax()
@@ -50,35 +46,23 @@ public class StorageUsageSummary
 		return snapshotsMegsSecs;
 	}
 
-	public long getObjectsMegsMax()
-	{
-		return objectsMegsMax;
-	}
-
-	public long getObjectsMegsSecs()
-	{
-		return objectsMegsSecs;
-	}
-
-	public void updateValues(long volumesMegs, long snapshotsMegs, long objectsMegs,
+	public void updateValues(long volumesMegs, long snapshotsMegs,
 			long durationSecs)
 	{
 		this.volumesMegsMax   = Math.max(this.volumesMegsMax, volumesMegs);
 		this.snapshotsMegsMax = Math.max(this.snapshotsMegsMax, snapshotsMegs);
-		this.objectsMegsMax   = Math.max(this.objectsMegsMax, objectsMegs);
 		
 		this.volumesMegsSecs   += volumesMegs   * durationSecs;
 		this.snapshotsMegsSecs += snapshotsMegs * durationSecs;
-		this.objectsMegsSecs   += objectsMegs   * durationSecs;
 	}
 	
 	@Override
 	public String toString()
 	{
 		return String.format("[volsMegsSecs:%d,volsMegsMax:%d,snapsMegsSecs:%d,"
-				+ "snapsMegsMax:%d,objsMegsSecs:%d,objsMegsMax:%d]",
+				+ "snapsMegsMax:%d]",
 				volumesMegsSecs, volumesMegsMax, snapshotsMegsSecs,
-				snapshotsMegsMax, objectsMegsSecs, objectsMegsMax);
+				snapshotsMegsMax);
 	}
 
 }

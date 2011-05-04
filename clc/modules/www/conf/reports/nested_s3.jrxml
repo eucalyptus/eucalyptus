@@ -8,10 +8,9 @@
 	<parameter name="sizeTimeSizeUnit" class="java.lang.String"/>
 	<field name="label" class="java.lang.String"/>
 	<field name="groupBy" class="java.lang.String"/>
-	<field name="volumesSizeMax" class="java.lang.String"/>
-	<field name="volumesSizeTime" class="java.lang.String"/>
-	<field name="snapshotsSizeMax" class="java.lang.String"/>
-	<field name="snapshotsSizeTime" class="java.lang.String"/>
+	<field name="bucketsNumMax" class="java.lang.String"/>
+	<field name="objectsSizeMax" class="java.lang.String"/>
+	<field name="objectsSizeTime" class="java.lang.String"/>
 
 	<group name="groupBy">
 		<groupExpression><![CDATA[$F{groupBy}]]></groupExpression>
@@ -73,7 +72,7 @@
 					<textElement textAlignment="Right">
 						<font size="14" isBold="false"/>
 					</textElement>
-					<text><![CDATA[Storage Report]]></text>
+					<text><![CDATA[S3 Report]]></text>
 				</staticText>
 			</frame>
 		</band>
@@ -87,25 +86,25 @@
 				<reportElement x="-20" y="40" width="595" height="1" forecolor="#666666"/>
 			</line>
 			<textField>
-				<reportElement mode="Opaque" x="0" y="0" width="110" height="40" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="0" y="0" width="138" height="40" forecolor="#000000" backcolor="#FFFF66"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$P{criterion}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement mode="Opaque" x="110" y="0" width="220" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="138" y="0" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text>Volumes</text>
+				<text>Buckets</text>
 			</staticText>
 			<staticText>
-				<reportElement mode="Opaque" x="330" y="0" width="220" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="276" y="0" width="276" height="20" forecolor="#000000" backcolor="#FFFF66"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
-				<text>Snapshots</text>
+				<text>Objects</text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="-20" y="0" width="20" height="40" forecolor="#000000" backcolor="#FFFF66"/>
@@ -116,28 +115,21 @@
 			</staticText>
 
 			<textField>
-				<reportElement mode="Opaque" x="110" y="20" width="110" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="138" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<textElement textAlignment="Center">
+					<font size="14" isBold="true"/>
+				</textElement>
+				<textFieldExpression>"Max Num"</textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement mode="Opaque" x="276" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression>"Max (" + $P{sizeUnit} + ")"</textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement mode="Opaque" x="220" y="20" width="110" height="20" forecolor="#000000" backcolor="#FFFF66"/>
-				<textElement textAlignment="Center">
-					<font size="14" isBold="true"/>
-				</textElement>
-				<textFieldExpression>$P{sizeTimeSizeUnit} + "-" + $P{sizeTimeTimeUnit}</textFieldExpression>
-			</textField>
-			<textField>
-				<reportElement mode="Opaque" x="330" y="20" width="110" height="20" forecolor="#000000" backcolor="#FFFF66"/>
-				<textElement textAlignment="Center">
-					<font size="14" isBold="true"/>
-				</textElement>
-				<textFieldExpression>"Max (" + $P{sizeUnit} + ")"</textFieldExpression>
-			</textField>
-			<textField>
-				<reportElement mode="Opaque" x="440" y="20" width="110" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="414" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
@@ -158,39 +150,32 @@
 				<reportElement positionType="FixRelativeToBottom" x="0" y="19" width="555" height="1"/>
 			</line>
 			<textField isStretchWithOverflow="true">
-				<reportElement x="0" y="0" width="110" height="20"/>
+				<reportElement x="0" y="0" width="138" height="20"/>
 				<textElement textAlignment="Center">
 					<font size="14"/>
 				</textElement>
 				<textFieldExpression class="java.lang.String"><![CDATA[$F{label}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
-				<reportElement x="110" y="0" width="110" height="20"/>
+				<reportElement x="138" y="0" width="138" height="20"/>
 				<textElement textAlignment="Center">
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{volumesSizeMax}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{bucketsNumMax}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
-				<reportElement x="220" y="0" width="110" height="20"/>
+				<reportElement x="276" y="0" width="138" height="20"/>
 				<textElement textAlignment="Center">
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{volumesSizeTime}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{objectsSizeMax}]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true">
-				<reportElement x="330" y="0" width="110" height="20"/>
+				<reportElement x="414" y="0" width="138" height="20"/>
 				<textElement textAlignment="Center">
 					<font size="14"/>
 				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{snapshotsSizeMax}]]></textFieldExpression>
-			</textField>
-			<textField isStretchWithOverflow="true">
-				<reportElement x="440" y="0" width="110" height="20"/>
-				<textElement textAlignment="Center">
-					<font size="14"/>
-				</textElement>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{snapshotsSizeTime}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{objectsSizeTime}]]></textFieldExpression>
 			</textField>
 		</band>
 	</detail>
