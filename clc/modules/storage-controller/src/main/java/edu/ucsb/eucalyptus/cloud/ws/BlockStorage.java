@@ -103,6 +103,8 @@ import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.CloneVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CloneVolumeType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
@@ -1027,4 +1029,11 @@ public class BlockStorage {
 		}
 	}
 
+	public CloneVolumeResponseType CloneVolume(CloneVolumeType request) throws EucalyptusCloudException {
+		CloneVolumeResponseType reply = request.getReply();
+		CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
+		createStorageVolume.setParentVolumeId(request.getVolumeId());
+		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
+		return reply;
+	}
 }

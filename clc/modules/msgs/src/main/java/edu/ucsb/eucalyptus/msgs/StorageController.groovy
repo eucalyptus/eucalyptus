@@ -347,3 +347,15 @@ public class StorageUsageStatsRecord extends StatEventRecord {
 		return new StorageUsageStatsRecord(numberOfVolumes, totalSpaceUsed);
 	}
 }
+
+public class CloneVolumeType extends StorageComponentMessageType {
+	String volumeId;
+	
+	def CloneVolumeType() {		
+	}
+}
+
+public class CloneVolumeResponseType extends StorageComponentMessageResponseType {
+	def CloneVolumeResponseType() {		
+	}
+}
