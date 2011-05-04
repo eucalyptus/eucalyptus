@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+import sys, os, boto
+from euca_admin import EucaAdmin
+from euca_admin.component import CloneVolume 
+from optparse import OptionParser
+
+def main():
+  c = CloneVolume()
+  parser = c.get_parser()
+  (options, args) = parser.parse_args()
+  c.execute(options.sc_host, options.volume_id)
+  sys.exit()
+
+if __name__ == "__main__":
+    main()
+ 
