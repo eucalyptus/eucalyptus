@@ -574,7 +574,7 @@ public class BlockStorage {
 			} else {
 				CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
 				createStorageVolume.setParentVolumeId(volumeInfo.getVolumeId());
-				createStorageVolume.setVolumeId("vol-testy-000");
+				createStorageVolume.setVolumeId("vol-testy-0001");
 				CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 			}
 		}

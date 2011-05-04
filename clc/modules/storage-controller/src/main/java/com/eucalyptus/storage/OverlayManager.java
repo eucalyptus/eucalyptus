@@ -605,7 +605,8 @@ public class OverlayManager implements LogicalStorageManager {
 		if(foundVolumeInfo != null) {
 			String vgName = "vg-" + Hashes.getRandom(4);
 			String lvName = "lv-" + Hashes.getRandom(4);
-			String loFileName = foundVolumeInfo.getLoFileName();
+			String parentVgName = foundVolumeInfo.getVgName();
+			String parentLvName = foundVolumeInfo.getLvName();
 			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
 			int size = foundVolumeInfo.getSize();
 			volumeManager.finish();
@@ -621,7 +622,8 @@ public class OverlayManager implements LogicalStorageManager {
 				createLogicalVolume(loDevName, vgName, lvName);
 				//duplicate snapshot volume
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				duplicateLogicalVolume(loFileName, absoluteLVName);
+				String absoluteParentLVName = lvmRootDirectory + PATH_SEPARATOR + parentVgName + PATH_SEPARATOR + parentLvName;
+				duplicateLogicalVolume(absoluteParentLVName, absoluteLVName);
 				//export logical volume
 				try {
 					volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
