@@ -348,14 +348,14 @@ public class StorageUsageStatsRecord extends StatEventRecord {
 	}
 }
 
-public class CloneVolumeType extends StorageComponentMessageType {
+public class CloneVolumeType extends StorageRequestType {
 	String volumeId;
 	
 	def CloneVolumeType() {		
 	}
 }
 
-public class CloneVolumeResponseType extends StorageComponentMessageResponseType {
+public class CloneVolumeResponseType extends StorageResponseType {
 	def CloneVolumeResponseType() {		
 	}
 }

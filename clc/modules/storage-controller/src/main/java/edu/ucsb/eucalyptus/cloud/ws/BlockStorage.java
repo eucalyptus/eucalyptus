@@ -571,6 +571,11 @@ public class BlockStorage {
 			if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
 				LOG.warn( "Volume looks like it has failed removing it: " + volumeInfo.getVolumeId() );
 				checker.cleanFailedVolume(volumeInfo.getVolumeId());
+			} else {
+				CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
+				createStorageVolume.setParentVolumeId(volumeInfo.getVolumeId());
+				createStorageVolume.setVolumeId("vol-testy-000");
+				CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 			}
 		}
 		db.commit();
