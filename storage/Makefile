@@ -9,7 +9,7 @@ IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o 
 VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
 IMAGER=_euca_imager
-EFENCE=-lefence
+#EFENCE=-lefence
 
 all: backing.o storage.o storage-windows.o walrus.o Wclient $(IMAGER) test_blobstore
 #all: storage.o storage-windows.o walrus.o test_blobstore

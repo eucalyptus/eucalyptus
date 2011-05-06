@@ -123,7 +123,7 @@ static const char * blobstore_metadata_suffixes [] = { // entries must match the
 
 typedef struct _blobstore_filelock {
     char path [PATH_MAX]; // path that the file was open with (TODO: canonicalize?)
-    int type; // lock type, as used by fcntl()
+    int type; // lock type, as used by fcntl() TODO: remove this?
     int refs; // number of open file descriptors for this path in this process
     int next_fd; // next available file descriptor in the table below:
     int fd        [BLOBSTORE_MAX_CONCURRENT];
@@ -131,7 +131,7 @@ typedef struct _blobstore_filelock {
     pthread_rwlock_t lock; // reader/writer lock for controlling intra-process access
     pthread_mutex_t mutex; // for locking this specific struct during manipulations
     struct _blobstore_filelock * next; // pointer for constructing a LL
-} __attribute__((__packed__)) blobstore_filelock;
+} blobstore_filelock;
 
 __thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK; // thread-local errno
 static void (* err_fn) (const char * msg) = NULL; 
@@ -257,8 +257,9 @@ static long long time_usec (void)
 // MUST be called with _blobstore_mutex held
 static void close_and_free_filelock (blobstore_filelock * l)
 {
-    // close all file descriptors at once 
-    // (closing any one removes the lock for all descriptors)
+    // close all file descriptors at once (we do this because 
+    // closing any one removes the lock for all descriptors
+    // held by a process)
     for (int i=0; i<l->next_fd; i++) {
         close (l->fd [i]);
     }
@@ -281,7 +282,7 @@ static int close_and_unlock (int fd)
         return -1;
     }
     int ret = 0;
-    pthread_mutex_lock (&_blobstore_mutex); // grab global lock (this will not block and, plus, we may be deallocating)
+    pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
 
     int index = -1;
     blobstore_filelock * l;
@@ -299,6 +300,7 @@ static int close_and_unlock (int fd)
         next_ptr = &(l->next); // list head or prev element
     }
     if (l) { // we found a match
+        assert (* next_ptr == l);
         assert (index>=0 && index<BLOBSTORE_MAX_CONCURRENT);
         if (l->fd_status [index] == 1) { // last not been closed
             l->fd_status [index] = 0; // set status to 'unused'
@@ -307,6 +309,7 @@ static int close_and_unlock (int fd)
                 _locks_list_rem_ctr++;
                 close_and_free_filelock (l); // close and free(l)
             }
+            assert (l->refs>=0);
         } else {
             err (BLOBSTORE_ERROR_BADF, "file descriptor already closed");
             ret = -1;
@@ -373,41 +376,49 @@ static int open_and_lock (const char * path,
     }
 
     // handle intra-process locking, with a pthreads read-write lock
-    pthread_mutex_lock (&_blobstore_mutex); // grab the global lock
-    blobstore_filelock * l;
-    blobstore_filelock ** next_ptr = &locks_list;
-    for (l = locks_list; l; l=l->next) { // look through existing locks
-        next_ptr = &(l->next); // either LL head or last element's next pointer
-        if (strcmp (path, path) == 0);
-        if (strcmp (path, l->path) == 0)
-            break;
-    }
-    if (l==NULL) { // this path is not locked by any thread
-        l = calloc (1, sizeof(blobstore_filelock));
-        if (l==NULL) {
-            pthread_mutex_unlock (&_blobstore_mutex);
-            err (BLOBSTORE_ERROR_NOMEM, NULL);
-            return -1;
+    blobstore_filelock * path_lock = NULL;
+    { // critical section
+        pthread_mutex_lock (&_blobstore_mutex); // grab the global lock
+        blobstore_filelock ** next_ptr = &locks_list; 
+        for (blobstore_filelock * l = locks_list; l; l=l->next) { // look through existing locks
+            if (strcmp (path, l->path) == 0) {
+                path_lock = l;
+                break;
+            }
+            next_ptr = &(l->next); 
         }
-        strncpy (l->path, path, sizeof(l->path));
-        pthread_rwlock_init (&(l->lock), NULL);
-        pthread_mutex_init (&(l->mutex), NULL);
-        l->type = l_type; // lock type must match in future
-        * next_ptr = l; // add at the end of LL
-        _locks_list_add_ctr++;
+        // next_ptr now points either to LL head or 
+        // to the last non-matching element's next pointer
+        
+        if (path_lock==NULL) { // this path is not locked by any thread
+            path_lock = calloc (1, sizeof(blobstore_filelock));
+            if (path_lock==NULL) {
+                pthread_mutex_unlock (&_blobstore_mutex);
+                err (BLOBSTORE_ERROR_NOMEM, NULL);
+                return -1;
+            }
+            strncpy (path_lock->path, path, sizeof(path_lock->path));
+            pthread_rwlock_init (&(path_lock->lock), NULL);
+            pthread_mutex_init (&(path_lock->mutex), NULL);
+            path_lock->type = l_type; // lock type must match in future
+            * next_ptr = path_lock; // add at the end of LL
+            _locks_list_add_ctr++;
+        } else {
+            assert (* next_ptr == path_lock);
+            if (path_lock->next_fd==BLOBSTORE_MAX_CONCURRENT) {
+                pthread_mutex_unlock (&_blobstore_mutex);
+                err (BLOBSTORE_ERROR_MFILE, "too many open file descriptors");
+                return -1;
+            }
+            if (path_lock->type!=l_type) {
+                pthread_mutex_unlock (&_blobstore_mutex);
+                err (BLOBSTORE_ERROR_INVAL, "lock type mismatch with the existing lock");
+                return -1;
+            }
+        }
+        path_lock->refs++; // increase the reference count while still under lock
+        pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
     }
-    if (l->next_fd==BLOBSTORE_MAX_CONCURRENT) {
-        pthread_mutex_unlock (&_blobstore_mutex);
-        err (BLOBSTORE_ERROR_MFILE, "too many open file descriptors");
-        return -1;
-    }
-    if (l->type!=l_type) {
-        pthread_mutex_unlock (&_blobstore_mutex);
-        err (BLOBSTORE_ERROR_INVAL, "lock type mismatch with the existing lock");
-        return -1;
-    }
-    l->refs++; // increase the reference count while still under lock
-    pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
 
     // open/create the file, using Posix file locks for inter-process locking
     int pthread_rwlock_acquired = 0;
@@ -420,9 +431,9 @@ static int open_and_lock (const char * path,
         // first try getting the posix rwlock
         int ret;
         if (l_type == F_WRLCK) 
-            ret = pthread_rwlock_trywrlock (&(l->lock));
+            ret = pthread_rwlock_trywrlock (&(path_lock->lock));
         else 
-            ret = pthread_rwlock_tryrdlock (&(l->lock));
+            ret = pthread_rwlock_tryrdlock (&(path_lock->lock));
         if (ret==0) {
             // posix rwlock succeeded, try the file lock
             pthread_rwlock_acquired = 1;
@@ -443,11 +454,11 @@ static int open_and_lock (const char * path,
         }
         usleep (BLOBSTORE_SLEEP_INTERVAL_MS);
     }
-    pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
-    l->fd        [l->next_fd] = fd;
-    l->fd_status [l->next_fd] = 1; 
-    l->next_fd++;
-    pthread_mutex_unlock (&(l->mutex));
+    pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+    path_lock->fd        [path_lock->next_fd] = fd;
+    path_lock->fd_status [path_lock->next_fd] = 1; 
+    path_lock->next_fd++;
+    pthread_mutex_unlock (&(path_lock->mutex));
 
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
@@ -455,17 +466,34 @@ static int open_and_lock (const char * path,
     return fd;
 
  error:
-    if (pthread_rwlock_acquired) pthread_rwlock_unlock (&(l->lock));
-    pthread_mutex_lock (&_blobstore_mutex); // grab the global lock, since we may be deallocating
+    if (pthread_rwlock_acquired) pthread_rwlock_unlock (&(path_lock->lock));
     if (fd>=0) // we succeded with open() but failed to get the lock
         close (fd);
-    if (--l->refs==0) {
-        * next_ptr = l->next;
-        _locks_list_rem_ctr++;
-        close_and_free_filelock (l);
+    { // critical section
+        pthread_mutex_lock (&_blobstore_mutex); // grab the global lock, since we may be deallocating
+        // we must recalculate next_ptr since the element that it points to
+        // may have been removed from the LL and freed while we were outside
+        // the critical section
+        blobstore_filelock ** next_ptr = &locks_list; 
+        for (blobstore_filelock * l = locks_list; l; l=l->next) { // look through existing locks
+            if (path_lock == l)
+                break;
+            next_ptr = &(l->next); 
+        }
+        // next_ptr now points either to LL head or 
+        // to the last non-matching element's next pointer
+        assert (* next_ptr == path_lock);
+
+        if (--path_lock->refs==0) {
+            * next_ptr = path_lock->next;
+            _locks_list_rem_ctr++;
+            close_and_free_filelock (path_lock);
+        }
+        assert (path_lock->refs>=0);
+
+        _open_error_ctr++;
+        pthread_mutex_unlock (&_blobstore_mutex);
     }
-    _open_error_ctr++;
-    pthread_mutex_unlock (&_blobstore_mutex);
     return -1;
 }
 
@@ -2815,7 +2843,8 @@ static int do_blobstore_test (const char * base, const char * name, blobstore_fo
 }
 
 #define COMPETITORS 3
-#define COMPETITIVE_ITERATIONS 10
+#define COMPETITIVE_ITERATIONS 3
+#define COMPETITIVE_PAUSE_MS 3
 
 static void * competitor_function (void * ptr)
 {
@@ -2825,7 +2854,7 @@ static void * competitor_function (void * ptr)
     int timeouts = 0;
 
     for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
-        int findex = (int)(((sizeof(_farray)/sizeof(char *))-1)*((double)random()/RAND_MAX)); // pick random file
+        int findex = (int)((sizeof(_farray)/sizeof(char *))*((double)random()/RAND_MAX)); // pick random file
         int fd = open_and_lock (_farray[findex], _C, 0, BLOBSTORE_FILE_PERM);
         if (fd!=-1) {
             printf ("%u: created test lock %d\n", (unsigned int)pthread_self(), findex);
@@ -2838,18 +2867,19 @@ static void * competitor_function (void * ptr)
             }
         }
         
-        usleep (10);
+        usleep (COMPETITIVE_PAUSE_MS);
         
         fd = open_and_lock (_farray[findex], _W, 0, BLOBSTORE_FILE_PERM);
         if (fd!=-1) {
             printf ("%u: opened test lock %d\n", (unsigned int)pthread_self(), findex);
             successes++;
-            usleep (10);
+            usleep (COMPETITIVE_PAUSE_MS);
             close_and_unlock (fd);
         } else {
             if (_blobstore_errno != BLOBSTORE_ERROR_AGAIN) { // it is OK to lose the race for the lock
                 errors++;
             } else {
+                printf ("%u: timed out on lock %d\n", (unsigned int)pthread_self(), findex);
                 timeouts++;
             }
         }
@@ -2880,6 +2910,7 @@ int do_file_lock_test (void)
 
     for (int i=0; i<5; i++) {
         printf ("\nintra-process locks cycle=%d\n", i);
+
         _OPEN(fd1,F1,_W,300,-1);
         _OPEN(fd1,F1,_R,300,-1); 
         _OPEN(fd2,F1,_C,0,0);
@@ -2932,6 +2963,12 @@ int do_file_lock_test (void)
             thread_ret_sum += thread_ret [i];
         }
         printf ("waited for all competing threads (returned sum = %d)\n", thread_ret_sum);
+        _OPEN(fd1,F1,_W,0,0);
+        remove (F1);
+        _OPEN(fd2,F2,_W,0,0);
+        remove (F2);
+        _OPEN(fd3,F3,_W,0,0);
+        remove (F3);
     }
 
     for (int i=0; i<5; i++) {
@@ -3003,12 +3040,16 @@ int do_file_lock_test (void)
     return errors;
 }
 
+static void dummy_err_fn (const char * msg) { }
+
 int main (int argc, char ** argv)
 {
     int errors = 0;
     char cwd [1024];
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
+
+    blobstore_set_error_function (dummy_err_fn);    
 
     printf ("testing blobstore.c\n");
 
