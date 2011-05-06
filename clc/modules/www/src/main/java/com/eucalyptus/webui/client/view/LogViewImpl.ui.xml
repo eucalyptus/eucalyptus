@@ -6,10 +6,7 @@
         @def radius 6px;
         .boundingBox {
         	background-color:#DDDDDD;
-        	-webkit-box-shadow:0px -4px 6px #CCCCCC;
-            -moz-box-shadow:0px -4px 6px #CCCCCC;
-            box-shadow:0px -4px 6px #CCCCCC;
-            border:1px solid #AAAAAA;
+            border-top:1px solid #D1D1D1;
         }
     </ui:style>
 

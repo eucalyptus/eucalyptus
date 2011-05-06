@@ -9,6 +9,7 @@ import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.FormPanel;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Widget;
 
 public class LoginViewImpl extends Composite implements LoginView {
@@ -43,6 +44,9 @@ public class LoginViewImpl extends Composite implements LoginView {
   
   @UiField
   LoginFormStyle formStyle;
+  
+  @UiField
+  Label prompt;
   
   public LoginViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -86,6 +90,11 @@ public class LoginViewImpl extends Composite implements LoginView {
   @Override
   public void setPresenter( Presenter listener ) {
     this.listener = listener;
+  }
+
+  @Override
+  public void setPrompt( String prompt ) {
+    this.prompt.setText( prompt );
   }
   
 }

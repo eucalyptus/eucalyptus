@@ -5,8 +5,8 @@
     
     <ui:style>
         .boundingBox {
-        	width:20em;
-        	height:30em;
+        	width:15em;
+        	height:7em;
         }
         .topLeft {
         	border-top:1px solid #AAAAAA;
@@ -29,6 +29,13 @@
             -moz-box-shadow:0px 0px 8px #DDDDDD;
             box-shadow:0px 0px 8px #DDDDDD;
         }
+        .links {
+        	margin-top:2px;
+        	font-size:85%;
+        	color:#2E52A4;
+        	cursor:pointer;
+        	cursor:hand;
+        }
     </ui:style>
     
     <g:HTMLPanel>
@@ -39,7 +46,19 @@
                     <td class="{style.topRight}">&nbsp;</td>
                 </tr>
                 <tr>
-                    <td colspan="2" class="{style.bottom} {style.boxShadow}"></td>
+                    <td colspan="2" class="{style.bottom} {style.boxShadow}">
+                        <div style="margin:8px;">
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="profileLink">View/change profile</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="credLink">Download credential</g:Anchor>
+                            </div>
+                            <div style="border-top:1px solid #888888">
+                                <g:Anchor styleName="{style.links}" ui:field="logoutLink">Sign out</g:Anchor>
+                            </div>
+                        </div>
+                    </td>
                 </tr>
             </tbody>
         </table>

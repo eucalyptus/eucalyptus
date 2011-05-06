@@ -9,24 +9,28 @@ import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DockLayoutPanel;
 import com.google.gwt.user.client.ui.HasText;
 import com.google.gwt.user.client.ui.Widget;
 
-public class ShellViewImpl extends Composite implements StartView {
+public class ShellViewImpl extends Composite implements ShellView {
   
   private static ShellViewImplUiBinder uiBinder = GWT.create( ShellViewImplUiBinder.class );
   interface ShellViewImplUiBinder extends UiBinder<Widget, ShellViewImpl> {}
   
   interface ShellStyle extends CssResource {
-    String hoverLeft( );
-    String hoverRight( );
+    String left( );
+    String right( );
   }
   
   private static final int ANIMATE_DURATION = 200;//ms
-  private static final int DIRECTORY_WIDTH = 240; //px
+  
+  public static final int DIRECTORY_WIDTH = 240;//px
+  public static final int DETAIL_WIDTH = 300;//px
+  public static final int LOG_HEIGHT = 160;//px
   
   @UiField
   HeaderViewImpl header;
@@ -35,16 +39,19 @@ public class ShellViewImpl extends Composite implements StartView {
   DirectoryViewImpl directory;
   
   @UiField
-  ContentViewImpl content;
-  
-  @UiField
   DetailViewImpl detail;
   
   @UiField
   FooterViewImpl footer;
   
   @UiField
-  Button splitter;
+  Anchor splitter;
+  
+  @UiField
+  LogViewImpl log;
+
+  @UiField
+  ContentViewImpl content;
   
   @UiField
   ShellStyle shellStyle;
@@ -54,49 +61,63 @@ public class ShellViewImpl extends Composite implements StartView {
   public ShellViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
-
-  @UiHandler( "splitter" )
-  void handleSplitterMouseOver( MouseOverEvent e ) {
-    if ( directoryHidden ) {
-      splitter.addStyleName( shellStyle.hoverRight( ) );
-    } else {
-      splitter.addStyleName( shellStyle.hoverLeft( ) );
-    }    
-  }
-  
-  @UiHandler( "splitter" )
-  void handleSplitterMouseOut( MouseOutEvent e ) {
-    splitter.removeStyleName( shellStyle.hoverRight( ) );
-    splitter.removeStyleName( shellStyle.hoverLeft( ) );
-  }
   
   @UiHandler( "splitter" )
   void handleSplitterClick( ClickEvent e ) {
+    directoryHidden = !directoryHidden;
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
     if ( directoryHidden ) {
-      parent.setWidgetSize( directory, DIRECTORY_WIDTH );
-      directoryHidden = false;
-    } else {
       parent.setWidgetSize( directory, 0 );
-      directoryHidden = true;      
+      splitter.removeStyleName( shellStyle.left( ) );
+      splitter.addStyleName( shellStyle.right( ) );
+    } else {
+      parent.setWidgetSize( directory, DIRECTORY_WIDTH );
+      splitter.removeStyleName( shellStyle.right( ) );
+      splitter.addStyleName( shellStyle.left( ) );
     }
     parent.animate( ANIMATE_DURATION );
   }
   
-  public void openDetail( ) {
+  public void showDetail( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
-    parent.setWidgetSize( detail, 300 );
+    parent.setWidgetSize( detail, DETAIL_WIDTH );
   }
 
-  public void closeDetail( ) {
+  public void hideDetail( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
     parent.setWidgetSize( detail, 0 );
   }
 
   @Override
-  public void setPresenter( Presenter listener ) {
-    // TODO Auto-generated method stub
-    
+  public DirectoryView getDirectoryView( ) {
+    return this.directory;
+  }
+
+  @Override
+  public ContentView getContentView( ) {
+    return this.content;
+  }
+
+  @Override
+  public FooterView getFooterView( ) {
+    return this.footer;
+  }
+
+  @Override
+  public HeaderView getHeaderView( ) {
+    return this.header;
   }
   
+  @Override
+  public void showLogConsole( ) {
+    DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
+    parent.setWidgetSize( this.log, LOG_HEIGHT );    
+  }
+
+  @Override
+  public void hideLogConsole( ) {
+    DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
+    parent.setWidgetSize( this.log, 0 );    
+  }
+
 }

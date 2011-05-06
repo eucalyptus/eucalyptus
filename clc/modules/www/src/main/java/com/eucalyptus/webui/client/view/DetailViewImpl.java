@@ -24,7 +24,6 @@ public class DetailViewImpl extends Composite {
   
   @UiHandler( "close" )
   void handleCloseEvent( ClickEvent e ) {
-    EucalyptusWebInterface.shell.closeDetail( );
   }
   
 }

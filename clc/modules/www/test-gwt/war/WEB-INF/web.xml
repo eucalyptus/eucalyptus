@@ -7,13 +7,13 @@
   
   <!-- Servlets -->
   <servlet>
-    <servlet-name>EuareServiceImpl</servlet-name>
-    <servlet-class>com.eucalyptus.webui.server.EuareServiceImpl</servlet-class>
+    <servlet-name>EucalyptusServiceImpl</servlet-name>
+    <servlet-class>com.eucalyptus.webui.server.EucalyptusServiceImpl</servlet-class>
   </servlet>
 
   <servlet-mapping>
-	<servlet-name>EuareServiceImpl</servlet-name>
-	<url-pattern>/webui/euare</url-pattern>
+	<servlet-name>EucalyptusServiceImpl</servlet-name>
+	<url-pattern>/webui/backend</url-pattern>
   </servlet-mapping>
 
   <!-- Default page to serve -->

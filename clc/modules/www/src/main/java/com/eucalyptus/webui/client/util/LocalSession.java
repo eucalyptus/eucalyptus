@@ -1,11 +1,16 @@
 package com.eucalyptus.webui.client.util;
 
+import com.eucalyptus.webui.client.service.Session;
+
 public interface LocalSession {
   
-  String loadSessionId( );
+  // Load session from disk
+  Session getSession( );
   
-  void saveSessionId( String sessionId );
+  // Save session to disk
+  void saveSession( Session session, boolean persistent );
   
-  void clearSessionId( );
+  // Clear session
+  void clearSession( );
   
 }

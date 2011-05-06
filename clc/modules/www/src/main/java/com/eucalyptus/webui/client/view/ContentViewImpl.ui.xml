@@ -18,32 +18,14 @@
             text-align:center;
             text-shadow:1px 1px 1px #FFFFFF;
         }
-        .scroll {
-            margin:5px 10px 12px 10px;
-        }
-        .button {
-        	font-size:80%;
-        	width:4.5em;
-        	height:2.5em;
-        }
-        .ctable {
-        	width:98%;
-        	font-size:80%;
-        	color:#333333;
-        }
     </ui:style>
 
     <g:DockLayoutPanel styleName="{style.boundingBox}" unit="EM">
         <g:north size="1.5">
-            <g:Label styleName="{style.title}">ACCOUNTS</g:Label>
+            <g:Label styleName="{style.title}" ui:field="title">CONTENTS</g:Label>
         </g:north>
-        <g:north size="3">
-            <g:Button styleName="{style.button}">Click</g:Button>
-        </g:north>        
         <g:center>
-            <g:ScrollPanel styleName="{style.scroll}">
-                <euca:SampleTable styleName="{style.ctable}" ui:field="table"/>
-            </g:ScrollPanel>
+            <g:LayoutPanel ui:field="content"/>
         </g:center>
     </g:DockLayoutPanel>
     

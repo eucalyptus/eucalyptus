@@ -4,28 +4,27 @@
     xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
     
     <ui:style>
-        .splitter {
+        a.splitter {
         	width:100%;
         	height:100%;
-        	border:0px solid #FFFFFF;
-        	background-color:transparent;
+        	cursor:pointer;
+        	cursor:hand;
+        }
+        a.splitter:hover, a.splitter:focus, a.splitter:active {
+        	background-color:#DDDDDD;
         }
     </ui:style>
     
     <ui:style field="shellStyle" type="com.eucalyptus.webui.client.view.ShellViewImpl.ShellStyle">
-        .hoverLeft {
-        	background-color:#DDDDDD;
+        .left {
         	background-image:url('themes/active/arrowleft.png');
         	background-repeat:no-repeat;
         	background-position:center center;
-        	cursor:pointer;
         }
-        .hoverRight {
-            background-color:#DDDDDD;
+        .right {
             background-image:url('themes/active/arrowright.png');
             background-repeat:no-repeat;
             background-position:center center;
-            cursor:pointer;
         }
     </ui:style>
     
@@ -36,11 +35,14 @@
         <g:south size="24">
             <euca:FooterViewImpl ui:field="footer"/>
         </g:south>
+        <g:south size="0">
+            <euca:LogViewImpl ui:field="log"/>
+        </g:south>
         <g:west size="240">
             <euca:DirectoryViewImpl ui:field="directory"/>
         </g:west>
         <g:west size="12">
-            <g:Button styleName="{style.splitter}" ui:field="splitter"/>
+            <g:Anchor styleName="{style.splitter} {shellStyle.left}" ui:field="splitter"/>
         </g:west>
         <g:east size="0">
             <euca:DetailViewImpl ui:field="detail"/>

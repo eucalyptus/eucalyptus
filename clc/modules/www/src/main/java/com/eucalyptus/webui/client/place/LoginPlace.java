@@ -1,25 +1,21 @@
 package com.eucalyptus.webui.client.place;
 
 import com.google.gwt.place.shared.Place;
-import com.google.gwt.place.shared.PlaceTokenizer;
 
 public class LoginPlace extends Place {
   
-  public LoginPlace( ) {
+  public static final String DEFAULT_PROMPT = "";
+  public static final String LOGIN_FAILURE_PROMPT = "Login failed! Please try again.";
+  public static final String LOADING_FAILURE_PROMPT = "Loading failed! Please contact administrator and try login again.";
+  
+  private String prompt;
+  
+  public LoginPlace( String prompt ) {
+    this.prompt = prompt;
   }
   
-  public static class Tokenizer implements PlaceTokenizer<LoginPlace> {
-
-    @Override
-    public LoginPlace getPlace( String token ) {
-      return new LoginPlace( );
-    }
-
-    @Override
-    public String getToken( LoginPlace place ) {
-      return null;
-    }
-    
+  public String getPrompt( ) {
+    return this.prompt;
   }
   
 }

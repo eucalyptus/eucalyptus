@@ -11,9 +11,9 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.Widget;
 
-public class HeaderViewImpl extends Composite {
+public class HeaderViewImpl extends Composite implements HeaderView {
   
-  private static Logger LOG = Logger.getLogger( "HeaderViewImpl" );
+  private static Logger LOG = Logger.getLogger( HeaderViewImpl.class.getName( ) );
   
   private static HeaderViewImplUiBinder uiBinder = GWT.create( HeaderViewImplUiBinder.class );
   interface HeaderViewImplUiBinder extends UiBinder<Widget, HeaderViewImpl> {}
@@ -21,8 +21,8 @@ public class HeaderViewImpl extends Composite {
   @UiField
   UserLink userLink;
   
-  private PopupPanel settingPopup;
-  
+  private UserSettingViewImpl settingPopup;
+    
   public HeaderViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
     settingPopup = new UserSettingViewImpl( );
@@ -31,10 +31,19 @@ public class HeaderViewImpl extends Composite {
   
   @UiHandler( "userLink" )
   void handleClickOnUserAnchor( ClickEvent e ) {
-    LOG.log( Level.INFO, "CLICK" );
     settingPopup.setPopupPosition( userLink.getAbsoluteLeft( ) - 1,
                                    userLink.getAbsoluteTop( ) - 1 );
     settingPopup.show( );
+  }
+
+  @Override
+  public void setUser( String user ) {
+    this.userLink.setUser( user );
+  }
+
+  @Override
+  public UserSettingView getUserSetting( ) {
+    return this.settingPopup;
   }
   
 }

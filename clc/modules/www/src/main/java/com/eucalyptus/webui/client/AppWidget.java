@@ -1,20 +1,22 @@
 package com.eucalyptus.webui.client;
 
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
+import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
-import com.google.gwt.user.client.ui.RootLayoutPanel;
 
 public class AppWidget implements AcceptsOneWidget {
   
-  public AppWidget( ) {
+  private HasWidgets.ForIsWidget container;
+  
+  public AppWidget( HasWidgets.ForIsWidget container ) {
+    this.container = container;
   }
   
   @Override
   public void setWidget( IsWidget w ) {
-    RootLayoutPanel root = RootLayoutPanel.get( );
-    root.clear( );
+    container.clear( );
     if ( w != null ) {
-      root.add( w );
+      container.add( w );
     }
   }
   

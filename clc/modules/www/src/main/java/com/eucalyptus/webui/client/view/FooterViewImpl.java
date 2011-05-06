@@ -14,34 +14,36 @@ import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
 
-public class FooterViewImpl extends Composite {
+public class FooterViewImpl extends Composite implements FooterView {
   
   private static Logger LOG = Logger.getLogger( "FooterViewImpl" );
   
   private static FooterViewImplUiBinder uiBinder = GWT.create( FooterViewImplUiBinder.class );
   interface FooterViewImplUiBinder extends UiBinder<Widget, FooterViewImpl> {}
   
-  private static final int HEIGHT = 150;
-  
   @UiField
   LogSwitch logSwitch;
-
-  private PopupPanel logPanel;
+  
+  private Presenter presenter;
   
   public FooterViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
-    logPanel = new LogViewImpl( );
   }
   
   @UiHandler( "logSwitch" )
   void handleLogSwitchClickedEvent( ClickEvent e ) {
-    if ( logSwitch.isClicked( ) ) {
-      logPanel.setPixelSize( RootPanel.get( ).getOffsetWidth( ) - 15, HEIGHT );
-      logPanel.setPopupPosition( 5, this.getAbsoluteTop( ) - HEIGHT );
-      logPanel.show( );
-    } else {
-      logPanel.hide( );
+    if ( this.presenter != null ) {
+      if ( this.logSwitch.isClicked( ) ) {
+        this.presenter.onShowLogConsole( );
+      } else {
+        this.presenter.onHideLogConsole( );
+      }
     }
+  }
+
+  @Override
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
   }
   
 }

@@ -35,7 +35,7 @@
         	height:100%;
         }
         .splitter {
-        	width:0px;
+        	width:1px;
         	height:80%;
         	border-left:1px solid #AAAAAA;
         	border-right:1px solid #FFFFFF;
@@ -44,7 +44,8 @@
         	font-size:70%;
         	font-style:italic;
         	color:#666666;
-        	margin-right:0.5em;
+        	margin-right:6px;
+        	margin-left:6px;
         	text-align:center;   	
         }
         .log {
@@ -53,17 +54,20 @@
             color:#333333;
             text-align:left;      
         }
+        .fullHeight {
+        	height:100%;
+        }
     </ui:style>
         
     <g:HTMLPanel styleName="{style.footerBar}">
         <div class="{style.horizontalLeft} {style.logDiv}">
             <div class="{style.vcenter}">
-                <g:Label styleName="{style.log}">This is sample log line.</g:Label>
+                <g:Label styleName="{style.log}" ui:field="status">This is sample log line.</g:Label>
             </div>
         </div>
         <div class="{style.horizontalRight} {style.rightDiv}">
             <div class="{style.vcenter}">
-                <g:Label styleName="{style.version}">EEE 3.0</g:Label>
+                <g:Label styleName="{style.version}" ui:field="version">EEE 3.0</g:Label>
             </div>
         </div>
         <div class="{style.horizontalRight} {style.rightDiv}">
@@ -71,14 +75,12 @@
                 <div class="{style.splitter}">&nbsp;</div>
             </div>
         </div>
-        <div class="{style.horizontalRight} {style.rightDiv}">
-            <div class="{style.vcenter}">
-                <euca:LogSwitch ui:field="logSwitch"/>
-            </div>
+        <div class="{style.horizontalRight} {style.fullHeight}">
+            <euca:LogSwitch ui:field="logSwitch"/>
         </div>
         <div class="{style.horizontalRight} {style.rightDiv}">
             <div class="{style.vcenter}">
-                <div class="{style.splitter}"></div>
+                <div class="{style.splitter}">&nbsp;</div>
             </div>
         </div>
     </g:HTMLPanel>

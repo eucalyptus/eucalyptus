@@ -12,14 +12,14 @@ import com.google.gwt.user.client.ui.HasText;
 import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.Widget;
 
-public class LogViewImpl extends PopupPanel {
+public class LogViewImpl extends Composite implements LogView {
   
   private static LogViewImplUiBinder uiBinder = GWT.create( LogViewImplUiBinder.class );
   
   interface LogViewImplUiBinder extends UiBinder<Widget, LogViewImpl> {}
   
   public LogViewImpl( ) {
-    setWidget( uiBinder.createAndBindUi( this ) );
+    initWidget( uiBinder.createAndBindUi( this ) );
   }
 
 }

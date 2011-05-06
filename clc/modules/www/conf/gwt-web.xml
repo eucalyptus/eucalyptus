@@ -81,9 +81,9 @@
 
   <servlet>
     <description></description>
-    <display-name>EuareService</display-name>
-    <servlet-name>EuareServiceImpl</servlet-name>
-    <servlet-class>com.eucalyptus.webui.server.EuareServiceImpl</servlet-class>
+    <display-name>EucalyptusService</display-name>
+    <servlet-name>EucalyptusServiceImpl</servlet-name>
+    <servlet-class>com.eucalyptus.webui.server.EucalyptusServiceImpl</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -111,8 +111,8 @@
 
 
   <servlet-mapping>
-    <servlet-name>EuareServiceImpl</servlet-name>
-    <url-pattern>/euare</url-pattern>
+    <servlet-name>EucalyptusServiceImpl</servlet-name>
+    <url-pattern>/backend</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>

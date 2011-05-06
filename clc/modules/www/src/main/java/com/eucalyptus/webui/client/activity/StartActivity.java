@@ -9,22 +9,32 @@ import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
+/**
+ * Showing the start page, providing guides for first-time users,
+ * and shortcuts for experienced users.
+ * 
+ * @author Ye Wen (wenye@eucalyptus.com)
+ *
+ */
 public class StartActivity extends AbstractActivity {
   
-  private static Logger LOG = Logger.getLogger( "StartActivity" );
+  public static final String TITLE = "WELCOME";
+  
+  private static final Logger LOG = Logger.getLogger( StartActivity.class.getName( ) );
   
   private ClientFactory clientFactory;
   
   public StartActivity( StartPlace place, ClientFactory clientFactory ) {
     this.clientFactory = clientFactory;
-    LOG.log( Level.INFO, "Creating StartActivity" );
   }
   
   @Override
   public void start( AcceptsOneWidget container, EventBus eventBus ) {
     LOG.log( Level.INFO, "Start StartActivity" );
-    StartView startView = clientFactory.getStartView( );
-    container.setWidget( startView );    
+    this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
+    StartView startView = this.clientFactory.getStartView( );
+    //container.setWidget( startView );
+    container.setWidget( this.clientFactory.getLoadingAnimationView( ) );
   }
   
 }

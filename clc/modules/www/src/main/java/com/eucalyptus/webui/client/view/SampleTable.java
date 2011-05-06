@@ -79,7 +79,6 @@ public class SampleTable extends Composite {
       public void onSelectionChange(SelectionChangeEvent event) {
         Contact selected = selectionModel.getSelectedObject();
         if (selected != null) {
-          EucalyptusWebInterface.shell.openDetail( );
           LOG.log(Level.INFO, "You selected: " + selected.name);
         }
       }

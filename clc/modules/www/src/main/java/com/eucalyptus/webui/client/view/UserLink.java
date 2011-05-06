@@ -32,4 +32,8 @@ public class UserLink extends Composite implements HasClickHandlers {
     return userAnchor.addClickHandler( handler );
   }
   
+  public void setUser( String user ) {
+    this.userAnchor.setHTML( user );
+  }
+  
 }

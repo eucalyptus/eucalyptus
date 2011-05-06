@@ -12,6 +12,12 @@
         	display:table-cell;
         	vertical-align:middle;
         }
+        .prompt {
+        	font-size:80%;
+        	color:red;
+        	text-align:center;
+        	margin-bottom:6px;
+        }
     </ui:style>
     
     <ui:style field="formStyle" type="com.eucalyptus.webui.client.view.LoginViewImpl.LoginFormStyle">
@@ -74,7 +80,9 @@
     </ui:style>
     
     <g:HTMLPanel styleName="{style.vcenterParent}">
-        <div class="{style.vcenterChild}" ui:field="loginArea" />
+        <div class="{style.vcenterChild}" ui:field="loginArea" >
+            <g:Label styleName="{style.prompt}" ui:field="prompt"/>
+        </div>
     </g:HTMLPanel>
     
 </ui:UiBinder>
