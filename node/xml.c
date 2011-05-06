@@ -69,6 +69,7 @@
 #include <time.h>
 #include <sys/types.h> // umask
 #include <sys/stat.h> // umask
+#include <pthread.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/debugXML.h>
 #include <libxml/HTMLtree.h>
@@ -91,6 +92,7 @@ extern struct nc_state_t nc_state; // TODO: pass that in?
 
 static int initialized = 0;
 static void error_handler (void * ctx, const char * fmt, ...);
+static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 #define INIT() if (!initialized) init()
 
 // macros for making XML construction a bit more readable
@@ -101,13 +103,16 @@ static void error_handler (void * ctx, const char * fmt, ...);
 
 static void init (void)
 {
-        if (initialized) return;
+    pthread_mutex_lock (&xml_mutex);
+    if (!initialized) {
         xmlInitParser();
         LIBXML_TEST_VERSION; // verifies that loaded library matches the compiled library
         xmlSubstituteEntitiesDefault (1); // substitute entities while parsing
         xmlSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libxml2 writes to stderr
         xsltSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libslt writes to stderr
         initialized = 1;
+    }
+    pthread_mutex_unlock (&xml_mutex);
 }
 
 // Encodes instance metadata (contained in ncInstance struct) in XML
@@ -118,6 +123,7 @@ int gen_instance_xml (const ncInstance * instance)
 {
     INIT();
 
+    pthread_mutex_lock (&xml_mutex);
     xmlDocPtr doc = xmlNewDoc (BAD_CAST "1.0");
     xmlNodePtr instanceNode = xmlNewNode (NULL, BAD_CAST "instance");
     xmlDocSetRootElement (doc, instanceNode);
@@ -186,6 +192,7 @@ int gen_instance_xml (const ncInstance * instance)
 
     logprintfl (EUCAINFO, "wrote instanceNode XML to %s\n", instance->xmlFilePath);
     xmlFreeDoc(doc);
+    pthread_mutex_unlock (&xml_mutex);
 
     return 0;
 }
@@ -197,7 +204,12 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
 int gen_libvirt_xml (const ncInstance * instance, const char * libvirtXsltPath) 
 {
         INIT();
-        return apply_xslt_stylesheet (libvirtXsltPath, instance->xmlFilePath, instance->libvirtFilePath);
+
+        pthread_mutex_lock (&xml_mutex);
+        int ret = apply_xslt_stylesheet (libvirtXsltPath, instance->xmlFilePath, instance->libvirtFilePath);
+        pthread_mutex_unlock (&xml_mutex);
+
+        return ret;
 }
 
 // Gets called from XSLT/XML2 library, possibly several times per error.

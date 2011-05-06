@@ -16,6 +16,7 @@ NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
+EFENCE=-lefence
 
 all: server client clientlib test_nc test
 
@@ -75,7 +76,7 @@ server: $(SERVICE_SO)
 	make -C ../util
 
 $(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) $(AXIS2C_HOME)/lib/libaxutil.so ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o ../util/windows-bundle.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(EFENCE)
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 

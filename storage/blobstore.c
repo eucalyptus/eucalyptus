@@ -131,7 +131,7 @@ typedef struct _blobstore_filelock {
     pthread_rwlock_t lock; // reader/writer lock for controlling intra-process access
     pthread_mutex_t mutex; // for locking this specific struct during manipulations
     struct _blobstore_filelock * next; // pointer for constructing a LL
-} blobstore_filelock;
+} __attribute__((__packed__)) blobstore_filelock;
 
 __thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK; // thread-local errno
 static void (* err_fn) (const char * msg) = NULL; 
@@ -139,8 +139,15 @@ static unsigned char _do_print_errors = 1;
 static unsigned char _do_print_trace = 0;
 static pthread_mutex_t _blobstore_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 static blobstore_filelock * locks_list = NULL; // process-global LL head (TODO: replace this with a hash table)
-////static long _locks_list_add_ctr = 0L;
-////static long _locks_list_rem_ctr = 0L;
+
+// debugging counters
+static long _locks_list_add_ctr = 0L;
+static long _locks_list_rem_ctr = 0L;
+static long _open_success_ctr = 0L;
+static long _close_success_ctr = 0L;
+static long _open_error_ctr = 0L;
+static long _open_timeout_ctr = 0L;
+static long _close_error_ctr = 0L;
 static char zero_buf [1] = "\0";
 
 static void myprintf (int loglevel, const char * format, ...)
@@ -297,7 +304,7 @@ static int close_and_unlock (int fd)
             l->fd_status [index] = 0; // set status to 'unused'
             if (--l->refs==0) { // if not other references...
                 * next_ptr = l->next; // remove from LL
-                ////                _locks_list_rem_ctr++;
+                _locks_list_rem_ctr++;
                 close_and_free_filelock (l); // close and free(l)
             }
         } else {
@@ -309,6 +316,10 @@ static int close_and_unlock (int fd)
         ret = -1;
     }
 
+    if (ret==0)
+        _close_success_ctr++;
+    else
+        _close_error_ctr++;
     pthread_mutex_unlock (&_blobstore_mutex);
     return ret;
 }
@@ -367,6 +378,7 @@ static int open_and_lock (const char * path,
     blobstore_filelock ** next_ptr = &locks_list;
     for (l = locks_list; l; l=l->next) { // look through existing locks
         next_ptr = &(l->next); // either LL head or last element's next pointer
+        if (strcmp (path, path) == 0);
         if (strcmp (path, l->path) == 0)
             break;
     }
@@ -382,7 +394,7 @@ static int open_and_lock (const char * path,
         pthread_mutex_init (&(l->mutex), NULL);
         l->type = l_type; // lock type must match in future
         * next_ptr = l; // add at the end of LL
-        ////        _locks_list_add_ctr++;
+        _locks_list_add_ctr++;
     }
     if (l->next_fd==BLOBSTORE_MAX_CONCURRENT) {
         pthread_mutex_unlock (&_blobstore_mutex);
@@ -424,6 +436,9 @@ static int open_and_lock (const char * path,
         }
         if (timeout_usec!=BLOBSTORE_NO_TIMEOUT && time_usec() >= deadline) { // we timed out waiting for the lock
             err (BLOBSTORE_ERROR_AGAIN, NULL);
+            pthread_mutex_lock (&_blobstore_mutex);
+            _open_timeout_ctr++;
+            pthread_mutex_unlock (&_blobstore_mutex);
             goto error;
         }
         usleep (BLOBSTORE_SLEEP_INTERVAL_MS);
@@ -433,6 +448,10 @@ static int open_and_lock (const char * path,
     l->fd_status [l->next_fd] = 1; 
     l->next_fd++;
     pthread_mutex_unlock (&(l->mutex));
+
+    pthread_mutex_lock (&_blobstore_mutex);
+    _open_success_ctr++;
+    pthread_mutex_unlock (&_blobstore_mutex);
     return fd;
 
  error:
@@ -442,8 +461,10 @@ static int open_and_lock (const char * path,
         close (fd);
     if (--l->refs==0) {
         * next_ptr = l->next;
+        _locks_list_rem_ctr++;
         close_and_free_filelock (l);
     }
+    _open_error_ctr++;
     pthread_mutex_unlock (&_blobstore_mutex);
     return -1;
 }
@@ -2131,6 +2152,8 @@ unsigned long long blockblob_get_size_bytes ( blockblob * bb)
 #define F2 "/tmp/blobstore_test_2"
 #define F3 "/tmp/blobstore_test_3"
 
+static char * _farray [] = { F1, F2, F3 };
+
 #define _UNEXPECTED printf ("======================> UNEXPECTED RESULT (errors=%d)!!!\n", ++errors);
 
 #define _CHKMETA(ST,RE) snprintf (entry_path, sizeof(entry_path), "%s/%s", bs->path, ST); \
@@ -2340,7 +2363,6 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
         bbs2 [i] = NULL;
         bbs2 [i+STRESS_BLOBS] = NULL;
     }
-    srandom (time(NULL));
     for (int i=0; i<STRESS_BLOBS*3; i++) { // run over the array a few times
         int j = i % (STRESS_BLOBS/2); // modify pairs from array
         int k = j + (STRESS_BLOBS/2);
@@ -2792,7 +2814,52 @@ static int do_blobstore_test (const char * base, const char * name, blobstore_fo
     return errors;
 }
 
-static void * thread_function( void * ptr )
+#define COMPETITORS 3
+#define COMPETITIVE_ITERATIONS 10
+
+static void * competitor_function (void * ptr)
+{
+    printf ("%u: competitor running\n", (unsigned int)pthread_self());
+    int errors = 0;
+    int successes = 0;
+    int timeouts = 0;
+
+    for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
+        int findex = (int)(((sizeof(_farray)/sizeof(char *))-1)*((double)random()/RAND_MAX)); // pick random file
+        int fd = open_and_lock (_farray[findex], _C, 0, BLOBSTORE_FILE_PERM);
+        if (fd!=-1) {
+            printf ("%u: created test lock %d\n", (unsigned int)pthread_self(), findex);
+            close_and_unlock (fd);
+        } else {
+            if (_blobstore_errno != BLOBSTORE_ERROR_EXIST && // it is OK if file already exists
+                _blobstore_errno != BLOBSTORE_ERROR_AGAIN) { // it is OK to lose the race for the lock
+                errors++;
+                continue;
+            }
+        }
+        
+        usleep (10);
+        
+        fd = open_and_lock (_farray[findex], _W, 0, BLOBSTORE_FILE_PERM);
+        if (fd!=-1) {
+            printf ("%u: opened test lock %d\n", (unsigned int)pthread_self(), findex);
+            successes++;
+            usleep (10);
+            close_and_unlock (fd);
+        } else {
+            if (_blobstore_errno != BLOBSTORE_ERROR_AGAIN) { // it is OK to lose the race for the lock
+                errors++;
+            } else {
+                timeouts++;
+            }
+        }
+    }
+
+    * (int *) ptr = errors;
+    return NULL;
+}
+
+static void * thread_function (void * ptr)
 {
     printf ("this is a thread\n");
     int pid, ret, errors = 0;
@@ -2852,6 +2919,19 @@ int do_file_lock_test (void)
             }
         }
         remove (F3);
+
+        printf ("running %d competing threads\n", COMPETITORS);
+        pthread_t threads [COMPETITORS];
+        int thread_ret [COMPETITORS];
+        int thread_ret_sum = 0;
+        for (int i=0; i<COMPETITORS; i++) {
+            pthread_create (&threads[i], NULL, competitor_function, (void *)&thread_ret[i]);
+        }
+        for (int i=0; i<COMPETITORS; i++) {
+            pthread_join (threads[i], NULL);
+            thread_ret_sum += thread_ret [i];
+        }
+        printf ("waited for all competing threads (returned sum = %d)\n", thread_ret_sum);
     }
 
     for (int i=0; i<5; i++) {
@@ -2928,11 +3008,14 @@ int main (int argc, char ** argv)
     int errors = 0;
     char cwd [1024];
     getcwd (cwd, sizeof (cwd));
+    srandom (time(NULL));
 
     printf ("testing blobstore.c\n");
 
     errors += do_file_lock_test ();
     if (errors) goto done; // no point in doing blobstore test if above isn't working
+
+goto done;
 
     errors += do_metadata_test (cwd, "directory-meta");
     if (errors) goto done; // no point in doing blobstore test if above isn't working
