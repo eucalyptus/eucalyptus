@@ -391,7 +391,9 @@ class EucaConf(object):
                 req = cls([path1, path2], path1, args[2],
                           ['node-cert.pem', 'cluster-cert.pem',
                            'cluster-pk.pem', 'node-pk.pem',
-                           'vtunpass', 'cloud-cert.pem'])
+                           'vtunpass', 'cloud-cert.pem'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
                 req.sync()
 
     def do_register_walrus(self):
@@ -403,7 +405,9 @@ class EucaConf(object):
                 path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path], path, args[2], ['euca.p12'])
+                req = cls([path], path, args[2], ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
                 req.sync()
 
     def do_register_sc(self):
@@ -415,7 +419,9 @@ class EucaConf(object):
                 path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path], path, args[2], ['euca.p12'])
+                req = cls([path], path, args[2], ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
                 req.sync()
 
     def _do_deregister(self, option_name, module_name, class_name):
@@ -445,7 +451,9 @@ class EucaConf(object):
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
         files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
                  'node-pk.pem', 'cluster-pk.pem']
-        req = cls([path], path, node, files)
+        req = cls([path], path, node, files,
+                  use_rsync=(not self.options.no_rsync),
+                  use_scp=(not self.options.no_scp))
         return req.sync()
 
     def _print_sync_error(self):
