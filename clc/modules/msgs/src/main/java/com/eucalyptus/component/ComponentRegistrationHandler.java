@@ -98,7 +98,6 @@ public class ComponentRegistrationHandler {
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
-        throw Exceptions.filterStackTrace( ex );
       }
       return true;
     } catch ( Throwable e ) {
