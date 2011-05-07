@@ -1,12 +1,10 @@
 package com.eucalyptus.cluster.callback;
 
-import java.net.SocketException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -53,7 +51,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
         }
       } catch ( NoSuchElementException e1 ) {
         try {
-          AccountFullName accountFn = Accounts.lookupAccountFullNameById( netInfo.getAccountId( ) );
+          AccountFullName accountFn = Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) );
           if( accountFn != null ) {
             net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
             if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
