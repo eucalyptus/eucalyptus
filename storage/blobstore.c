@@ -2837,18 +2837,18 @@ static int do_blobstore_test (const char * base, const char * name, blobstore_fo
     blobstore_unlock (bs);
     blobstore_close (bs);
 
-    printf ("completed blobstore test\n");
+    printf ("completed blobstore test (name=%s)\n", name);
  done:
     return errors;
 }
 
-#define COMPETITORS 3
-#define COMPETITIVE_ITERATIONS 3
+#define COMPETITIVE_PARTICIPANTS 5
+#define COMPETITIVE_ITERATIONS 50
 #define COMPETITIVE_PAUSE_MS 3
 
 static void * competitor_function (void * ptr)
 {
-    printf ("%u: competitor running\n", (unsigned int)pthread_self());
+    printf ("%u/%u: competitor running\n", (unsigned int)pthread_self(), (int)getpid());
     int errors = 0;
     int successes = 0;
     int timeouts = 0;
@@ -2857,7 +2857,7 @@ static void * competitor_function (void * ptr)
         int findex = (int)((sizeof(_farray)/sizeof(char *))*((double)random()/RAND_MAX)); // pick random file
         int fd = open_and_lock (_farray[findex], _C, 0, BLOBSTORE_FILE_PERM);
         if (fd!=-1) {
-            printf ("%u: created test lock %d\n", (unsigned int)pthread_self(), findex);
+            printf ("%u/%u: created test lock %d\n", (unsigned int)pthread_self(), (int)getpid(), findex);
             close_and_unlock (fd);
         } else {
             if (_blobstore_errno != BLOBSTORE_ERROR_EXIST && // it is OK if file already exists
@@ -2871,7 +2871,7 @@ static void * competitor_function (void * ptr)
         
         fd = open_and_lock (_farray[findex], _W, 0, BLOBSTORE_FILE_PERM);
         if (fd!=-1) {
-            printf ("%u: opened test lock %d\n", (unsigned int)pthread_self(), findex);
+            printf ("%u/%u: opened test lock %d\n", (unsigned int)pthread_self(), (int)getpid(), findex);
             successes++;
             usleep (COMPETITIVE_PAUSE_MS);
             close_and_unlock (fd);
@@ -2879,7 +2879,7 @@ static void * competitor_function (void * ptr)
             if (_blobstore_errno != BLOBSTORE_ERROR_AGAIN) { // it is OK to lose the race for the lock
                 errors++;
             } else {
-                printf ("%u: timed out on lock %d\n", (unsigned int)pthread_self(), findex);
+                printf ("%u/%u: timed out on lock %d\n", (unsigned int)pthread_self(), (int)getpid(), findex);
                 timeouts++;
             }
         }
@@ -2951,23 +2951,22 @@ int do_file_lock_test (void)
         }
         remove (F3);
 
-        printf ("running %d competing threads\n", COMPETITORS);
-        pthread_t threads [COMPETITORS];
-        int thread_ret [COMPETITORS];
+        // highly concurrent test that involves creating and then opening
+        // three blobs (F1, F2, F3) from several threads over many iterations
+        printf ("running %d competing threads\n", COMPETITIVE_PARTICIPANTS);
+        pthread_t threads [COMPETITIVE_PARTICIPANTS];
+        int thread_ret [COMPETITIVE_PARTICIPANTS];
         int thread_ret_sum = 0;
-        for (int i=0; i<COMPETITORS; i++) {
+        for (int i=0; i<COMPETITIVE_PARTICIPANTS; i++) {
             pthread_create (&threads[i], NULL, competitor_function, (void *)&thread_ret[i]);
         }
-        for (int i=0; i<COMPETITORS; i++) {
+        for (int i=0; i<COMPETITIVE_PARTICIPANTS; i++) {
             pthread_join (threads[i], NULL);
             thread_ret_sum += thread_ret [i];
         }
-        printf ("waited for all competing threads (returned sum = %d)\n", thread_ret_sum);
-        _OPEN(fd1,F1,_W,0,0);
+        printf ("waited for all competing threads (returned sum=%d)\n", thread_ret_sum);
         remove (F1);
-        _OPEN(fd2,F2,_W,0,0);
         remove (F2);
-        _OPEN(fd3,F3,_W,0,0);
         remove (F3);
     }
 
@@ -3036,6 +3035,30 @@ int do_file_lock_test (void)
         remove (F1);
         remove (F2);
         remove (F3);
+
+        // highly concurrent test that involves creating and then opening
+        // three blobs (F1, F2, F3) from several processes over many iterations
+        printf ("running %d competing processes\n", COMPETITIVE_PARTICIPANTS);
+        int pids [COMPETITIVE_PARTICIPANTS];
+        int proc_ret_sum = 0;
+        for (int i=0; i<COMPETITIVE_PARTICIPANTS; i++) {
+            pids [i] = fork();
+            if (pids [i] == 0) { // child
+                int ret;
+                competitor_function (&ret);
+                _exit (ret);
+            }
+        }
+        for (int i=0; i<COMPETITIVE_PARTICIPANTS; i++) {
+            int status;
+            waitpid (pids[i], &status, 0);
+            proc_ret_sum += WEXITSTATUS(status);
+        }
+        printf ("waited for all competing processes (returned sum=%d)\n", proc_ret_sum);
+        remove (F1);
+        remove (F2);
+        remove (F3);
+
     }
     return errors;
 }
@@ -3056,8 +3079,6 @@ int main (int argc, char ** argv)
     errors += do_file_lock_test ();
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
-goto done;
-
     errors += do_metadata_test (cwd, "directory-meta");
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
@@ -3072,6 +3093,8 @@ goto done;
 
     errors += do_copy_test (cwd, "copy");
     if (errors) goto done; // no point in doing blobstore test if above isn't working
+
+goto done;
 
     errors += do_clone_test (cwd, "clone", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
     if (errors) goto done; // no point in doing blobstore test if above isn't working
