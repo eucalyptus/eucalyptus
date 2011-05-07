@@ -216,7 +216,20 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     return Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( );
+                                                                                     if( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
+                                                                                       try {
+                                                                                         AsyncRequests.newRequest( new EnableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                         return true;
+                                                                                       } catch ( ExecutionException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       } catch ( InterruptedException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       }
+                                                                                      } else {
+                                                                                        return false;
+                                                                                      }
                                                                                    }
                                                                                  };
   
