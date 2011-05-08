@@ -96,5 +96,15 @@ public class LoginViewImpl extends Composite implements LoginView {
   public void setPrompt( String prompt ) {
     this.prompt.setText( prompt );
   }
+
+  @Override
+  public void setFocus( ) {
+    Document.get( ).getElementById( LOGINFORM_USERNAME_ID ).focus( );
+  }
+
+  @Override
+  public void clearPassword( ) {
+    ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ) ).setValue( "" );
+  }
   
 }

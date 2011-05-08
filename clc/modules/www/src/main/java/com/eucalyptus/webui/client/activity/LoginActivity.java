@@ -35,6 +35,8 @@ public class LoginActivity extends AbstractActivity implements LoginView.Present
     loginView.setPresenter( this );
     loginView.setPrompt( place.getPrompt( ) );
     container.setWidget( loginView );
+    loginView.clearPassword( );
+    loginView.setFocus( );
   }
 
   /**

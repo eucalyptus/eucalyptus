@@ -6,6 +6,7 @@
     <inherits name="com.google.gwt.logging.Logging"/>
     <inherits name="com.google.gwt.activity.Activity"/>
     <inherits name="com.google.gwt.place.Place"/>
+    <inherits name="com.google.gwt.http.HTTP"/>
 
     <!-- Logging -->
     <set-property name="gwt.logging.logLevel" value="INFO"/>

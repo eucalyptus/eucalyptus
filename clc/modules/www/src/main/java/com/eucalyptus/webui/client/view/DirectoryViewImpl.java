@@ -36,6 +36,8 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
   
   @UiField
   ScrollPanel treePanel;
+
+  private SearchHandler searchHandler;
   
   public DirectoryViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -56,6 +58,7 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
         CategoryItem selected = selectionModel.getSelectedObject( );
         if ( selected != null ) {
           LOG.log( Level.INFO, "Selected: " + selected.getName( ) );
+          searchHandler.search( selected.getQuery( ) );
         } else {
           LOG.log( Level.WARNING, "Selected empty item" );
         }
@@ -77,5 +80,10 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
     for ( int i = 0; i < root.getChildCount( ); i++ ) {
       root.setChildOpen( i, true );
     }
+  }
+
+  @Override
+  public void setSearchHandler( SearchHandler handler ) {
+    this.searchHandler = handler;
   }
 }

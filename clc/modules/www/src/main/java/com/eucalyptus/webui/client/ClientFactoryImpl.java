@@ -1,9 +1,13 @@
 package com.eucalyptus.webui.client;
 
+import com.eucalyptus.webui.client.place.ErrorSinkPlace;
+import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceAsync;
 import com.eucalyptus.webui.client.util.LocalSession;
 import com.eucalyptus.webui.client.util.LocalSessionImpl;
+import com.eucalyptus.webui.client.view.ErrorSinkView;
+import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingAnimationViewImpl;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
@@ -16,29 +20,42 @@ import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.StartViewImpl;
+import com.google.gwt.activity.shared.ActivityManager;
+import com.google.gwt.activity.shared.ActivityMapper;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.event.shared.ResettableEventBus;
 import com.google.gwt.event.shared.SimpleEventBus;
+import com.google.gwt.place.shared.Place;
 import com.google.gwt.place.shared.PlaceController;
+import com.google.gwt.place.shared.PlaceHistoryHandler;
+import com.google.gwt.place.shared.PlaceHistoryHandler.Historian;
 
-public class ClientFactoryImpl implements ClientFactory
-{
-	private static final EventBus mainEventBus = new ResettableEventBus( new SimpleEventBus( ) );
-	private static final PlaceController mainPlaceController = new PlaceController( mainEventBus );
-	private static final EventBus lifecycleEventBus = new SimpleEventBus( );
-	private static final PlaceController lifecyclePlaceController = new PlaceController( lifecycleEventBus );
+public class ClientFactoryImpl implements ClientFactory {
+  
+  private static final Place DEFAULT_PLACE = new StartPlace( );
+  private static final Place ERROR_PLACE = new ErrorSinkPlace( );
+  
+	private EventBus mainEventBus = new ResettableEventBus( new SimpleEventBus( ) );
+	private PlaceController mainPlaceController = new PlaceController( mainEventBus );
+  private ActivityManager mainActivityManager;
+  private PlaceHistoryHandler mainPlaceHistoryHandler;
+  private Historian mainHistorian = new PlaceHistoryHandler.DefaultHistorian( );
 	
-	private static final LocalSession localSession = new LocalSessionImpl( );
+	private EventBus lifecycleEventBus = new SimpleEventBus( );
+	private PlaceController lifecyclePlaceController = new PlaceController( lifecycleEventBus );
 	
-	private static final EucalyptusServiceAsync euareService = GWT.create( EucalyptusService.class );
+	private LocalSession localSession = new LocalSessionImpl( );
+	
+	private EucalyptusServiceAsync backendService = GWT.create( EucalyptusService.class );
 
-	private static LoginView loginView;
-	private static LoadingProgressView loadingProgressView;
-	private static ShellView shellView;
-	private static StartView startView;
-	private static ServiceView serviceView;
-	private static LoadingAnimationView loadingAnimationView;
+	private LoginView loginView;
+	private LoadingProgressView loadingProgressView;
+	private ShellView shellView;
+	private StartView startView;
+	private ServiceView serviceView;
+	private LoadingAnimationView loadingAnimationView;
+	private ErrorSinkView errorSinkView;
 
   @Override
   public LocalSession getLocalSession( ) {
@@ -47,7 +64,7 @@ public class ClientFactoryImpl implements ClientFactory
 
   @Override
   public EucalyptusServiceAsync getBackendService( ) {
-    return euareService;
+    return backendService;
   }
 
   @Override
@@ -116,6 +133,48 @@ public class ClientFactoryImpl implements ClientFactory
       loadingAnimationView = new LoadingAnimationViewImpl( );
     }
     return loadingAnimationView;
+  }
+
+  @Override
+  public ErrorSinkView getErrorSinkView( ) {
+    if ( errorSinkView == null ) {
+      errorSinkView = new ErrorSinkViewImpl( );
+    }
+    return errorSinkView;
+  }
+
+  @Override
+  public ActivityManager getMainActivityManager( ) {
+    if ( mainActivityManager == null ) {
+      ActivityMapper activityMapper = new MainActivityMapper( this );
+      mainActivityManager = new ActivityManager( activityMapper, mainEventBus );      
+    }
+    return mainActivityManager;
+  }
+
+  @Override
+  public PlaceHistoryHandler getMainPlaceHistoryHandler( ) {
+    if ( mainPlaceHistoryHandler == null ) {
+      MainPlaceHistoryMapper historyMapper= GWT.create( MainPlaceHistoryMapper.class );
+      mainPlaceHistoryHandler = new ExPlaceHistoryHandler( historyMapper );    
+      ( ( ExPlaceHistoryHandler ) mainPlaceHistoryHandler).register( mainPlaceController, mainEventBus, DEFAULT_PLACE, ERROR_PLACE );      
+    }
+    return mainPlaceHistoryHandler;
+  }
+
+  @Override
+  public Historian getMainHistorian( ) {
+    return mainHistorian;
+  }
+
+  @Override
+  public Place getDefaultPlace( ) {
+    return DEFAULT_PLACE;
+  }
+  
+  @Override
+  public Place getErrorPlace( ) {
+    return ERROR_PLACE;
   }
   
 }

@@ -3,6 +3,7 @@ package com.eucalyptus.webui.client.activity;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
+import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.view.StartView;
 import com.google.gwt.activity.shared.AbstractActivity;
@@ -23,9 +24,11 @@ public class StartActivity extends AbstractActivity {
   private static final Logger LOG = Logger.getLogger( StartActivity.class.getName( ) );
   
   private ClientFactory clientFactory;
+  private StartPlace place;
   
   public StartActivity( StartPlace place, ClientFactory clientFactory ) {
     this.clientFactory = clientFactory;
+    this.place = place;
   }
   
   @Override
@@ -33,8 +36,7 @@ public class StartActivity extends AbstractActivity {
     LOG.log( Level.INFO, "Start StartActivity" );
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     StartView startView = this.clientFactory.getStartView( );
-    //container.setWidget( startView );
-    container.setWidget( this.clientFactory.getLoadingAnimationView( ) );
+    container.setWidget( startView );
   }
   
 }

@@ -6,15 +6,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.AppWidget;
 import com.eucalyptus.webui.client.ClientFactory;
+import com.eucalyptus.webui.client.ExPlaceHistoryHandler;
 import com.eucalyptus.webui.client.MainActivityMapper;
 import com.eucalyptus.webui.client.MainPlaceHistoryMapper;
 import com.eucalyptus.webui.client.place.LoginPlace;
+import com.eucalyptus.webui.client.place.LogoutPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
+import com.eucalyptus.webui.client.view.SearchHandler;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.UserSettingView;
 import com.google.gwt.activity.shared.AbstractActivity;
@@ -23,6 +26,7 @@ import com.google.gwt.activity.shared.ActivityMapper;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.event.shared.ResettableEventBus;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.place.shared.Place;
 import com.google.gwt.place.shared.PlaceHistoryHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -35,19 +39,17 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  * @author Ye Wen (wenye@eucalyptus.com)
  *
  */
-public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter {
+public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, SearchHandler {
   
   private static final Logger LOG = Logger.getLogger( ShellActivity.class.getName( ) );
   
-  private static final Place DEFAULT_PLACE = new StartPlace( );
+  private static final String VERSION_NAME = "version";
+  private static final String DEFAULT_VERSION = "EEE";
   
   private ClientFactory clientFactory;
   private ShellPlace place;
   
   private AcceptsOneWidget container;
-  
-  private ActivityManager mainActivityManager;
-  private PlaceHistoryHandler mainPlaceHistoryHandler;
   
   private LoginUserProfile user;
   private HashMap<String, String> props;
@@ -65,26 +67,15 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
     getLoginUserProfile( );
   }
   
-  @Override
-  public void onStop( ) {
-    ( ( ResettableEventBus ) ( this.clientFactory.getMainEventBus( ) ) ).removeHandlers( );
-  }
-  
   private void startMain( ) {
     loadShellView( this.container );
 
     // This is the root container of all main activities
     AppWidget appWidget = new AppWidget( this.clientFactory.getShellView( ).getContentView( ).getContentContainer( ) );    
-    ActivityMapper activityMapper = new MainActivityMapper( this.clientFactory );
-    this.mainActivityManager = new ActivityManager( activityMapper, this.clientFactory.getMainEventBus( ) );
-    this.mainActivityManager.setDisplay(appWidget);
-
-    MainPlaceHistoryMapper historyMapper= GWT.create( MainPlaceHistoryMapper.class );
-    this.mainPlaceHistoryHandler = new PlaceHistoryHandler( historyMapper );
-    this.mainPlaceHistoryHandler.register( this.clientFactory.getMainPlaceController( ),
-                                           this.clientFactory.getMainEventBus( ),
-                                           DEFAULT_PLACE );
-    this.mainPlaceHistoryHandler.handleCurrentHistory( );
+    this.clientFactory.getMainActivityManager( ).setDisplay(appWidget);
+    
+    ExPlaceHistoryHandler placeHistoryHandler = ( ExPlaceHistoryHandler ) clientFactory.getMainPlaceHistoryHandler( );
+    placeHistoryHandler.handleCurrentHistory( );
   }
   
   private void loadLoadingProgressView( AcceptsOneWidget container ) {
@@ -94,12 +85,20 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   }
   
   private void loadShellView( AcceptsOneWidget container ) {
+    String v = props.get( VERSION_NAME );
     ShellView shellView = this.clientFactory.getShellView( );
+    
     shellView.getDirectoryView( ).buildTree( this.category );
+    shellView.getDirectoryView( ).setSearchHandler( this );
+    
     shellView.getFooterView( ).setPresenter( this );
+    shellView.getFooterView( ).setVersion( v == null ? DEFAULT_VERSION : v );
+    
     shellView.getHeaderView( ).setUser( this.user.toString( ) );
     shellView.getHeaderView( ).getUserSetting( ).setUser( this.user.toString( ) );
     shellView.getHeaderView( ).getUserSetting( ).setPresenter( this );
+    shellView.getHeaderView( ).setSearchHandler( this );
+    
     container.setWidget( shellView );
   }
   
@@ -115,9 +114,14 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
       
       @Override
       public void onSuccess( LoginUserProfile result ) {
-        user = result;
-        clientFactory.getLoadingProgressView( ).setProgress( 33 );
-        getSystemProperties( );
+        if ( result == null ) {
+          LOG.log( Level.WARNING, "Got empty user profile" );
+          clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );
+        } else {
+          user = result;
+          clientFactory.getLoadingProgressView( ).setProgress( 33 );
+          getSystemProperties( );
+        }
       }
       
     });
@@ -135,9 +139,14 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
       
       @Override
       public void onSuccess( HashMap<String, String> result ) {
-        props = result;
-        clientFactory.getLoadingProgressView( ).setProgress( 67 );
-        getCategory( );
+        if ( result == null ) {
+          LOG.log( Level.WARNING, "Got empty system properties" );
+          clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );          
+        } else {
+          props = result;
+          clientFactory.getLoadingProgressView( ).setProgress( 67 );
+          getCategory( );
+        }
       }
     } );
   }
@@ -154,9 +163,14 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
       
       @Override
       public void onSuccess( ArrayList<CategoryTag> result ) {
-        category = result;
-        clientFactory.getLoadingProgressView( ).setProgress( 100 );
-        startMain( );
+        if ( result == null ) {
+          LOG.log( Level.WARNING, "Got empty category" );
+          clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );          
+        } else {
+          category = result;
+          clientFactory.getLoadingProgressView( ).setProgress( 100 );
+          startMain( );
+        }
       }
     } );
   }
@@ -174,7 +188,19 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   @Override
   public void logout( ) {
     this.clientFactory.getLocalSession( ).clearSession( );
-    this.clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
+    //this.clientFactory.getMainHistorian( ).newItem( "", false );
+    //this.clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
+    this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
+  }
+
+  @Override
+  public void search( String search ) {
+    if ( search != null ) {
+      LOG.log( Level.INFO, "New search: " + search );
+      this.clientFactory.getMainHistorian( ).newItem( search, true/*issueEvent*/ );
+    } else {
+      LOG.log( Level.INFO, "Empty search!" );
+    }
   }
   
 }

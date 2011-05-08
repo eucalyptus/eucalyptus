@@ -5,7 +5,7 @@ import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
 public class StartPlace extends Place {
-
+  
   public StartPlace( ) {
   }
   

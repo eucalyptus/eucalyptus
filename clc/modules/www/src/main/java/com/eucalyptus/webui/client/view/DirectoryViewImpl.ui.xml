@@ -21,8 +21,8 @@
         }
         .scroll {
             margin:5px 10px 12px 10px;
-            font-size:90%;
-            color:#333333;            
+            font-size:80%;
+            color:#303030;            
         }
     </ui:style>
     

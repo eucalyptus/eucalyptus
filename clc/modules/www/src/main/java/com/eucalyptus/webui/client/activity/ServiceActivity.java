@@ -4,9 +4,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
 import com.eucalyptus.webui.client.place.ServicePlace;
+import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.ServiceView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
 public class ServiceActivity extends AbstractActivity {
@@ -25,10 +27,15 @@ public class ServiceActivity extends AbstractActivity {
   
   @Override
   public void start( AcceptsOneWidget container, EventBus eventBus ) {
-    LOG.log( Level.INFO, "Start ServiceActivity" );
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
-    ServiceView view = this.clientFactory.getServiceView( );
+    // Show loading first
+    LoadingAnimationView view = this.clientFactory.getLoadingAnimationView( );
     container.setWidget( view );
+    doSearch( URL.decode( place.getSearch( ) ) );
+  }
+  
+  private void doSearch( String query ) {
+    LOG.log( Level.INFO, "'service' new search: " + query );
   }
   
 }

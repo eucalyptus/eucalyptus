@@ -8,16 +8,21 @@
         	height:100%;
         	display:table;
         }
-        .center {
-        	margin-left:auto;
-        	margin-right:auto;
+        .vcenter {
         	display:table-cell;
         	vertical-align:middle;
+        }
+        .hcenter {
+        	display:block;
+            margin-left:auto;
+            margin-right:auto;        	
         }
     </ui:style>
     
     <g:HTMLPanel styleName="{style.boundingBox}">
-        <img class="{style.center}" src="themes/active/loading.gif"/>
+        <div class="{style.vcenter}">
+            <img alt="Loading" class="{style.hcenter}" src="themes/active/loading.gif"/>
+        </div>
     </g:HTMLPanel>
     
 </ui:UiBinder>

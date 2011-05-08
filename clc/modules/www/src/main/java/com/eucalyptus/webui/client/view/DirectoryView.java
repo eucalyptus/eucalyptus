@@ -8,4 +8,6 @@ public interface DirectoryView extends IsWidget {
 
   void buildTree( ArrayList<CategoryTag> data );
   
+  void setSearchHandler( SearchHandler handler );
+  
 }

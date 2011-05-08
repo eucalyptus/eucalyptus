@@ -28,9 +28,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public HashMap<String, String> getSystemProperties( Session session ) throws EucalyptusServiceException {
-    HashMap<String, String> prop = Maps.newHashMap( );
-    prop.put( "version", "EEE 3.0" );
-    return null;
+    HashMap<String, String> props = Maps.newHashMap( );
+    props.put( "version", "Eucalyptus EEE 3.0" );
+    return props;
   }
 
   @Override

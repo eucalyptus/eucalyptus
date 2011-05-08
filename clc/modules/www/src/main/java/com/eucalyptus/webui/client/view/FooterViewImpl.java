@@ -10,6 +10,7 @@ import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
@@ -23,6 +24,9 @@ public class FooterViewImpl extends Composite implements FooterView {
   
   @UiField
   LogSwitch logSwitch;
+  
+  @UiField
+  Label version;
   
   private Presenter presenter;
   
@@ -44,6 +48,11 @@ public class FooterViewImpl extends Composite implements FooterView {
   @Override
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;
+  }
+
+  @Override
+  public void setVersion( String version ) {
+    this.version.setText( version );
   }
   
 }

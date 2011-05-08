@@ -4,6 +4,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.event.dom.client.KeyPressEvent;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
@@ -21,7 +23,12 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @UiField
   UserLink userLink;
   
+  @UiField
+  SearchBox searchBox;
+  
   private UserSettingViewImpl settingPopup;
+  
+  private SearchHandler searchHandler;
     
   public HeaderViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -36,6 +43,14 @@ public class HeaderViewImpl extends Composite implements HeaderView {
     settingPopup.show( );
   }
 
+  @UiHandler( "searchBox" )
+  void handleSearchBoxKeyPressed( KeyPressEvent e ) {
+    if ( KeyCodes.KEY_ENTER == e.getCharCode( ) ) {
+      searchHandler.search( searchBox.getInput( ) );
+      searchBox.clearInput( );
+    }
+  }
+  
   @Override
   public void setUser( String user ) {
     this.userLink.setUser( user );
@@ -44,6 +59,11 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @Override
   public UserSettingView getUserSetting( ) {
     return this.settingPopup;
+  }
+
+  @Override
+  public void setSearchHandler( SearchHandler handler ) {
+    this.searchHandler = handler;
   }
   
 }

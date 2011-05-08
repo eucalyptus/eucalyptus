@@ -8,4 +8,6 @@ public interface HeaderView extends IsWidget {
   
   UserSettingView getUserSetting( );
   
+  void setSearchHandler( SearchHandler handler );
+  
 }

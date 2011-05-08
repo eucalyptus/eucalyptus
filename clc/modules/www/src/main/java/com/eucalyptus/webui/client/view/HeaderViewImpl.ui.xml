@@ -74,7 +74,7 @@
         </div>
         <div class="{style.horizontalRight} {style.searchDiv}">
             <div class="{style.vcenter}">
-                <euca:SearchBox/>
+                <euca:SearchBox ui:field="searchBox"/>
             </div>
         </div>
     </g:HTMLPanel>
