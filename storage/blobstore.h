@@ -191,6 +191,8 @@ blobstore * blobstore_open ( const char * path,
 int blobstore_close ( blobstore * bs ); // releases a reference, allowing others to change some parameters (revocation policy) or delete the store, and frees the blobstore handle
 int blobstore_delete ( blobstore * bs ); // if no outside references to store or blobs exist, and no blobs are protected, deletes the blobs, the store metadata, and frees the blobstore handle
 int blobstore_get_error ( void ); // returns code of the last error 
+const char * blobstore_get_last_msg (); // returns last message logged inside blobstore
+const char * blobstore_get_last_trace(); // returns last error stack trace logged inside blobstore
 const char * blobstore_get_error_str ( blobstore_error_t error ); // description of the error
 void blobstore_set_error_function ( void (* fn) (const char * msg)); // sets the function that will be handed error messages (instead of sending them to stdout)
 

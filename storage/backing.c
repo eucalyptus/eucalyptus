@@ -82,18 +82,15 @@
 #include "backing.h"
 #include "handlers.h" // connect_iscsi*
 
-#define TIMEOUT 100*60*60*2 // TODO: change the timeout?
+#define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 // TODO: change the timeout?
+#define STORE_TIMEOUT_USEC 1000000LL*60*2
 
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
 
 extern struct nc_state_t nc_state; // TODO: remove this extern
-
-static void bs_errors (const char * msg)
-{
-    logprintfl (EUCAERROR, "blobstore: %s", msg);
-}
+static void bs_errors (const char * msg) { } // we do not care to print all messages from blobstore as many are errors that we can handle
 
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)
 {
@@ -148,7 +145,6 @@ static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * b
         strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
-    logprintfl (EUCAINFO, "prepared backing of type %s\n", vbr->typeName);        
 }
 
 // sets path to 
@@ -182,7 +178,7 @@ static void set_id (ncInstance * instance, virtualBootRecord * vbr, char * id, u
 
 static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, int allow_block_dev)
 {
-    logprintfl (EUCAINFO, "preparing backing of type %s (pulled from '%s')...\n", vbr->typeName, vbr->resourceLocation);
+    logprintfl (EUCAINFO, "[%s] preparing backing of type %s (pulled from '%s')...\n", instance->instanceId, vbr->typeName, vbr->resourceLocation);
     int ret = ERROR;
 
     // construct the blob IDs for this resource
@@ -195,7 +191,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
     case NC_LOCATION_URL:
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
-        logprintfl (EUCAERROR, "error: backing of type %s is NOT IMPLEMENTED\n", vbr->typeName);
+        logprintfl (EUCAERROR, "[%s] error: backing of type %s is NOT IMPLEMENTED\n", instance->instanceId, vbr->typeName);
         // TODO: implement backing location type URL, CLC, SC
         break;
 
@@ -213,7 +209,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
         int in_cache = 0;
         if (cache_bs) { // we have a cache store
             int flags = 0; // first we'll try opening as a reader
-            while ((cache_bb = blockblob_open (cache_bs, cache_id, bb_size_bytes, flags, blob_sig, TIMEOUT)) == NULL) {
+            while ((cache_bb = blockblob_open (cache_bs, cache_id, bb_size_bytes, flags, blob_sig, CACHE_TIMEOUT_USEC)) == NULL) {
                 int err = blobstore_get_error();
 
                 if (err==BLOBSTORE_ERROR_NOENT) { // cache entry does not exist
@@ -221,7 +217,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
 
                 } else if (err==BLOBSTORE_ERROR_SIGNATURE) { // wrong signature or length
                     // open with any signature and delete the old one
-                    cache_bb = blockblob_open (cache_bs, cache_id, 0, 0, NULL, 0);
+                    cache_bb = blockblob_open (cache_bs, cache_id, 0, 0, NULL, 0); // TODO: should there be a non-zero timeout?
                     if (cache_bb && blockblob_delete (cache_bb, 0) == 0) {
                         flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // try creating
                         cache_bb = NULL; // (delete frees the handle)
@@ -232,22 +228,29 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                     break; // give up
 
                 } else if (err==BLOBSTORE_ERROR_AGAIN) { // timed out waiting
+                    logprintfl (EUCAWARN, "[%s] timed out waiting for blob cache\n", instance->instanceId);
+                    logprintfl (EUCADEBUG, "[%s] blobstore: %s\n%s", instance->instanceId, blobstore_get_last_msg(), blobstore_get_last_trace());
                     break; // give up
 
                 } else {
-                    logprintfl (EUCAWARN, "unkown error while preparing cache entry, skipping cache for %s\n", instance->instanceId);
+                    logprintfl (EUCAWARN, "[%s] unkown error while preparing cache entry, skipping cache\n", instance->instanceId);
                     break;
                 }
             }
-            if (cache_bb && !flags) {
-                in_cache = 1; // we have a valid entry in the cache
+            if (cache_bb) {
+                if (!flags) {
+                    in_cache = 1; // we have a valid entry in the cache
+                    logprintfl (EUCAINFO, "[%s] blob cache has a valid entry\n", instance->instanceId);
+                }
+            } else {
+                logprintfl (EUCAINFO, "[%s] blob cache will not be used\n", instance->instanceId);
             }
         }
-
-        logprintfl (EUCAINFO, "allocating work blob %s of size %lld bytes\n", work_id, bb_size_bytes);
+        
+        logprintfl (EUCAINFO, "[%s] allocating work blob %s of size %lld bytes\n", instance->instanceId,  work_id, bb_size_bytes);
 
         // allocate the work entry
-        blockblob * work_bb = blockblob_open (work_bs, work_id, bb_size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, blob_sig, 1000); // TODO: figure out the timeout
+        blockblob * work_bb = blockblob_open (work_bs, work_id, bb_size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, blob_sig, STORE_TIMEOUT_USEC); // TODO: figure out the timeout
         if (work_bb==NULL)
             goto w_error;
 
@@ -259,7 +262,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                 dest_path = blockblob_get_file (work_bb);
             }
             if (walrus_image_by_manifest_url (vbr->preparedResourceLocation, dest_path, 1) != OK) {
-                logprintfl (EUCAERROR, "error: failed to download for instance %s component %s\n", instance->instanceId, vbr->preparedResourceLocation);
+                logprintfl (EUCAERROR, "[%s] error: failed to download component %s\n", instance->instanceId, vbr->preparedResourceLocation);
                 goto w_error;
             }
         }
@@ -270,12 +273,12 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                     {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:cache_bb}, 0, 0, round_up_sec (bb_size_bytes) / 512}
                 };
                 if (blockblob_clone (work_bb, map, 1)==-1) {
-                    logprintfl (EUCAERROR, "error: failed to clone cached blob %s to work blob %s\n", cache_bb->id, work_bb->id);
+                    logprintfl (EUCAERROR, "[%s] error: failed to clone cached blob %s to work blob %s\n", instance->instanceId, cache_bb->id, work_bb->id);
                     goto w_error;
                 }
             } else {
                 if (blockblob_copy (cache_bb, 0L, work_bb, 0L, 0L)==-1) {
-                    logprintfl (EUCAERROR, "error: failed to copy cached blob %s to work blob %s\n", cache_bb->id, work_bb->id);
+                    logprintfl (EUCAERROR, "[%s] error: failed to copy cached blob %s to work blob %s\n", instance->instanceId, cache_bb->id, work_bb->id);
                     goto w_error;
                 }
             }
@@ -285,23 +288,23 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             const char * dev = blockblob_get_dev (work_bb);
 
             // tune file system, which is needed to boot EMIs fscked long ago
-            logprintfl (EUCAINFO, "tuning root file system\n");
+            logprintfl (EUCAINFO, "[%s] tuning root file system\n", instance->instanceId);
             if (diskutil_tune (dev) == ERROR) {
-                logprintfl (EUCAERROR, "error: failed to tune root file system\n");
+                logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", instance->instanceId);
                 goto w_error;
             }
 
-            logprintfl (EUCAINFO, "injecting the ssh key\n");
+            logprintfl (EUCAINFO, "[%s] injecting the ssh key\n", instance->instanceId);
 
             // mount the partition
             char mnt_pt [EUCA_MAX_PATH];
             set_path (mnt_pt, sizeof (mnt_pt), instance, "euca-mount-XXXXXX");
             if (mkdtemp (mnt_pt)==NULL) {
-                logprintfl (EUCAINFO, "error: mkdtemp() failed: %s\n", strerror (errno));
+                logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", instance->instanceId,  strerror (errno));
                 goto w_error;
             }
             if (diskutil_mount (dev, mnt_pt) != OK) {
-                logprintfl (EUCAINFO, "error: failed to mount '%s' on '%s'\n", dev, mnt_pt);
+                logprintfl (EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", instance->instanceId, dev, mnt_pt);
                 goto w_error;
             }
 
@@ -310,23 +313,23 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             char path [EUCA_MAX_PATH];
             snprintf (path, sizeof (path), "%s/root/.ssh", mnt_pt);
             if (diskutil_mkdir (path) == -1) {
-                logprintfl (EUCAINFO, "error: failed to create path '%s'\n", path);
+                logprintfl (EUCAINFO, "[%s] error: failed to create path '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
             }
             if (diskutil_ch (path, "root", 0700) != OK) {
-                logprintfl (EUCAINFO, "error: failed to change user and/or permissions for '%s'\n", path);
+                logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
             }
             snprintf (path, sizeof (path), "%s/root/.ssh/authorized_keys", mnt_pt);
             if (diskutil_write2file (path, instance->keyName) != OK) { // TODO: maybe append the key instead of overwriting?
-                logprintfl (EUCAINFO, "error: failed to save key in '%s'\n", path);
+                logprintfl (EUCAINFO, "[%s] error: failed to save key in '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
             }
             if (diskutil_ch (path, "root", 0600) != OK) {
-                logprintfl (EUCAINFO, "error: failed to change user and/or permissions for '%s'\n", path);
+                logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
             }
@@ -335,11 +338,11 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
 
             // unmount partition and delete the mount point
             if (diskutil_umount (mnt_pt) != OK) {
-                logprintfl (EUCAINFO, "error: failed to unmount %s (there may be a resource leak)\n", mnt_pt);
+                logprintfl (EUCAINFO, "[%s] error: failed to unmount %s (there may be a resource leak)\n", instance->instanceId, mnt_pt);
                 injection_failed = 1;
             }
             if (rmdir (mnt_pt) != 0) {
-                logprintfl (EUCAINFO, "error: failed to remove %s (there may be a resource leak): %s\n", mnt_pt, strerror(errno));
+                logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", instance->instanceId, mnt_pt, strerror(errno));
                 injection_failed = 1;
             }
 
@@ -352,16 +355,27 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
 
         w_error:
         
-        if (work_bb) blockblob_close (work_bb);
-        if (cache_bb) blockblob_close (cache_bb);
-        if (blob_sig) free (blob_sig);
+        if (work_bb) {
+            if (blockblob_close (work_bb) != 0) {
+                logprintfl (EUCAERROR, "[%s] error: failed to close work blob %s\n", work_id);
+                ret = ERROR;
+            }
+        }
+        if (cache_bb) {
+            if (blockblob_close (cache_bb) != 0) {
+                logprintfl (EUCAERROR, "[%s] error: failed to close cache blob %s\n", cache_id);
+                ret = ERROR;
+            }
+        }
+        if (blob_sig) 
+            free (blob_sig);
         break;
     }
         
     case NC_LOCATION_IQN: {
         char * dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, nc_state.home, vbr->resourceLocation);
 		if (!dev || !strstr(dev, "/dev")) {
-            logprintfl(EUCAERROR, "error: failed to connect to iSCSI target\n");
+            logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", instance->instanceId);
             goto i_error;
 		} 
         // update VBR with device location
@@ -374,15 +388,15 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
     }
 
     case NC_LOCATION_AOE:
-        logprintfl (EUCAERROR, "error: backing of type %s is NOT IMPLEMENTED\n", vbr->typeName);
+        logprintfl (EUCAERROR, "[%s] error: backing of type %s is NOT IMPLEMENTED\n", instance->instanceId, vbr->typeName);
         // TODO:
         break;
 
     case NC_LOCATION_NONE: {
         // allocate the work entry
-        logprintfl (EUCAINFO, "allocating work blob %s of size %lld bytes\n", work_id, vbr->size);
+        logprintfl (EUCAINFO, "[%s] allocating work blob %s of size %lld bytes\n", instance->instanceId, work_id, vbr->size);
 
-        blockblob * work_bb = blockblob_open (work_bs, work_id, vbr->size, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000); // TODO: figure out the timeout
+        blockblob * work_bb = blockblob_open (work_bs, work_id, vbr->size, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, STORE_TIMEOUT_USEC); // TODO: figure out the timeout
         if (work_bb==NULL)
             break;
 
@@ -393,19 +407,20 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             break;
         case NC_FORMAT_EXT2: // TODO: distinguish ext2 and ext3!
         case NC_FORMAT_EXT3:
-            logprintfl (EUCAINFO, "formatting blob %s as ext3\n", work_id);
+            logprintfl (EUCAINFO, "[%s] formatting blob %s as ext3\n", instance->instanceId, work_id);
             format = diskutil_mkfs (blockblob_get_dev (work_bb), vbr->size);
             break;
         case NC_FORMAT_SWAP:
-            logprintfl (EUCAINFO, "formatting blob %s as swap\n", work_id);
+            logprintfl (EUCAINFO, "[%s] formatting blob %s as swap\n", instance->instanceId, work_id);
             format = diskutil_mkswap (blockblob_get_dev (work_bb), vbr->size);
             break;
         default:
-            logprintfl (EUCAERROR, "error: format of type %s is NOT IMPLEMENTED\n", vbr->formatName);
+            logprintfl (EUCAERROR, "[%s] error: format of type %s is NOT IMPLEMENTED\n", instance->instanceId, vbr->formatName);
         }
-        
+
         if (format == OK) {
             update_vbr_with_backing_info (vbr, work_bb, allow_block_dev);
+            logprintfl (EUCAINFO, "[%s] work blob allocated\n", instance->instanceId);
             ret = OK;
         }
 
@@ -414,7 +429,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
     }
 
     default:
-        logprintfl (EUCAERROR, "error: unrecognized locationType %d\n", vbr->locationType);
+        logprintfl (EUCAERROR, "[%s] error: unrecognized locationType %d\n", instance->instanceId, vbr->locationType);
     }
 
     return ret;
@@ -424,8 +439,8 @@ static blockblob * open_blob (ncInstance * instance, virtualBootRecord * vbr)
 {
     char id [EUCA_MAX_PATH];
     set_id (instance, vbr, id, sizeof (id));
-    logprintfl (EUCADEBUG, "opening blob %s\n", id);
-    return blockblob_open (work_bs, id, vbr->size, BLOBSTORE_FLAG_EXCL, NULL, 1000); // TODO: figure out the timeout
+    logprintfl (EUCADEBUG, "[%s] opening blob %s\n", instance->instanceId, id);
+    return blockblob_open (work_bs, id, vbr->size, BLOBSTORE_FLAG_EXCL, NULL, STORE_TIMEOUT_USEC); // TODO: figure out the timeout
 }
 
 static int destroy_blob (ncInstance * instance, virtualBootRecord * vbr)
@@ -434,7 +449,7 @@ static int destroy_blob (ncInstance * instance, virtualBootRecord * vbr)
     if (bb==NULL) {
         return ERROR;
     }
-    int ret = (blockblob_delete (bb, 1000)==0)?(OK):(ERROR); // TODO: figure out the timeout
+    int ret = (blockblob_delete (bb, STORE_TIMEOUT_USEC)==0)?(OK):(ERROR); // TODO: figure out the timeout
     if (ret!=OK) {
         blockblob_close (bb); // at least try to close it
     }
@@ -479,7 +494,7 @@ static void set_disk_dev (virtualBootRecord * vbr)
 
 static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtualBootRecord ** parts, int partitions)
 {
-    logprintfl (EUCAINFO, "composing a disk from supplied partitions...\n");
+    logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
     int ret = ERROR;
 #define MBR_BLOCKS (62 + 4)
@@ -492,18 +507,18 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
         virtualBootRecord * p = * (parts + i);
         
         if (p->size < 1) {
-            logprintfl (EUCAERROR, "error: unknown size for partition %d\n", i);
+            logprintfl (EUCAERROR, "[%s] error: unknown size for partition %d\n", instance->instanceId, i);
             goto cleanup;
         }
 
         if (p->size % 512) {
-            logprintfl (EUCAERROR, "error: size for partition %d is not a multiple of 512\n", i);
+            logprintfl (EUCAERROR, "[%s] error: size for partition %d is not a multiple of 512\n", instance->instanceId, i);
             goto cleanup;
         }
         
         pbbs [i] = open_blob (instance, p);
         if (pbbs [i] == NULL) {
-            logprintfl (EUCAERROR, "error: failed to open blob for partition %d\n", i);
+            logprintfl (EUCAERROR, "[%s] error: failed to open blob for partition %d\n", instance->instanceId, i);
             goto cleanup;
         }
 
@@ -531,34 +546,34 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     // generate the id and create the blob
     char disk_id [EUCA_MAX_PATH];
     set_id (instance, disk, disk_id, sizeof (disk_id));
-    blockblob * dbb = blockblob_open (work_bs, disk_id, disk->size, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000); // TODO: figure out the timeout
+    blockblob * dbb = blockblob_open (work_bs, disk_id, disk->size, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, STORE_TIMEOUT_USEC); // TODO: figure out the timeout
     if (dbb == NULL) {
         goto cleanup;
     }
 
     // map the partitions to the disk
     if (blockblob_clone (dbb, map, partitions + 1)==-1) {
-        logprintfl (EUCAERROR, "error: failed to clone partitions to created disk\n");
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk\n", instance->instanceId);
         goto cleanup;
     }
     update_vbr_with_backing_info (disk, dbb, TRUE);
 
     // create MBR
-    logprintfl (EUCAINFO, "creating MBR\n");
+    logprintfl (EUCAINFO, "[%s] creating MBR\n", instance->instanceId);
     if (diskutil_mbr (blockblob_get_dev (dbb), "msdos") == ERROR) { // issues `parted mklabel`
-        logprintfl (EUCAERROR, "error: failed to add MBR to disk\n");
+        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk\n", instance->instanceId);
         goto cleanup;
     }
 
     for (int i=0; i<partitions; i++) {
         int m = i + 1; // first map entry is for MBR
-        logprintfl (EUCAINFO, "adding partition %d to partition table\n", i);
+        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", instance->instanceId, i);
         if (diskutil_part (blockblob_get_dev (dbb),  // issues `parted mkpart`
                            "primary", // TODO: make this work with more than 4 partitions
                            NULL, // do not create file system
                            map [m].first_block_dst, // first sector
                            map [m].first_block_dst + map [m].len_blocks - 1) == ERROR) {
-            logprintfl (EUCAERROR, "error: failed to add partition %d to disk\n", i);
+            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk\n", instance->instanceId, i);
             goto cleanup;
         }
 
@@ -615,7 +630,7 @@ int create_instance_backing (ncInstance * instance)
     for (int i=0; i<total_prereqs; i++) {
         virtualBootRecord * vbr = prereq [i];
         if (create_vbr_backing (instance, vbr, FALSE)) { // libvirt wants a file not a block device for kernel and ramdisk
-            logprintfl (EUCAERROR, "Error: failed to obtain prerequisites needed by instance %s\n", instance->instanceId);
+            logprintfl (EUCAERROR, "[%s] error: failed to obtain prerequisites needed by instance\n", instance->instanceId);
             goto out;
         }
     }
@@ -628,7 +643,7 @@ int create_instance_backing (ncInstance * instance)
                 virtualBootRecord * vbr = parts [i][j][k];
                 if (vbr) {
                     if (create_vbr_backing (instance, vbr, TRUE)) { // libvirt can use either a file or block device for disks
-                        logprintfl (EUCAERROR, "Error: failed to create backing (bus %d, disk %d, part %d) for instance %s\n", i, j, k, instance->instanceId);
+                        logprintfl (EUCAERROR, "[%s] error: failed to create backing (bus %d, disk %d, part %d)\n", instance->instanceId, i, j, k);
                         goto out;
                     }
                     if (k>0)
@@ -636,11 +651,11 @@ int create_instance_backing (ncInstance * instance)
                     
                 } else if (partitions) { // there were partitions and we saw them all
                     if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
-                        logprintfl (EUCAERROR, "error: out of room in the virtual boot record while adding disk %d on bus %d\n", j, i);
+                        logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instance->instanceId, j, i);
                         goto out;
                     }
                     if (create_disk (instance, &(vm->virtualBootRecord [vm->virtualBootRecordLen++]), &(parts [i][j][1]), partitions)) {
-                        logprintfl (EUCAERROR, "error: failed to create disk %d on bus %d from %d partitions\n", j, i, partitions);
+                        logprintfl (EUCAERROR, "[%s] error: failed to create disk %d on bus %d from %d partitions\n", instance->instanceId, j, i, partitions);
                         vm->virtualBootRecordLen--;
                         goto out;
                     }
@@ -675,7 +690,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // VM is running and then chowns them to root after termination)
     set_path (path, sizeof (path), instance, "*");
     if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
-        logprintfl (EUCAWARN, "Error: failed to chown files before cleanup for instance %s\n", instance->instanceId);
+        logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
     
     // sort vbrs into prereqs[] and parts[] so they can be approached differently
@@ -699,14 +714,14 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
                 if (vbr) {  
                     if (vbr->locationType==NC_LOCATION_IQN) {
                         if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
-                            logprintfl(EUCAERROR, "error: failed to disconnect iSCSI target attached to %s\n", vbr->backingPath);
+                            logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
                         } 
                     } else {
                         // if k==0, we will destroy a disk blob, 
                         // which must be destroyed before child
                         // partition blobs, if any (k>0)
                         if (destroy_files && destroy_blob (instance, vbr)) {
-                            logprintfl (EUCAWARN, "Error: failed to destroy backing (bus %d, disk %d, part %d) for instance %s\n", i, j, k, instance->instanceId);
+                            logprintfl (EUCAWARN, "[%s] error: failed to destroy backing (bus %d, disk %d, part %d) for instance\n", instance->instanceId, i, j, k);
                         }
                     }
                 }
@@ -718,7 +733,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     for (int i=0; i<total_prereqs; i++) {
         virtualBootRecord * vbr = prereq [i];
         if (destroy_files && destroy_blob (instance, vbr)) {
-            logprintfl (EUCAWARN, "Error: failed to destroy prerequisite for instance %s\n", instance->instanceId);
+            logprintfl (EUCAWARN, "[%s] error: failed to destroy prerequisite for instance\n", instance->instanceId);
         }
     }
 
@@ -737,7 +752,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // any new files, this last step will fail
     set_path (path, sizeof (path), instance, NULL);
     if (rmdir (path) && destroy_files) {
-        logprintfl (EUCAWARN, "warning: failed to remove backing directory %s\n", path);
+        logprintfl (EUCAWARN, "[%s] warning: failed to remove backing directory %s\n", instance->instanceId, path);
     }
     
     return ret;
@@ -755,12 +770,12 @@ int save_instance_struct (const ncInstance * instance)
 
     int fd;
     if ((fd = open (checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
-	    logprintfl(EUCADEBUG, "save_instance_struct: failed to create instance checkpoint at %s\n", checkpoint_path);
+	    logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         return ERROR;
     }
 
     if (write (fd, (char *)instance, sizeof(struct ncInstance_t)) != sizeof (struct ncInstance_t)) {
-	    logprintfl(EUCADEBUG, "save_instance_struct: failed to write instance checkpoint at %s\n", checkpoint_path);
+	    logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         close (fd);
         return ERROR;
     }

@@ -73,6 +73,7 @@
 #include "misc.h" // logprintfl
 #include "diskutil.h"
 #include "eucalyptus.h"
+#include "pthread.h"
 
 enum { 
     MKSWAP=0, 
@@ -256,7 +257,7 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
         free (output);
 
         if (found) {
-            logprintfl (EUCADEBUG, "attaching to loop device '%s' at offset '%lld' file %s\n", lodev, offset, path);
+            logprintfl (EUCADEBUG, "{%u} attaching to loop device '%s' at offset '%lld' file %s\n", (unsigned int)pthread_self(), lodev, offset, path);
             output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
             if (output==NULL) {
                 logprintfl (EUCAINFO, "WARNING: cannot attach %s to loop device %s (will retry)\n", path, lodev);
@@ -283,7 +284,7 @@ int diskutil_unloop (const char * lodev)
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "detaching from loop device '%s'\n", lodev);
+    logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
     output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
     if (output)
         free (output);
