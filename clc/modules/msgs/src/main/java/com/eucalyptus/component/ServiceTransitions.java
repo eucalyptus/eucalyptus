@@ -471,7 +471,7 @@ public class ServiceTransitions {
                                                                                                                                     LifecycleEvents.start( config ) );
                                                                                        } catch ( EventFailedException e1 ) {
                                                                                          LOG.error( e1, e1 );
-                                                                                         config.error( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
+                                                                                         config.info( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
                                                                                        }
                                                                                        
                                                                                      }
@@ -488,7 +488,7 @@ public class ServiceTransitions {
                                                                                                                                     LifecycleEvents.stop( config ) );
                                                                                        } catch ( EventFailedException e1 ) {
                                                                                          LOG.error( e1, e1 );
-                                                                                         config.error( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
+                                                                                         config.info( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
                                                                                        }
                                                                                        
                                                                                      }
@@ -505,7 +505,7 @@ public class ServiceTransitions {
                                                                                                                                     LifecycleEvents.enable( config ) );
                                                                                        } catch ( EventFailedException e1 ) {
                                                                                          LOG.error( e1, e1 );
-                                                                                         config.error( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
+                                                                                         config.info( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
                                                                                        }
                                                                                      }
                                                                                    };
@@ -521,7 +521,7 @@ public class ServiceTransitions {
                                                                                                                                     LifecycleEvents.disable( config ) );
                                                                                        } catch ( EventFailedException e1 ) {
                                                                                          LOG.error( e1, e1 );
-                                                                                         config.error( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
+                                                                                         config.info( new ServiceRegistrationException( e1.getMessage( ), e1 ) );
                                                                                        }
                                                                                      }
                                                                                    };
