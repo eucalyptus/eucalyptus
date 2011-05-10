@@ -88,6 +88,12 @@ public class ExPlaceHistoryHandler extends PlaceHistoryHandler {
   public void handleCurrentHistory() {
     handleHistoryToken(historian.getToken());
   }
+  
+  @Override
+  public HandlerRegistration register(PlaceController placeController,
+      EventBus eventBus, Place defaultPlace) {
+    return register(placeController, eventBus, defaultPlace, defaultPlace);
+  }
 
   /**
    * Initialize this place history handler.

@@ -16,4 +16,6 @@ public interface EucalyptusService extends RemoteService {
   
   ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
   
+  SearchResult lookupServiceComponents( Session session ) throws EucalyptusServiceException;
+  
 }

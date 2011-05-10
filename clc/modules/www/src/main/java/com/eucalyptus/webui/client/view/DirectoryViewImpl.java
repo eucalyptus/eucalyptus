@@ -59,16 +59,16 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
         if ( selected != null ) {
           LOG.log( Level.INFO, "Selected: " + selected.getName( ) );
           searchHandler.search( selected.getQuery( ) );
-        } else {
-          LOG.log( Level.WARNING, "Selected empty item" );
         }
       }
     } );
     
     CellTree.Resources resource = GWT.create( TreeResources.class );
     
-    CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null, resource );
+    //CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null, resource );
+    CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null );
     tree.setKeyboardSelectionPolicy( KeyboardSelectionPolicy.DISABLED );
+    tree.setAnimationEnabled( false );
     tree.setDefaultNodeSize( TREENODE_SIZE );
     openAllNode( tree.getRootTreeNode( ) );
     

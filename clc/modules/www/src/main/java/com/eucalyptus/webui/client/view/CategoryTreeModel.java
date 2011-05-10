@@ -123,7 +123,7 @@ public class CategoryTreeModel implements TreeViewModel {
 
   @Override
   public boolean isLeaf( Object value ) {
-    if ( value instanceof CategoryItem ) {
+    if ( value != null && value instanceof CategoryItem ) {
       return true;
     }
     return false;

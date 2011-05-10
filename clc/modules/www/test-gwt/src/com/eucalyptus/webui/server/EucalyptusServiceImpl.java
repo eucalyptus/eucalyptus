@@ -1,12 +1,16 @@
 package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.DataFieldDesc;
+import com.eucalyptus.webui.client.service.DataRow;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
+import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.Session;
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.google.gwt.thirdparty.guava.common.collect.Maps;
@@ -50,5 +54,19 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     list.add( new CategoryItem( "Report", "Resource usage report", "report", "report:" ) );
     tags.add( new CategoryTag( "Resource", list ) );
     return tags;
+  }
+
+  @Override
+  public SearchResult lookupServiceComponents( Session session ) throws EucalyptusServiceException {
+    SearchResult result = new SearchResult( );
+    
+    result.getDescs( ).add( new DataFieldDesc( "Service", true, "12", "EM" ) );
+    result.getDescs( ).add( new DataFieldDesc( "Host", true, "100", "PCT" ) );
+    
+    result.getRows( ).add( new DataRow( Arrays.asList( "cloud", "192.168.7.54" ) ) );
+    result.getRows( ).add( new DataRow( Arrays.asList( "cluster", "192.168.7.54" ) ) );
+    result.getRows( ).add( new DataRow( Arrays.asList( "walrus", "192.168.7.54" ) ) );
+    
+    return null;
   }
 }
