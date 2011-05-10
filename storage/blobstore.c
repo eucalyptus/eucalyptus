@@ -1796,7 +1796,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     }
 
     // do not delete the blob if it is used by another one
-    bb->in_use = check_in_use (bs, bb->id, timeout_usec); // update in_use status TODO: is this timeout alright?
+    bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
     if (bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened or backed (by us)
         ERR (BLOBSTORE_ERROR_AGAIN, NULL);
         ret = -1;

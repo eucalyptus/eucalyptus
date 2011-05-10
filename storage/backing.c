@@ -84,6 +84,7 @@
 
 #define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 // TODO: change the timeout?
 #define STORE_TIMEOUT_USEC 1000000LL*60*2
+#define DELETE_TIMEOUT_USEC 1000000LL*10
 
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
@@ -449,7 +450,7 @@ static int destroy_blob (ncInstance * instance, virtualBootRecord * vbr)
     if (bb==NULL) {
         return ERROR;
     }
-    int ret = (blockblob_delete (bb, STORE_TIMEOUT_USEC)==0)?(OK):(ERROR); // TODO: figure out the timeout
+    int ret = (blockblob_delete (bb, DELETE_TIMEOUT_USEC)==0)?(OK):(ERROR); // TODO: figure out the timeout
     if (ret!=OK) {
         blockblob_close (bb); // at least try to close it
     }
