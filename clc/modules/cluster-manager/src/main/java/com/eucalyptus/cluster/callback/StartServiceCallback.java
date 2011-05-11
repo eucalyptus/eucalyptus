@@ -72,7 +72,7 @@ public class StartServiceCallback extends MessageCallback<StartServiceType, Star
   private static Logger LOG = Logger.getLogger( StartServiceCallback.class );
 
   public StartServiceCallback( ) {
-    super( );
+    super.setRequest( new StartServiceType( ) );
   }
 
   @Override
