@@ -75,7 +75,7 @@
 
   <mapping class="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" abstract="true">
     <value name="deviceName" field="deviceName" />
-    <structure choice="true" usage="optional">
+    <structure choice="true" usage="optional" ordered="false">
       <value name="virtualName" field="virtualName" />
       <structure name="ebs" map-as="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping"/>
     </structure>
