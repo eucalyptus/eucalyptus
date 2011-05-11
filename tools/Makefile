@@ -43,7 +43,7 @@ install: build
 	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
 #	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
 #	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
-	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
+#	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_vmware $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
@@ -59,6 +59,7 @@ install: build
 	@$(INSTALL) -m 755 euca-lictool $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 644 libvirt.xsl $(DESTDIR)$(etcdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud

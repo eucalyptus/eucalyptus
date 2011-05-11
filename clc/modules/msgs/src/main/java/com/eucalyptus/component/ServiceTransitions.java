@@ -587,7 +587,7 @@ public class ServiceTransitions {
                                                                                            if ( prop instanceof SingletonDatabasePropertyEntry ) {
                                                                                              addProp = prop;
                                                                                            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                                                                                             addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getName( ) );
+                                                                                             addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
                                                                                            }
                                                                                            PropertyDirectory.addProperty( addProp );
                                                                                          }
@@ -605,7 +605,7 @@ public class ServiceTransitions {
                                                                                            if ( prop instanceof SingletonDatabasePropertyEntry ) {
                                                                                              //noop
                                                                                            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                                                                                             ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getName( ) );
+                                                                                             ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
                                                                                            }
                                                                                            PropertyDirectory.removeProperty( prop );
                                                                                          }

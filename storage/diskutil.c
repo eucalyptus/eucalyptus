@@ -1,6 +1,66 @@
 // -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
+/*
+  Copyright (c) 2009  Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, only version 3 of the License.
+
+  This file is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  Please contact Eucalyptus Systems, Inc., 130 Castilian
+  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+  if you need additional information or have any questions.
+
+  This file may incorporate work covered under the following copyright and
+  permission notice:
+
+  Software License Agreement (BSD License)
+
+  Copyright (c) 2008, Regents of the University of California
+
+
+  Redistribution and use of this software in source and binary forms, with
+  or without modification, are permitted provided that the following
+  conditions are met:
+
+  Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ANY SUCH LICENSES OR RIGHTS.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,13 +71,15 @@
 #include <stdarg.h>
 #include <errno.h>
 #include "misc.h" // logprintfl
+#include "ipc.h" // sem
 #include "diskutil.h"
 #include "eucalyptus.h"
-#include "diskfile.h"
+#include "pthread.h"
 
 enum { 
     MKSWAP=0, 
-    MKEXT3, 
+    MKEXT3,
+    TUNE2FS,
     FILECMD, 
     LOSETUP, 
     MOUNT, 
@@ -41,6 +103,7 @@ enum {
 static char * helpers [LASTHELPER] = {
     "mkswap", 
     "mkfs.ext3", 
+    "tune2fs",
     "file", 
     "losetup", 
     "mount", 
@@ -61,12 +124,21 @@ static char * helpers [LASTHELPER] = {
 };
 
 static char * helpers_path [LASTHELPER];
-
 static char * pruntf (char *format, ...);
+static int initialized = 0;
+static sem * loop_sem = NULL; // semaphore held while attaching/detaching loopback devices
 
 int diskutil_init (void)
 {
-    return verify_helpers (helpers, helpers_path, LASTHELPER);
+    int ret = 0;
+
+    if (!initialized) {
+        ret = verify_helpers (helpers, helpers_path, LASTHELPER);
+        initialized = 1;
+        loop_sem = sem_alloc (1, "mutex");
+    }
+
+    return ret;
 }
 
 int diskutil_cleanup (void)
@@ -89,7 +161,7 @@ int diskutil_ddzero (const char * path, const long long sectors, boolean zero_fi
         seek = 0;
     }
 
-    output = pruntf ("%s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[DD], path, seek, count);
+    output = pruntf ("%s %s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], path, seek, count);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot create disk file %s\n", path);
         ret = ERROR;
@@ -122,8 +194,8 @@ int diskutil_dd2 (const char * in, const char * out, const int bs, const long lo
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "copying data from %s to %s of %lld blocks, seeking %lld, skipping %lld\n", in, out, count, seek, skip);
-    output = pruntf("%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
+    logprintfl (EUCAINFO, "copying data from %s to %s of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", in, out, count, bs, seek, skip);
+    output = pruntf("%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot copy '%s' to '%s'\n", in, out);
         ret = ERROR;
@@ -139,7 +211,7 @@ int diskutil_mbr (const char * path, const char * type)
     int ret = OK;
     char * output;
 
-    output = pruntf ("LD_PRELOAD='' %s --script %s mklabel %s", helpers_path[PARTED], path, type);
+    output = pruntf ("LD_PRELOAD='' %s %s --script %s mklabel %s", helpers_path[ROOTWRAP], helpers_path[PARTED], path, type);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot create an MBR\n");
         ret = ERROR;
@@ -155,7 +227,7 @@ int diskutil_part (const char * path, char * part_type, const char * fs_type, co
     int ret = OK;
     char * output;
 
-    output = pruntf ("%s --script %s mkpart %s %s %llds %llds", helpers_path[PARTED], path, part_type, fs_type, first_sector, last_sector);
+    output = pruntf ("LD_PRELOAD='' %s %s --script %s mkpart %s %s %llds %llds", helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, (fs_type)?(fs_type):(""), first_sector, last_sector);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot add a partition\n");
         ret = ERROR;
@@ -166,6 +238,13 @@ int diskutil_part (const char * path, char * part_type, const char * fs_type, co
     return ret;
 }
 
+// expose the loop semaphore so others (e.g., instance startup code) 
+// can avoid races with 'losetup' that we've seen on Xen
+sem * diskutil_get_loop_sem (void)
+{
+    return loop_sem;
+}
+
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size)
 {
     int found = 0;
@@ -173,6 +252,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
     int ret = OK;
     char * output;
 
+    // we retry because we cannot atomically obtain a free loopback
+    // device on all distros (some versions of 'losetup' allow a file
+    // argument with '-f' options, but some do not)
     for (int i=0; i<10; i++) {
         output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
         if (output==NULL) // there was a problem
@@ -188,8 +270,10 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
         free (output);
 
         if (found) {
-            logprintfl (EUCADEBUG, "attaching to loop device '%s' at offset '%lld' file %s\n", lodev, offset, path);
+            logprintfl (EUCADEBUG, "{%u} attaching to loop device '%s' at offset '%lld' file %s\n", (unsigned int)pthread_self(), lodev, offset, path);
+            sem_p (loop_sem);
             output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
+            sem_v (loop_sem);
             if (output==NULL) {
                 logprintfl (EUCAINFO, "WARNING: cannot attach %s to loop device %s (will retry)\n", path, lodev);
             } else {
@@ -215,16 +299,29 @@ int diskutil_unloop (const char * lodev)
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "detaching from loop device '%s'\n", lodev);
+    logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
     output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
     if (output)
         free (output);
-    output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
-    if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
-        ret = ERROR;
-    } else {
-        free (output);
+
+    // we retry because we have seen spurious errors from 'losetup -d' on Xen:
+    //     ioctl: LOOP_CLR_FD: Device or resource bus
+    for (int i=0; i<10; i++) {
+        sem_p (loop_sem);
+        output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+        sem_v (loop_sem);
+        if (!output) {           
+            ret = ERROR;
+        } else {
+            ret = OK;
+            free (output);
+            break;
+        }
+        logprintfl (EUCAINFO, "WARNING: cannot dettach loop device %s (will retry)\n", lodev);
+        sleep (1);
+    }
+    if (ret == ERROR) {
+      logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
     }
 
     return ret;
@@ -255,6 +352,22 @@ int diskutil_mkfs (const char * lodev, const long long size_bytes)
     output = pruntf ("%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes/block_size);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as ext3\n", lodev);
+        ret = ERROR;
+    } else {
+        free (output);
+    }
+
+    return ret;
+}
+
+int diskutil_tune (const char * lodev)
+{
+    int ret = OK;
+    char * output;
+
+    output = pruntf ("%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
+    if (!output) {
+        logprintfl (EUCAINFO, "ERROR: cannot tune file system on '%s'\n", lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -567,3 +680,7 @@ static char * pruntf (char *format, ...)
     }
     return(output);
 }
+
+// round up or down to sector size
+long long round_up_sec   (long long bytes) { return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE) + 1) * SECTOR_SIZE) : bytes); }
+long long round_down_sec (long long bytes) { return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE))     * SECTOR_SIZE) : bytes); }

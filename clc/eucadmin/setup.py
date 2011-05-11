@@ -61,11 +61,17 @@ class build_scripts_with_path_headers(build_scripts):
                 print line.rstrip()
 
 admin_scripts = ["bin/euca_conf",
+                 "bin/euca-clone-volume",
+                 "bin/euca-convert-volumes",
+                 "bin/euca-deregister-arbitrator",
                  "bin/euca-deregister-cluster",
                  "bin/euca-deregister-storage-controller",
+                 "bin/euca-deregister-vmware-broker",
                  "bin/euca-deregister-walrus",
+                 "bin/euca-describe-arbitrators",
                  "bin/euca-describe-clusters",
                  "bin/euca-describe-components",
+                 "bin/euca-describe-nodes",
                  "bin/euca-describe-properties",
                  "bin/euca-describe-services",
                  "bin/euca-describe-storage-controllers",
@@ -76,8 +82,10 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-modify-service",
                  "bin/euca-modify-storage-controller",
                  "bin/euca-modify-walrus",
+                 "bin/euca-register-arbitrator",
                  "bin/euca-register-cluster",
                  "bin/euca-register-storage-controller",
+                 "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",
                 ]
 
