@@ -228,7 +228,6 @@ public class Threads {
     private static final Runnable[] EMPTY = new Runnable[] {};
     
     public List<Runnable> free( ) {
-      execServices.remove( this.getName( ) );
       List<Runnable> ret = Lists.newArrayList( );
       for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
@@ -263,10 +262,12 @@ public class Threads {
     @Override
     public void shutdown( ) {
       this.pool.shutdown( );
+      execServices.remove( this.getName( ) );
     }
     
     @Override
     public List<Runnable> shutdownNow( ) {
+      execServices.remove( this.getName( ) );
       return this.free( );
     }
     
