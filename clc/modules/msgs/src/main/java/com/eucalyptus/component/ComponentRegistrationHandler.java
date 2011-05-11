@@ -94,7 +94,7 @@ public class ComponentRegistrationHandler {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
         component.startTransition( newComponent ).get( ); 
-        component.enableTransition( newComponent ).get( ); 
+        component.enableTransition( newComponent );
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );

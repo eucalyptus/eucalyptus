@@ -139,8 +139,7 @@ public class Partitions {
   }
   
   public static boolean testPartitionCredentialsDirectory( String name ) {
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + name;
-    File keyDir = new File( directory );
+    File keyDir = SubDirectory.KEYS.getChildFile( name );
     if ( !keyDir.exists( ) ) {
       try {
         return keyDir.mkdir( ) && keyDir.canWrite( );
