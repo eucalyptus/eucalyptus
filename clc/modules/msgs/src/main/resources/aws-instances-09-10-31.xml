@@ -77,7 +77,7 @@
     <value name="deviceName" field="deviceName" />
     <structure choice="true" usage="optional" ordered="false">
       <value name="virtualName" field="virtualName" />
-      <structure name="ebs" map-as="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping"/>
+      <structure name="ebs" field="ebs" map-as="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping"/>
     </structure>
   </mapping>
 
