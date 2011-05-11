@@ -63,10 +63,9 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.binding.HttpEmbedded;
-import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.auth.policy.PolicyAction
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
 
 public class VmControlMessage extends EucalyptusMessage {}
 public class ResourceTagMessage extends EucalyptusMessage {}
@@ -269,10 +268,11 @@ public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
     this.attachTime = attachTime;
   }
 }
-public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/
+public class EbsDeviceMapping extends BlockDeviceMappingItemType {  //** added 2008-02-01  **/
+  String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
   Integer volumeSize = -1;
-  Boolean noDevice = true;
+  Boolean noDevice = false;
   Boolean deleteOnTermination = true;
 }
 

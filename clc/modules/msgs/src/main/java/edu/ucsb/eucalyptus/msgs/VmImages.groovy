@@ -61,13 +61,11 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.msgs
+package edu.ucsb.eucalyptus.msgs;
 
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -80,7 +78,6 @@ public class DeregisterImageType extends VmImageMessage {
 }
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
-
   String imageId;
   ArrayList<LaunchPermissionItemType> launchPermission = new ArrayList<LaunchPermissionItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();

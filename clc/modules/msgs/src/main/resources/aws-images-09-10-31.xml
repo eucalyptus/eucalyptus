@@ -73,6 +73,10 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="imageLocation" field="imageLocation" />
     <value name="name" field="name" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+    <value name="architecture" field="architecture" usage="optional" />
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
     <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
     <structure name="blockDeviceMapping" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
