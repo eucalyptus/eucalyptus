@@ -396,6 +396,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         Callable<CheckedListenableFuture<Cluster>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
           case PENDING:
+          case STARTING:
             if ( tick.isAsserted( Cluster.STATE_INTERVAL_PENDING ) ) {
               transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING,
                                                          State.STARTING_NOTREADY,

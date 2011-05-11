@@ -185,7 +185,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void stop( ) {
     this.running.set( false );
-//    this.workers.shutdownNow( ); TODO:GRZE:FIXME there is a potential conflict here between releasing the threads and the incorrect state of the threadpool in the case where it has been shut down by a previou s deregister operation.
+    this.workers.shutdownNow( ); //TODO:GRZE:FIXME there is a potential conflict here between releasing the threads and the incorrect state of the threadpool in the case where it has been shut down by a previou s deregister operation.
   }
   
   public MessagableService getParent( ) {
