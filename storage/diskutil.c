@@ -71,6 +71,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include "misc.h" // logprintfl
+#include "ipc.h" // sem
 #include "diskutil.h"
 #include "eucalyptus.h"
 #include "pthread.h"
@@ -125,6 +126,7 @@ static char * helpers [LASTHELPER] = {
 static char * helpers_path [LASTHELPER];
 static char * pruntf (char *format, ...);
 static int initialized = 0;
+static sem * loop_sem = NULL; // semaphore held while attaching/detaching loopback devices
 
 int diskutil_init (void)
 {
@@ -133,6 +135,7 @@ int diskutil_init (void)
     if (!initialized) {
         ret = verify_helpers (helpers, helpers_path, LASTHELPER);
         initialized = 1;
+        loop_sem = sem_alloc (1, "mutex");
     }
 
     return ret;
@@ -235,6 +238,13 @@ int diskutil_part (const char * path, char * part_type, const char * fs_type, co
     return ret;
 }
 
+// expose the loop semaphore so others (e.g., instance startup code) 
+// can avoid races with 'losetup' that we've seen on Xen
+sem * diskutil_get_loop_sem (void)
+{
+    return loop_sem;
+}
+
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size)
 {
     int found = 0;
@@ -242,6 +252,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
     int ret = OK;
     char * output;
 
+    // we retry because we cannot atomically obtain a free loopback
+    // device on all distros (some versions of 'losetup' allow a file
+    // argument with '-f' options, but some do not)
     for (int i=0; i<10; i++) {
         output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
         if (output==NULL) // there was a problem
@@ -258,7 +271,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
 
         if (found) {
             logprintfl (EUCADEBUG, "{%u} attaching to loop device '%s' at offset '%lld' file %s\n", (unsigned int)pthread_self(), lodev, offset, path);
+            sem_p (loop_sem);
             output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
+            sem_v (loop_sem);
             if (output==NULL) {
                 logprintfl (EUCAINFO, "WARNING: cannot attach %s to loop device %s (will retry)\n", path, lodev);
             } else {
@@ -288,12 +303,25 @@ int diskutil_unloop (const char * lodev)
     output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
     if (output)
         free (output);
-    output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
-    if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
-        ret = ERROR;
-    } else {
-        free (output);
+
+    // we retry because we have seen spurious errors from 'losetup -d' on Xen:
+    //     ioctl: LOOP_CLR_FD: Device or resource bus
+    for (int i=0; i<10; i++) {
+        sem_p (loop_sem);
+        output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+        sem_v (loop_sem);
+        if (!output) {           
+            ret = ERROR;
+        } else {
+            ret = OK;
+            free (output);
+            break;
+        }
+        logprintfl (EUCAINFO, "WARNING: cannot dettach loop device %s (will retry)\n", lodev);
+        sleep (1);
+    }
+    if (ret == ERROR) {
+      logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
     }
 
     return ret;

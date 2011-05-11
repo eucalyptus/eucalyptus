@@ -29,7 +29,7 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
 
 test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
-	$(CC) -g -rdynamic -std=gnu99 $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
+	$(CC) -g -rdynamic -std=gnu99 $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o ../util/ipc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c

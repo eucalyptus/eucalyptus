@@ -86,6 +86,7 @@ permission notice:
 #include "ipc.h"
 #include "misc.h"
 #include "backing.h"
+#include "diskutil.h"
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "eucalyptus.h"
@@ -105,6 +106,7 @@ static char * compile_timestamp_str = "";
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
+sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
 
 bunchOfInstances *global_instances = NULL; 
 
@@ -583,9 +585,12 @@ void *startup_thread (void * arg)
     // too many simultaneous create requests 
     logprintfl (EUCADEBUG2, "about to start domain %s\n", instance->instanceId);
     print_running_domains ();
+
     for (i=0; i<5 && dom == NULL; i++) {
       sem_p (hyp_sem);
+      sem_p (loop_sem);
       dom = virDomainCreateLinux (nc_state.conn, xml, 0);
+      sem_v (loop_sem);
       sem_v (hyp_sem);
     }
 
@@ -614,6 +619,7 @@ void *startup_thread (void * arg)
     }
     sem_v (inst_sem);
  free:
+
     if (xml) free (xml);
     if (brname) free (brname);
     return NULL;
@@ -796,10 +802,15 @@ static int init (void)
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem) {
-		logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
+	if (!hyp_sem || !inst_sem || !addkey_sem) {
+		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
 	}
+
+    if (diskutil_init() || (loop_sem = diskutil_get_loop_sem())==NULL) {
+        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+		return ERROR_FATAL;
+    }
 
 	/* set default in the paths. the driver will override */
 	nc_state.config_network_path[0] = '\0';

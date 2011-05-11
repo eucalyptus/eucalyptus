@@ -65,10 +65,12 @@
 #define HELPERS_H
 
 #include "misc.h" // bolean
+#include "ipc.h" // sem
 
 #define SECTOR_SIZE 512
 
 int diskutil_init (void);
+sem * diskutil_get_loop_sem (void);
 int diskutil_cleanup (void);
 int diskutil_ddzero (const char * path, const long long sectors, boolean zero_fill);
 int diskutil_dd (const char * in, const char * out, const int bs, const long long count);
