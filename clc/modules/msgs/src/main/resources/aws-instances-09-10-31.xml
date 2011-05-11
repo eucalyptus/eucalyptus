@@ -66,7 +66,7 @@
 
 <binding force-classes="true" add-constructors="true">
 
-  <mapping class="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping" abstract="true">
+  <mapping name="ebs" class="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping" abstract="true">
     <value name="virtualName" field="virtualName" usage="optional"/>
     <value name="snapshotId" field="snapshotId" />
     <value name="volumeSize" field="volumeSize" />
@@ -77,7 +77,7 @@
     <value name="deviceName" field="deviceName" />
     <structure choice="true" usage="optional" ordered="false">
       <value name="virtualName" field="virtualName" />
-      <structure name="ebs" field="ebs" map-as="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping"/>
+      <structure field="ebs" map-as="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping"/>
     </structure>
   </mapping>
 
