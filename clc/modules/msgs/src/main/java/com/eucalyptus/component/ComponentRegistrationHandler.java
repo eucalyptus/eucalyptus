@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -70,31 +71,45 @@ import com.eucalyptus.util.Exceptions;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
-
+  
   public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     final ServiceBuilder builder = component.getBuilder( );
     String partition = part;
-
-    if( !component.getComponentId( ).isPartitioned( ) ) {
+    
+    if ( !component.getComponentId( ).isPartitioned( ) ) {
       partition = name;
-    } else if( component.getComponentId( ).isCloudLocal( ) ) {
+    } else if ( component.getComponentId( ).isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
-    } else if( partition == null ) {
+    } else if ( partition == null ) {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
-
+    
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
     }
-
+    
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        component.startTransition( newComponent ).get( ); 
-        component.enableTransition( newComponent );
+        component.startTransition( newComponent ).addListener( new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              component.enableTransition( newComponent ).get( );
+            } catch ( IllegalStateException ex ) {
+              LOG.error( ex, ex );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex, ex );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        } );
+        
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
@@ -107,7 +122,7 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
     }
   }
-
+  
   public static boolean deregister( Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
     final ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
@@ -147,5 +162,5 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": remove failed with message: " + e.getMessage( ), e );
     }
   }
-
+  
 }
