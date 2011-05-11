@@ -432,7 +432,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( EventType.TRANSITION ).append( this.name ).append( " Active" ).append( this.transition != null
+      sb.append( EventType.TRANSITION ).append( " " ).append( this.name ).append( " Active" ).append( this.transition != null
         ? this.transition.toString( )
         : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
       Logs.exhaust( ).info( sb.toString( ) );

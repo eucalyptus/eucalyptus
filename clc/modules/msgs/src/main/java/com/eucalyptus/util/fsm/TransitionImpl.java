@@ -215,8 +215,8 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
 //        return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
 //      }
 //    } );
-    return String.format( "Transition name=%s from=%s/%s to=%s/%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
-                          this.getToState( ), this.getToStateMark( ), "" + this.action );
+    return String.format( "Transition name=%s from=%s/%s to=%s/%s error=%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+                          this.getToState( ), this.getToStateMark( ), this.getErrorState( ), "" + this.action );
   }
   
   /**
