@@ -103,6 +103,8 @@ import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.CloneVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CloneVolumeType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.ConvertVolumesType;
@@ -198,7 +200,7 @@ public class BlockStorage {
 		blockManager.enable();
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
-	
+
 	public static void disable() throws EucalyptusCloudException {
 		blockManager.disable();
 	}
@@ -458,6 +460,7 @@ public class BlockStorage {
 		}
 
 		String snapshotId = request.getSnapshotId();
+		String parentVolumeId = request.getParentVolumeId();
 		String userId = request.getUserId();
 		String volumeId = request.getVolumeId();
 
@@ -507,7 +510,7 @@ public class BlockStorage {
 		db.commit();
 
 		//create volume asynchronously
-		VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, sizeAsInt);
+		VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, parentVolumeId, sizeAsInt);
 		volumeService.add(volumeCreator);
 
 		return reply;
@@ -568,7 +571,7 @@ public class BlockStorage {
 			if(volumeInfo.getStatus().equals(StorageProperties.Status.failed.toString())) {
 				LOG.warn( "Volume looks like it has failed removing it: " + volumeInfo.getVolumeId() );
 				checker.cleanFailedVolume(volumeInfo.getVolumeId());
-			}
+			} 
 		}
 		db.commit();
 		return reply;
@@ -828,11 +831,13 @@ public class BlockStorage {
 	public class VolumeCreator extends VolumeTask {
 		private String volumeId;
 		private String snapshotId;
+		private String parentVolumeId;
 		private int size;
 
-		public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, int size) {
+		public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, String parentVolumeId, int size) {
 			this.volumeId = volumeId;
 			this.snapshotId = snapshotId;
+			this.parentVolumeId = parentVolumeId;
 			this.size = size;
 		}
 
@@ -883,8 +888,11 @@ public class BlockStorage {
 				}
 			} else {
 				try {
-					assert(size > 0);
-					blockManager.createVolume(volumeId, size);
+					if(parentVolumeId != null) {
+						blockManager.cloneVolume(volumeId, parentVolumeId);
+					} else {
+						blockManager.createVolume(volumeId, size);
+					}
 				} catch(Exception ex) {
 					success = false;
 					LOG.error(ex,ex);
@@ -1021,4 +1029,11 @@ public class BlockStorage {
 		}
 	}
 
+	public CloneVolumeResponseType CloneVolume(CloneVolumeType request) throws EucalyptusCloudException {
+		CloneVolumeResponseType reply = request.getReply();
+		CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
+		createStorageVolume.setParentVolumeId(request.getVolumeId());
+		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
+		return reply;
+	}
 }

@@ -182,7 +182,7 @@ public class VolumeManager {
     }
     newVol.setState( State.GENERATING );
     try {
-      CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ) );
+      CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ), null );
       req.regardingUserRequest( request );
       ServiceDispatcher.lookup( sc ).send( req );
       try {
