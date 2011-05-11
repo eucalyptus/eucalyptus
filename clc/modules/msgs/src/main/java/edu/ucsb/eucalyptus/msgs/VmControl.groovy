@@ -63,10 +63,9 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.binding.HttpEmbedded;
-import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.auth.policy.PolicyAction
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
 
 public class VmControlMessage extends EucalyptusMessage {}
 public class ResourceTagMessage extends EucalyptusMessage {}
@@ -282,7 +281,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes
   String format; // optional, defaults to none (none, ext3, ntfs, swap)
-  EbsDeviceMapping ebsDev;
+  EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
     this.deviceName = deviceName;
