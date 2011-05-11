@@ -71,7 +71,7 @@ import com.eucalyptus.util.async.MessageCallback;
 public class StartServiceCallback extends MessageCallback<StartServiceType, StartServiceResponseType> {
   private static Logger LOG = Logger.getLogger( StartServiceCallback.class );
 
-  private StartServiceCallback( ) {
+  public StartServiceCallback( ) {
     super( );
   }
 

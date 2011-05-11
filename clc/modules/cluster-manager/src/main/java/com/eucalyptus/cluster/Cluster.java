@@ -86,6 +86,7 @@ import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.ServiceStateCallback;
+import com.eucalyptus.cluster.callback.StartServiceCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Component;
@@ -218,7 +219,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    public boolean apply( final Cluster input ) {
                                                                                      if( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
                                                                                        try {
-                                                                                         AsyncRequests.newRequest( new EnableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                         AsyncRequests.newRequest( new StartServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
                                                                                          return true;
                                                                                        } catch ( ExecutionException ex ) {
                                                                                          Cluster.this.errors.add( ex.getCause( ) );
