@@ -65,6 +65,7 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.util.async.MessageCallback;
@@ -80,6 +81,7 @@ public class DisableServiceCallback extends SubjectMessageCallback<Cluster, Disa
   @Override
   public void fire( DisableServiceResponseType msg ) {
     LOG.debug( "Disabled service: " + msg );
+    Clusters.getInstance( ).enable( this.getSubject( ) );
   }
 
 }
