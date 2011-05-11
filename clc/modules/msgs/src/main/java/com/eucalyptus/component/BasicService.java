@@ -197,7 +197,7 @@ public class BasicService extends AbstractService implements Service {
     return this.goal;
   }
   
-  @Override
+   @Override
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
@@ -209,8 +209,10 @@ public class BasicService extends AbstractService implements Service {
             @Override
             public void run( ) {
               try {
-                if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
+                if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
                   BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) );
+                } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
+                  BasicService.this.stateMachine.transition( State.DISABLED );
                 }
               } catch ( Throwable ex ) {
                 LOG.debug( "CheckRunner caught an exception: " + ex );
