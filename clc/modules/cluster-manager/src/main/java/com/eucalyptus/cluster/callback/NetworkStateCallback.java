@@ -21,7 +21,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   private static Logger LOG = Logger.getLogger( NetworkStateCallback.class );
   
   public NetworkStateCallback( ) {
-    this.setRequest( new DescribeNetworksType( ) {
+    super( new DescribeNetworksType( ) {
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );

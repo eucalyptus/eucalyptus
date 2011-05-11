@@ -117,6 +117,8 @@ public class DescribeImageAttributeType extends VmImageMessage {
 public class DescribeImagesResponseType extends VmImageMessage {
 
   ArrayList<ImageDetails> imagesSet = new ArrayList<ImageDetails>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEIMAGES )
 public class DescribeImagesType extends VmImageMessage {
@@ -127,6 +129,8 @@ public class DescribeImagesType extends VmImageMessage {
   ArrayList<String> imagesSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "Owner")
   ArrayList<String> ownersSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 /** *******************************************************************************/
 public class ModifyImageAttributeResponseType extends VmImageMessage {

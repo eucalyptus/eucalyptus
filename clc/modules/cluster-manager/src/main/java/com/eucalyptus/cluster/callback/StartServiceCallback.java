@@ -64,15 +64,17 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 
-public class StartServiceCallback extends MessageCallback<StartServiceType, StartServiceResponseType> {
+public class StartServiceCallback extends SubjectMessageCallback<Cluster, StartServiceType, StartServiceResponseType> {
   private static Logger LOG = Logger.getLogger( StartServiceCallback.class );
 
-  public StartServiceCallback( ) {
-    super.setRequest( new StartServiceType( ) );
+  public StartServiceCallback( Cluster subject ) {
+    super( subject, new StartServiceType( ) );
   }
 
   @Override

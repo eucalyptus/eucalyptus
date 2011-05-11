@@ -20,27 +20,28 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
   private static Logger LOG = Logger.getLogger( VmPendingCallback.class );
   
   public VmPendingCallback( Cluster cluster ) {
-    this.setSubject( cluster );
-    this.setRequest( new VmDescribeType( ) {
+    super( cluster );
+    super.setRequest( new VmDescribeType( ) {
       {
         regarding( );
         for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
           if ( vm.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) ) ) {
             if ( VmState.PENDING.equals( vm.getState( ) )
-                 || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+                        || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
-            } else if( vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+            } else if ( vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
               @Override
               public boolean apply( AttachedVolume arg0 ) {
                 return !arg0.getStatus( ).endsWith( "ing" );
-              }} ) ) {
-              
+              }
+            } ) ) {
+
             }
           }
         }
       }
     } );
-    if( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {
+    if ( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {
       throw new CancellationException( );
     }
   }
@@ -72,7 +73,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       }
     }
   }
-
+  
   /**
    * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
    * @param t

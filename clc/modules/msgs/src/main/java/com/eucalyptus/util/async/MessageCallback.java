@@ -12,6 +12,11 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   protected MessageCallback( ) {
     super( );
   }
+
+  protected MessageCallback( Q request ) {
+    super( );
+    this.request.set( request );
+  }
   
   /**
    * @see com.eucalyptus.util.async.RemoteCallback#getRequest()

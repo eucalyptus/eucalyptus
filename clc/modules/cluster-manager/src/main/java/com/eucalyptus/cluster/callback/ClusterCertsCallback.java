@@ -11,7 +11,7 @@ public class ClusterCertsCallback extends ClusterLogMessageCallback<GetKeysType,
   private static Logger LOG = Logger.getLogger( ClusterCertsCallback.class );
 
   public ClusterCertsCallback( ) {
-    this.setRequest( ( GetKeysType ) new GetKeysType( "self" ).regarding( ) );
+    super( ( GetKeysType ) new GetKeysType( "self" ).regarding( ) );
   }
   
   /**

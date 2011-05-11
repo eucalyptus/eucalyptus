@@ -70,6 +70,11 @@
         </structure>
       </collection>
     </structure>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Filter" />
+      </collection>
+    </structure>
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType" abstract="true">

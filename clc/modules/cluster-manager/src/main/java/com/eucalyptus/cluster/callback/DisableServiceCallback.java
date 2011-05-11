@@ -64,15 +64,17 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 
 
-public class DisableServiceCallback extends MessageCallback<DisableServiceType, DisableServiceResponseType> {
+public class DisableServiceCallback extends SubjectMessageCallback<Cluster, DisableServiceType, DisableServiceResponseType> {
   private static Logger LOG = Logger.getLogger( DisableServiceCallback.class );
-  public DisableServiceCallback( ) {
-    super.setRequest( new DisableServiceType( ) );
+  public DisableServiceCallback( Cluster subject ) {
+    super( subject, new DisableServiceType( ) );
   }
 
   @Override

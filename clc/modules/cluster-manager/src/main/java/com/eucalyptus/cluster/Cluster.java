@@ -179,7 +179,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    public boolean apply( final Cluster input ) {
                                                                                      if( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
                                                                                        try {
-                                                                                        AsyncRequests.newRequest( new DisableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                        AsyncRequests.newRequest( new DisableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
                                                                                         return true;
                                                                                       } catch ( ExecutionException ex ) {
                                                                                         Cluster.this.errors.add( ex.getCause( ) );
@@ -199,7 +199,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    public boolean apply( final Cluster input ) {
                                                                                      if( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
                                                                                        try {
-                                                                                        AsyncRequests.newRequest( new EnableServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                        AsyncRequests.newRequest( new EnableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
                                                                                         return true;
                                                                                       } catch ( ExecutionException ex ) {
                                                                                         Cluster.this.errors.add( ex.getCause( ) );
@@ -219,7 +219,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    public boolean apply( final Cluster input ) {
                                                                                      if( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
                                                                                        try {
-                                                                                         AsyncRequests.newRequest( new StartServiceCallback( ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                         AsyncRequests.newRequest( new StartServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
                                                                                          return true;
                                                                                        } catch ( ExecutionException ex ) {
                                                                                          Cluster.this.errors.add( ex.getCause( ) );
@@ -562,7 +562,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                   State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                   State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
       Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-      Clusters.getInstance( ).enable( this );
     } catch ( NoSuchElementException ex ) {
       throw ex;
     } catch ( InterruptedException ex ) {

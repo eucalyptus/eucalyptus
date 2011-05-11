@@ -62,18 +62,18 @@
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2009-08-15/" name="ec2_amazonaws_com_doc_2009_08_15">
-    <namespace uri="http://ec2.amazonaws.com/doc/2009-08-15/" default="elements"/>
-    <include path="aws-base.xml"/>
-    <include path="aws-instances.xml"/>
-    <include path="aws-images.xml"/>
-    <include path="aws-image-attr.xml"/>
-    <include path="aws-ips.xml"/>
-    <include path="aws-keypairs.xml"/>
-    <include path="aws-security.xml"/>
-    <include path="aws-zones-09-07-15.xml"/>
-    <include path="aws-regions.xml"/>
-    <include path="aws-ebs-volumes.xml"/>
-    <include path="aws-ebs-snapshots-09-08-15.xml"/>
-    <include path="aws-vpc.xml"/>
-    <include path="aws-unimplemented.xml"/>
+  <namespace uri="http://ec2.amazonaws.com/doc/2009-08-15/" default="elements" />
+  <include path="aws-base.xml" />
+  <include path="aws-instances.xml" />
+  <include path="aws-images.xml" />
+  <include path="aws-image-attr.xml" />
+  <include path="aws-ips.xml" />
+  <include path="aws-keypairs.xml" />
+  <include path="aws-security.xml" />
+  <include path="aws-zones-09-07-15.xml" />
+  <include path="aws-regions.xml" />
+  <include path="aws-ebs-volumes.xml" />
+  <include path="aws-ebs-snapshots-09-08-15.xml" />
+  <include path="aws-vpc.xml" />
+  <include path="aws-unimplemented.xml" />
 </binding>

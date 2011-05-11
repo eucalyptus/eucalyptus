@@ -113,6 +113,7 @@ public class Futures {
                           resultFuture.setException( ex );
                         } catch ( final InterruptedException ex ) {
                           Automata.LOG.error( "BUG BUG BUG Interrupted calling .get() on a Future which isDone(): " + ex.getMessage( ), ex );
+                          Thread.currentThread( ).interrupt( );
                           resultFuture.setException( ex );
                         }
                       }

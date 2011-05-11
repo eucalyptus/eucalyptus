@@ -62,14 +62,31 @@
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk grze@eucalyptus.com
   -->
-
 <binding force-classes="true" add-constructors="true">
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="requestId" field="correlationId" usage="optional" />
+    <!--2008-12-01-->
+  <mapping name="DescribeRegionsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="regionInfo" field="regionInfo" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RegionInfoType" />
+    </collection>
   </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
-    abstract="true">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+    <!--2008-12-01-->
+  <mapping class="edu.ucsb.eucalyptus.msgs.RegionInfoType" abstract="true">
+    <value name="regionName" field="regionName" />
+    <value name="regionEndpoint" field="regionEndpoint" />
+  </mapping>
+    <!--2008-12-01-->
+  <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <collection name="regionSet" field="regions" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="regionName" />
+      </structure>
+    </collection>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Filter" />
+      </collection>
+    </structure>
   </mapping>
 </binding>

@@ -94,7 +94,7 @@ public class DeleteCustomerGatewayResponseType extends VPNMessageType {
 
 public class DescribeCustomerGatewaysType extends VPNMessageType {
   ArrayList<String> customerGatewaySet;
-  ArrayList<FilterType> filterSet;
+  ArrayList<Filter> filterSet;
 }
 public class DescribeCustomerGatewaysResponseType extends VPNMessageType {
   ArrayList<CustomerGatewayType> customerGatewaySet;
@@ -115,7 +115,7 @@ public class DeleteVpnGatewayResponseType extends VPNMessageType {
 }
 public class DescribeVpnGatewaysType extends VPNMessageType {
   ArrayList<String> vpnGatewaySet;
-  ArrayList<FilterType> filterSet;
+  ArrayList<Filter> filterSet;
 }
 public class DescribeVpnGatewaysResponseType extends VPNMessageType {
   ArrayList<VpnGatewayType> vpnGatewaySet;
@@ -135,7 +135,7 @@ public class DeleteVpnConnectionResponseType extends VPNMessageType {
 }
 public class DescribeVpnConnectionsType extends VPNMessageType {
   ArrayList<String> vpnConnectionSet;
-  ArrayList<FilterType> filterSet;
+  ArrayList<Filter> filterSet;
 }
 public class DescribeVpnConnectionsResponseType extends VPNMessageType {
   ArrayList<VpnConnectionType> vpnConnectionSet;
@@ -161,7 +161,7 @@ public class CreateVpcResponseType extends VPNMessageType {
 }
 public class DescribeVpcsType extends VPNMessageType {
   ArrayList<String> vpcSet;
-  ArrayList<FilterType> filterSet;
+  ArrayList<Filter> filterSet;
 }
 public class DescribeVpcsResponseType extends VPNMessageType {
   ArrayList<VpcType> vpcSet;
@@ -181,7 +181,7 @@ public class CreateSubnetResponseType extends VPNMessageType {
 }
 public class DescribeSubnetsType extends VPNMessageType {
   ArrayList<String> subnetSet;
-  ArrayList<FilterType> filterSet;
+  ArrayList<Filter> filterSet;
 }
 public class DescribeSubnetsResponseType extends VPNMessageType {
   ArrayList<SubnetType> subnetSet;

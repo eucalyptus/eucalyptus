@@ -15,7 +15,7 @@ public class BundleCallback extends MessageCallback<BundleInstanceType,BundleIns
 
   private static Logger LOG = Logger.getLogger( BundleCallback.class );
   public BundleCallback( BundleInstanceType request ) {
-    this.setRequest( request );
+    super( request );
   }
   
 

@@ -85,8 +85,8 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   private Address       address;
   
   public AssignAddressCallback( Address address ) {
+    super( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
     this.address = address;
-    super.setRequest( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
   }
   
   @Override

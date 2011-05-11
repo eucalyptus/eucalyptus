@@ -64,19 +64,23 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 
-public class EnableServiceCallback extends MessageCallback<EnableServiceType, EnableServiceResponseType> {
+public class EnableServiceCallback extends SubjectMessageCallback<Cluster, EnableServiceType, EnableServiceResponseType> {
   private static Logger LOG = Logger.getLogger( EnableServiceCallback.class );
-  public EnableServiceCallback( ) {
-    super.setRequest( new EnableServiceType( ) );
+  public EnableServiceCallback( Cluster subject ) {
+    super( subject, new EnableServiceType( ) );
   }
 
   @Override
   public void fire( EnableServiceResponseType msg ) {
     LOG.debug( "Enabled service: " + msg );
+    Clusters.getInstance( ).enable( this.getSubject( ) );
   }
   
 }

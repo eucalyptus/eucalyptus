@@ -15,7 +15,7 @@ public class CancelBundleCallback extends MessageCallback<CancelBundleTaskType,C
 
   private static Logger LOG = Logger.getLogger( CancelBundleCallback.class );
   public CancelBundleCallback( CancelBundleTaskType request ) {
-    this.setRequest( request );
+    super( request );
   }
   
 

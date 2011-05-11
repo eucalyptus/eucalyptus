@@ -121,6 +121,11 @@
         <value name="user" />
       </structure>
     </collection>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Filter" />
+      </collection>
+    </structure>
   </mapping>
 
   <mapping name="DescribeSnapshotsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType"

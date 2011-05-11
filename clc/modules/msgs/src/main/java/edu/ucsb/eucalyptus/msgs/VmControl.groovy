@@ -95,6 +95,8 @@ public class DescribeInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeInstancesResponseType extends VmControlMessage {
 
@@ -401,83 +403,3 @@ public class UnmonitorInstancesType extends VmControlMessage {
   public MonitorInstancesType() {  }
 }
 
-public class CreateTagsResponseType extends ResourceTagMessage  {
-  public CreateTagsResponseType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATETAGS )
-public class CreateTagsType extends ResourceTagMessage  {
-  ArrayList<String> resourcesSet = new ArrayList<String>();
-  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
-  public CreateTagsType() {  }
-}
-
-public class FilterType extends EucalyptusData {
-  String name;
-  ArrayList<String> valueSet = new ArrayList<String>();
-  public FilterType() {  }
-}
-public class ResourceTag extends EucalyptusData {
-  String key;
-  String value;
-  public ResourceTagSetItemType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBETAGS )
-public class DescribeTagsType extends ResourceTagMessage  {
-  ArrayList<FilterType> filterSet = new ArrayList<FilterType>();
-  public DescribeTagsType() {  }
-}
-public class DescribeTagsResponseType extends ResourceTagMessage  {
-  String requestId;
-  ArrayList<TagInfo> tagSet = new ArrayList<TagInfo>( );
-  public DescribeTagsResponseType() {  }
-}
-public class DeleteTagsResponseType extends ResourceTagMessage {
-  String requestId;
-  public DeleteTagsResponseType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETETAGS )
-public class DeleteTagsType extends ResourceTagMessage {
-  ArrayList<String> resourcesSet = new ArrayList<String>();
-  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
-  public DeleteTagsType() {  }
-}
-public class TagInfo extends EucalyptusData {
-  String resourceId;
-  String resourceType;
-  String key;
-  String value;
-  public TagSetItemType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEPLACEMENTGROUP )
-public class CreatePlacementGroupType extends VmPlacementMessage {
-  String groupName;
-  String strategy;
-  public CreatePlacementGroupType() {  }
-}
-public class CreatePlacementGroupResponseType extends VmPlacementMessage {
-  public CreatePlacementGroupResponseType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETEPLACEMENTGROUP )
-public class DeletePlacementGroupType extends VmPlacementMessage {
-  String groupName;
-  public DeletePlacementGroupType() {  }
-}
-public class DeletePlacementGroupResponseType extends VmPlacementMessage {
-  public DeletePlacementGroupResponseType() {  }
-}
-public class PlacementGroupInfo extends EucalyptusData {
-  String groupName;
-  String strategy;
-  String state;
-  public PlacementGroupInfoType() {  }
-}
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEPLACEMENTGROUPS )
-public class DescribePlacementGroupsType extends VmPlacementMessage {
-  ArrayList<String> placementGroupSet = new ArrayList<String>();
-  ArrayList<FilterType> filterSet = new ArrayList<FilterType>();
-  public DescribePlacementGroupsType() {  }
-}
-public class DescribePlacementGroupsResponseType extends VmPlacementMessage {
-  ArrayList<PlacementGroupInfo> placementGroupSet = new ArrayList<PlacementGroupInfo>();
-  public DescribePlacementGroupsResponseType() {  }
-}
