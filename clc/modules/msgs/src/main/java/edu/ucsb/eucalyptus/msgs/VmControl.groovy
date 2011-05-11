@@ -63,9 +63,10 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction
-import com.eucalyptus.binding.HttpEmbedded
-import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmControlMessage extends EucalyptusMessage {}
 public class ResourceTagMessage extends EucalyptusMessage {}
