@@ -12,15 +12,20 @@ password=`./dbPass.sh`
 
 
 # Clear all prior data 
-wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeFalseData"
+wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeAllData"
 
+if [ "$?" -ne "0" ]
+then
+	echo "Wget failed to clear all prior data."
+	exit -1
+fi
 
 # Check that the data is cleared
-LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from instance_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
+LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from s3_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
 if [ "$LINE_CNT" -ne "0" ]
 then
 	echo "Data not cleared"
-	#exit -1
+	exit -1
 else
 	echo "Data cleared"
 fi
@@ -36,20 +41,20 @@ timestamp=$(($timestamp*1000))
 
 
 # Check that the data exists and has been inserted 
-LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from instance_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
+LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from s3_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
 if [ "$LINE_CNT" -ne "0" ]
 then
 	echo "Data generated"
 else
 	echo "Data not generated"
-	#exit -1
+	exit -1
 fi
 
 
 # Check that the inserted data has correct timestamps
 error_margin=$((60*60*1000)) # 1 hr
 
-mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select timestamp_ms from instance_usage_snapshot"|awk '/[0-9]+/ {print $1}'| while read line; do
+mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select timestamp_ms from s3_usage_snapshot"|awk '/[0-9]+/ {print $1}'| while read line; do
 	is_within=`echo "within($line,$timestamp,$error_margin)"|bc within_error.bc`
 	if [ "$is_within" -eq "1" ]
 	then
