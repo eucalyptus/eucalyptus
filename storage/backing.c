@@ -285,11 +285,11 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             }
         }
 
-        if (instance->params.image == vbr) { // this is a root image 
+        if (instance->params.image == vbr && vbr->partitionNumber > 0) { // this is a linux root partition image 
             const char * dev = blockblob_get_dev (work_bb);
 
             // tune file system, which is needed to boot EMIs fscked long ago
-            logprintfl (EUCAINFO, "[%s] tuning root file system\n", instance->instanceId);
+            logprintfl (EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", instance->instanceId, vbr->diskNumber, vbr->partitionNumber);
             if (diskutil_tune (dev) == ERROR) {
                 logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", instance->instanceId);
                 goto w_error;
