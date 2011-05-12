@@ -139,8 +139,9 @@ public class Transitions {
         try {
           if ( !predicate.apply( parent ) ) {
             transitionCallback.fireException( Transitions.exceptionOnCondition( "Transition condition failed for " + parent + " on condition ", predicate ) );
+          } else {
+            transitionCallback.fire( );
           }
-          transitionCallback.fire( );
         } catch ( Throwable ex ) {
           LOG.error( ex );
           transitionCallback.fireException( ex );

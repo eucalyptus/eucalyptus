@@ -1,7 +1,5 @@
-package com.eucalyptus.component.event;
+package com.eucalyptus.component;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.Event;
 
 public class AbstractLifecycleEvent implements LifecycleEvent {

@@ -70,7 +70,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -78,9 +77,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionHandler;
-import com.eucalyptus.util.fsm.TransitionListener;
 import com.eucalyptus.util.fsm.Transitions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 
 public class ServiceState implements StateMachine<ServiceConfiguration, Component.State, Component.Transition> {
@@ -90,11 +87,12 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   private Component.State                                                                 goal    = Component.State.DISABLED;              //TODO:GRZE:OMGFIXME
   private final NavigableSet<String>                                                      details = new ConcurrentSkipListSet<String>( );
   
-  public ServiceState( ServiceConfiguration parent ) {
+  public ServiceState( final ServiceConfiguration parent ) {
     this.parent = parent;
     this.stateMachine = this.buildStateMachine( );
   }
   
+  @Override
   public Component.State getState( ) {
     return this.stateMachine.getState( );
   }
@@ -107,19 +105,19 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.ENABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.addPipelines ).run( ServiceTransitions.addProperties )/*.run( ServiceTransitions.startEndpoint )*/;
-        in( State.DISABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.removePipelines ).run( ServiceTransitions.removeProperties )/*.run( ServiceTransitions.stopEndpoint )*/;
+        in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD ).run( ServiceTransitions.StateCallbacks.PROPERTIES_ADD )/*.run( ServiceTransitions.startEndpoint )*/;
+        in( State.DISABLED ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).run( ServiceTransitions.StateCallbacks.PIPELINES_REMOVE ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE )/*.run( ServiceTransitions.stopEndpoint )*/;
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
-        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.LOAD_TRANSITION );
-        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).addListener( ServiceTransitions.fireStartEvent ).run( ServiceTransitions.START_TRANSITION );
-        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
-        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.fireEnableEvent ).run( ServiceTransitions.ENABLE_TRANSITION );
-        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.fireStopEvent ).run( ServiceTransitions.STOP_TRANSITION );
-        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
-        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.fireDisableEvent ).run( ServiceTransitions.DISABLE_TRANSITION );
-        from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.CHECK_TRANSITION );
-        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.DESTROY_TRANSITION );
+        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.TransitionActions.LOAD );
+        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).addListener( ServiceTransitions.StateCallbacks.FIRE_START_EVENT ).run( ServiceTransitions.TransitionActions.START );
+        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_ENABLE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
+        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
+        from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.TransitionActions.DESTROY );
       }
     }.newAtomicMarkedState( );
   }
@@ -182,10 +180,11 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     return this.goal;
   }
   
-  void setGoal( Component.State goal ) {
+  void setGoal( final Component.State goal ) {
     this.goal = goal;
   }
   
+  @Override
   public boolean isBusy( ) {
     return this.stateMachine.isBusy( );
   }
@@ -194,18 +193,22 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     return this.parent.lookupComponent( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
+  @Override
   public ImmutableList<State> getStates( ) {
     return this.stateMachine.getStates( );
   }
   
+  @Override
   public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
     return this.stateMachine.getTransitions( );
   }
   
+  @Override
   public boolean isLegalTransition( Transition transitionName ) {
     return this.stateMachine.isLegalTransition( transitionName );
   }
-
+  
+  @Override
   public ServiceConfiguration getParent( ) {
     return this.stateMachine.getParent( );
   }

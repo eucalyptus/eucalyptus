@@ -75,6 +75,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
@@ -84,7 +85,6 @@ import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.event.LifecycleEvents;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -265,32 +265,32 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public void error( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.ERROR.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.ERROR, t );
   }
   
   @Override
   public void info( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.Severity.INFO.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.INFO, t );
   }
   
   @Override
   public void fatal( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.FATAL.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.FATAL, t );
   }
   
   @Override
   public void urgent( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.URGENT.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.URGENT, t );
   }
   
   @Override
   public void warning( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.error( this, ServiceChecks.Severity.WARNING.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.WARNING, t );
   }
   
   @Override
   public void debug( Throwable t ) {
-    this.lookupService( ).fireEvent( LifecycleEvents.info( this, ServiceChecks.Severity.DEBUG.transform( this, t ) ) );
+    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.DEBUG, t );
   }
   
   @Override

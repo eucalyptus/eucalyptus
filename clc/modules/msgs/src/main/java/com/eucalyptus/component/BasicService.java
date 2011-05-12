@@ -73,7 +73,6 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.component.event.LifecycleEvent;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;

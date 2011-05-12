@@ -1,9 +1,7 @@
-package com.eucalyptus.component.event;
+package com.eucalyptus.component;
 
 import java.util.Date;
 import java.util.List;
-import com.eucalyptus.component.ServiceCheckRecord;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.ReferentialEvent;
 
 public interface LifecycleEvent extends ReferentialEvent<ServiceConfiguration> {

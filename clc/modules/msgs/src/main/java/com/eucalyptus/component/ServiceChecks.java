@@ -257,7 +257,7 @@ public class ServiceChecks {
       }
     }
     
-    protected Severity getSeverity( ) {
+    public Severity getSeverity( ) {
       return this.severity;
     }
     
