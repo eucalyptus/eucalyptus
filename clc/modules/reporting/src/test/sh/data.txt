@@ -1,0 +1,9 @@
+This
+is
+some
+data
+for
+insertion
+into
+S3.
+
