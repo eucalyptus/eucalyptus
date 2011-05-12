@@ -1,42 +1,147 @@
 package com.eucalyptus.webui.client.view;
 
-import com.eucalyptus.webui.client.service.DataRow;
+import java.util.ArrayList;
+import com.eucalyptus.webui.client.service.SearchRange;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
+import com.google.gwt.cell.client.CheckboxCell;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.resources.client.ClientBundle.Source;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.cellview.client.CellTable;
+import com.google.gwt.user.cellview.client.CellTable.Resources;
+import com.google.gwt.user.cellview.client.CellTable.Style;
+import com.google.gwt.user.cellview.client.Column;
+import com.google.gwt.user.cellview.client.ColumnSortEvent.AsyncHandler;
+import com.google.gwt.user.cellview.client.ColumnSortList;
+import com.google.gwt.user.cellview.client.ColumnSortList.ColumnSortInfo;
 import com.google.gwt.user.cellview.client.SimplePager;
+import com.google.gwt.user.cellview.client.SimplePager.TextLocation;
+import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.view.client.AsyncDataProvider;
+import com.google.gwt.view.client.HasData;
+import com.google.gwt.view.client.MultiSelectionModel;
+import com.google.gwt.view.client.Range;
+import com.google.gwt.view.client.SelectionModel;
 
 public class SearchResultTable extends Composite {
   
+  private static final String MULTI_SELECTION_TIP = "Use 'Ctrl' or 'Shift' for multiple selection.";
+
   private static SearchResultTableUiBinder uiBinder = GWT.create( SearchResultTableUiBinder.class );
   
   interface SearchResultTableUiBinder extends UiBinder<Widget, SearchResultTable> {}
+
+  public static interface TableResources extends Resources {
+    @Source( "SearchResultTable.css" )
+    Style cellTableStyle( );
+  }  
+  
+  @UiField
+  Label tip;
   
   @UiField( provided = true )
-  CellTable<DataRow> cellTable;
+  CellTable<SearchResultRow> cellTable;
   
   @UiField( provided = true )
   SimplePager pager;
+
+  private ArrayList<SearchResultFieldDesc> fieldDescs;
+  private SearchResultRangeChangeHandler changeHandler;
+  private SelectionModel<SearchResultRow> selectionModel;
+  // Not all column are displayed in the table. This maps table column to data field index.
+  private ArrayList<Integer> tableColIdx = new ArrayList<Integer>( );
   
-  // First page of data to get the table going
-  private SearchResult initialData;
+  public SearchResultTable( int pageSize, ArrayList<SearchResultFieldDesc> fieldDescs, SearchResultRangeChangeHandler changeHandler, SelectionModel<SearchResultRow> selectionModel ) {
+    this.changeHandler = changeHandler;
+    this.fieldDescs = fieldDescs;
+    this.selectionModel = selectionModel;
     
-  public SearchResultTable( SearchResult initialData ) {
-    this.initialData = initialData;
-    
-    buildTable( );
+    buildTable( pageSize );
+    buildPager( );
     
     initWidget( uiBinder.createAndBindUi( this ) );
+    
+    if ( selectionModel instanceof MultiSelectionModel ) {
+      this.tip.setText( MULTI_SELECTION_TIP );
+    }
   }
   
-  private void buildTable( ) {
-    cellTable = new CellTable<DataRow>( );
+  public void setData( SearchResult data ) {    
+    if ( cellTable != null ) {
+      cellTable.setRowCount( data.getTotalSize( ), true );
+      //cellTable.setVisibleRange( data.getStart( ), data.getLength( ) );
+      cellTable.setRowData( data.getStart( ), data.getRows( ) );
+    }
+  }
+  
+  private void buildTable( int pageSize ) {
+    CellTable.Resources resources = GWT.create( TableResources.class );
     
+    cellTable = new CellTable<SearchResultRow>( pageSize, resources );
+    cellTable.setWidth( "100%", true );
+    // Initialize columns
+    for ( int i = 0; i < this.fieldDescs.size( ); i++ ) {
+      SearchResultFieldDesc desc = this.fieldDescs.get( i );
+      final int index = i;
+      TextColumn<SearchResultRow> col = new TextColumn<SearchResultRow>( ) {
+        @Override
+        public String getValue( SearchResultRow data ) {
+          if ( data == null ) {
+            return "";
+          } else {
+            return data.getField( index );
+          }
+        }
+      };
+      col.setSortable( desc.getSortable( ) );
+      cellTable.addColumn( col, desc.getTitle( ) );
+      cellTable.setColumnWidth( col, desc.getWidth( ) );
+      tableColIdx.add( i );
+    }
     
+    cellTable.setSelectionModel( selectionModel );
+  }
+  
+  private void buildPager( ) {
+    SimplePager.Resources pagerResources = GWT.create( SimplePager.Resources.class );
+    pager = new SimplePager( TextLocation.CENTER, pagerResources, false, 0, true );
+    pager.setDisplay( cellTable );
+  }
+  
+  public void load( ) {
+    cellTable.getColumnSortList( ).push( cellTable.getColumn( 0 ) );
+    
+    AsyncDataProvider<SearchResultRow> dataProvider = new AsyncDataProvider<SearchResultRow>( ) {
+      @Override
+      protected void onRangeChanged( HasData<SearchResultRow> display ) {
+        SearchRange sr = new SearchRange( );
+        Range range = display.getVisibleRange( );
+        if ( range != null ) {
+          sr.setStart( range.getStart( ) );
+          sr.setLength( range.getLength( ) );
+        }
+        if ( cellTable.getColumnSortList( ) != null ) {
+          ColumnSortInfo sort = cellTable.getColumnSortList( ).get( 0 );
+          if ( sort != null ) {
+            sr.setSortField( tableColIdx.get( cellTable.getColumnIndex( ( Column<SearchResultRow, ?> ) sort.getColumn( ) ) ) );
+            sr.setAscending( sort.isAscending( ) );
+          }
+        }
+        changeHandler.handleRangeChange( sr );
+      }
+    };
+    dataProvider.addDataDisplay( cellTable );
+    
+    AsyncHandler sortHandler = new AsyncHandler( cellTable );
+    cellTable.addColumnSortHandler( sortHandler );    
   }
   
 }

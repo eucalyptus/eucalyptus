@@ -1,0 +1,79 @@
+package com.eucalyptus.webui.client.view;
+
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResult;
+import com.eucalyptus.webui.client.service.SearchResultRow;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.LayoutPanel;
+import com.google.gwt.user.client.ui.ScrollPanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.view.client.MultiSelectionModel;
+import com.google.gwt.view.client.SelectionChangeEvent;
+import com.google.gwt.view.client.SelectionChangeEvent.Handler;
+import com.google.gwt.view.client.SelectionModel;
+import com.google.gwt.view.client.SingleSelectionModel;
+
+public class AccountViewImpl extends Composite implements AccountView {
+  
+  private static final Logger LOG = Logger.getLogger( AccountViewImpl.class.getName( ) );
+  
+  private static AccountViewImplUiBinder uiBinder = GWT.create( AccountViewImplUiBinder.class );
+  
+  interface AccountViewImplUiBinder extends UiBinder<Widget, AccountViewImpl> {}
+  
+  @UiField
+  LayoutPanel tablePanel;
+  
+  private SearchResultTable table;
+  
+  private Presenter presenter;
+  
+  public AccountViewImpl( ) {
+    initWidget( uiBinder.createAndBindUi( this ) );
+  }
+
+  @Override
+  public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs, SearchResultRangeChangeHandler changeHandler ) {
+    tablePanel.clear( );
+    final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    selectionModel.addSelectionChangeHandler( new Handler( ) {
+      @Override
+      public void onSelectionChange( SelectionChangeEvent event ) {
+        Set<SearchResultRow> rows = selectionModel.getSelectedSet( );
+        LOG.log( Level.INFO, "Selection changed: " + rows );
+        presenter.onSelectionChange( rows );
+      }
+    } );
+    /*
+    final SingleSelectionModel<SearchResultRow> selectionModel = new SingleSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    selectionModel.addSelectionChangeHandler( new Handler( ) {
+      @Override
+      public void onSelectionChange( SelectionChangeEvent event ) {
+        SearchResultRow row = selectionModel.getSelectedObject( );
+        LOG.log( Level.INFO, "Selection changed: " + row );
+      }
+    } );
+    */    
+    table = new SearchResultTable( pageSize, fieldDescs, changeHandler, selectionModel );
+    tablePanel.add( table );
+    table.load( );
+  }
+
+  @Override
+  public void setData( SearchResult data ) {
+    table.setData( data );
+  }
+
+  @Override
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
+  }
+
+}

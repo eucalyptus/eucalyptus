@@ -6,19 +6,27 @@ import com.google.gwt.place.shared.Prefix;
 
 public class AccountPlace extends Place {
 
+  private String search;
+  
+  public AccountPlace( String search ) {
+    this.search = search;
+  }
+  
+  public String getSearch( ) {
+    return this.search;
+  }
+  
   @Prefix( "account" )
   public static class Tokenizer implements PlaceTokenizer<AccountPlace> {
 
     @Override
     public AccountPlace getPlace( String token ) {
-      // TODO Auto-generated method stub
-      return null;
+      return new AccountPlace( token );
     }
 
     @Override
     public String getToken( AccountPlace place ) {
-      // TODO Auto-generated method stub
-      return null;
+      return place.getSearch( );
     }
     
   }

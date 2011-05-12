@@ -1,4 +1,4 @@
-package com.eucalyptus.webui.client.util;
+package com.eucalyptus.webui.client.session;
 
 import com.eucalyptus.webui.client.service.Session;
 

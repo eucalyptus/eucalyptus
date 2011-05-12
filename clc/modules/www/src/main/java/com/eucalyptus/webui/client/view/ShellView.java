@@ -7,6 +7,9 @@ public interface ShellView extends IsWidget {
   void showLogConsole( );
   void hideLogConsole( );
   
+  void showDetail( );
+  void hideDetail( );
+  
   DirectoryView getDirectoryView( );
   
   ContentView getContentView( );
@@ -14,5 +17,7 @@ public interface ShellView extends IsWidget {
   FooterView getFooterView( );
   
   HeaderView getHeaderView( );
+  
+  DetailView getDetailView( );
   
 }

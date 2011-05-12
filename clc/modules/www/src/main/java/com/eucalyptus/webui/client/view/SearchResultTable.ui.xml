@@ -4,26 +4,49 @@
     xmlns:c="urn:import:com.google.gwt.user.cellview.client">
     
     <ui:style>
+        .scroll {
+        	width:100%;
+        	height:100%;
+        }
 	    .cellTable {
-		     border-bottom: 1px solid #ccc;
-		     text-align: left;
-		     margin-bottom: 4px;
-	    }    
+	    	font-size:95%;
+	    	color:#292929;
+	    	border-bottom:1px solid #CCCCCC
+	    }
+	    .tableBox {
+	    	width:99%;
+	    }
+	    .pager {
+	    	font-size:80%;
+	    	color:#505050;
+	    	margin-left:auto;
+	    	margin-right:auto;
+	    }
+	    .tip {
+	    	color:#555555;
+	    	font-size:80%;
+	    	font-style:italic;
+	    	margin-left:4px;
+	    	position:absolute;
+	    	top:4px;
+	    	left:0;
+	    }
 	</ui:style>
  
-    <g:HTMLPanel>
-        <table cellspacing="0" cellpadding="0" style="width:100%;">
-            <tr>
-                <td valign="top">
-                    <c:CellTable addStyleNames="{style.cellTable}" pageSize="15" ui:field="cellTable" />
-                </td>
-            </tr>
-            <tr>
-                <td align="center">
-                    <c:SimplePager ui:field="pager" />
-                </td>
-            </tr>
-        </table>
-    </g:HTMLPanel>
+    <g:DockLayoutPanel unit="PX">
+        <g:south size="32">
+            <g:FlowPanel>
+                <g:Label addStyleNames="{style.tip}" ui:field="tip"/>            
+                <c:SimplePager addStyleNames="{style.pager}" ui:field="pager" />
+            </g:FlowPanel>
+        </g:south>
+        <g:center>
+            <g:ScrollPanel addStyleNames="{style.scroll}">
+                <g:FlowPanel addStyleNames="{style.tableBox}">
+                    <c:CellTable addStyleNames="{style.cellTable}" ui:field="cellTable" />
+                </g:FlowPanel>
+            </g:ScrollPanel>
+        </g:center>
+    </g:DockLayoutPanel>
     
 </ui:UiBinder> 

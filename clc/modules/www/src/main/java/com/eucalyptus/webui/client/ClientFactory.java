@@ -1,7 +1,10 @@
 package com.eucalyptus.webui.client;
 
 import com.eucalyptus.webui.client.service.EucalyptusServiceAsync;
-import com.eucalyptus.webui.client.util.LocalSession;
+import com.eucalyptus.webui.client.session.LocalSession;
+import com.eucalyptus.webui.client.session.SessionData;
+import com.eucalyptus.webui.client.view.AccountView;
+import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
@@ -63,6 +66,11 @@ public interface ClientFactory {
 	LocalSession getLocalSession( );
 	
 	/**
+	 * @return the local session data.
+	 */
+	SessionData getSessionData( );
+	
+	/**
 	 * @return the impl. of Euare service.
 	 */
 	EucalyptusServiceAsync getBackendService( );
@@ -101,5 +109,15 @@ public interface ClientFactory {
    * @return the impl. of ErrorSinkView
    */
   ErrorSinkView getErrorSinkView( );
+  
+  /**
+   * @return the impl. of AccountView
+   */
+  AccountView getAccountView( );
+  
+  /**
+   * @return the impl. of DetailView
+   */
+  DetailView getDetailView( );
   
 }

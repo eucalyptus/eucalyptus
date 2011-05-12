@@ -2,6 +2,8 @@
 <ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
     xmlns:g="urn:import:com.google.gwt.user.client.ui">
     
+    <ui:image field="arrow" src="image/arrow_down_8x7_blue.png"></ui:image>
+    
     <ui:style>
         .boundingBox {
         	padding:4px;
@@ -11,6 +13,14 @@
             cursor:pointer;
             color:#2E52A4;
         }
+        @sprite .arrow {
+        	height:8px;
+        	width:8px;
+        	gwt-image:'arrow';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;        	
+        }
     </ui:style>
     
     <g:HTMLPanel styleName="{style.boundingBox}">
@@ -19,7 +29,7 @@
                 <g:Anchor styleName="{style.userAnchor}" ui:field="userAnchor">username@account</g:Anchor>
             </td>
             <td style="vertical-align:middle;padding-left:3px;">
-                <img alt="Dropdown" src="themes/active/arrowdown.png"/>
+                <span class="{style.arrow}"></span>
             </td>
         </tr></tbody></table>
     </g:HTMLPanel>

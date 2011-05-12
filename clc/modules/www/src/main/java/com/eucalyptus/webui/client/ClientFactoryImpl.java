@@ -4,8 +4,13 @@ import com.eucalyptus.webui.client.place.ErrorSinkPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceAsync;
-import com.eucalyptus.webui.client.util.LocalSession;
-import com.eucalyptus.webui.client.util.LocalSessionImpl;
+import com.eucalyptus.webui.client.session.LocalSession;
+import com.eucalyptus.webui.client.session.LocalSessionImpl;
+import com.eucalyptus.webui.client.session.SessionData;
+import com.eucalyptus.webui.client.view.AccountView;
+import com.eucalyptus.webui.client.view.AccountViewImpl;
+import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.DetailViewImpl;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
@@ -46,6 +51,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private PlaceController lifecyclePlaceController = new PlaceController( lifecycleEventBus );
 	
 	private LocalSession localSession = new LocalSessionImpl( );
+	private SessionData sessionData = new SessionData( );
 	
 	private EucalyptusServiceAsync backendService = GWT.create( EucalyptusService.class );
 
@@ -56,6 +62,8 @@ public class ClientFactoryImpl implements ClientFactory {
 	private ServiceView serviceView;
 	private LoadingAnimationView loadingAnimationView;
 	private ErrorSinkView errorSinkView;
+	private AccountView accountView;
+	private DetailView detailView;
 
   @Override
   public LocalSession getLocalSession( ) {
@@ -144,6 +152,22 @@ public class ClientFactoryImpl implements ClientFactory {
   }
 
   @Override
+  public AccountView getAccountView( ) {
+    if ( accountView == null ) {
+      accountView = new AccountViewImpl( );
+    }
+    return accountView;
+  }
+
+  @Override
+  public DetailView getDetailView( ) {
+    if ( detailView == null ) {
+      detailView = new DetailViewImpl( );
+    }
+    return detailView;
+  }
+  
+  @Override
   public ActivityManager getMainActivityManager( ) {
     if ( mainActivityManager == null ) {
       ActivityMapper activityMapper = new MainActivityMapper( this );
@@ -175,6 +199,11 @@ public class ClientFactoryImpl implements ClientFactory {
   @Override
   public Place getErrorPlace( ) {
     return ERROR_PLACE;
+  }
+
+  @Override
+  public SessionData getSessionData( ) {
+    return sessionData;
   }
   
 }

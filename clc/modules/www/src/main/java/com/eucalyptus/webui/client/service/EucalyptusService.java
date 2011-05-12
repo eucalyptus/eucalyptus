@@ -15,7 +15,7 @@ public interface EucalyptusService extends RemoteService {
   HashMap<String, String> getSystemProperties( Session session ) throws EucalyptusServiceException;
   
   ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
-  
-  SearchResult lookupServiceComponents( Session session ) throws EucalyptusServiceException;
+ 
+  SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
 }

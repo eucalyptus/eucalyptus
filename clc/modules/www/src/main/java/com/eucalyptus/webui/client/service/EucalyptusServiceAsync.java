@@ -14,6 +14,6 @@ public interface EucalyptusServiceAsync {
   
   void getCategory( Session session, AsyncCallback<ArrayList<CategoryTag>> callback );
   
-  void lookupServiceComponents( Session session, AsyncCallback<SearchResult> callback );
+  void lookupAccount( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
   
 }

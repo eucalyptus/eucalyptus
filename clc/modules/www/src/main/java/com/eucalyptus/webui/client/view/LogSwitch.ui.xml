@@ -2,6 +2,9 @@
 <ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
     xmlns:g="urn:import:com.google.gwt.user.client.ui">
     
+    <ui:image field="logGray" src="image/document_stroke_12x12_gray.png"></ui:image>
+    <ui:image field="logOrange" src="image/document_stroke_12x12_orange.png"></ui:image>
+        
     <ui:style>
         .boundingBox {
             height:100%;        	
@@ -22,19 +25,19 @@
         	display:table-cell;
         	vertical-align:middle;
         }
-        a.button span.icon {
+        @sprite a.button span.icon {
         	width:12px;
         	height:12px;
         	display:table-cell;
         	vertical-align:middle;
-            background-image:url('themes/active/loggray.png');
+            gwt-image:'logGray';
             background-repeat:no-repeat;
             background-position:center center;
         }
-        a.button:active span.icon, a.button:focus span.icon, a.button:hover span.icon {
-            background-image:url('themes/active/logorange.png');
+        @sprite a.button:active span.icon, a.button:focus span.icon, a.button:hover span.icon {
+            gwt-image:'logOrange';
             background-repeat:no-repeat;
-            background-position:center center;                  	
+            background-position:center center;            
         }
     </ui:style>
     

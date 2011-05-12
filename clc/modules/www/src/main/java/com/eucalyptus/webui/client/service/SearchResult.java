@@ -2,43 +2,67 @@ package com.eucalyptus.webui.client.service;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class SearchResult implements Serializable {
   
   private static final long serialVersionUID = 1L;
   
-  private Integer idColumn;
-  private ArrayList<DataFieldDesc> descs = new ArrayList<DataFieldDesc>( );
-  private ArrayList<DataRow> rows = new ArrayList<DataRow>( );
+  private int totalSize;
+  private int start;
+  private int length;
+  private ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
+  private ArrayList<SearchResultRow> rows = new ArrayList<SearchResultRow>( );
   
   public SearchResult( ) {
-    this.idColumn = 0;
+  }
+  
+  public SearchResult( int totalSize, int start, int length ) {
+    this.totalSize = totalSize;
+    this.start = start;
+    this.length = length;
   }
 
-  public void setDescs( ArrayList<DataFieldDesc> descs ) {
-    this.descs = descs;
+  public void setDescs( List<SearchResultFieldDesc> descs ) {
+    this.descs.clear( );
+    this.descs.addAll( descs );
   }
 
-  public ArrayList<DataFieldDesc> getDescs( ) {
+  public ArrayList<SearchResultFieldDesc> getDescs( ) {
     return descs;
   }
 
-  public void setRows( ArrayList<DataRow> rows ) {
-    this.rows = rows;
+  public void setRows( List<SearchResultRow> rows ) {
+    this.rows.clear( );
+    this.rows.addAll( rows );
   }
 
-  public ArrayList<DataRow> getRows( ) {
+  public ArrayList<SearchResultRow> getRows( ) {
     return rows;
   }
 
-  public void setIdColumn( Integer idColumn ) {
-    this.idColumn = idColumn;
+  public void setTotalSize( int totalSize ) {
+    this.totalSize = totalSize;
   }
 
-  public Integer getIdColumn( ) {
-    return idColumn;
+  public int getTotalSize( ) {
+    return totalSize;
   }
-  
-  
+
+  public void setStart( int start ) {
+    this.start = start;
+  }
+
+  public int getStart( ) {
+    return start;
+  }
+
+  public void setLength( int length ) {
+    this.length = length;
+  }
+
+  public int getLength( ) {
+    return length;
+  }
   
 }

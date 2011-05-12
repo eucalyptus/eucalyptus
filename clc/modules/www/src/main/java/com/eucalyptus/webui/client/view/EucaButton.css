@@ -1,0 +1,158 @@
+a.button,button {
+	display: inline-block;
+	padding: 5px;
+	color: #3C3C3D;
+	font-size:90%;
+	text-shadow: 1px 1px 0 #FFFFFF;
+	background-color: #ECECEC;
+	white-space: nowrap;
+	overflow: visible;
+	cursor: pointer;
+	cursor: hand;
+	text-decoration: none;
+	border: 1px solid #CACACA;
+	-webkit-border-radius: 2px;
+	-moz-border-radius: 2px;
+	border-radius: 2px;
+	outline: none;
+	position: relative;
+	zoom: 1;
+}
+
+button {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+a.button {
+	-moz-user-select: none;
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+}
+
+a.button.primary,button.primary {
+	font-weight: bold
+}
+
+button:focus,a.button:hover,button:hover {
+	color: #FFFFFF;
+	border-color: #388AD4;
+	text-decoration: none;
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
+	background-color: #2D7DC5;
+}
+
+a.button:active,button:active,a.button.active,button.active {
+	/*background-position: 0 -81px;*/
+	border-color: #347BBA;
+	background-color: #0F5EA2;
+	color: #FFFFFF;
+	text-shadow: none;
+}
+
+a.button:active,button:active {
+	top: 1px;
+}
+
+a.button.negative:focus,button.negative:focus,a.button.negative:hover,button.negative:hover {
+	color: #FFFFFF;
+	background-color: #D84743;
+	border-color: #911D1B;
+}
+
+a.button.negative:active,button.negative:active,a.button.negative.active,button.negative.active {
+	background-color: #A5211E;
+	border-color: #911D1B;
+}
+
+a.button.positive:focus,button.positive:focus,a.button.positive:hover,button.positive:hover {
+	background-color: #96ED89;
+	border-color: #45BF55;
+}
+
+a.button.positive:active,button.positive:active,a.button.positive.active,button.positive.active {
+	/*background-position: 0 -320px;*/
+	background-color: #45BF55;
+}
+
+a.button.pill,button.pill {
+	-webkit-border-radius: 19px;
+	-moz-border-radius: 19px;
+	border-radius: 19px;
+	padding: 5px 10px 4px 10px;
+}
+
+a.button.left,button.left {
+	-webkit-border-bottom-right-radius: 0px;
+	-webkit-border-top-right-radius: 0px;
+	-moz-border-radius-bottomright: 0px;
+	-moz-border-radius-topright: 0px;
+	border-bottom-right-radius: 0px;
+	border-top-right-radius: 0px;
+	margin-right: 0px;
+	border-right: none;
+}
+
+a.button.middle,button.middle {
+	margin-right: 0px;
+	margin-left: 0px;
+	-webkit-border-radius: 0px;
+	-moz-border-radius: 0px;
+	border-radius: 0px;
+	border-right: none;
+}
+
+a.button.right,button.right {
+	-webkit-border-bottom-left-radius: 0px;
+	-webkit-border-top-left-radius: 0px;
+	-moz-border-radius-bottomleft: 0px;
+	-moz-border-radius-topleft: 0px;
+	border-top-left-radius: 0px;
+	border-bottom-left-radius: 0px;
+	margin-left: 0px;
+}
+
+a.button.left:active,button.left:active,a.button.middle:active,button.middle:active,a.button.right:active,button.right:active {
+	top: 0px
+}
+
+a.button.big,button.big {
+	font-size: 16px;
+	padding-left: 14px;
+	padding-right: 17px;
+}
+
+button.big {
+}
+
+a.button span.icon,button span.icon {
+	display: inline-block;
+	width: 14px;
+	height: 12px;
+	margin: auto 7px auto auto;
+	position: relative;
+	top: 0;
+	background-repeat: no-repeat;
+	background-position: center center;
+}
+
+a.big.button span.icon,button.big span.icon {
+	top: 0px;
+}
+
+@sprite a.button span.icon.plus,button span.icon.plus {
+    gwt-image:'plusGray';
+}
+@sprite a.button:hover span.icon.plus,button:hover span.icon.plus {
+    gwt-image:'plusWhite';
+}
+
+@sprite a.button span.icon.minus,button span.icon.minus {
+	height:6px;
+    gwt-image:'minusGray';
+}
+@sprite a.button:hover span.icon.minus,button:hover span.icon.minus {
+	height:6px;
+    gwt-image:'minusWhite';
+}

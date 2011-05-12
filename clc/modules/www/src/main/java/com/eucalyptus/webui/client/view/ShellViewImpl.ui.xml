@@ -3,6 +3,9 @@
     xmlns:g="urn:import:com.google.gwt.user.client.ui"
     xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
     
+    <ui:image field="arrowleft" src="image/arrow_left_8x9_gray.png"></ui:image>
+    <ui:image field="arrowright" src="image/arrow_right_8x9_gray.png"></ui:image>
+    
     <ui:style>
         a.splitter {
         	width:100%;
@@ -16,13 +19,13 @@
     </ui:style>
     
     <ui:style field="shellStyle" type="com.eucalyptus.webui.client.view.ShellViewImpl.ShellStyle">
-        .left {
-        	background-image:url('themes/active/arrowleft.png');
+        @sprite .left {
+        	gwt-image:'arrowleft';
         	background-repeat:no-repeat;
         	background-position:center center;
         }
-        .right {
-            background-image:url('themes/active/arrowright.png');
+        @sprite .right {
+            gwt-image:'arrowright';
             background-repeat:no-repeat;
             background-position:center center;
         }

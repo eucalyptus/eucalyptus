@@ -2,6 +2,7 @@ package com.eucalyptus.webui.client;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.eucalyptus.webui.client.view.GlobalResources;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.google.gwt.activity.shared.ActivityManager;
 import com.google.gwt.activity.shared.ActivityMapper;
@@ -27,6 +28,7 @@ public class EucalyptusWebInterface implements EntryPoint {
         LOG.log( Level.SEVERE, e.getMessage( ), e );
       }
     } );
+    GWT.<GlobalResources>create( GlobalResources.class ).buttonCss( ).ensureInjected( );
     // Create ClientFactory using deferred binding so we can
     // replace with different implementations in gwt.xml
     ClientFactory clientFactory = GWT.create( ClientFactory.class );

@@ -15,6 +15,8 @@ import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
+import com.eucalyptus.webui.client.session.SessionData;
+import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.SearchHandler;
@@ -39,20 +41,17 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  * @author Ye Wen (wenye@eucalyptus.com)
  *
  */
-public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, SearchHandler {
+public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Presenter, SearchHandler {
   
   private static final Logger LOG = Logger.getLogger( ShellActivity.class.getName( ) );
   
-  private static final String VERSION_NAME = "version";
-  private static final String DEFAULT_VERSION = "EEE";
+  private static final String DEFAULT_VERSION = "Eucalyptus unknown version";
   
   private ClientFactory clientFactory;
   private ShellPlace place;
   
   private AcceptsOneWidget container;
   
-  private LoginUserProfile user;
-  private HashMap<String, String> props;
   private ArrayList<CategoryTag> category;
   
   public ShellActivity( ShellPlace place, ClientFactory clientFactory ) {
@@ -85,19 +84,21 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   }
   
   private void loadShellView( AcceptsOneWidget container ) {
-    String v = props.get( VERSION_NAME );
     ShellView shellView = this.clientFactory.getShellView( );
     
     shellView.getDirectoryView( ).buildTree( this.category );
     shellView.getDirectoryView( ).setSearchHandler( this );
     
     shellView.getFooterView( ).setPresenter( this );
-    shellView.getFooterView( ).setVersion( v == null ? DEFAULT_VERSION : v );
+    shellView.getFooterView( ).setVersion( clientFactory.getSessionData( ).getStringProperty( SessionData.VERSION, DEFAULT_VERSION ) );
     
-    shellView.getHeaderView( ).setUser( this.user.toString( ) );
-    shellView.getHeaderView( ).getUserSetting( ).setUser( this.user.toString( ) );
+    String user = clientFactory.getSessionData( ).getLoginUser( ).toString( );
+    shellView.getHeaderView( ).setUser( user );
+    shellView.getHeaderView( ).getUserSetting( ).setUser( user );
     shellView.getHeaderView( ).getUserSetting( ).setPresenter( this );
     shellView.getHeaderView( ).setSearchHandler( this );
+    
+    shellView.getDetailView( ).setPresenter( this );
     
     container.setWidget( shellView );
   }
@@ -118,7 +119,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
           LOG.log( Level.WARNING, "Got empty user profile" );
           clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );
         } else {
-          user = result;
+          clientFactory.getSessionData( ).setLoginUser( result );
           clientFactory.getLoadingProgressView( ).setProgress( 33 );
           getSystemProperties( );
         }
@@ -143,7 +144,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
           LOG.log( Level.WARNING, "Got empty system properties" );
           clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );          
         } else {
-          props = result;
+          clientFactory.getSessionData( ).setProperties( result );
           clientFactory.getLoadingProgressView( ).setProgress( 67 );
           getCategory( );
         }
@@ -201,6 +202,11 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
     } else {
       LOG.log( Level.INFO, "Empty search!" );
     }
+  }
+
+  @Override
+  public void hideDetail( ) {
+    this.clientFactory.getShellView( ).hideDetail( );
   }
   
 }

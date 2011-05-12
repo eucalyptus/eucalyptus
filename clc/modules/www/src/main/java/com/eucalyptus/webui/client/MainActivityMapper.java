@@ -1,9 +1,11 @@
 package com.eucalyptus.webui.client;
 
+import com.eucalyptus.webui.client.activity.AccountActivity;
 import com.eucalyptus.webui.client.activity.ErrorSinkActivity;
 import com.eucalyptus.webui.client.activity.LogoutActivity;
 import com.eucalyptus.webui.client.activity.ServiceActivity;
 import com.eucalyptus.webui.client.activity.StartActivity;
+import com.eucalyptus.webui.client.place.AccountPlace;
 import com.eucalyptus.webui.client.place.ErrorSinkPlace;
 import com.eucalyptus.webui.client.place.LogoutPlace;
 import com.eucalyptus.webui.client.place.ServicePlace;
@@ -30,7 +32,9 @@ public class MainActivityMapper implements ActivityMapper {
     } else if ( place instanceof ErrorSinkPlace ) {
       return new ErrorSinkActivity( ( ErrorSinkPlace )place, this.clientFactory );
     } else if ( place instanceof LogoutPlace ) {
-      return new LogoutActivity( ( LogoutPlace)place, this.clientFactory );
+      return new LogoutActivity( ( LogoutPlace )place, this.clientFactory );
+    } else if ( place instanceof AccountPlace ) {
+      return new AccountActivity( ( AccountPlace )place, this.clientFactory );
     }
     return null;
   }

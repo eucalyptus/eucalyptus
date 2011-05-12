@@ -65,8 +65,7 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
     
     CellTree.Resources resource = GWT.create( TreeResources.class );
     
-    //CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null, resource );
-    CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null );
+    CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null, resource );
     tree.setKeyboardSelectionPolicy( KeyboardSelectionPolicy.DISABLED );
     tree.setAnimationEnabled( false );
     tree.setDefaultNodeSize( TREENODE_SIZE );

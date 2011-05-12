@@ -20,21 +20,21 @@ public class CategoryTreeModel implements TreeViewModel {
    * Tree icons
    */
   static interface Images extends ClientBundle {
-    @Source( "document_stroke_12x12.png" )
+    @Source( "image/document_stroke_12x12_gray.png" )
     ImageResource def( );
     
-    @Source( "tag_fill_12x12.png" )
+    @Source( "image/tag_fill_12x12_gray.png" )
     ImageResource tag( );
     
-    @Source( "cog_alt_12x12.png" )
+    @Source( "image/cog_alt_12x12_gray.png" )
     ImageResource service( );
-    @Source( "user_12x16.png" )
+    @Source( "image/user_12x16_gray.png" )
     ImageResource user( );
-    @Source( "article_12x12.png" )
+    @Source( "image/article_12x12_gray.png" )
     ImageResource report( );
-    @Source( "home_12x12.png" )
+    @Source( "image/home_12x12_gray.png" )
     ImageResource home( );
-    @Source( "image_12x12.png" )
+    @Source( "image/image_12x12_gray.png" )
     ImageResource image( );
 
   }

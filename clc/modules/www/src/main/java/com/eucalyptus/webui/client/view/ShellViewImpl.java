@@ -1,5 +1,7 @@
 package com.eucalyptus.webui.client.view;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.MouseOutEvent;
@@ -17,6 +19,8 @@ import com.google.gwt.user.client.ui.HasText;
 import com.google.gwt.user.client.ui.Widget;
 
 public class ShellViewImpl extends Composite implements ShellView {
+  
+  private static final Logger LOG = Logger.getLogger( ShellViewImpl.class.getName( ) );
   
   private static ShellViewImplUiBinder uiBinder = GWT.create( ShellViewImplUiBinder.class );
   interface ShellViewImplUiBinder extends UiBinder<Widget, ShellViewImpl> {}
@@ -78,12 +82,15 @@ public class ShellViewImpl extends Composite implements ShellView {
     parent.animate( ANIMATE_DURATION );
   }
   
+  @Override
   public void showDetail( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
     parent.setWidgetSize( detail, DETAIL_WIDTH );
   }
 
+  @Override
   public void hideDetail( ) {
+    LOG.log( Level.INFO, "Hiding detail pane." );
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
     parent.setWidgetSize( detail, 0 );
   }
@@ -118,6 +125,11 @@ public class ShellViewImpl extends Composite implements ShellView {
   public void hideLogConsole( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
     parent.setWidgetSize( this.log, 0 );    
+  }
+
+  @Override
+  public DetailView getDetailView( ) {
+    return this.detail;
   }
 
 }
