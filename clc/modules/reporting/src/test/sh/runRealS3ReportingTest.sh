@@ -1,19 +1,22 @@
 #!/bin/sh
 
+
 # Login, and get session id
 wget -O /tmp/sessionId --no-check-certificate 'https://localhost:8443/loginservlet?adminPw=admin'
 export SESSIONID=`cat /tmp/sessionId`
 echo "session id:" $SESSIONID
 
+
 # Get mysql password
 password=`./dbPass.sh`
+
 
 # Clear all prior data 
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeFalseData"
 
+
 # Check that the data is cleared
 LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from instance_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
-
 if [ "$LINE_CNT" -ne "0" ]
 then
 	echo "Data not cleared"
@@ -22,7 +25,14 @@ else
 	echo "Data cleared"
 fi
 
+
 # Generate data
+timestamp=`date +%s`
+timestamp=$(($timestamp*1000))
+./s3curl.pl --id $EC2_ACCESS_KEY --key $EC2_SECRET_KEY --put /dev/null -- -s -v $S3_URL/mybucket
+./s3curl.pl --id $EC2_ACCESS_KEY --key $EC2_SECRET_KEY --put data.txt -- -s -v $S3_URL/mybucket/obj_${timestamp}_a
+./s3curl.pl --id $EC2_ACCESS_KEY --key $EC2_SECRET_KEY --put data.txt -- -s -v $S3_URL/mybucket/obj_${timestamp}_b
+./s3curl.pl --id $EC2_ACCESS_KEY --key $EC2_SECRET_KEY --put data.txt -- -s -v $S3_URL/mybucket/obj_${timestamp}_c
 
 
 # Check that the data exists and has been inserted 
@@ -37,8 +47,6 @@ fi
 
 
 # Check that the inserted data has correct timestamps
-timestamp=`date +%s`
-timestamp=$(($timestamp*1000))
 error_margin=$((60*60*1000)) # 1 hr
 
 mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select timestamp_ms from instance_usage_snapshot"|awk '/[0-9]+/ {print $1}'| while read line; do
@@ -53,3 +61,4 @@ mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucal
 done
 
 exit 0
+
