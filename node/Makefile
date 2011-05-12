@@ -12,8 +12,11 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart
-NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o
+NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
+NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o
+BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
+#EFENCE=-lefence
 
 all: server client clientlib test_nc test
 
@@ -35,9 +38,18 @@ generated/stubs: $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) $(BUILD_ID) -c $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 server: $(SERVICE_SO)
+
+../storage/backing.o: ../storage/backing.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
+../storage/diskutil.o: ../storage/diskutil.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
+../storage/blobstore.o: ../storage/blobstore.c ../util/misc.o ../util/data.o
+	make -C ../storage
 
 ../storage/storage.o: ../storage/storage.c ../util/misc.o ../util/data.o
 	make -C ../storage
@@ -63,24 +75,24 @@ server: $(SERVICE_SO)
 ../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs ../storage/storage.o ../storage/http.o ../storage/walrus.o ../net/vnetwork.o ../util/misc.o ../util/data.o ../util/windows-bundle.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o
-	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) ../storage/walrus.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../net/*.o ../util/*.o
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/misc.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o ../util/windows-bundle.o
+	$(CC) -o $(SERVICE_SO) -shared $(NC_LIBS) generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(EFENCE)
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 
 client: $(CLIENT) $(CLIENT)_local
 
-$(CLIENT): generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o $(CLIENT).c
+$(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o $(STORAGE_OJBS) ../net/*.o $(CLIENT).c ../storage/http.o ../storage/storage-windows.o
 
-$(CLIENT)_local: generated/stubs ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o ../storage/storage.o ../storage/http.o ../storage/storage-windows.o ../storage/walrus.o ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS)
+$(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o
+	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o 
 
 test: test.c ../util/misc.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o ../util/euca_auth.o
 
-test_nc: test_nc.c ../util/misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../util/euca_auth.o
+test_nc: test_nc.c ../util/misc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o ../util/ipc.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

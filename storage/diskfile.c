@@ -21,9 +21,6 @@
 
 static boolean diskutil_initialized = FALSE;
 
-// round up or down to sector size
-long long round_up_sec   (long long bytes) { return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE) + 1) * SECTOR_SIZE) : bytes); }
-long long round_down_sec (long long bytes) { return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE))     * SECTOR_SIZE) : bytes); }
 long long mbr_size_bytes (void) { return SECTOR_SIZE * (62 + 4); } // TODO: figure out why extra couple sectors seem needed
 
 // allocates a diskfile object and creates an empty files of size at most limit_bytes
