@@ -9,6 +9,10 @@ import com.eucalyptus.util.HasOwningAccount;
 @PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_IMAGE )
 public interface Image extends HasFullName<Image>, HasOwningAccount {
   
+  public interface StaticDiskImage extends Image {
+    public abstract String getImageLocation( );
+  }
+  
   public static final String IMAGE_RAMDISK_PREFIX = "eri";
   public static final String IMAGE_KERNEL_PREFIX  = "eki";
   public static final String IMAGE_MACHINE_PREFIX = "emi";

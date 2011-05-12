@@ -64,6 +64,8 @@
 
 package com.eucalyptus.images;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.List;
@@ -119,6 +121,17 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Transient
   private static Logger         LOG            = Logger.getLogger( ImageInfo.class );
   
+  /**
+   * Name of the registered image info:
+   * Constraints: 3-128 alphanumeric characters, parenthesis (()), commas (,), slashes (/), dashes
+   * (-), or underscores(_)
+   */
+  @Column( name = "metadata_image_name" )
+  private String                imageName;
+  
+  @Column( name = "metadata_image_description" )
+  private String                description;
+  
   @Column( name = "metadata_image_path" )
   private String                imageLocation;
   
@@ -163,13 +176,19 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageLocation, final Image.Architecture arch,
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, 
+                    final String imageDescription, final Image.Architecture arch, final Image.Platform platform ) {
+    this( userFullName, imageId, imageName, imageDescription, null, arch, platform );
+  }
+  
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final String imageLocation,
+                    final Image.Architecture arch,
                     final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
-    Assertions.assertNotNull( arch );
-    Assertions.assertNotNull( arch );
-    Assertions.assertNotNull( imageLocation );
-    Assertions.assertNotNull( platform );
+    assertThat( arch, notNullValue( ) );
+    assertThat( imageName, notNullValue( ) );
+    assertThat( imageName, notNullValue( ) );
+    assertThat( platform, notNullValue( ) );
     this.setState( Image.State.pending );
     this.imageLocation = imageLocation;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
@@ -197,11 +216,11 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.architecture = architecture;
   }
   
-  public String getImageLocation( ) {
+  protected String getImageLocation( ) {
     return imageLocation;
   }
   
-  public void setImageLocation( String imageLocation ) {
+  protected void setImageLocation( String imageLocation ) {
     this.imageLocation = imageLocation;
   }
   
@@ -435,5 +454,29 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       return false;
     }
     return true;
+  }
+  
+  public String getDescription( ) {
+    return this.description;
+  }
+  
+  public void setDescription( String description ) {
+    this.description = description;
+  }
+  
+  public Set<DeviceMapping> getDeviceMappings( ) {
+    return this.deviceMappings;
+  }
+  
+  protected void setDeviceMappings( Set<DeviceMapping> deviceMappings ) {
+    this.deviceMappings = deviceMappings;
+  }
+  
+  public String getImageName( ) {
+    return this.imageName;
+  }
+  
+  protected void setImageName( String imageName ) {
+    this.imageName = imageName;
   }
 }

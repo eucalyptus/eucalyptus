@@ -90,6 +90,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.Architecture;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
@@ -215,7 +216,9 @@ public class ImageUtil {
                                                                                                                                  "Manifest signature has changed since registration." );
       LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
       try {
-        WalrusUtil.triggerCaching( imgInfo );
+        if( imgInfo instanceof Image.StaticDiskImage ) {
+          WalrusUtil.triggerCaching( ( StaticDiskImage ) imgInfo );
+        }
       } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
       LOG.error( e );

@@ -36,7 +36,7 @@ public class Transactions {
     }
   }
   
-  public static <T> T one( T search, Tx<T> c ) throws TransactionException {
+  public static <T> T one( T search, Tx<T> c ) throws TransactionException {//TODO:GRZE:adjust these to use callbacks
     if ( search == null ) {
       TransactionException ex = new TransactionException( "A search object must be supplied" );
       LOG.warn( ex.getMessage( ), ex );

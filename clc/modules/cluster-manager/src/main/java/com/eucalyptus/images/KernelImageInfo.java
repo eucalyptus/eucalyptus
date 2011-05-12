@@ -80,7 +80,7 @@ import com.eucalyptus.cloud.Image;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "kernel" )
-public class KernelImageInfo extends ImageInfo {
+public class KernelImageInfo extends ImageInfo implements Image.StaticDiskImage {
 
   public KernelImageInfo( ) {
     super( );
@@ -92,9 +92,14 @@ public class KernelImageInfo extends ImageInfo {
     this.setImageType( Image.Type.kernel );
   }
 
-  public KernelImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
+  public KernelImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Architecture arch, Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, imageLocation, arch, platform );
     this.setImageType( Image.Type.kernel );
+  }
+
+  @Override
+  public String getImageLocation( ) {
+    return super.getImageLocation( );
   }
 
 }

@@ -138,6 +138,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -145,6 +146,10 @@ import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
+  /**
+   * 
+   */
+  private static final int CLUSTER_STARTUP_SYNC_RETRIES = 15;
   /**
    * 
    */
@@ -177,37 +182,37 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     if( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+                                                                                     if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
                                                                                        try {
-                                                                                        AsyncRequests.newRequest( new DisableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
-                                                                                        return true;
-                                                                                      } catch ( ExecutionException ex ) {
-                                                                                        Cluster.this.errors.add( ex.getCause( ) );
-                                                                                        return false;
-                                                                                      } catch ( InterruptedException ex ) {
-                                                                                        Cluster.this.errors.add( ex.getCause( ) );
-                                                                                        return false;
-                                                                                      }
+                                                                                         AsyncRequests.newRequest( new DisableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                         return true;
+                                                                                       } catch ( ExecutionException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       } catch ( InterruptedException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       }
                                                                                      } else {
                                                                                        return false;
                                                                                      }
-                                                                                  }
+                                                                                   }
                                                                                  };
   private final Predicate<Cluster>                       COMPONENT_IS_ENABLED    = new Predicate<Cluster>( ) {
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     if( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+                                                                                     if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
                                                                                        try {
-                                                                                        AsyncRequests.newRequest( new EnableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
-                                                                                        return true;
-                                                                                      } catch ( ExecutionException ex ) {
-                                                                                        Cluster.this.errors.add( ex.getCause( ) );
-                                                                                        return false;
-                                                                                      } catch ( InterruptedException ex ) {
-                                                                                        Cluster.this.errors.add( ex.getCause( ) );
-                                                                                        return false;
-                                                                                      }
+                                                                                         AsyncRequests.newRequest( new EnableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
+                                                                                         return true;
+                                                                                       } catch ( ExecutionException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       } catch ( InterruptedException ex ) {
+                                                                                         Cluster.this.errors.add( ex.getCause( ) );
+                                                                                         return false;
+                                                                                       }
                                                                                      } else {
                                                                                        return false;
                                                                                      }
@@ -217,7 +222,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                    
                                                                                    @Override
                                                                                    public boolean apply( final Cluster input ) {
-                                                                                     if( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
+                                                                                     if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
                                                                                        try {
                                                                                          AsyncRequests.newRequest( new StartServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
                                                                                          return true;
@@ -228,9 +233,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                          Cluster.this.errors.add( ex.getCause( ) );
                                                                                          return false;
                                                                                        }
-                                                                                      } else {
-                                                                                        return false;
-                                                                                      }
+                                                                                     } else {
+                                                                                       return false;
+                                                                                     }
                                                                                    }
                                                                                  };
   
@@ -535,20 +540,41 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public void start( ) throws ServiceRegistrationException {
     Clusters.getInstance( ).registerDisabled( this );
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
     try {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING,
-                                                                                                  State.STARTING_AUTHENTICATING,
-                                                                                                  State.STARTING_NOTREADY, State.NOTREADY );
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( new Callable<CheckedListenableFuture<Cluster>>( ) {
+        
+        @Override
+        public CheckedListenableFuture<Cluster> call( ) throws Exception {
+          final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.STARTING,
+                                                                                                      State.STARTING_AUTHENTICATING,
+                                                                                                      State.STARTING_NOTREADY, State.NOTREADY );
+          CheckedListenableFuture<Cluster> future = null;
+          Exception error = null;
+          for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+            try {
+              transition.call( ).get( );
+              break;
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              error = ex;
+            }
+            TimeUnit.SECONDS.sleep( 1 );
+          }
+          ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
+          ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
+          if ( future != null ) {
+            return future;
+          } else {
+            throw error;
+          }
+        }
+      } ).get( );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
       LOG.error( ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ) );
     }
-    
   }
   
   public void enable( ) throws ServiceRegistrationException {
@@ -885,7 +911,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public void check( ) throws CheckException {
     List<Throwable> currentErrors = Lists.newArrayList( );
     this.errors.drainTo( currentErrors );
-    if( !currentErrors.isEmpty( ) ) {
+    if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
     }

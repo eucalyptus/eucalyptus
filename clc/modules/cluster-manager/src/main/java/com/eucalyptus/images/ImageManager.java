@@ -231,15 +231,16 @@ public class ImageManager {
       
       @Override
       public boolean apply( BlockDeviceMappingItemType input ) {
-        return rootDevName.equals( input.getDeviceName( ) );
+        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
       }
     };
     if ( request.getImageLocation( ) != null ) {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), manifest );
+      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), manifest );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), checkEbsRoot ) ) {
       BlockDeviceMappingItemType rootBlockDevice = Iterables.find( request.getBlockDeviceMappings( ), checkEbsRoot );
+      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootBlockDevice );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="

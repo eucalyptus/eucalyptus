@@ -64,8 +64,7 @@
 package com.eucalyptus.util.fsm;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
@@ -105,11 +104,12 @@ public class Automata {
     //TODO:GRZE: enforce that the sequence of states denotes a valid transition path
     S currentState = hasFsm.getStateMachine( ).getState( );
     int index = Lists.newArrayList( toStates ).indexOf( currentState );
-    S[] actualStates = toStates; 
-    if( index >= 0 && index < toStates.length ) {
-      actualStates = Arrays.copyOfRange( toStates, index+1, toStates.length );
+    S[] actualStates = toStates;
+    if ( index >= 0 && index < toStates.length ) {
+      actualStates = Arrays.copyOfRange( toStates, index + 1, toStates.length );
     }
-    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: " + Joiner.on( "->" ).join( actualStates ) );
+    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
+               + Joiner.on( "->" ).join( actualStates ) );
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
   }

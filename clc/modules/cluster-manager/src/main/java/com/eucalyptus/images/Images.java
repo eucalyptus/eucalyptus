@@ -5,15 +5,22 @@ import java.util.zip.Adler32;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.State;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.TransactionFireException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.TypeMapping;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
@@ -21,6 +28,7 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
  */
 public class Images {
   private static Logger LOG = Logger.getLogger( Images.class );
+  
   private static String generateImageId( final String imagePrefix, final String imageLocation ) {
     Adler32 hash = new Adler32( );
     String key = imageLocation + System.currentTimeMillis( );
@@ -39,7 +47,7 @@ public class Images {
     LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
     return query.getDisplayName( );
   }
-
+  
   public static class ImageInfoToDetails implements TypeMapping<ImageInfo, ImageDetails> {
     @Override
     public ImageDetails apply( ImageInfo arg0 ) {
@@ -97,13 +105,15 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      if( Image.State.deregistered.equals( img.getState( ) ) ) {
+      if ( Image.State.deregistered.equals( img.getState( ) ) ) {
         db.delete( img );
       } else {
         img.setState( Image.State.deregistered );
       }
       db.commit( );
-      WalrusUtil.invalidate( img );
+      if( img instanceof Image.StaticDiskImage ) {
+        WalrusUtil.invalidate( ( StaticDiskImage ) img );
+      }
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
@@ -160,25 +170,42 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromSnapshot( UserFullName creator, Snapshot snapshot ) {
-    
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, BlockDeviceMappingItemType rootBlockDevice ) throws EucalyptusCloudException {
+    String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+    try {
+      Transactions.one( Snapshot.named( userFullName, snapshotId ), new Tx<Snapshot>( ) {
+        
+        @Override
+        public void fire( Snapshot t ) throws Throwable {
+
+        }
+      } );
+    } catch ( TransactionFireException ex ) {
+      throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
+    } catch ( TransactionException ex ) {
+      LOG.error( ex, ex );
+      throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
+    }
+    return null;
   }
   
-  
-  public static ImageInfo createFromManifest( UserFullName creator, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageName, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
     ImageInfo ret = null;
     switch ( manifest.getImageType( ) ) {
       case kernel:
-        ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ), manifest.getImageLocation( ),
+        ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+                                   imageName, imageDescription, manifest.getImageLocation( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case ramdisk:
-        ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ), manifest.getImageLocation( ),
+        ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+                                    imageName, imageDescription, manifest.getImageLocation( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case machine:
-        ret =  new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ), manifest.getImageLocation( ),
-                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
+        ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+                                    imageName, imageDescription, manifest.getImageLocation( ),
+                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
     }
-    if( ret == null ) {
+    if ( ret == null ) {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
     } else {
       ret.setSignature( manifest.getSignature( ) );
@@ -192,13 +219,15 @@ public class Images {
         db.rollback( );
         throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
       }
-    //TODO:GRZE:RESTORE
+      //TODO:GRZE:RESTORE
 //    for( String p : extractProductCodes( inputSource, xpath ) ) {
 //      imageInfo.addProductCode( p );
 //    }
 //    imageInfo.grantPermission( ctx.getAccount( ) );
       LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-      WalrusUtil.triggerCaching( ret );
+      if( ret instanceof Image.StaticDiskImage ) {
+        WalrusUtil.triggerCaching( ( StaticDiskImage ) ret );
+      }
       return ret;
     }
   }

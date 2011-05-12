@@ -83,7 +83,7 @@ import com.eucalyptus.cloud.Image;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )
-public class RamdiskImageInfo extends ImageInfo {
+public class RamdiskImageInfo extends ImageInfo implements Image.StaticDiskImage {
 
   public RamdiskImageInfo( ) {
     super( );
@@ -95,9 +95,14 @@ public class RamdiskImageInfo extends ImageInfo {
     this.setImageType( Image.Type.ramdisk );
   }
 
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
+  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Architecture arch, Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, imageLocation, arch, platform );
     this.setImageType( Image.Type.ramdisk );
+  }
+
+  @Override
+  public String getImageLocation( ) {
+    return super.getImageLocation( );
   }
 
 }

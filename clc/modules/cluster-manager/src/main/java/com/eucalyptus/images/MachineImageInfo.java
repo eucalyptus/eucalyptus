@@ -81,7 +81,7 @@ import com.eucalyptus.cloud.Image;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "machine" )
-public class MachineImageInfo extends ImageInfo {
+public class MachineImageInfo extends ImageInfo implements Image.StaticDiskImage {
   @Column( name = "image_kernel_id" )
   private String kernelId;
   @Column( name = "image_ramdisk_id" )
@@ -97,13 +97,13 @@ public class MachineImageInfo extends ImageInfo {
     this.setImageType( Image.Type.machine );
   }
 
-  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Architecture arch, Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, imageLocation, arch, platform );
     this.setImageType( Image.Type.machine );
   }
 
-  public MachineImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
+  public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
+    super( userFullName, imageId, imageName, imageDescription, imageLocation, arch, platform );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.setImageType( Image.Type.machine );
@@ -131,5 +131,10 @@ public class MachineImageInfo extends ImageInfo {
 
   public boolean hasRamdisk( ) {
     return this.getRamdiskId( ) != null;
+  }
+
+  @Override
+  public String getImageLocation( ) {
+    return super.getImageLocation( );
   }
 }
