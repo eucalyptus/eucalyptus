@@ -70,7 +70,10 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.VMwareBrokerBindingHandler;
 import com.eucalyptus.ws.handlers.wssecurity.VMwareWsSecHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.broker.vmware.VMwareBroker;
+import com.eucalyptus.component.ComponentPart;
 
+@ComponentPart( VMwareBroker.class )
 public class VMwareSoapPipeline extends FilteredPipeline {
   private static Logger LOG = Logger.getLogger( VMwareSoapPipeline.class );
   @Override

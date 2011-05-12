@@ -1,23 +1,20 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
-
 /*
-  Copyright (c) 2009  Eucalyptus Systems, Inc.
+  Copyright (c) 2010  Eucalyptus Systems, Inc.	
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, only version 3 of the License.
-
+  it under the terms of the GNU General Public License as published by 
+  the Free Software Foundation, only version 3 of the License.  
+ 
   This file is distributed in the hope that it will be useful, but WITHOUT
   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-  for more details.
+  for more details.  
 
   You should have received a copy of the GNU General Public License along
   with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+ 
   Please contact Eucalyptus Systems, Inc., 130 Castilian
-  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
   if you need additional information or have any questions.
 
   This file may incorporate work covered under the following copyright and
@@ -26,7 +23,7 @@
   Software License Agreement (BSD License)
 
   Copyright (c) 2008, Regents of the University of California
-
+  
 
   Redistribution and use of this software in source and binary forms, with
   or without modification, are permitted provided that the following
@@ -55,29 +52,21 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include "storage.h"
-#include "http.h"
 
-int main (int argc, char **argv)
-{
-    printf ("argc=%d\n", argc);
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-    if (argc==5) {
-        return http_put (argv[1], argv[2], argv[3], argv[4]);
+#ifndef EUCA_XML_H
+#define EUCA_XML_H
 
-    } else {
-        printf ("=====> testing storage.c\n");
-        int err = test_cache ();
-        printf ("  error=%d\n", err);
-        return err;
-    }
-}
+#include "data.h"
+
+int gen_instance_xml (const ncInstance * instance);
+int gen_libvirt_xml (const ncInstance * instance, const char * libvirtXsltPath);
+
+#endif

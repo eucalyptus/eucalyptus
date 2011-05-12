@@ -55,18 +55,19 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef WALRUS_H
-#define WALRUS_H
-int walrus_object_by_url (const char * url, const char * outfile, const int do_compress);
-int walrus_object_by_path (const char * path, const char * outfile, const int do_compress);
-int walrus_image_by_manifest_url (const char * url, const char * outfile, const int do_compress);
-int walrus_image_by_manifest_path (const char * manifest_path, const char * outfile, const int do_compress);
-char * walrus_get_digest (const char * url);
-int walrus_verify_digest (const char * url, const char * digest_path);
-//int http_get (const char * url, const char * outfile);
-#endif /* WALRUS_H */
+
+#include "data.h" // ncInstance
+
+#define BACKING_FILE_PERM 0660
+#define BACKING_DIRECTORY_PERM 0771
+
+int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb);
+int create_instance_backing (ncInstance * instance);
+int save_instance_struct (const ncInstance * instance);
+ncInstance * load_instance_struct (const char * instanceId);
+int destroy_instance_backing (ncInstance * instance, int destroy_files);
