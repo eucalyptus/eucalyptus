@@ -167,7 +167,8 @@ class EucaSetup(object):
     def make_dirs(self):
         for dir_name in MakeDirs:
             path = os.path.join(self.config['EUCALYPTUS'], dir_name)
-            os.makedirs(path)
+            if not os.path.isdir(path):
+                os.makedirs(path)
 
     def main(self):
         # check for existence of rootwrap

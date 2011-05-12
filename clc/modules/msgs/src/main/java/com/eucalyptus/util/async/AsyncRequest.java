@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.util.async.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -68,7 +69,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupService( cluster ).getEndpoint( ).enqueue( this );
+    Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupService( cluster ).enqueue( this );
     return this.getResponse( );
   }
   
@@ -78,8 +79,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( ServiceEndpoint serviceEndpoint ) {
-    serviceEndpoint.enqueue( this );
+  public CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceConfig ) {
+    serviceConfig.lookupService( ).enqueue( this );
     return this.getResponse( );
   }
   
@@ -91,13 +92,13 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @throws InterruptedException
    */
   @Override
-  public R sendSync( ServiceEndpoint endpoint ) throws ExecutionException, InterruptedException {
-    return this.execute( endpoint, endpoint.getPipelineFactory( ) ).getResponse( ).get( );
+  public R sendSync( ServiceConfiguration serviceConfig ) throws ExecutionException, InterruptedException {
+    return this.execute( serviceConfig ).getResponse( ).get( );
   }
   
-  public Request<Q, R> execute( ServiceEndpoint endpoint, ChannelPipelineFactory pipelineFactory ) {
+  public Request<Q, R> execute( ServiceConfiguration config ) {
     try {
-      Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + endpoint );
+      Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + config );
       try {
         this.callback.initialize( this.request );
       } catch ( Throwable e ) {
@@ -108,8 +109,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         this.response.setException( ex );
         throw ex;
       }
-      Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + endpoint );
-      if ( !this.handler.fire( endpoint, pipelineFactory, this.request ) ) {
+      Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + config );
+      if ( !this.handler.fire( config, this.request ) ) {
         if ( this.response.isDone( ) ) {
           try {
             R r = this.response.get( 1, TimeUnit.MILLISECONDS );
@@ -218,5 +219,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   protected void setRequest( Q request ) {
     this.request = request;
   }
+
+  @Override
+  public String toString( ) {
+    return String.format( "AsyncRequest:callback=%s", this.callback );
+  }
+  
   
 }

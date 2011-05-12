@@ -713,6 +713,7 @@ public class AccountType extends EuareMessage {
 
 public class DeleteAccountType extends EuareMessage {
   String accountName;
+  Boolean recursive;
   public DeleteAccountType() {  }
 }
 public class DeleteAccountResponseType extends EuareMessage {
@@ -836,4 +837,17 @@ public class DeleteAccountPolicyType extends EuareMessage {
 public class DeleteAccountPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteAccountPolicyResponseType() {  }
+}
+public class GetLdapSyncStatusType extends EuareMessage {
+  public GetLdapSyncStatusType() {  }
+}
+public class GetLdapSyncStatusResponseType extends EuareMessage {
+  GetLdapSyncStatusResultType getLdapSyncStatusResult = new GetLdapSyncStatusResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetLdapSyncStatusResponseType() {  }
+}
+public class GetLdapSyncStatusResultType extends EucalyptusData {
+  Boolean syncEnabled;
+  Boolean inSync;
+  public GetLdapSyncStatusResultType() {  }
 }

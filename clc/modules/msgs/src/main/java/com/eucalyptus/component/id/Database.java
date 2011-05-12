@@ -66,6 +66,7 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Internets;
 import com.google.common.collect.Lists;
 
 public class Database extends ComponentId.Unpartioned {
@@ -81,7 +82,7 @@ public class Database extends ComponentId.Unpartioned {
   
   @Override
   public String getLocalEndpointName( ) {
-    return "mysql://127.0.0.1:8777/eucalyptus";
+    return "mysql://" + Internets.localhost( ) + ":8777/eucalyptus";
   }
   
   @Override

@@ -70,6 +70,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -92,9 +93,9 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Templates;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
@@ -129,7 +130,7 @@ public class ServiceContextManager implements EventListener<Event> {
       doUpdate( );
     }
   }
-
+  
   private Future<?> doUpdate( ) {
     if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
       try {
@@ -145,11 +146,13 @@ public class ServiceContextManager implements EventListener<Event> {
               }
             }
           } );
-        } 
+        }
         if ( this.shouldReload( ) ) {
           this.pendingCount.incrementAndGet( );
         }
-        return ret != null ? ret : Futures.predestinedFuture( null );
+        return ret != null
+          ? ret
+          : Futures.predestinedFuture( null );
       } finally {
         this.canHasWrite.unlock( );
       }
@@ -171,18 +174,18 @@ public class ServiceContextManager implements EventListener<Event> {
       return false;
     }
   }
-
+  
   public static final void restartSync( ) {
     singleton.pendingCount.incrementAndGet( );
     try {
       singleton.doUpdate( ).get( );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
-
+  
   public static final void restart( ) {
     singleton.pendingCount.incrementAndGet( );
   }
@@ -260,10 +263,10 @@ public class ServiceContextManager implements EventListener<Event> {
   
   private static ConfigResource createConfigResource( Component component, String outString ) {
     ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
-    if ( LogLevels.EXTREME ) {
-      CONFIG_LOG.trace( "===================================" );
-      CONFIG_LOG.trace( outString );
-      CONFIG_LOG.trace( "===================================" );
+    if ( Logs.EXTREME ) {
+      Logs.exhaust( ).trace( "===================================" );
+      Logs.exhaust( ).trace( outString );
+      Logs.exhaust( ).trace( "===================================" );
     }
     ConfigResource configRsc = new ConfigResource( component.getComponentId( ).getServiceModelFileName( ), bis );
     return configRsc;
@@ -297,6 +300,13 @@ public class ServiceContextManager implements EventListener<Event> {
     try {
       if ( this.context != null ) {
         try {
+          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+            }
+          }
           this.context.stop( );
           this.context.dispose( );
         } catch ( MuleException ex ) {

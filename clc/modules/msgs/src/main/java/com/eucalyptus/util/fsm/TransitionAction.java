@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,52 +64,71 @@
 package com.eucalyptus.util.fsm;
 
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 
-public abstract class TransitionAction<P extends HasName<P>> {
+/**
+ * <p>
+ * A callback interface which is invoked according to the progress of a transitions between two
+ * states: {@fromState} is the state before the transition and {@toState} is the state
+ * after the transition. The primary purpose of implementing classes is to enforce pre-conditions
+ * and apply side effects corresponding with the change of state. The expectation is that
+ * transitions are applied atomically in the sense that only one can be in progress at a time.
+ * </p>
+ * <p>
+ * The methods are invoked in the following order; their purpose is summarized here with details in
+ * the documentation for each method:
+ * <ol>
+ * <li>{@link #before()}: prior to any change of state -- check preconditions.</li>
+ * <li>{@link #leave()}: on leaving {@code fromState}.</li>
+ * <li>{@link #enter()}: on entering {@code toState}.</li>
+ * <li>
+ * <li>{@link #after(toState)}: after the transition has been completed.</li>
+ * </ol>
+ * </p>
+ * 
+ * @author decker
+ * 
+ * @param <S> enum type of the states in the state machine.
+ */
+public interface TransitionAction<P extends HasName<P>> {
   /**
-   * @see com.eucalyptus.util.fsm.TransitionListener#leave(com.eucalyptus.util.HasName, com.eucalyptus.util.async.Callback.Completion)
-   * @param parent
-   * @param transitionCallback
+   * Invoked before leaving the {@code fromState}. At this time the transition
+   * has not yet begun and can be aborted. A return of false or a caught
+   * exception will stop application of the transition.
+   * 
+   * Implementors should ensure to avoid side-effects.
+   * 
+   * @return false iff the transition should not be executed.
+   */
+  public abstract boolean before( P parent );
+  
+  /**
+   * Applies changes corresponding with leaving {@code fromState} and <strong>signals completion
+   * using the supplied {@link Callback.Completion}</strong>. This method is invoked
+   * when the transition begins and after the state has been changed to {@code toState} but before
+   * any side effects have been applied.
+   * 
+   * Implementors can assume that no other transitions will execute until this
+   * transition has completed.
    */
   public abstract void leave( P parent, Completion transitionCallback );
-
+  
   /**
-   * @see com.eucalyptus.util.fsm.TransitionListener#before(com.eucalyptus.util.HasName)
-   * @param parent
-   * @return
+   * Applies changes corresponding with having entered {@code toState} and is
+   * invoked when the transition completes leaving the state as {@code toState}.
+   * 
+   * Implementors can assume that no other transitions will execute until this
+   * transition has completed.
    */
-  public boolean before( P parent ) {
-    return true;
-  }
-
+  public abstract void enter( P parent );
+  
   /**
-   * @see com.eucalyptus.util.fsm.TransitionListener#enter(com.eucalyptus.util.HasName)
-   * @param parent
+   * Invoked after the transition completes but before any other transition is
+   * evaluated against the underlying state machine.
+   * 
+   * Implementors should ensure to avoid side-effects.
    */
-  public void enter( P parent ) {}
-
-  /**
-   * @see com.eucalyptus.util.fsm.TransitionListener#after(com.eucalyptus.util.HasName)
-   * @param parent
-   */
-  public void after( P parent ) {}
-
-  public static final TransitionAction NOOP = new TransitionAction( ) {
-    public void leave( HasName parent, Completion transitionCallback ) {
-      transitionCallback.fire( );
-    }
-    public String toString( ) {
-      return "TransitionAction.noop";
-    }
-  };
-  public static final TransitionAction OUTOFBAND = new TransitionAction( ) {
-    @Override
-    public void leave( HasName parent, Completion transitionCallback ) {}
-
-    public String toString( ) {
-      return "TransitionAction.OUTOFBAND";
-    }
-
-  };
+  public abstract void after( P parent );
+  
 }

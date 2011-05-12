@@ -220,7 +220,7 @@ public class SystemState {
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }

@@ -46,15 +46,13 @@ struct eucalyptus_opts
   char * home_arg;	/**< @brief Eucalyptus home directory. (default='/opt/grze_eee/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
-  int child_flag;	/**< @brief This system is a child/secondary host. (default=off).  */
-  const char *child_help; /**< @brief This system is a child/secondary host. help description.  */
-  char ** parent_arg;	/**< @brief Host address of parent(s) for bootstrap..  */
-  char ** parent_orig;	/**< @brief Host address of parent(s) for bootstrap. original value given at command line.  */
-  unsigned int parent_min; /**< @brief Host address of parent(s) for bootstrap.'s minimum occurreces */
-  unsigned int parent_max; /**< @brief Host address of parent(s) for bootstrap.'s maximum occurreces */
-  const char *parent_help; /**< @brief Host address of parent(s) for bootstrap. help description.  */
-  int merge_db_flag;	/**< @brief Attempt to merge the database from a parent. (default=off).  */
-  const char *merge_db_help; /**< @brief Attempt to merge the database from a parent. help description.  */
+  int initialize_flag;	/**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. (default=off).  */
+  const char *initialize_help; /**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. help description.  */
+  char ** bind_addr_arg;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address..  */
+  char ** bind_addr_orig;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address. original value given at command line.  */
+  unsigned int bind_addr_min; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address.'s minimum occurreces */
+  unsigned int bind_addr_max; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address.'s maximum occurreces */
+  const char *bind_addr_help; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -91,8 +89,8 @@ struct eucalyptus_opts
   char * err_arg;	/**< @brief Redirect standard error to file. (default='&2').  */
   char * err_orig;	/**< @brief Redirect standard error to file. original value given at command line.  */
   const char *err_help; /**< @brief Redirect standard error to file. help description.  */
-  int remote_dns_flag;	/**< @brief Eucalyptus will not try to bind port 53. (default=off).  */
-  const char *remote_dns_help; /**< @brief Eucalyptus will not try to bind port 53. help description.  */
+  int remote_dns_flag;	/**< @brief eucalyptus-cloud will not try to bind port 53. (default=off).  */
+  const char *remote_dns_help; /**< @brief eucalyptus-cloud will not try to bind port 53. help description.  */
   int disable_iscsi_flag;	/**< @brief Disable ISCSI support for dynamic block storage. (default=off).  */
   const char *disable_iscsi_help; /**< @brief Disable ISCSI support for dynamic block storage. help description.  */
   int disable_cloud_flag;	/**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. (default=off).  */
@@ -137,9 +135,8 @@ struct eucalyptus_opts
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
-  unsigned int child_given ;	/**< @brief Whether child was given.  */
-  unsigned int parent_given ;	/**< @brief Whether parent was given.  */
-  unsigned int merge_db_given ;	/**< @brief Whether merge-db was given.  */
+  unsigned int initialize_given ;	/**< @brief Whether initialize was given.  */
+  unsigned int bind_addr_given ;	/**< @brief Whether bind-addr was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */
   unsigned int kill_given ;	/**< @brief Whether kill was given.  */

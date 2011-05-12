@@ -37,7 +37,13 @@ class RegisterWalrus(AWSQueryRequest):
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Register walruses'
-    Params = [Param(name='Host',
+    Params = [Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the walrus'),
+              Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
@@ -49,13 +55,7 @@ class RegisterWalrus(AWSQueryRequest):
                     ptype='integer',
                     default=8774,
                     optional=True,
-                    doc='Port for the walrus'),
-              Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=True,
-                    doc='Partition for the walrus')]
+                    doc='Port for the walrus')]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',

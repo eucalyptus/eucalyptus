@@ -56,7 +56,7 @@ class ConfigFile(dict):
         if self._save_to_file:
             self._backup()
             cmd_str =  self.ChangeCmd % (key, value, self.path)
-            cmd = eucadmin.command.Command(cmd_str, self.test)
+            cmd = eucadmin.command.Command(cmd_str)
         dict.__setitem__(self, key, value)
 
     def _read_config_data(self):
@@ -76,13 +76,13 @@ class ConfigFile(dict):
     def comment(self, pattern):
         self.backup()
         cmd_str = self.CommentCmd % (pattern, self.path)
-        cmd = eucadmin.command.Command(cmd_str, self.test)
+        cmd = eucadmin.command.Command(cmd_str)
         if pattern in self:
             del self[pattern]
 
     def uncomment(self, pattern):
         self.backup()
         cmd_str = self.UncommentCmd % (pattern, self.path)
-        cmd = eucadmin.command.Command(cmd_str, self.test)
+        cmd = eucadmin.command.Command(cmd_str)
         self['pattern'] = ''
         

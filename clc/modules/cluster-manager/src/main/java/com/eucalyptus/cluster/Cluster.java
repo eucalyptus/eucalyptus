@@ -77,17 +77,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cluster.Cluster.State;
+import com.eucalyptus.cluster.Cluster.Transition;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.ClusterLogMessageCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.cluster.callback.ServiceStateCallback;
 import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.crypto.util.B64;
@@ -111,10 +120,10 @@ import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
-import com.eucalyptus.util.fsm.AtomicMarkedState;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
-import com.eucalyptus.util.fsm.TransitionAction;
+import com.eucalyptus.util.fsm.AbstractTransitionAction;
 import com.eucalyptus.vm.VmType;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -125,7 +134,7 @@ import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasName<Cluster>, EventListener {
   private static Logger                                       LOG            = Logger.getLogger( Cluster.class );
-  private final AtomicMarkedState<Cluster, State, Transition> stateMachine;
+  private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                          configuration;
   private final FullName                                      fullName;
   private final ThreadFactory                                 threadFactory;
@@ -139,7 +148,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public enum State {
     DISABLED, /* just like down, but is explicitly requested */
     DOWN, /* cluster either down, unreachable, or responds with errors */
-    AUTHENTICATING, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
+    AUTHENTICATING, CHECKING_SERVICE, STARTING, STARTING_VMS2, STARTING_RESOURCES, STARTING_NET, STARTING_VMS, STARTING_ADDRS,
     RUNNING_ADDRS, RUNNING_RSC, RUNNING_NET, RUNNING_VMS, /* available */
   }
   
@@ -152,6 +161,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
 //    NETWORK_ERROR, /* any -> DOWN: error reaching cluster host */
 //    CONFIG_ERROR, /* any -> DOWN: configuration error on the cluster */
     INIT_CERTS, /* AUTHENTICATING -> STARTING */
+    INIT_SERVICES,
     INIT_RESOURCES,
     INIT_NET,
     INIT_VMS,
@@ -175,17 +185,17 @@ public class Cluster implements HasName<Cluster>, EventListener {
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.DOWN ) {
       {
         //when entering state DOWN
-        in( State.DOWN ).run( new Callback<State>( ) {
+        in( State.DOWN ).run( new Callback<Cluster>( ) {
           @Override
-          public void fire( State t ) {
+          public void fire( Cluster t ) {
             Cluster.this.transitionIfSafe( Transition.START );
           }
         } );
         
         //when entering state AUTHENTICATING
-        in( State.AUTHENTICATING ).run( new Callback<State>( ) {
+        in( State.AUTHENTICATING ).run( new Callback<Cluster>( ) {
           @Override
-          public void fire( State t ) {
+          public void fire( Cluster t ) {
             Cluster.this.transitionIfSafe( Transition.INIT_CERTS );
           }
         } );
@@ -198,6 +208,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.INIT_CERTS )//
         .from( State.AUTHENTICATING ).to( State.STARTING ).error( State.DOWN ).run( newRefresh( ClusterCertsCallback.class ) );
         
+        on( Transition.INIT_SERVICES ).from( State.CHECKING_SERVICE ).to( State.STARTING ).error( State.STARTING ).run( newRefresh( ServiceStateCallback.class ) );
         on( Transition.INIT_RESOURCES ).from( State.STARTING ).to( State.STARTING_RESOURCES ).error( State.DOWN ).run( newRefresh( ResourceStateCallback.class ) );
         on( Transition.INIT_NET ).from( State.STARTING_RESOURCES ).to( State.STARTING_NET ).error( State.DOWN ).run( newRefresh( NetworkStateCallback.class ) );
         on( Transition.INIT_VMS ).from( State.STARTING_NET ).to( State.STARTING_VMS ).error( State.DOWN ).run( newRefresh( VmStateCallback.class ) );
@@ -213,7 +224,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
         on( Transition.ENABLE ).from( State.DISABLED ).to( State.DOWN ).noop( );
         
       }
-    }.newAtomicState( );
+    }.newAtomicMarkedState( );
   }
   
   private FullName getFullName( ) {
@@ -231,10 +242,6 @@ public class Cluster implements HasName<Cluster>, EventListener {
       LOG.error( ex, ex );
     } catch ( ExistingTransitionException ex ) {
     }
-  }
-  
-  public ServiceEndpoint getServiceEndpoint( ) {
-    return Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupService( this.configuration ).getEndpoint( );
   }
   
   public X509Certificate getClusterCertificate( ) {
@@ -301,11 +308,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public RegisterClusterType getWeb( ) {
     String host = this.getConfiguration( ).getHostName( );
     int port = 0;
-    try {
-      URI uri = new URI( this.getConfiguration( ).getUri( ) );
-      host = uri.getHost( );
-      port = uri.getPort( );
-    } catch ( URISyntaxException e ) {}
+    URI uri = this.getConfiguration( ).getUri( );
+    host = uri.getHost( );
+    port = uri.getPort( );
     return new RegisterClusterType( this.getConfiguration( ).getPartition( ), this.getName( ), host, port );
   }
   
@@ -319,7 +324,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   public void start( ) {
     Clusters.getInstance( ).register( this );
-    this.getServiceEndpoint( ).start( );
+    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
@@ -327,7 +332,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public void stop( ) {
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-    this.getServiceEndpoint( ).stop( );
+    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     Clusters.getInstance( ).registerDisabled( this );
   }
   
@@ -359,7 +364,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
     return true;
   }
   
-  public String getUri( ) {
+  public URI getUri( ) {
     return this.configuration.getUri( );
   }
   
@@ -387,7 +392,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   public String toString( ) {
     StringBuilder buf = new StringBuilder( );
     buf.append( "Cluster " ).append( this.configuration ).append( '\n' );
-    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getServiceEndpoint( ) ).append( '\n' );
+    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getConfiguration( ).lookupService( ).getEndpoint( ) ).append( '\n' );
     for ( NodeInfo node : this.nodeMap.values( ) ) {
       buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " node=" ).append( node ).append( '\n' );
     }
@@ -500,8 +505,8 @@ public class Cluster implements HasName<Cluster>, EventListener {
    * @param nextState
    * @return
    */
-  private TransitionAction<Cluster> newRefresh( final Class msgClass ) {
-    return new TransitionAction<Cluster>( ) {
+  private AbstractTransitionAction<Cluster> newRefresh( final Class msgClass ) {
+    return new AbstractTransitionAction<Cluster>( ) {
       private final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = Callbacks.newSubjectMessageFactory( msgClass, Cluster.this );
       
       @Override
@@ -530,11 +535,12 @@ public class Cluster implements HasName<Cluster>, EventListener {
         //TODO: retry.
         try {
           if ( ClusterLogMessageCallback.class.isAssignableFrom( msgClass ) ) {
+            ComponentId glId = ComponentIds.lookup( GatherLogService.class );
+            ServiceConfiguration conf = parent.getConfiguration( );
             Callbacks.newRequest( this.factory.newInstance( ) ).then( cb )
-                     .execute( parent.getServiceEndpoint( ), com.eucalyptus.component.id.ClusterController.getLogClientPipeline( ) )
-                     .getResponse( ).get( );
+                     .sendSync(  ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ), glId.makeRemoteUri( conf.getHostName( ), conf.getPort() ) ) ); 
           } else {
-            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getServiceEndpoint( ) );
+            Callbacks.newRequest( this.factory.newInstance( ) ).then( cb ).sendSync( parent.getConfiguration( ) );
           }
         } catch ( ExecutionException e ) {
           if ( e.getCause( ) instanceof FailedRequestException ) {
@@ -569,7 +575,7 @@ public class Cluster implements HasName<Cluster>, EventListener {
   
   private void updateVolatiles( ) {
     try {
-      Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getServiceEndpoint( ) );
+      Callbacks.newRequest( new VmPendingCallback( this ) ).sendSync( this.getConfiguration( ) );
     } catch ( ExecutionException ex ) {
       Exceptions.trace( ex );
     } catch ( InterruptedException ex ) {
@@ -587,6 +593,9 @@ public class Cluster implements HasName<Cluster>, EventListener {
           break;
         case AUTHENTICATING:
           this.stateMachine.startTransition( Transition.INIT_CERTS );
+          break;
+        case CHECKING_SERVICE:
+          this.stateMachine.startTransition( Transition.INIT_SERVICES );
           break;
         case STARTING:
           this.stateMachine.startTransition( Transition.INIT_RESOURCES );

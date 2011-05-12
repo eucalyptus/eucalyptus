@@ -137,8 +137,8 @@ public class Hosts {
           if( !empyrean.hasService( ephemeralConfig ) ) {
             try {
               empyrean.loadService( ephemeralConfig ).get();
-              ServiceEndpoint endpoint = empyrean.lookupService( ephemeralConfig ).getEndpoint( );
-              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), endpoint );
+              ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
+              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
               Mbeans.register( entry );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex , ex );

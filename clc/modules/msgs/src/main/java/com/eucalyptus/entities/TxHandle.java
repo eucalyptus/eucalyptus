@@ -16,8 +16,8 @@ import org.hibernate.event.EventListeners;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {

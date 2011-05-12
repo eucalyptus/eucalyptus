@@ -223,7 +223,7 @@ public class VmControl {
           try {
             VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getPlacement( ) );
+              Callbacks.newRequest( new RebootCallback( v.getInstanceId( ) ).regarding( request ) ).dispatch( v.getClusterName( ) );
               return true;
             } else {
               return false;
@@ -269,12 +269,12 @@ public class VmControl {
     } else {
       Cluster cluster = null;
       try {
-        cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+        cluster = Clusters.getInstance( ).lookup( v.getClusterName( ) );
       } catch ( NoSuchElementException e1 ) {
-        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPlacement( ) + "' related to vm: " + request.getInstanceId( ) );
+        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getClusterName( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+      Callbacks.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     }
   }
   
@@ -375,11 +375,11 @@ public class VmControl {
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
         
-        Cluster cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+        Cluster cluster = Clusters.getInstance( ).lookup( v.getClusterName( ) );
         
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( v.getBundleTask( ) );
-        Callbacks.newClusterRequest( new CancelBundleCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new CancelBundleCallback( request ) ).dispatch( cluster.getConfiguration( ) );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
@@ -423,7 +423,7 @@ public class VmControl {
         BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
         request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );
-        Callbacks.newClusterRequest( callback ).dispatch( v.getPlacement( ) );
+        Callbacks.newClusterRequest( callback ).dispatch( v.getClusterName( ) );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
@@ -442,13 +442,13 @@ public class VmControl {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {
-        cluster = Clusters.getInstance( ).lookup( v.getPlacement( ) );
+        cluster = Clusters.getInstance( ).lookup( v.getClusterName( ) );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       if ( v.getPasswordData( ) == null ) {
-        Callbacks.newClusterRequest( new PasswordDataCallback( request ) ).dispatch( cluster.getServiceEndpoint( ) );
+        Callbacks.newClusterRequest( new PasswordDataCallback( request ) ).dispatch( cluster.getConfiguration( ) );
       } else {
         GetPasswordDataResponseType reply = request.getReply( );
         reply.set_return( true );

@@ -2,6 +2,8 @@ package com.eucalyptus.auth.ldap;
 
 import java.util.List;
 import java.util.Set;
+import javax.naming.InvalidNameException;
+import javax.naming.ldap.LdapName;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
@@ -20,6 +22,8 @@ import com.google.common.collect.Sets;
 public class LicParser {
   
   private static final Logger LOG = Logger.getLogger( LicParser.class );
+  
+  private static final String COMMENT = "_comment";
   
   private static final String LDAP_URL_PREFIX = "ldap://";
   
@@ -113,6 +117,9 @@ public class LicParser {
     JSONObject groupsPartition = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.GROUPS_PARTITION );
     for ( Object t : groupsPartition.keySet( ) ) {
       String partitionName = ( String ) t;
+      if ( partitionName.equalsIgnoreCase( COMMENT ) ) {
+        continue;
+      }
       Set<String> groupSet = Sets.newHashSet( );
       groupSet.addAll( JsonUtils.getArrayByType( String.class, groupsPartition, partitionName ) );
       lic.getGroupsPartition( ).put( partitionName, groupSet );
@@ -125,7 +132,7 @@ public class LicParser {
   private void parseAccountingGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject accountingGroups = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.ACCOUNTING_GROUPS );
     lic.setAccountingGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ACCOUNTING_GROUP_BASE_DN ) ) );
-    lic.setAccountingGroups( parseSelection( accountingGroups ) );
+    lic.setAccountingGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, accountingGroups, LicSpec.SELECTION ) ) );
     lic.setAccountingGroupIdAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ) );
     lic.setGroupsAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) );
   }
@@ -133,7 +140,7 @@ public class LicParser {
   private void parseGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject groups = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.GROUPS );
     lic.setGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.GROUP_BASE_DN ) ) );
-    lic.setGroups( parseSelection( groups ) );
+    lic.setGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, groups, LicSpec.SELECTION ) ) );
     lic.setGroupIdAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.ID_ATTRIBUTE ) );
     lic.setUsersAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) );
   }
@@ -141,29 +148,47 @@ public class LicParser {
   private void parseUsers( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject users = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.USERS );
     lic.setUserBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, users, LicSpec.USER_BASE_DN ) ) );
-    lic.setUsers( parseSelection( users ) );
+    lic.setUsersSelection( parseSelection( JsonUtils.getByType( JSONObject.class, users, LicSpec.SELECTION ) ) );
     lic.setUserIdAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.ID_ATTRIBUTE ) );
-    lic.getUserInfoAttributes( ).addAll( JsonUtils.getArrayByType( String.class, users, LicSpec.USER_INFO_ATTRIBUTES ) );
     lic.setPasswordAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.PASSWORD_ATTRIBUTE ) );
+    parseUserInfoMap( ( JSONObject ) JsonUtils.getByType( JSONObject.class, users, LicSpec.USER_INFO_ATTRIBUTES ), lic );
   }
   
-  private SetFilter parseSelection( JSONObject obj ) {
-    try {
-      SetFilter filter = new SetFilter( );
-      String which = JsonUtils.checkBinaryOption( obj, LicSpec.SELECT, LicSpec.NOT_SELECT );
-      if ( LicSpec.SELECT.equals( which ) ) {
-        filter.setComplement( false );
-      } else {
-        filter.setComplement( true );
+  private void parseUserInfoMap( JSONObject map, LdapIntegrationConfiguration lic ) throws JSONException {
+    for ( Object m : map.keySet( ) ) {
+      String attr = ( String ) m;
+      if ( attr.equalsIgnoreCase( COMMENT ) ) {
+        continue;
       }
-      filter.addAll( JsonUtils.getArrayByType( String.class, obj, which ) );
-      return filter;
-    } catch ( JSONException e ) {
-      // Return a contain-all filter, i.e. *
-      return new SetFilter( true );
+      String name = JsonUtils.getByType( String.class, map, attr );
+      lic.getUserInfoAttributes( ).put( attr, name );
     }
   }
+
+  private Selection parseSelection( JSONObject obj ) throws JSONException {
+    Selection selection = new Selection( );
+    selection.setSearchFilter( JsonUtils.getRequiredByType( String.class, obj, LicSpec.FILTER ) );
+    if ( selection.getSearchFilter( ) == null ) {
+      throw new JSONException( "Empty search filter is not allowed" );
+    }
+    selection.getSelected( ).addAll( JsonUtils.getArrayByType( String.class, obj, LicSpec.SELECT ) );
+    validateDnSet( selection.getSelected( ) );
+    selection.getNotSelected( ).addAll( JsonUtils.getArrayByType( String.class, obj, LicSpec.NOT_SELECT ) );
+    validateDnSet( selection.getSelected( ) );
+    selection.getSelected( ).removeAll( selection.getNotSelected( ) );
+    return selection;
+  }
   
+  private void validateDnSet( Set<String> selected ) throws JSONException {
+    try {
+      for ( String dn : selected ) {
+        new LdapName( dn );
+      }
+    } catch ( InvalidNameException e ) {
+      throw new JSONException( "Invalid DN name", e );
+    }
+  }
+
   private void parseSyncConfig( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject sync = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.SYNC );
     lic.setEnableSync( "true".equalsIgnoreCase( JsonUtils.getRequiredByType( String.class, sync, LicSpec.ENABLE_SYNC ) ) );

@@ -41,8 +41,8 @@ install: build
 	@$(INSTALL) -m 755 euca_ipt $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca_upgrade $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
-	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
+#	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
+#	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 euca_vmware $(DESTDIR)$(datarootdir)/eucalyptus
@@ -56,6 +56,9 @@ install: build
 	@$(INSTALL) -m 644 libvirt-kvm-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 libvirt-xen-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 755 getstats.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 euca-lictool $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus
 
 uninstall: 
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
@@ -78,3 +81,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_sync_key
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_vmware
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
+	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
