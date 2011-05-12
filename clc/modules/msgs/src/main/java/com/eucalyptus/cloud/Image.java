@@ -47,6 +47,10 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
     xen, kvm, vmware
   }
   
+  public enum DeviceMappingType {
+    suppress, ephemeral, blockstorage
+  }
+  
   public enum Architecture {
     i386, x86_64
   }

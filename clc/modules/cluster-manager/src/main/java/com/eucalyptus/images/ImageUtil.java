@@ -321,13 +321,6 @@ public class ImageUtil {
     return kernelId;
   }
   
-  public static String[] getImagePathParts( String imageLocation ) throws EucalyptusCloudException {
-    String[] imagePathParts = imageLocation.split( "/" );
-    if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException(
-                                                                          "Image registration failed:  Invalid image location." );
-    return imagePathParts;
-  }
-  
   public static void checkBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {
     String userName = null;
     Context ctx = Contexts.lookup( );

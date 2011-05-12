@@ -106,7 +106,8 @@ import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -116,7 +117,7 @@ import com.google.common.collect.Lists;
 public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   @Transient
-  private static Logger         LOG          = Logger.getLogger( ImageInfo.class );
+  private static Logger         LOG            = Logger.getLogger( ImageInfo.class );
   
   @Column( name = "metadata_image_path" )
   private String                imageLocation;
@@ -142,11 +143,15 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<LaunchPermission> permissions  = new HashSet<LaunchPermission>( );
+  private Set<LaunchPermission> permissions    = new HashSet<LaunchPermission>( );
   
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<ProductCode>      productCodes = new HashSet<ProductCode>( );
+  private Set<ProductCode>      productCodes   = new HashSet<ProductCode>( );
+  
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<DeviceMapping>    deviceMappings = new HashSet<DeviceMapping>( );
   
   @Transient
   private FullName              fullName;
@@ -275,6 +280,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     }
     return this;
   }
+  
   public List<String> listProductCodes( ) {
     final List<String> prods = Lists.newArrayList( );
     try {
@@ -282,7 +288,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          for( ProductCode p : t.getProductCodes( ) ) {
+          for ( ProductCode p : t.getProductCodes( ) ) {
             prods.add( p.getValue( ) );
           }
         }
@@ -292,6 +298,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     }
     return prods;
   }
+  
   public List<String> listLaunchPermissions( ) {
     final List<String> perms = Lists.newArrayList( );
     try {
@@ -299,7 +306,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          for( LaunchPermission p : t.getPermissions( ) ) {
+          for ( LaunchPermission p : t.getPermissions( ) ) {
             perms.add( p.getAccountId( ) );
           }
         }
@@ -309,7 +316,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     }
     return perms;
   }
-
+  
   public ImageInfo resetProductCodes( ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
@@ -324,7 +331,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     }
     return this;
   }
-
+  
   public ImageInfo revokePermission( final Account account ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
@@ -413,14 +420,14 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public void setImageType( Type imageType ) {
     this.imageType = imageType;
   }
-
+  
   public boolean addProductCode( final String prodCode ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
         public void fire( ImageInfo t ) throws Throwable {
-          t.getProductCodes().add( new ProductCode( t, prodCode ) );
+          t.getProductCodes( ).add( new ProductCode( t, prodCode ) );
         }
       }
                   );

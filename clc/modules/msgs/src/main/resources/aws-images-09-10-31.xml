@@ -71,7 +71,7 @@
 
   <mapping name="RegisterImage" class="edu.ucsb.eucalyptus.msgs.RegisterImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="imageLocation" field="imageLocation" />
+    <value name="imageLocation" field="imageLocation" usage="optional"/>
     <value name="name" field="name" usage="optional" />
     <value name="description" field="description" usage="optional" />
     <value name="architecture" field="architecture" usage="optional" />
