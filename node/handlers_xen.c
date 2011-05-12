@@ -74,10 +74,10 @@ permission notice:
 
 #include "ipc.h"
 #include "misc.h"
-#include <handlers.h>
-#include <storage.h>
-#include <eucalyptus.h>
-#include <euca_auth.h>
+#include "handlers.h"
+#include "eucalyptus.h"
+#include "euca_auth.h"
+#include "backing.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -105,6 +105,7 @@ static int doInitialize (struct nc_state_t *nc)
     snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
+        nc->capability = HYPERVISOR_XEN_AND_HARDWARE; // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
 
         /* check connection is fresh */
         if (!check_hypervisor_conn()) {
@@ -205,14 +206,13 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   instance = find_instance(&global_instances, instanceId);
   if (instance) {
     snprintf(userId, 48, "%s", instance->userId);
+  	snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
   }
   sem_v (inst_sem);
   if (!instance) {
     logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
     return(1);
   }
-
-  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), userId, instanceId);
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
     fd = open(console_file, O_RDONLY);
@@ -238,7 +238,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
   if (getuid() != 0) {
     snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
-    snprintf(dest_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), userId, instanceId);
+    snprintf(dest_file, MAX_PATH, "%s/console.log", instance->instancePath);
     snprintf(cmd, MAX_PATH, "%s cp %s %s", nc->rootwrap_cmd_path, console_file, dest_file);
     rc = system(cmd);
     if (!rc) {
@@ -427,7 +427,7 @@ doAttachVolume (	struct nc_state_t *nc,
 
         sem_p (inst_sem);
         volume = add_volume (instance, volumeId, remoteDev, localDevReal, localDevReal, "attached");
-	scSaveInstanceInfo(instance); /* to enable NC recovery */
+	save_instance_struct (instance); // for surviving restart
         sem_v (inst_sem);
         if (is_iscsi_target) {
 	    if (local_iscsi_dev) free(local_iscsi_dev);

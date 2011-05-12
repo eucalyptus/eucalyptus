@@ -86,6 +86,7 @@ void usage (void)
 			 "\t\bundleInstance\t\t[-i]\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
+             "\t\t-l \t\t- local invocation => do not use WSSEC\n"
              "\t\t-h \t\t- this help information\n"
              "\t\t-w [host:port] \t- Walrus endpoint\n"
              "\t\t-n [host:port] \t- NC endpoint\n"
@@ -183,16 +184,20 @@ int main (int argc, char **argv)
     char ** group_names = NULL;
     int group_names_size = 0;
 	char * command = NULL;
+        int local = 0;
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "hdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:")) != -1) {
+	while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
             break;
         case 'd':
             debug = 1;
+            break;
+        case 'l':
+            local = 1;
             break;
         case 'n':
             nc_hostport = optarg; 
@@ -344,7 +349,7 @@ int main (int argc, char **argv)
     strncpy (si->uris[0], walrus_url, sizeof (si->uris[0]));
     si->urisLen = 1;
 
-    if (use_wssec) {
+    if (use_wssec && !local) {
         if (debug) printf ("using policy file %s\n", policyFile);
         rc = InitWSSEC(stub->env, stub->stub, policyFile);
         if (rc) {
@@ -388,6 +393,7 @@ int main (int argc, char **argv)
         mac_addr [0] = 'b';
         mac_addr [1] = 'b';
 	privIp = strdup("10.0.0.202");
+        srand (time (NULL));
 
         /* generate random IDs if they weren't specified*/
 #define C rand()%26 + 97
@@ -446,8 +452,7 @@ int main (int argc, char **argv)
 	    for (i=0; i<EUCA_MAX_VBRS; i++) {
 	      if (strlen(outInst->params.virtualBootRecord[i].typeName)>0) count++;
 	    }
-            printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count);
-            free_instance(&outInst);
+            printf("instanceId=%s stateCode=%d stateName=%s deviceMappings=%d/%d\n", outInst->instanceId, outInst->stateCode, outInst->stateName, count, outInst->params.virtualBootRecordLen);
         }
     
         /***********************************************************/
@@ -583,5 +588,9 @@ int main (int argc, char **argv)
         exit (1);
     }
     
-    exit(0);
+    if (local) {
+        pthread_exit(NULL);
+    } else {
+        _exit(0);
+    }
 }

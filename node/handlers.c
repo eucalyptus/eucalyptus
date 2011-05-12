@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -82,20 +85,28 @@ permission notice:
 #include "eucalyptus-config.h"
 #include "ipc.h"
 #include "misc.h"
+#include "backing.h"
+#include "diskutil.h"
 #define HANDLERS_FANOUT
-#include <handlers.h>
-#include <storage.h>
-#include <eucalyptus.h>
-#include <euca_auth.h>
+#include "handlers.h"
+#include "eucalyptus.h"
+#include "euca_auth.h"
+#include "xml.h"
 
-#include <windows-bundle.h>
-
+#include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
+
+#ifdef EUCA_COMPILE_TIMESTAMP
+static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
+#else
+static char * compile_timestamp_str = "";
+#endif
 
 /* used by lower level handlers */
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
+sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
 
 bunchOfInstances *global_instances = NULL; 
 
@@ -389,71 +400,6 @@ refresh_instance_info(	struct nc_state_t *nc,
     }
 }
 
-int
-get_instance_xml(	const char *gen_libvirt_cmd_path,
-			char *userId,
-			char *instanceId,
-			char *platform,
-			char *ramdiskId,
-			char *kernelId,
-			char *disk_path,
-			virtualMachine *params,
-			char *privMac,
-			//			char *privIp,
-			char *brname,
-			int use_virtio_net,
-			int use_virtio_root,
-			char **xml)
-{
-    char buf [MAX_PATH];
-
-    snprintf(buf, MAX_PATH, "%s", gen_libvirt_cmd_path);
-    if (use_virtio_net) {
-        strncat(buf, " --virtionet", MAX_PATH);
-    }
-    if (use_virtio_root) {
-        strncat(buf, " --virtioroot", MAX_PATH);
-    }
-
-    if (!strstr(platform, "windows")) {
-      if (strnlen(ramdiskId, CHAR_BUFFER_SIZE) && strnlen(kernelId, CHAR_BUFFER_SIZE)) {
-	strcat(buf, " --ramdisk --kernel");
-	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk --kernel", gen_libvirt_cmd_path);
-      } else if (strnlen(ramdiskId, CHAR_BUFFER_SIZE)) {
-	strcat(buf, " --ramdisk");
-	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --ramdisk", gen_libvirt_cmd_path);
-      } else if (strnlen(kernelId, CHAR_BUFFER_SIZE)) {
-	strcat(buf, " --kernel");
-	//        snprintf (buf, CHAR_BUFFER_SIZE, "%s --kernel", gen_libvirt_cmd_path);
-      }
-    }
-
-    if (params->disk > 0) { /* TODO: get this info from scMakeImage */
-        strncat (buf, " --ephemeral", MAX_PATH);
-    }
-    * xml = system_output (buf);
-    if ( ( * xml ) == NULL ) {
-        logprintfl (EUCAFATAL, "%s: %s\n", gen_libvirt_cmd_path, strerror (errno));
-        return ERROR;
-    }
-    
-    /* the tags better be not substring of other tags: BA will substitute
-     * ABABABAB */
-    replace_string (xml, "BASEPATH", disk_path);
-    replace_string (xml, "SWAPPATH", disk_path);
-    replace_string (xml, "NAME", instanceId);
-    replace_string (xml, "PRIVMACADDR", privMac);
-    //    replace_string (xml, "PUBMACADDR", pubMac);
-    replace_string (xml, "BRIDGEDEV", brname);
-    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->mem * 1024); /* because libvirt wants memory in Kb, while we use Mb */
-    replace_string (xml, "MEMORY", buf);
-    snprintf(buf, CHAR_BUFFER_SIZE, "%d", params->cores);
-    replace_string (xml, "VCPUS", buf);
-    
-    return 0;
-}
-
-
 void *
 monitoring_thread (void *arg)
 {
@@ -517,27 +463,24 @@ monitoring_thread (void *arg)
                 continue;
             }
 
-	    // time out logic for STAGING or BOOTING or BUNDLING instances
+            // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state==STAGING  
-		&& (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+                && (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
-		&& (now - instance->bootTime)     < booting_cleanup_threshold) continue;
-	    if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
+                && (now - instance->bootTime)     < booting_cleanup_threshold) continue;
+            if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
                 && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
             if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
                 && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
-
-            /* ok, it's been condemned => destroy the files */
-            if (!nc_state.save_instance_files) {
-				logprintfl (EUCAINFO, "cleaning up state for instance %s\n", instance->instanceId);
-	      if (scCleanupInstanceImage(instance->userId, instance->instanceId)) {
-                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
-	      }
-	    } else {
-	      logprintfl (EUCAINFO, "cleaning up state for instance %s (but keeping the files)\n", instance->instanceId);
-	    }
             
-            /* check to see if this is the last instance running on vlan, handle local networking information drop */
+            // ok, it's been condemned => destroy the files
+            int destroy_files = !nc_state.save_instance_files;
+            logprintfl (EUCAINFO, "cleaning up state for instance %s%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
+            if (destroy_instance_backing (instance, destroy_files)) {
+                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
+            }
+            
+            // check to see if this is the last instance running on vlan, handle local networking information drop
             int left = 0;
             bunchOfInstances * vnhead;
             for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {
@@ -572,16 +515,6 @@ monitoring_thread (void *arg)
     return NULL;
 }
 
-static void build_id_and_url (const virtualBootRecord * vbr, char * id, char * url)
-{
-    id [0] = '\0';
-    url [0] = '\0';
-    if (vbr) {
-        strncpy (id, vbr->id, SMALL_CHAR_BUFFER_SIZE);
-        strncpy (url, vbr->preparedResourceLocation, CHAR_BUFFER_SIZE);
-    }
-}
-
 void *startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
@@ -593,92 +526,78 @@ void *startup_thread (void * arg)
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        return NULL;
+        goto free;
     }
     
+    // set up networking
     error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
-    if ( error ) {
+    if (error) {
         logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-        return NULL;
+        goto free;
     }
     error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
     if (error) {
-      logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
-      change_state(instance, SHUTOFF);
-      return(NULL);
+        logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        goto free;
     }
-
+    strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+    if (nc_state.config_use_virtio_net) {
+        instance->params.nicType = NIC_TYPE_VIRTIO;
+    } else {
+        if (strstr(instance->platform, "windows")) {
+            instance->params.nicType = NIC_TYPE_WINDOWS;
+        } else {
+            instance->params.nicType = NIC_TYPE_LINUX;
+        }
+    }
     logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
 
-    char imageURL   [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.image, instance->imageId, imageURL);
-    char kernelURL  [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.kernel, instance->kernelId, kernelURL);
-    char ramdiskURL [CHAR_BUFFER_SIZE]; build_id_and_url (instance->params.ramdisk, instance->ramdiskId, ramdiskURL);
+    strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
+    instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
+    instance->combinePartitions = nc_state.convert_to_disk; 
 
-    error = scMakeInstanceImage (nc_state.home, 
-				 instance->userId, 
-                                 instance->imageId, imageURL,
-                                 instance->kernelId, kernelURL,
-                                 instance->ramdiskId, ramdiskURL,
-                                 instance->instanceId, instance->keyName, 
-				 instance->platform, &disk_path, 
-				 addkey_sem, nc_state.convert_to_disk,
-				 instance->params.disk*1024);
-    if (error) {
+    char xslt_path [1024];
+    snprintf (xslt_path, sizeof (xslt_path), "%s/etc/eucalyptus/libvirt.xsl", nc_state.home);
+    if ((error = create_instance_backing (instance))
+        || (error = gen_instance_xml (instance))
+        || (error = gen_libvirt_xml (instance, xslt_path))) {
+        
         logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
-	if (brname) free(brname);
-        return NULL;
+        goto free;
     }
-	if (instance->state==TEARDOWN) { // timed out in STAGING
-		if (brname) free(brname);
-        return NULL;
-	}
+    xml = file2str (instance->libvirtFilePath);
+
+    if (instance->state==TEARDOWN) { // timed out in STAGING
+        goto free;
+    }
     if (instance->state==CANCELED) {
         logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
-	if (brname) free(brname);
-        return NULL;
+        goto free;
     }
     
-    error = get_instance_xml (nc_state.gen_libvirt_cmd_path,
-		              instance->userId, instance->instanceId, 
-			      instance->platform,
-			      instance->ramdiskId,
-			      instance->kernelId,
-                              disk_path, 
-                              &(instance->params), 
-                              instance->ncnet.privateMac, 
-                              brname,
-                              nc_state.config_use_virtio_net,
-                              nc_state.config_use_virtio_root,
-                              &xml);
+    save_instance_struct (instance); // to enable NC recovery
 
-    if (brname) free(brname);
-    if (xml) logprintfl (EUCADEBUG2, "libvirt XML config:\n%s\n", xml);
-    if (error) {
-        logprintfl (EUCAFATAL, "Failed to create libvirt XML config for instance %s\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        return NULL;
-    }
-    
-    scStoreStringToInstanceFile (instance->userId, instance->instanceId, "libvirt.xml", xml); /* for debugging */
-    scSaveInstanceInfo(instance); /* to enable NC recovery */
-
-    /* we serialize domain creation as hypervisors can get confused with
-     * too many simultaneous create requests */
+    // serialize domain creation as hypervisors can get confused with
+    // too many simultaneous create requests 
     logprintfl (EUCADEBUG2, "about to start domain %s\n", instance->instanceId);
     print_running_domains ();
+
     for (i=0; i<5 && dom == NULL; i++) {
       sem_p (hyp_sem);
+      sem_p (loop_sem);
       dom = virDomainCreateLinux (nc_state.conn, xml, 0);
+      sem_v (loop_sem);
       sem_v (hyp_sem);
     }
-    if (xml) free(xml);
+
     if (dom == NULL) {
         logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
         change_state (instance, SHUTOFF);
-        return NULL;
+        goto free;
     }
     eventlog("NC", instance->userId, "", "instanceBoot", "begin"); // TODO: bring back correlationId
     
@@ -699,6 +618,10 @@ void *startup_thread (void * arg)
       change_state (instance, BOOTING);
     }
     sem_v (inst_sem);
+ free:
+
+    if (xml) free (xml);
+    if (brname) free (brname);
     return NULL;
 }
 
@@ -764,7 +687,7 @@ void adopt_instances()
 		if (!strcmp(dom_name, "Domain-0"))
 			continue;
 
-		if ((instance = scRecoverInstanceInfo (dom_name))==NULL) {
+		if ((instance = load_instance_struct (dom_name))==NULL) {
 			logprintfl (EUCAWARN, "WARNING: failed to recover Eucalyptus metadata of running domain %s, ignoring it\n", dom_name);
 			continue;
 		}
@@ -802,7 +725,7 @@ static int init (void)
 	struct handlers ** h; 
 	long long fs_free_blocks = 0;
 	long long fs_block_size  = 0;
-	long long instances_bytes = 0;
+	long long instances_bytes = 0; // TODO: get this value from instace backing code
 	pthread_t tcb;
 
 	if (initialized>0) /* 0 => hasn't run, -1 => failed, 1 => ok */
@@ -823,6 +746,7 @@ static int init (void)
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
 	logfile(log, EUCADEBUG);
+        logprintfl (EUCAINFO, "Eucalyptus node controller initializing %s\n", compile_timestamp_str);
 
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
@@ -864,6 +788,8 @@ static int init (void)
 	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
 	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
 
+        add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
+
 	if (euca_init_cert ()) {
 	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
 	  return 1;
@@ -876,10 +802,15 @@ static int init (void)
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem) {
-		logprintfl (EUCAFATAL, "failed to create and initialize a semaphore\n");
+	if (!hyp_sem || !inst_sem || !addkey_sem) {
+		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
 	}
+
+    if (diskutil_init() || (loop_sem = diskutil_get_loop_sem())==NULL) {
+        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+		return ERROR_FATAL;
+    }
 
 	/* set default in the paths. the driver will override */
 	nc_state.config_network_path[0] = '\0';
@@ -889,11 +820,27 @@ static int init (void)
 	nc_state.get_info_cmd_path[0] = '\0';
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
-	/* prompt the SC to read the configuration too */
-	if (scInitConfig()) {
-		logprintfl (EUCAFATAL, "ERROR: scInitConfig() failed\n");
-		return ERROR_FATAL;
+        // backing store configuration
+        int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
+        int work_size_mb = DEFAULT_NC_WORK_SIZE;
+        GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
+        GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
+        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+	if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+            logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+            return ERROR_FATAL;
 	}
+	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
+		logprintfl(EUCAWARN, "Failed to stat %s\n", instance_path);
+	}  else {
+		nc_state.disk_max = (long long)fs.f_bsize * (long long)fs.f_bavail + instances_bytes; /* max for Euca, not total */
+		nc_state.disk_max /= BYTES_PER_DISK_UNIT;
+		if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
+			nc_state.disk_max = nc_state.config_max_disk;
+
+		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, instance_path);
+	}
+        if (instance_path) free (instance_path);
 
 	/* determine the hypervisor to use */
 	
@@ -958,30 +905,6 @@ static int init (void)
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
-
-	/* cleanup from previous runs and verify integrity of
-	 * instances directory */
-	sem_p (inst_sem);
-	instances_bytes = scFSCK (&global_instances);
-	sem_v (inst_sem);
-	if (instances_bytes < 0) {
-		logprintfl (EUCAFATAL, "instances store failed integrity check (error=%lld)\n", instances_bytes);
-		return ERROR_FATAL;
-	}
-	
-	/* get disk max */
-	strncpy(log, scGetInstancePath(), MAX_PATH);
-
-	if (statfs(log, &fs) == -1) {
-		logprintfl(EUCAWARN, "Failed to stat %s\n", log);
-	}  else {
-		nc_state.disk_max = (long long)fs.f_bsize * (long long)fs.f_bavail + instances_bytes; /* max for Euca, not total */
-		nc_state.disk_max /= BYTES_PER_DISK_UNIT;
-		if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
-			nc_state.disk_max = nc_state.config_max_disk;
-
-		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, log);
-	}
 
 	// set NC helper path
 	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
