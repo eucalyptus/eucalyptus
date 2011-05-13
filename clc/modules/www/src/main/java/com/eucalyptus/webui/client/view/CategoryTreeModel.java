@@ -42,7 +42,8 @@ public class CategoryTreeModel implements TreeViewModel {
     ImageResource type( );
     @Source( "image/arrow_down_12x12_gray.png" )
     ImageResource down( );
-    
+    @Source( "image/dollar_12x11_gray.png" )
+    ImageResource dollar( );    
 
   }
   
@@ -103,6 +104,7 @@ public class CategoryTreeModel implements TreeViewModel {
       imageMap.put( images.type( ).getName( ), AbstractImagePrototype.create( images.type( ) ).getHTML( ) );
       imageMap.put( images.group( ).getName( ), AbstractImagePrototype.create( images.group( ) ).getHTML( ) );
       imageMap.put( images.down( ).getName( ), AbstractImagePrototype.create( images.down( ) ).getHTML( ) );
+      imageMap.put( images.dollar( ).getName( ), AbstractImagePrototype.create( images.dollar( ) ).getHTML( ) );
     }    
   }
   

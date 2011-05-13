@@ -50,7 +50,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     list.add( new CategoryItem( "Configuration", "System configurations", "config", "config:" ) );
     tags.add( new CategoryTag( "System", list ) );
     list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Account", "Accounts", "group", "account:" ) );
+    list.add( new CategoryItem( "Account", "Accounts", "dollar", "account:" ) );
     list.add( new CategoryItem( "Group", "User groups", "group", "group:" ) );
     list.add( new CategoryItem( "User", "Users", "user", "user:" ) );
     tags.add( new CategoryTag( "Identity", list ) );
