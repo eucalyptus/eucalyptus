@@ -6,6 +6,7 @@ import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
+import com.eucalyptus.reporting.s3.S3UsageLog;
 import com.eucalyptus.util.ExposedCommand;
 
 /**
@@ -266,6 +267,25 @@ public class FalseDataGenerator
 
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
 	}
+
+	
+	@ExposedCommand
+	public static void removeAllData()
+	{
+		System.out.println(" ----> REMOVING ALL DATA");
+
+		InstanceUsageLog.getInstanceUsageLog().purgeLog(Long.MAX_VALUE);		
+	}
+	
+	@ExposedCommand
+	public static void setWriteIntervalMs(String writeIntervalMs)
+	{
+		System.out.println(" ----> SET WRITE INTERVAL");
+		
+		long writeIntervalMsl = Long.parseLong(writeIntervalMs);
+		ReportingBootstrapper.getInstanceListener().setWriteIntervalMs(writeIntervalMsl);
+	}
+	
 
 	public static void printFalseData()
 	{

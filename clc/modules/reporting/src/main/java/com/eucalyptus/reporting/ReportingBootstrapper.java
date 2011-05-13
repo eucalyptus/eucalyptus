@@ -28,7 +28,7 @@ public class ReportingBootstrapper
 
 	private StorageEventPoller storagePoller;
 	private StorageEventListener storageListener;
-	private InstanceEventListener instanceListener;
+	private static InstanceEventListener instanceListener = null;
 	private S3EventListener s3Listener;
 	private QueueFactory queueFactory;
 	private QueueBroker queueBroker;
@@ -120,13 +120,7 @@ public class ReportingBootstrapper
 			 */
 			QueueReceiver instanceReceiver =
 				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
-			if (instanceListener == null) {
-				instanceListener = new InstanceEventListener();
-				log.info("New instance listener instantiated");
-			} else {
-				log.info("Used existing instance listener");
-			}
-			instanceReceiver.addEventListener(instanceListener);
+			instanceReceiver.addEventListener(getInstanceListener());
 
 
 			QueueReceiver s3Receiver =
@@ -202,20 +196,16 @@ public class ReportingBootstrapper
 		}
 	}
 
+	public static InstanceEventListener getInstanceListener()
+	{
+		if (instanceListener == null)
+			instanceListener = new InstanceEventListener();
+		return instanceListener;
+	}
+
 
 	/* Following methods are used by the testing framework only
 	 */
-
-	/**
-	 * This method is used by the testing framework only. It inserts its own
-	 * event listener which extends the normal one but makes up fake
-	 * timestamps. 
-	 */
-	public void setOverriddenInstanceEventListener(
-			InstanceEventListener overriddenListener)
-	{
-		this.instanceListener = overriddenListener;
-	}
 
 	/**
 	 * This method is used by the testing framework only. 
@@ -225,4 +215,5 @@ public class ReportingBootstrapper
 		return this.storagePoller;
 	}
 
+	
 }

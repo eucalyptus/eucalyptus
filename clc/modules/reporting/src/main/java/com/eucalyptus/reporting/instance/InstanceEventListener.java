@@ -13,17 +13,19 @@ public class InstanceEventListener
 {
 	private static Logger log = Logger.getLogger( InstanceEventListener.class );
 
-	private static long WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
+	private static final long DEFAULT_WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
 
 	private final Set<String> recentlySeenUuids;
 	private final List<InstanceUsageSnapshot> recentUsageSnapshots;
 	private long lastWriteMs;
-
+	private long writeIntervalMs;
+	
 	public InstanceEventListener()
 	{
 		this.recentlySeenUuids = new HashSet<String>();
 		this.recentUsageSnapshots = new ArrayList<InstanceUsageSnapshot>();
 		this.lastWriteMs = 0l;
+		this.writeIntervalMs = DEFAULT_WRITE_INTERVAL_SECS * 1000;
 	}
 
 	public void fireEvent( Event e )
@@ -74,7 +76,7 @@ public class InstanceEventListener
 			   */
 			  recentUsageSnapshots.add(insUsageSnapshot);
 
-			  if (receivedEventMs > (lastWriteMs + WRITE_INTERVAL_SECS*1000)) {
+			  if (receivedEventMs > (lastWriteMs + getWriteIntervalMs())) {
 				  for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
 					  entityWrapper.recast(InstanceUsageSnapshot.class).add(ius);
 					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
@@ -119,5 +121,16 @@ public class InstanceEventListener
 	{
 		return System.currentTimeMillis();
 	}
+
 	
+	public long getWriteIntervalMs()
+	{
+		return writeIntervalMs;
+	}
+
+	public void setWriteIntervalMs(long writeIntervalMs)
+	{
+		this.writeIntervalMs = writeIntervalMs;
+	}
+
 }
