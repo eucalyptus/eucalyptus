@@ -145,28 +145,43 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
+  @Transient
   private final FullName                              owner;
   private final String                                clusterName;
   private final String                                partition;
   private final byte[]                                userData;
+  @Transient
   private final List<Network>                         networks      = Lists.newArrayList( );
+  @Transient
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
+  @Transient
   private String                                      platform;
+  @Transient
   private VmKeyInfo                                   keyInfo;
+  @Transient
   private VmTypeInfo                                  vmTypeInfo;
   
+  @Transient
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
+  @Transient
   private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  @Transient
   private final StopWatch                             stopWatch     = new StopWatch( );
+  @Transient
   private final StopWatch                             updateWatch   = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
+  @Transient
   private SystemState.Reason                          reason;
+  @Transient
   private final List<String>                          reasonDetails = Lists.newArrayList( );
+  @Transient
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
+  @Transient
   private Boolean                                     privateNetwork;
   private Long                                        blockBytes    = 0l;
   private Long                                        networkBytes  = 0l;

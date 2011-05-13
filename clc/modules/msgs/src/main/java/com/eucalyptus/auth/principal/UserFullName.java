@@ -73,8 +73,8 @@ public class UserFullName extends AccountFullName implements FullName {
   private static Logger LOG = Logger.getLogger( UserFullName.class );
   private final String userId;
   private final String userName;
-  private UserFullName( User user ) throws AuthException {
-    super( Accounts.lookupAccountFullNameByUserId( user.getUserId( ) ), "user", user.getName( ) );
+  private UserFullName( Account account, User user ) throws AuthException {
+    super( account, "user", user.getName( ) );
     this.userId = user.getUserId( );
     this.userName = user.getName( );
   }
@@ -90,16 +90,19 @@ public class UserFullName extends AccountFullName implements FullName {
   public static UserFullName getInstance( User user ) {
     try {
       if( user == null ) {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
-      } else if( user == FakePrincipals.SYSTEM_USER ) {
-        return new UserFullName( FakePrincipals.SYSTEM_USER );
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+      } else if( FakePrincipals.SYSTEM_USER.equals( user ) ) {
+        return new UserFullName( FakePrincipals.SYSTEM_ACCOUNT, FakePrincipals.SYSTEM_USER );
+      } else if( FakePrincipals.NOBODY_USER.equals( user ) ) {
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
       } else {
-        return new UserFullName( user );
+        Account account = user.getAccount( );
+        return new UserFullName( account, user );
       }
     } catch ( AuthException ex ) {
       LOG.error( ex.getMessage( ) );
       try {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
       } catch ( AuthException ex1 ) {
         LOG.error( ex1 , ex1 );
         throw new UndeclaredThrowableException( ex );
