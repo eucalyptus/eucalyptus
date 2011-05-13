@@ -144,11 +144,8 @@ public class CreateVmInstances {
   }
   
   private VmInstance getVmInstance( UserFullName userFullName, VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmInstance vmInst = new VmInstance( reservationId,
-                                        index - 1,
-                                        VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ),
-                                        userFullName,
-                                        token.getCluster( ),
+    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ), reservationId, 
+                                        index - 1, token.getCluster( ),
                                         vmAllocInfo.getUserData( ),
                                         vmAllocInfo.getKeyInfo( ),
                                         vmAllocInfo.getVmTypeInfo( ),

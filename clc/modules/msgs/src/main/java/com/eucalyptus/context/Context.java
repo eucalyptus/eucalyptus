@@ -108,9 +108,12 @@ public class Context {
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
-        return Accounts.lookupUserFullNameByName( effectiveUserId );
+        return UserFullName.getInstance( Accounts.lookupUserByName( effectiveUserId ) );
       } catch ( RuntimeException ex ) {
         LOG.error( ex );
+        return UserFullName.getInstance( this.getUser( ) );
+      } catch ( AuthException ex ) {
+        LOG.error( ex , ex );
         return UserFullName.getInstance( this.getUser( ) );
       }
     } else {

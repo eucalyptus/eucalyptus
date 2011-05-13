@@ -93,11 +93,11 @@ public class ImageConfiguration extends AbstractPersistent {
   private Boolean       defaultVisibility;
   
   @ConfigurableField( displayName = "default_kernel_id", description = "The default used for running images which do not have a kernel specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_kernel_id", nullable = false )
+  @Column( name = "config_image_default_kernel_id" )
   private String        defaultKernelId;
   
   @ConfigurableField( displayName = "default_ramdisk_id", description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_ramdisk_id", nullable = false )
+  @Column( name = "config_image_default_ramdisk_id" )
   private String        defaultRamdiskId;
   
   protected ImageConfiguration( ) {

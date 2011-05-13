@@ -64,10 +64,15 @@
 package com.eucalyptus.component;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.config.ConfigurationService;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
@@ -94,21 +99,44 @@ public class ComponentRegistrationHandler {
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        component.startTransition( newComponent ).addListener( new Runnable( ) {
+        final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
+        future.addListener( new Runnable( ) {
           
           @Override
           public void run( ) {
-            try {
-              component.enableTransition( newComponent ).get( );
-            } catch ( IllegalStateException ex ) {
-              LOG.error( ex, ex );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex, ex );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
+            if( !future.isDone( ) ) {
+              LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
+            }
+            for( int i = 0; i < 10; i++ ) {
+              try {
+                future.get( 100, TimeUnit.MILLISECONDS );
+                try {
+                  component.enableTransition( newComponent ).get( );
+                } catch ( IllegalStateException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  continue;
+                } catch ( ExecutionException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  break;
+                } catch ( InterruptedException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  Thread.currentThread( ).interrupt( );
+                  break;
+                }
+              } catch ( TimeoutException ex1 ) {
+                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
+                continue;
+              } catch ( ExecutionException ex1 ) {
+                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
+                break;
+              } catch ( InterruptedException ex1 ) {
+                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
+                Thread.currentThread( ).interrupt( );
+                break;
+              }
             }
           }
-        } );
+        }, Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ) );//NOTE: use a thread other than the calling thread.
         
       } catch ( Throwable ex ) {
         builder.remove( newComponent );

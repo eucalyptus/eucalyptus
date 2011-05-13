@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,88 +61,73 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.blockstorage;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.FullName;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.ws.client.ServiceDispatcher;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
-public class UserFullName extends AccountFullName implements FullName {
-  private static Logger LOG = Logger.getLogger( UserFullName.class );
-  private final String userId;
-  private final String userName;
-  private UserFullName( User user ) throws AuthException {
-    super( user.getAccount( ), "user", user.getName( ) );
-    this.userId = user.getUserId( );
-    this.userName = user.getName( );
-  }
-  
-  public static UserFullName getInstance( String userId ) {
-    try {
-      return getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new UndeclaredThrowableException( ex );
-    }
-    
-  }
-  public static UserFullName getInstance( User user ) {
-    try {
-      if( user == null ) {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
-      } else if( user == FakePrincipals.SYSTEM_USER ) {
-        return new UserFullName( FakePrincipals.SYSTEM_USER );
-      } else {
-        return new UserFullName( user );
-      }
-    } catch ( AuthException ex ) {
-      LOG.error( ex.getMessage( ) );
+public class Snapshots {
+  private static Logger LOG = Logger.getLogger( Snapshots.class );
+  static Snapshot initializeSnapshot( Context ctx, EntityWrapper<Snapshot> db, Volume vol, ServiceConfiguration sc ) {
+    String newId = null;
+    Snapshot snap = null;
+    while ( true ) {
+      newId = Crypto.generateId( ctx.getUserFullName( ).getUniqueId( ), SnapshotManager.ID_PREFIX );
       try {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
-      } catch ( AuthException ex1 ) {
-        LOG.error( ex1 , ex1 );
-        throw new UndeclaredThrowableException( ex );
+        db.getUnique( Snapshot.named( newId ) );
+      } catch ( EucalyptusCloudException e ) {
+        snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
+        snap.setVolumeSize( vol.getSize( ) );
+        db.add( snap );
+        break;
       }
-    } catch ( Exception ex ) {
-      throw new UndeclaredThrowableException( ex );
     }
+    return snap;
   }
 
-  @Override
-  public String getUniqueId( ) {
-    return this.userId;
+  static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
+    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    try {
+      Transactions.one( Snapshot.named( snap.getDisplayName( ) ), new Callback<Snapshot>( ) {
+        
+        @Override
+        public void fire( Snapshot t ) {
+          try {
+            CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
+            CreateStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
+            snap.setMappedState( scReply.getStatus( ) );
+          } catch ( EucalyptusCloudException ex ) {
+            throw new UndeclaredThrowableException( ex );
+          }
+        }
+      } );
+    } catch ( ExecutionException ex ) {
+      SnapshotManager.LOG.error( ex.getCause( ), ex.getCause( ) );
+      throw new EucalyptusCloudException( ex );
+    }
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ),
+                                                                   snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex, ex );
+    }
+    return snap;
   }
 
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.userId == null )
-      ? 0
-      : this.userId.hashCode( ) );
-    return result;
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    UserFullName other = ( UserFullName ) obj;
-    if ( this.userId == null ) {
-      if ( other.userId != null ) return false;
-    } else if ( !this.userId.equals( other.userId ) ) return false;
-    return true;
-  }
-
-  public String getUserId( ) {
-    return this.userId;
-  }
-
-  public String getUserName( ) {
-    return this.userName;
-  }
 }

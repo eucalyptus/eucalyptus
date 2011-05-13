@@ -273,7 +273,7 @@ public class SystemState {
     try {
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      UserFullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
+      UserFullName ownerId = UserFullName.getInstance( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
       if ( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
@@ -322,9 +322,9 @@ public class SystemState {
           try {
             //TODO:GRZE:RESTORE
             try {
-              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameByUserId( runVm.getOwnerId( ) ), netName ).getVmNetwork( );
+              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), netName ).getVmNetwork( );
             } catch ( Exception e ) {
-              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameByUserId( runVm.getOwnerId( ) ), "default" ).getVmNetwork( );
+              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), "default" ).getVmNetwork( );
             }
             networks.add( notwork );
             NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
@@ -341,7 +341,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
+      VmInstance vm = new VmInstance( ownerId, instanceId, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );

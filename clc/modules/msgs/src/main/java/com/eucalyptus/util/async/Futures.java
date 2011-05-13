@@ -51,10 +51,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 import com.eucalyptus.util.fsm.Automata;
@@ -123,22 +126,35 @@ public class Futures {
                       
                       @Override
                       public void run( ) {
-                        try {
-                          resultFuture.set( secondFuture.get( ) );
-                        } catch ( final ExecutionException ex ) {
-                          resultFuture.setException( ex );
-                        } catch ( final InterruptedException ex ) {
-                          Automata.LOG.error( "BUG BUG BUG Interrupted calling .get() on a Future which isDone(): " + ex.getMessage( ), ex );
-                          Thread.currentThread( ).interrupt( );
-                          resultFuture.setException( ex );
+                        if ( !secondFuture.isDone( ) ) {
+                          LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
+                        }
+                        Exception lastEx = null;
+                        for ( int i = 0; i < 10; i++ ) {
+                          try {
+                            P res = secondFuture.get( 100, TimeUnit.MILLISECONDS );
+                            resultFuture.set( secondFuture.get( ) );
+                            return;
+                          } catch ( final ExecutionException ex ) {
+                            resultFuture.setException( ex );
+                            return;
+                          } catch ( final InterruptedException ex ) {
+                            Automata.LOG.error( "BUG BUG BUG Interrupted calling .get() on a Future which isDone(): " + ex.getMessage( ), ex );
+                            resultFuture.setException( ex );
+                            Thread.currentThread( ).interrupt( );
+                            return;
+                          } catch ( TimeoutException ex ) {
+                            Logs.exhaust( ).error( ex );
+                            lastEx = ex;
+                            continue;
+                          }
                         }
                       }
-                    } );
+                    }, Threads.lookup( Empyrean.class, Futures.class, secondCall.getClass( ).getCanonicalName( ) ) );
                   } catch ( final Exception ex ) {
                     resultFuture.setException( ex );
                   }
                 }
-                
               } catch ( final ExecutionException ex ) {
                 resultFuture.setException( ex.getCause( ) );
               } catch ( final InterruptedException ex ) {
@@ -146,7 +162,7 @@ public class Futures {
                 resultFuture.setException( ex );
               }
             }
-          } );
+          }, Threads.lookup( Empyrean.class, Futures.class, firstCall.getClass( ).getCanonicalName( ) ) );
         } catch ( final Exception ex ) {
           Automata.LOG.error( ex, ex );
           resultFuture.setException( ex );

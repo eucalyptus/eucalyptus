@@ -72,6 +72,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -100,7 +101,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   localDevice;
   @Transient
   private FullName fullName;
-  
+
   public Volume( ) {
     super( );
   }
@@ -124,21 +125,25 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     this.setDisplayName( displayName );
   }
   
-  public static Volume named( final UserFullName userFullName, String volumeId ) {
+  public static Volume named( String volumeId ) {
+    return named( null, volumeId );
+  }
+  
+  public static Volume named( final FullName fullName, String volumeId ) {
     //Volume v = new Volume( userFullName, volumeId );
     String accountId = null;
-    if ( userFullName != null ) {
-      accountId = userFullName.getAccountNumber( );
+    if ( fullName != null ) {
+      accountId = fullName.getNamespace( );
     }
     Volume v = new Volume( accountId, volumeId );
     return v;
   }
   
-  public static Volume ownedBy( final UserFullName userFullName ) {
+  public static Volume ownedBy( final FullName userFullName ) {
     //Volume v = new Volume( userFullName, null );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountNumber( );
+      accountId = userFullName.getNamespace( );
     }
     Volume v = new Volume( accountId, null );
     return v;

@@ -61,6 +61,7 @@
 package com.eucalyptus.cluster;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -77,6 +78,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import org.infinispan.util.concurrent.TimeoutException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.DisableServiceCallback;
@@ -118,6 +120,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -134,6 +137,7 @@ import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -149,95 +153,96 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   /**
    * 
    */
-  private static final int CLUSTER_STARTUP_SYNC_RETRIES = 15;
+  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 15;
   /**
    * 
    */
-  private static final long                              STATE_INTERVAL_ENABLED  = 10l;
+  private static final long                              STATE_INTERVAL_ENABLED       = 10l;
   /**
    * 
    */
-  private static final long                              STATE_INTERVAL_DISABLED = 10l;
+  private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   /**
    * 
    */
-  private static final long                              STATE_INTERVAL_NOTREADY = 10l;
+  private static final long                              STATE_INTERVAL_NOTREADY      = 10l;
   /**
    * 
    */
-  private static final long                              STATE_INTERVAL_PENDING  = 3l;
-  private static Logger                                  LOG                     = Logger.getLogger( Cluster.class );
+  private static final long                              STATE_INTERVAL_PENDING       = 3l;
+  private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
   private final ThreadFactory                            threadFactory;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
-  private final BlockingQueue<Throwable>                 errors                  = new LinkedBlockingDeque<Throwable>( );
+  private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
-  private NodeLogInfo                                    lastLog                 = new NodeLogInfo( );
-  private boolean                                        hasClusterCert          = false;
-  private boolean                                        hasNodeCert             = false;
-  private final Predicate<Cluster>                       COMPONENT_IS_DISABLED   = new Predicate<Cluster>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public boolean apply( final Cluster input ) {
-                                                                                     if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
-                                                                                       try {
-                                                                                         AsyncRequests.newRequest( new DisableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
-                                                                                         return true;
-                                                                                       } catch ( ExecutionException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       } catch ( InterruptedException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       }
-                                                                                     } else {
-                                                                                       return false;
-                                                                                     }
-                                                                                   }
-                                                                                 };
-  private final Predicate<Cluster>                       COMPONENT_IS_ENABLED    = new Predicate<Cluster>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public boolean apply( final Cluster input ) {
-                                                                                     if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
-                                                                                       try {
-                                                                                         AsyncRequests.newRequest( new EnableServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
-                                                                                         return true;
-                                                                                       } catch ( ExecutionException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       } catch ( InterruptedException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       }
-                                                                                     } else {
-                                                                                       return false;
-                                                                                     }
-                                                                                   }
-                                                                                 };
-  private final Predicate<Cluster>                       COMPONENT_IS_STARTED    = new Predicate<Cluster>( ) {
-                                                                                   
-                                                                                   @Override
-                                                                                   public boolean apply( final Cluster input ) {
-                                                                                     if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
-                                                                                       try {
-                                                                                         AsyncRequests.newRequest( new StartServiceCallback( Cluster.this ) ).dispatch( Cluster.this.configuration ).get( );
-                                                                                         return true;
-                                                                                       } catch ( ExecutionException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       } catch ( InterruptedException ex ) {
-                                                                                         Cluster.this.errors.add( ex.getCause( ) );
-                                                                                         return false;
-                                                                                       }
-                                                                                     } else {
-                                                                                       return false;
-                                                                                     }
-                                                                                   }
-                                                                                 };
+  private NodeLogInfo                                    lastLog                      = new NodeLogInfo( );
+  private boolean                                        hasClusterCert               = false;
+  private boolean                                        hasNodeCert                  = false;
+  
+  enum ComponentStatePredicates implements Predicate<Cluster> {
+    STARTED {
+      
+      @Override
+      public boolean apply( final Cluster input ) {
+        if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
+          try {
+            AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
+            return true;
+          } catch ( ExecutionException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          } catch ( InterruptedException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    },
+    ENABLED {
+      @Override
+      public boolean apply( final Cluster input ) {
+        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+          try {
+            AsyncRequests.newRequest( new EnableServiceCallback( input ) ).dispatch( input.configuration ).get( );
+            return true;
+          } catch ( ExecutionException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          } catch ( InterruptedException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    },
+    DISABLED {
+      @Override
+      public boolean apply( final Cluster input ) {
+        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+          try {
+            AsyncRequests.newRequest( new DisableServiceCallback( input ) ).dispatch( input.configuration ).get( );
+            return true;
+          } catch ( ExecutionException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          } catch ( InterruptedException ex ) {
+            input.errors.add( ex.getCause( ) );
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    };
+  }
   
   enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
     LOGS( LogDataCallback.class ),
@@ -289,6 +294,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     private Refresh( final Class refresh ) {
       this.refresh = refresh;
     }
+    
+    private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
+                                                                                                    WebServicesException.class );
+    private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
+                                                                                                    ExecutionException.class );
     
     @Override
     public TransitionAction<Cluster> apply( final Cluster cluster ) {
@@ -362,7 +372,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
-        this.from( State.PENDING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( Cluster.this.COMPONENT_IS_STARTED );
+        this.from( State.PENDING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( Cluster.ComponentStatePredicates.STARTED );
         this.from( State.STARTING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( LogRefresh.CERTS );
         this.from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( Refresh.SERVICEREADY );
         this.from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
@@ -370,10 +380,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
         this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
-        this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.this.COMPONENT_IS_ENABLED );
+        this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ComponentStatePredicates.ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
-        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.this.COMPONENT_IS_DISABLED );
+        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ComponentStatePredicates.DISABLED );
         
         this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
@@ -550,23 +560,26 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                       State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
           CheckedListenableFuture<Cluster> future = null;
           Exception error = null;
-          for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-            try {
-              transition.call( ).get( );
-              break;
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              error = ex;
+          try {
+            for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+              try {
+                transition.call( ).get( );
+                break;
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+                error = ex;
+              }
+              TimeUnit.SECONDS.sleep( 1 );
             }
-            TimeUnit.SECONDS.sleep( 1 );
-          }
-          ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
-          ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
-          if ( future != null ) {
-            return future;
-          } else {
-            throw error;
-          }
+          } finally {
+            ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
+            ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
+            if ( future != null ) {
+              return future;
+            } else {
+              throw error != null ? error : new TimeoutException( "Timed out trying to perform transition start() on cluster " + Cluster.this.configuration.getFullName( ) );
+            }
+          }          
         }
       } ).get( );
     } catch ( InterruptedException ex ) {
@@ -574,6 +587,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       LOG.error( ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ) );
+      Logs.exhaust( ).error( ex.getCause( ), ex.getCause( ) );
     }
   }
   

@@ -523,7 +523,6 @@ public class ServiceTransitions {
                           EventType.COMPONENT_SERVICE_START,
                           config.getFullName( ).toString( ), config.toString( ) ).debug( );
         LifecycleEvents.start( config );
-        
       }
     },
     FIRE_STOP_EVENT {

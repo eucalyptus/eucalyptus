@@ -67,6 +67,7 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.entities.EntityWrapper;
@@ -165,10 +166,10 @@ public class Partitions {
   }
   
   @Deprecated
-  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) throws NoSuchServiceException {
+  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
     if ( services.isEmpty( ) ) {
-      throw new NoSuchServiceException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
+      throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
     } else {
       return services.first( );
     }

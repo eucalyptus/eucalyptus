@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,88 +61,78 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.vm
 
-import java.lang.reflect.UndeclaredThrowableException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.FullName;
-import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.Date;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.Filter;
+import com.eucalyptus.binding.HttpParameterMapping;
 
-public class UserFullName extends AccountFullName implements FullName {
-  private static Logger LOG = Logger.getLogger( UserFullName.class );
-  private final String userId;
-  private final String userName;
-  private UserFullName( User user ) throws AuthException {
-    super( user.getAccount( ), "user", user.getName( ) );
-    this.userId = user.getUserId( );
-    this.userName = user.getName( );
-  }
-  
-  public static UserFullName getInstance( String userId ) {
-    try {
-      return getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new UndeclaredThrowableException( ex );
-    }
-    
-  }
-  public static UserFullName getInstance( User user ) {
-    try {
-      if( user == null ) {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
-      } else if( user == FakePrincipals.SYSTEM_USER ) {
-        return new UserFullName( FakePrincipals.SYSTEM_USER );
-      } else {
-        return new UserFullName( user );
-      }
-    } catch ( AuthException ex ) {
-      LOG.error( ex.getMessage( ) );
-      try {
-        return new UserFullName( FakePrincipals.NOBODY_USER );
-      } catch ( AuthException ex1 ) {
-        LOG.error( ex1 , ex1 );
-        throw new UndeclaredThrowableException( ex );
-      }
-    } catch ( Exception ex ) {
-      throw new UndeclaredThrowableException( ex );
-    }
-  }
+public class VmBundleMessage extends EucalyptusMessage {
+}
 
-  @Override
-  public String getUniqueId( ) {
-    return this.userId;
-  }
+public class BundleInstanceType extends VmBundleMessage {
+  String instanceId;
+  @HttpParameterMapping(parameter="Storage.S3.Bucket")
+  String bucket;
+  @HttpParameterMapping(parameter="Storage.S3.Prefix")
+  String prefix;
+  @HttpParameterMapping(parameter="Storage.S3.AWSAccessKeyId")
+  String awsAccessKeyId;
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicy")
+  String uploadPolicy;
+  @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
+  String uploadPolicySignature;
+  String url;
+  String userKey;
+}
+public class BundleInstanceResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class CancelBundleTaskType extends VmBundleMessage {
+  String bundleId;
+  String instanceId;
+}
+public class CancelBundleTaskResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+public class BundleTaskState extends EucalyptusData {
+  String instanceId;
+  String state;
+}
+public class DescribeBundleTasksType extends VmBundleMessage {
+  @HttpParameterMapping (parameter = "BundleId")
+  ArrayList<String> bundleIds = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+}
+public class DescribeBundleTasksResponseType extends VmBundleMessage {
+  ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
+  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
+}
 
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.userId == null )
-      ? 0
-      : this.userId.hashCode( ) );
-    return result;
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    UserFullName other = ( UserFullName ) obj;
-    if ( this.userId == null ) {
-      if ( other.userId != null ) return false;
-    } else if ( !this.userId.equals( other.userId ) ) return false;
-    return true;
-  }
-
-  public String getUserId( ) {
-    return this.userId;
-  }
-
-  public String getUserName( ) {
-    return this.userName;
+public class BundleTask extends EucalyptusData {
+  String instanceId;
+  String bundleId;
+  String state;
+  Date startTime;
+  Date updateTime;
+  String progress;
+  String bucket;
+  String prefix;
+  String errorMessage;
+  String errorCode;
+  public BundleTask() {}
+  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
+    this.bundleId = bundleId;
+    this.instanceId = instanceId;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.state = "pending";
+    this.startTime = new Date();
+    this.updateTime = new Date();
+    this.progress = "0%";
   }
 }

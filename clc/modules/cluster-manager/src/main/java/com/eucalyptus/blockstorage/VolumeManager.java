@@ -79,9 +79,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.NoSuchComponentException;
-import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
@@ -143,12 +141,7 @@ public class VolumeManager {
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
-    ServiceConfiguration sc;
-    try {
-      sc = Partitions.lookupService( Storage.class, request.getAvailabilityZone( ) );
-    } catch ( NoSuchComponentException ex ) {
-      throw new EucalyptusCloudException( ex.getMessage( ), ex );
-    }
+    ServiceConfiguration sc = Partitions.lookupService( Storage.class, request.getAvailabilityZone( ) );
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     if ( request.getSnapshotId( ) != null ) {
       try {
@@ -234,13 +227,7 @@ public class VolumeManager {
         db.commit( );
         return reply;
       }
-      ServiceConfiguration sc;
-      try {
-        sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
-      } catch ( NoSuchComponentException ex ) {
-        LOG.error( ex , ex );
-        throw new EucalyptusCloudException( "Failed to lookup SC for volume: " + vol + " because of: " + ex.getMessage( ), ex );
-      }
+      ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
       DeleteStorageVolumeResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
@@ -376,20 +363,8 @@ public class VolumeManager {
     if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, request.getVolumeId( ), volume.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
-    ServiceConfiguration sc;
-    try {
-      sc = Partitions.lookupService( Storage.class, volume.getPartition( ) );
-    } catch ( NoSuchComponentException ex ) {
-      LOG.error( ex , ex );
-      throw new EucalyptusCloudException( "Failed to lookup SC for volume: " + volume + " because of: " + ex.getMessage( ), ex );
-    }
-    ServiceConfiguration scVm;
-    try {
-      scVm = Partitions.lookupService( Storage.class, cluster.getName( ) );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
-    }
+    ServiceConfiguration sc = Partitions.lookupService( Storage.class, volume.getPartition( ) );
+    ServiceConfiguration scVm = Partitions.lookupService( Storage.class, cluster.getName( ) );
     if ( !sc.equals( scVm ) ) {
       throw new EucalyptusCloudException( "Can only attach volumes in the same cluster: " + request.getVolumeId( ) );
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {

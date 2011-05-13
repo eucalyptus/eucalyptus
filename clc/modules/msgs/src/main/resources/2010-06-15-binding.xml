@@ -65,6 +65,7 @@
   <namespace uri="http://ec2.amazonaws.com/doc/2010-06-15/" default="elements" />
   <include path="aws-base.xml" />
   <include path="aws-instances-09-10-31.xml" />
+  <include path="aws-bundling.xml" />
   <include path="aws-images-09-10-31.xml" />
   <include path="aws-image-attr.xml" />
   <include path="aws-ips.xml" />

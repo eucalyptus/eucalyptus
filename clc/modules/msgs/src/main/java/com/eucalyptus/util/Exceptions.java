@@ -2,6 +2,7 @@ package com.eucalyptus.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.google.common.base.Predicate;
@@ -34,6 +35,10 @@ public class Exceptions {
     }
     p.close( );
     return os.toString( );
+  }
+  
+  public static <T extends Throwable> UndeclaredThrowableException undeclared( String message, T ex ) {
+    return new UndeclaredThrowableException( ex, message );
   }
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {

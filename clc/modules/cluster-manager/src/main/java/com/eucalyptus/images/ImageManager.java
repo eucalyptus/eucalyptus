@@ -82,8 +82,11 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.ResourceLookup;
@@ -102,6 +105,7 @@ import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -276,7 +280,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ),
-                                   Accounts.lookupUserFullNameById( imgInfo.getOwnerUserId( ) ) ) ) {
+                                   UserFullName.getInstance( imgInfo.getOwnerUserId( ) ) ) ) {
         Images.deregisterImage( imgInfo.getDisplayName( ) );
       } else {
         throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
@@ -422,8 +426,39 @@ public class ImageManager {
     return reply;
   }
   
-  public CreateImageResponseType createImage( CreateImageType request ) {
+  public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {
     CreateImageResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    VmInstance vm = null;
+    try {
+      vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
+    }
+    if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to create an image from instance " + request.getInstanceId( ) + " as " + ctx.getUser( ).getName( ) );
+    }
+    if( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: " + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
+    }
+    if( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
+    }
+    Cluster cluster = null;
+    try {
+      cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+    } catch ( NoSuchElementException e ) {
+      LOG.debug( e );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getClusterName( ) );
+    }
+    //save instance state
+    //terminate the instance
+    //clone the volume
+    //-> start the instance
+    //-> snapshot the volume
+    //   |-> mark registration as available
+    
     return reply;
   }
   

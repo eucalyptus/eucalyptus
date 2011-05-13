@@ -4,12 +4,12 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.vm.BundleInstanceResponseType;
+import com.eucalyptus.vm.BundleInstanceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.BundleInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.BundleInstanceType;
 
 public class BundleCallback extends MessageCallback<BundleInstanceType,BundleInstanceResponseType> {
 

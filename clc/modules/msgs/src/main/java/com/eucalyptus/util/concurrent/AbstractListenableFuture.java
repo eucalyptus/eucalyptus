@@ -173,6 +173,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
         }
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
+        Thread.currentThread( ).interrupt( );
         this.future.setException( ex );
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
