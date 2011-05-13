@@ -111,14 +111,14 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class ImageManifests {
   private static Logger LOG = Logger.getLogger( ImageManifests.class );
   
-  private static boolean verifyBucketAcl( String bucketName ) {
+  static boolean verifyBucketAcl( String bucketName ) {
     Context ctx = Contexts.lookup( );
     GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( );
     getBukkitInfo.setBucket( bucketName );
     try {
       GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( getBukkitInfo );
       String ownerName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
-      return ctx.getUserFullName( ).getUserId( ).equals( ownerName );
+      return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerName ) || ctx.getUserFullName( ).getUserId( ).equals( ownerName );
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex, ex );
     } catch ( NoSuchElementException ex ) {
@@ -149,74 +149,11 @@ public class ImageManifests {
       results[k] += ( byte ) ( Character.digit( data.charAt( i++ ), 16 ) );
       k++;
     }
-
+    
     return results;
   }
-
   
-  private static boolean checkManifest( User user, String manifest, Document inputSource ) throws EucalyptusCloudException {
-    XPath xpath = XPathFactory.newInstance( ).newXPath( );
-    final String signature;
-    try {
-      String encryptedKey = ( String ) xpath.evaluate( "//ec2_encrypted_key" , inputSource, XPathConstants.STRING );
-      String encryptedIV = ( String ) xpath.evaluate( "//ec2_encrypted_iv" , inputSource, XPathConstants.STRING );
-      signature = ( String ) xpath.evaluate( "//signature" , inputSource, XPathConstants.STRING );
-    } catch ( XPathExpressionException ex1 ) {
-      LOG.error( ex1 );
-      throw new EucalyptusCloudException( "Failed to parse manifest file for one of the following required fields:  ec2_encrypted_iv, ec2_encrypted_key, or signature.  Cause: " + ex1.getMessage( ), ex1 );
-    }
-    String image = manifest.replaceAll(".*<image>","<image>").replaceAll("</image>.*","</image>");
-    String machineConfiguration = manifest.replaceAll(".*<machine_configuration>","<machine_configuration>").replaceAll("</machine_configuration>.*","</machine_configuration>");
-    final String pad = ( machineConfiguration + image );
-    Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
-      
-      @Override
-      public boolean apply( Certificate checkCert ) {
-        if ( checkCert instanceof X509Certificate ) {
-          X509Certificate cert = ( X509Certificate ) checkCert;
-          Signature sigVerifier;
-          try {
-            sigVerifier = Signature.getInstance( "SHA1withRSA" );
-            PublicKey publicKey = cert.getPublicKey( );
-            sigVerifier.initVerify( publicKey );
-            sigVerifier.update( ( pad ).getBytes( ) );
-            return sigVerifier.verify( hexToBytes( signature ) );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-    };
-    Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> euareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
-      
-      @Override
-      public X509Certificate apply( com.eucalyptus.auth.principal.Certificate input ) {
-        return input.getX509Certificate( );
-      }
-    };
-    
-    try {
-      if ( Iterables.any( Lists.transform( user.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
-        return true;
-      } else if ( tryVerifyWithCert.apply( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
-        return true;
-      } else {
-        for ( User u : Accounts.listAllUsers( ) ) {
-          if ( Iterables.any( Lists.transform( u.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
-            return true;
-          }
-        }
-      }
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
-    }
-    return false;
-  }
-  
-  private static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
+  static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
     GetObjectResponseType reply = null;
     try {
       GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
@@ -229,7 +166,7 @@ public class ImageManifests {
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
-    return B64.decString( reply.getBase64Data( ).getBytes( ) );
+    return B64.url.decString( reply.getBase64Data( ).getBytes( ) );
   }
   
   public static class ImageManifest {
@@ -242,8 +179,15 @@ public class ImageManifests {
     private final String             signature;
     private final String             manifest;
     private final Document           inputSource;
+    private final String             name;
+    private final Long               size        = -1l;
+    private final Long               bundledSize = -1l;
+    private XPath                    xpath;
+    private Function<String, String> xpathHelper;
+    private String                   encryptedKey;
+    private String                   encryptedIV;
     
-    private ImageManifest( String imageLocation ) throws EucalyptusCloudException {
+    ImageManifest( String imageLocation ) throws EucalyptusCloudException {
       Context ctx = Contexts.lookup( );
       String cleanLocation = imageLocation.replaceAll( "^/*", "" );
       this.imageLocation = cleanLocation;
@@ -253,7 +197,7 @@ public class ImageManifests {
       }
       String bucketName = cleanLocation.substring( 0, index );
       String manifestKey = cleanLocation.substring( index + 1 );
-      String manifestName = manifestKey.replaceAll( ".*/", "" );
+      final String manifestName = manifestKey.replaceAll( ".*/", "" );
       if ( !ImageManifests.verifyBucketAcl( bucketName ) ) {
         throw new EucalyptusCloudException( "Image registration failed: you must own the bucket containing the image." );
       }
@@ -264,85 +208,139 @@ public class ImageManifests {
       } catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
       }
-      XPath xpath = XPathFactory.newInstance( ).newXPath( );
-      String arch = null;
-      String kId = null;
-      String rId = null;
+      this.xpath = XPathFactory.newInstance( ).newXPath( );
+      this.xpathHelper = new Function<String, String>( ) {
+        
+        @Override
+        public String apply( String input ) {
+          return ( String ) ImageManifest.this.xpath.evaluate( input, ImageManifest.this.inputSource, XPathConstants.STRING );
+        }
+      };
+      
+      String temp;
+      this.name = ( ( temp = this.xpathHelper.apply( "/manifest/image/name/text()" ) ) != null )
+        ? temp
+        : manifestName.replace( ".manifest.xml", "" );
       try {
-        this.signature = ( String ) xpath.evaluate( "//signature" , inputSource, XPathConstants.STRING );
+        this.signature = ( ( temp = this.xpathHelper.apply( "//signature" ) ) != null )
+          ? temp
+          : null;
       } catch ( XPathExpressionException e ) {
         LOG.warn( e.getMessage( ) );
         throw new EucalyptusCloudException( "Failed to parse manifest file for the required field:  signature.  Cause: " + e.getMessage( ), e );
       }
-      try {
-        arch = ( String ) xpath.evaluate( "/manifest/machine_configuration/architecture/text()", inputSource, XPathConstants.STRING );
-      } catch ( XPathExpressionException e ) {
-        LOG.warn( e.getMessage( ) );
-      }
-      try {
-        kId = ( String ) xpath.evaluate( "/manifest/machine_configuration/kernel_id/text()", inputSource, XPathConstants.STRING );
-      } catch ( XPathExpressionException e ) {
-        LOG.warn( e.getMessage( ) );
-      }
-      try {
-        rId = ( String ) xpath.evaluate( "/manifest/machine_configuration/ramdisk_id/text()", inputSource, XPathConstants.STRING );
-      } catch ( XPathExpressionException e ) {
-        LOG.warn( e.getMessage( ) );
-      }
-      String architecture = ( ( arch == null )
+      this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
+      this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
+      Predicate<Image.Type> checkIdType = new Predicate<Image.Type>( ) {
+        
+        @Override
+        public boolean apply( Image.Type input ) {
+          String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
+          if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      };
+      String typeInManifest = this.xpathHelper.apply( Image.TYPE_MANIFEST_XPATH );
+      
+      this.size = ( ( temp = this.xpathHelper.apply( "/manifest/image/size/text()" ) ) != null )
+        ? Long.parseLong( temp )
+        : -1l;
+      this.bundledSize = ( ( temp = this.xpathHelper.apply( "/manifest/image/bundled_size/text()" ) ) != null )
+        ? Long.parseLong( temp )
+        : -1l;
+      
+      String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
+      this.architecture = Image.Architecture.valueOf( ( ( arch == null )
           ? "i386"
-          : arch );
-      this.architecture = Image.Architecture.valueOf( architecture );
-      if ( "yes".equals( kId ) || "true".equals( kId ) || manifestName.startsWith( "vmlinuz" ) ) {
-        if ( !ctx.hasAdministrativePrivileges( ) ) {
-          throw new EucalyptusCloudException( "Only administrators can register kernel images." );
-        }
-        this.imageType = Image.Type.kernel;
-        this.platform = Image.Platform.linux;
-        this.kernelId = null;
-        this.ramdiskId = null;
-      } else if ( "yes".equals( rId ) || "true".equals( rId ) || manifestName.startsWith( "initrd" ) ) {
-        if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-          throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
-        }
-        this.imageType = Image.Type.ramdisk;
-        this.platform = Image.Platform.linux;
-        this.kernelId = null;
-        this.ramdiskId = null;
+            : arch ) );
+      if ( ( checkIdType.apply( Image.Type.kernel ) || checkIdType.apply( Image.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       } else {
-        this.imageType = Image.Type.machine;
-        this.kernelId = kId;
-        this.ramdiskId = rId;
-        if ( !manifestName.startsWith( Image.Platform.windows.toString( ) ) ) {
+        if ( checkIdType.apply( Image.Type.kernel ) ) {
+          this.imageType = Image.Type.kernel;
           this.platform = Image.Platform.linux;
-          if ( kId != null ) {
-            ImageInfo k = null;
-            try {
-              k = Images.lookupImage( kId );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-              throw new EucalyptusCloudException( "Referenced kernel id is invalid: " + kId, ex );
-            }
-            if ( !Lookups.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, kId, k.getOwner( ) ) ) {
-              throw new EucalyptusCloudException( "Access to kernel image " + kId + " is denied for " + ctx.getUser( ).getName( ) );
-            }
-          }
-          if ( kId != null ) {
-            ImageInfo r = null;
-            try {
-              r = Images.lookupImage( rId );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-              throw new EucalyptusCloudException( "Referenced ramdisk id is invalid: " + rId, ex );
-            }
-            if ( !Lookups.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, rId, r.getOwner( ) ) ) {
-              throw new EucalyptusCloudException( "Access to ramdisk image " + rId + " is denied for " + ctx.getUser( ).getName( ) );
-            }
-          }
+          this.kernelId = null;
+          this.ramdiskId = null;
+        } else if ( checkIdType.apply( Image.Type.kernel ) ) {
+          this.imageType = Image.Type.ramdisk;
+          this.platform = Image.Platform.linux;
+          this.kernelId = null;
+          this.ramdiskId = null;
         } else {
-          this.platform = Image.Platform.windows;
-        }
+          this.kernelId = this.xpathHelper.apply( Image.Type.kernel.getManifestPath( ) );
+          this.ramdiskId = this.xpathHelper.apply( Image.Type.ramdisk.getManifestPath( ) );
+          this.imageType = Image.Type.machine;
+          if ( !manifestName.startsWith( Image.Platform.windows.toString( ) ) ) {
+            this.platform = Image.Platform.linux;
+            ImageManifests.checkPrivileges( this.kernelId );
+            ImageManifests.checkPrivileges( this.ramdiskId );
+          } else {
+            this.platform = Image.Platform.windows;
+          }
+        }        
       }
+    }
+    
+    private boolean checkManifest( User user ) throws EucalyptusCloudException {
+      try {} catch ( XPathExpressionException ex1 ) {
+        LOG.error( ex1 );
+        throw new EucalyptusCloudException(
+                                            "Failed to parse manifest file for one of the following required fields:  ec2_encrypted_iv, ec2_encrypted_key, or signature.  Cause: "
+                                                + ex1.getMessage( ), ex1 );
+      }
+      String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
+      String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" ).replaceAll( "</machine_configuration>.*",
+                                                                                                                                   "</machine_configuration>" );
+      final String pad = ( machineConfiguration + image );
+      Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
+        
+        @Override
+        public boolean apply( Certificate checkCert ) {
+          if ( checkCert instanceof X509Certificate ) {
+            X509Certificate cert = ( X509Certificate ) checkCert;
+            Signature sigVerifier;
+            try {
+              sigVerifier = Signature.getInstance( "SHA1withRSA" );
+              PublicKey publicKey = cert.getPublicKey( );
+              sigVerifier.initVerify( publicKey );
+              sigVerifier.update( ( pad ).getBytes( ) );
+              return sigVerifier.verify( hexToBytes( ImageManifest.this.signature ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+              return false;
+            }
+          } else {
+            return false;
+          }
+        }
+      };
+      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> euareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
+        
+        @Override
+        public X509Certificate apply( com.eucalyptus.auth.principal.Certificate input ) {
+          return input.getX509Certificate( );
+        }
+      };
+      
+      try {
+        if ( Iterables.any( Lists.transform( user.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+          return true;
+        } else if ( tryVerifyWithCert.apply( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+          return true;
+        } else {
+          for ( User u : Accounts.listAllUsers( ) ) {
+            if ( Iterables.any( Lists.transform( u.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
+              return true;
+            }
+          }
+        }
+      } catch ( AuthException e ) {
+        throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.", e );
+      }
+      return false;
     }
     
     public String getSignature( ) {
@@ -377,9 +375,37 @@ public class ImageManifests {
       return this.manifest;
     }
     
+    public String getName( ) {
+      return this.name;
+    }
+    
+    public Long getSize( ) {
+      return this.size;
+    }
+    
+    public Long getBundledSize( ) {
+      return this.bundledSize;
+    }
+    
   }
   
   public static ImageManifest lookup( String imageLocation ) throws EucalyptusCloudException {
     return new ImageManifest( imageLocation );
+  }
+  
+  static void checkPrivileges( String diskId ) throws EucalyptusCloudException {
+    Context ctx = Contexts.lookup( );
+    if ( diskId != null ) {
+      ImageInfo disk = null;
+      try {
+        disk = Images.lookupImage( diskId );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( "Referenced image id is invalid: " + diskId, ex );
+      }
+      if ( !Lookups.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, diskId, disk.getOwner( ) ) ) {
+        throw new EucalyptusCloudException( "Access to " + disk.getImageType( ).toString( ) + " image " + diskId + " is denied for " + ctx.getUser( ).getName( ) );
+      }
+    }
   }
 }

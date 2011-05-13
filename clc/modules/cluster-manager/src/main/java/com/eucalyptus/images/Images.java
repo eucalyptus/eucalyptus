@@ -20,6 +20,7 @@ import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.TypeMapping;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
@@ -189,19 +190,20 @@ public class Images {
     return null;
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageName, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
     ImageInfo ret = null;
+    String imageName = ( imageNameArg != null ) ? imageNameArg : manifest.getName( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
                                    imageName, imageDescription, manifest.getImageLocation( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case ramdisk:
-        ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+        ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case machine:
-        ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+        ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
     }
@@ -230,6 +232,14 @@ public class Images {
       }
       return ret;
     }
+  }
+
+  public static ImageConfiguration configuration( ) {
+    return ImageConfiguration.getInstance( );
+  }
+
+  public static String lookupDefaultKernelId( ) {
+    return;
   }
   
 }

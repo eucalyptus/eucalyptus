@@ -210,13 +210,12 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
-      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + userAccessKey + "'" );
+      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + userNumber + "'" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
       sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
-      sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user " + userNumber
-                 + " --ec2cert ${EUCALYPTUS_CERT}\"" );
+      sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
       zipOut.putNextEntry( new ZipEntry( "eucarc" ) );

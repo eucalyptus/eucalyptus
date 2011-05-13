@@ -227,6 +227,8 @@ public class ImageManager {
     }
     ImageInfo imageInfo = null;
     final String rootDevName = request.getRootDeviceName( );
+    final String eki = request.getKernelId( );
+    final String eri = request.getRamdiskId( );
     Predicate<BlockDeviceMappingItemType> checkEbsRoot = new Predicate<BlockDeviceMappingItemType>( ) {
       
       @Override

@@ -87,7 +87,20 @@ public class Partitions {
 //      Partitions.remove( partitionName );
 //    }
   }
-
+  
+  public static boolean exists( final String partitionName ) {
+    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    Partition p = null;
+    try {
+      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      db.commit( );
+      return true;
+    } catch ( EucalyptusCloudException ex1 ) {
+      db.rollback( );
+      return false;
+    }
+  }
+  
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( config.getComponentId( ).isPartitioned( ) ) {
       final String partitionName = config.getPartition( );
@@ -154,7 +167,7 @@ public class Partitions {
   @Deprecated
   public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) throws NoSuchServiceException {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
-    if( services.isEmpty( ) ) {
+    if ( services.isEmpty( ) ) {
       throw new NoSuchServiceException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
     } else {
       return services.first( );

@@ -61,4 +61,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public Collection<ServiceCheckRecord> lookupDetails( );
 
+  public abstract Boolean isHostLocal( );
+
 }

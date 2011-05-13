@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,38 +61,67 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.configurable;
 
-import java.util.ArrayList;
-import java.util.List;
-import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.Tx;
 
-public class Eucalyptus extends ComponentId.Unpartioned {
-  public static final Eucalyptus INSTANCE = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                                
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://EucalyptusRequestQueue";
+@org.hibernate.annotations.Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_config" )
+@Table( name = "configurable_property" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class ConfigurableEntity extends AbstractPersistent {
+  private String declaringClassName;
+  private String declaringFieldName;
+  private String value;
+  
+  ConfigurableEntity( String declaringClassName, String declaringFieldName, String value ) {
+    super( );
+    this.declaringClassName = declaringClassName;
+    this.declaringFieldName = declaringFieldName;
+    this.value = value;
   }
   
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
+  public static class SinglePropertyEntry extends AbstractConfigurableProperty {
+    
+    public SinglePropertyEntry( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description,
+                                PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
+                                PropertyChangeListener changeListener ) {
+      super( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
+    }
+    
+    public SinglePropertyEntry( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description,
+                                PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
+      super( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+    }
+    
+    @Override
+    public String getValue( ) {
+      String declaringClassName = this.getDefiningClass( ).getCanonicalName( );
+      String declaringFieldName = this.getFieldName( );
+      try {
+        Transactions.one( new ConfigurableEntity( declaringClassName, declaringFieldName, null ), new Tx<ConfigurableEntity>( ) {
+
+          @Override
+          public void fire( ConfigurableEntity t ) throws Throwable {}});
+      } catch ( TransactionException ex ) {
+        return this.getDefaultValue( );
       }
-    };
+    }
+    
+    @Override
+    public String setValue( String s ) {
+      return null;
+    }
+    
   }
-  
 }

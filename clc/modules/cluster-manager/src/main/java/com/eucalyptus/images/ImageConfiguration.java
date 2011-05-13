@@ -67,6 +67,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -79,28 +80,29 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
 public class ImageConfiguration extends AbstractPersistent {
   @Transient
-  private static Logger LOG               = Logger.getLogger( ImageConfiguration.class );
+  private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
   @ConfigurableField( description = "The default value used to determine whether or not images are marked 'public' when first registered." )
-  @Column( name = "metadata_image_is_public", nullable=false, columnDefinition="boolean default true" )
-  private Boolean       defaultVisibility = Boolean.TRUE;
+  @Column( name = "metadata_image_is_public", nullable = false, columnDefinition = "boolean default true" )
+  private Boolean       defaultVisibility;
   
-  public ImageConfiguration( ) {
+  @ConfigurableField( description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
+  @Column( name = "metadata_image_default_kernel_id", nullable = false )
+  private String        defaultKernelId;
+
+  @ConfigurableField( description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
+  @Column( name = "metadata_image_default_ramdisk_id", nullable = false )
+  private String        defaultRamdiskId;
+  
+  protected ImageConfiguration( ) {
     super( );
-  }
-  
-  public Boolean getDefaultVisibility( ) {
-    return this.defaultVisibility;
-  }
-  
-  public void setDefaultVisibility( Boolean defaultVisibility ) {
-    this.defaultVisibility = defaultVisibility;
   }
   
   public static ImageConfiguration getInstance( ) {
@@ -111,10 +113,41 @@ public class ImageConfiguration extends AbstractPersistent {
       try {
         ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
       } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         ret = new ImageConfiguration( );
       }
     }
     return ret;
+  }
+  
+  @PrePersist
+  protected void initialize( ) {
+    if ( this.defaultVisibility == null ) {
+      this.defaultVisibility = Boolean.TRUE;
+    }
+  }
+  
+  public Boolean getDefaultVisibility( ) {
+    return this.defaultVisibility;
+  }
+  
+  public void setDefaultVisibility( Boolean defaultVisibility ) {
+    this.defaultVisibility = defaultVisibility;
+  }
+  
+  public String getDefaultKernelId( ) {
+    return this.defaultKernelId;
+  }
+  
+  public void setDefaultKernelId( String defaultKernelId ) {
+    this.defaultKernelId = defaultKernelId;
+  }
+  
+  public String getDefaultRamdiskId( ) {
+    return this.defaultRamdiskId;
+  }
+  
+  public void setDefaultRamdiskId( String defaultRamdiskId ) {
+    this.defaultRamdiskId = defaultRamdiskId;
   }
 }

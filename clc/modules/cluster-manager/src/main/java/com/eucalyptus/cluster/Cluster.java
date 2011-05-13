@@ -771,8 +771,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       return false;
     }
     
-    final X509Certificate clusterx509 = PEMFiles.getCert( B64.dec( certs.getCcCert( ) ) );
-    final X509Certificate nodex509 = PEMFiles.getCert( B64.dec( certs.getNcCert( ) ) );
+    final X509Certificate clusterx509 = PEMFiles.getCert( B64.standard.dec( certs.getCcCert( ) ) );
+    final X509Certificate nodex509 = PEMFiles.getCert( B64.standard.dec( certs.getNcCert( ) ) );
     if ( "self".equals( certs.getServiceTag( ) ) || ( certs.getServiceTag( ) == null ) ) {
       return ( this.hasClusterCert = this.checkCerts( this.getClusterCertificate( ), clusterx509 ) )
              && ( this.hasNodeCert = this.checkCerts( this.getNodeCertificate( ), nodex509 ) );

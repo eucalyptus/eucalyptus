@@ -352,9 +352,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     @Override
     public String getPartition( ) {
       return this.isCloudLocal( )
-        ? Eucalyptus.INCOGNITO.name( )
+        ? Eucalyptus.INSTANCE.name( )
         : ( this.isAlwaysLocal( )
-          ? Empyrean.INCOGNITO.name( )
+          ? Empyrean.INSTANCE.name( )
           : this.name( ) );
     }
     

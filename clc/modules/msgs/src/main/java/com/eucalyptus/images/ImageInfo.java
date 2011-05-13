@@ -65,23 +65,20 @@
 package com.eucalyptus.images;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import java.security.Principal;
+import static org.hamcrest.Matchers.notNullValue;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
-import org.hibernate.annotations.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
 import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
@@ -90,22 +87,18 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.JoinTx;
-import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -251,9 +244,10 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Account account ) {
     try {
-      Transactions.one( new ImageInfo( this.displayName ), new JoinTx<ImageInfo>( ) {
+      Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
-        public void fire( EntityWrapper<ImageInfo> db, ImageInfo t ) throws Throwable {
+        public void fire( ImageInfo t ) {
+          EntityWrapper<ImageInfo> db = Transactions.join( );
           LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
 //            db.recast( LaunchPermission.class ).add( imgAuth );
@@ -261,7 +255,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -278,7 +272,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
 //        }
 //      }
 //                  );
-//    } catch ( TransactionException e ) {
+//    } catch ( ExecutionException e ) {
 //      return false;
 //    }
 //    return result[0];
@@ -294,7 +288,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -312,7 +306,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return prods;
@@ -330,7 +324,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return perms;
@@ -345,7 +339,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           t.getProductCodes( ).clear( );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -361,7 +355,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
           t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -450,7 +444,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
         }
       }
                   );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       return false;
     }
     return true;

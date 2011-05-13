@@ -124,10 +124,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.servicePath = servicePath;
   }
   
+  @Override
   public InetSocketAddress getSocketAddress( ) {
     return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
   }
   
+  @Override
   public URI getUri( ) {
     return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
@@ -136,10 +138,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return this.getComponentId( ).makeInternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
   
+  @Override
   public String getName( ) {
-    return name;
+    return this.name;
   }
   
+  @Override
   @Deprecated
   public final ComponentId getComponentId( ) {
     return lookupComponentId( );
@@ -153,14 +157,28 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     }
   }
   
+  @Override
   public final Component lookupComponent( ) {
     return Components.lookup( this.lookupComponentId( ) );
   }
   
+  @Override
   public final Service lookupService( ) {
     return Components.lookup( this.getComponentId( ) ).lookupService( this );
   }
   
+  @Override
+  public Boolean isHostLocal( ) {
+    try {
+      return this.port == -1
+        ? true
+        : Internets.testLocal( this.getHostName( ) );
+    } catch ( Exception e ) {
+      return false;
+    }
+  }
+
+  @Override
   public Boolean isVmLocal( ) {
     try {
       return this.port == -1
@@ -171,13 +189,15 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     }
   }
   
+  @Override
   public final FullName getFullName( ) {
     return this.getComponentId( ).makeFullName( this );
   }
   
+  @Override
   public int compareTo( ServiceConfiguration that ) {
     //ASAP: FIXME: GRZE useful ordering here plox.
-    return ( partition + name ).compareTo( that.getPartition( ) + that.getName( ) );
+    return ( this.partition + this.name ).compareTo( that.getPartition( ) + that.getName( ) );
   }
   
   @Override
@@ -202,50 +222,59 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     if ( that == null ) return false;
     if ( !getClass( ).equals( that.getClass( ) ) ) return false;
     ComponentConfiguration other = ( ComponentConfiguration ) that;
-    if ( name == null ) {
+    if ( this.name == null ) {
       if ( other.name != null ) return false;
-    } else if ( !name.equals( other.name ) ) return false;
+    } else if ( !this.name.equals( other.name ) ) return false;
     return true;
   }
   
+  @Override
   public String getPartition( ) {
     return this.partition;
   }
   
-  public void setPartition( String partition ) {
+  @Override
+  public void setPartition( final String partition ) {
     this.partition = partition;
   }
   
+  @Override
   public String getHostName( ) {
     return this.hostName;
   }
   
-  public void setHostName( String hostName ) {
+  @Override
+  public void setHostName( final String hostName ) {
     this.hostName = hostName;
   }
   
+  @Override
   public Integer getPort( ) {
     return this.port;
   }
   
+  @Override
   public void setPort( Integer port ) {
     this.port = port;
   }
   
+  @Override
   public String getServicePath( ) {
     return this.servicePath;
   }
   
-  public void setServicePath( String servicePath ) {
+  @Override
+  public void setServicePath( final String servicePath ) {
     this.servicePath = servicePath;
   }
   
-  public void setName( String name ) {
+  @Override
+  public void setName( final String name ) {
     this.name = name;
   }
   
   @Override
-  public ServiceBuilder lookupBuilder( ) {
+  public ServiceBuilder<? extends ServiceConfiguration> lookupBuilder( ) {
     return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
   }
   

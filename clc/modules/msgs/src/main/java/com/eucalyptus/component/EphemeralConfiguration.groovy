@@ -93,7 +93,12 @@ class EphemeralConfiguration extends ComponentConfiguration {
   public Boolean isVmLocal( ) {
     return super.isVmLocal( );
   }
-  
+
+  @Override
+  public Boolean isHostLocal( ) {
+    return super.isHostLocal( );
+  }
+
   @Override
   public int compareTo( ServiceConfiguration that ) {
     return super.compareTo( that );

@@ -93,13 +93,13 @@ public class ComponentFullName implements FullName {
     this.name = name;
     
     boolean hasParentComponent = !this.realComponentId.serviceDependencies( ).isEmpty( );
-    ComponentId tempComponentId = Empyrean.INCOGNITO;
+    ComponentId tempComponentId = Empyrean.INSTANCE;
     String tempPartition = "";
     if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
       if( this.realComponentId.serviceDependencies( ).contains( Eucalyptus.class ) ) {
-        tempComponentId = Eucalyptus.INCOGNITO;
+        tempComponentId = Eucalyptus.INSTANCE;
       } else if ( this.realComponentId.serviceDependencies( ).contains( Any.class ) || this.realComponentId.serviceDependencies( ).contains( Empyrean.class ) ) {
-        tempComponentId = Empyrean.INCOGNITO;
+        tempComponentId = Empyrean.INSTANCE;
       }
       tempPartition = partition;
     } else if ( !hasParentComponent && !this.realComponentId.isPartitioned( ) ) {
@@ -108,10 +108,10 @@ public class ComponentFullName implements FullName {
     } else if ( !this.realComponentId.isPartitioned( ) && hasParentComponent ) {
       ComponentId parentId = ComponentIds.lookup( this.realComponentId.serviceDependencies( ).get( 0 ) );
       if ( parentId.getClass( ).equals( Eucalyptus.class ) ) {
-        tempComponentId = Eucalyptus.INCOGNITO;
+        tempComponentId = Eucalyptus.INSTANCE;
         tempPartition = tempComponentId.name( );
       } else {
-        tempComponentId = Empyrean.INCOGNITO;
+        tempComponentId = Empyrean.INSTANCE;
         tempPartition = tempComponentId.name( );
       }
     }

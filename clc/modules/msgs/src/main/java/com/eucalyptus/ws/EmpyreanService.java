@@ -63,16 +63,22 @@
 
 package com.eucalyptus.ws;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Services;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -92,8 +98,13 @@ import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -190,10 +201,10 @@ public class EmpyreanService {
             LOG.error( ex, ex );
             return reply.markFailed( );
           } catch ( ExecutionException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             return reply.markFailed( );
           } catch ( InterruptedException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             return reply.markFailed( );
           }
         }
@@ -241,10 +252,10 @@ public class EmpyreanService {
                 c.disableTransition( config ).get( );
                 reply.getServices( ).add( serviceInfo );
               } catch ( ExecutionException ex ) {
-                LOG.error( ex , ex );
+                LOG.error( ex, ex );
                 return reply.markFailed( );
               } catch ( InterruptedException ex ) {
-                LOG.error( ex , ex );
+                LOG.error( ex, ex );
                 return reply.markFailed( );
               }
             } else {
@@ -261,67 +272,121 @@ public class EmpyreanService {
     return reply;
   }
   
+  static class Filters {
+    static Predicate<ServiceConfiguration> partition( final String partition ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return input.getPartition( ).equals( partition );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> host( final String host ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return host == null || input.getHostName( ).equals( host );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> state( final Component.State state ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return input.lookupState( ).equals( state );
+        }
+      };
+    }
+    
+    static Predicate<Component> componentType( final ComponentId compId ) {
+      return new Predicate<Component>( ) {
+        @Override
+        public boolean apply( Component input ) {
+          return Any.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listInternalArg ) {
+      final boolean listAll = Boolean.TRUE.equals( listAllArg );
+      final boolean listInternal = Boolean.TRUE.equals( listInternalArg );
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          if ( listAll ) {
+            return true;
+          } else if ( !input.getComponentId( ).hasDispatcher( ) && listInternal && input.isHostLocal( ) ) {
+            return true;
+          } else if ( input.getComponentId( ).hasDispatcher( ) ) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      };
+    }
+  }
+  
   public DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
-    final String typeFilter = request.getByType( );
-    final String hostFilter = request.getByHost( );
-    final String partitionFilter = request.getByPartition( );
-    final String stateFilter = request.getByState( );
-    final boolean listAll = Boolean.TRUE.equals( request.getListAll( ) );
-    final boolean listInternal = Boolean.TRUE.equals( request.getListInternal( ) );
+    
+    ComponentId compId = ( request.getByServiceType( ) != null )
+      ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
+      : Any.INSTANCE;
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
-    for ( Component comp : Components.list( ) ) {
-      if ( typeFilter == null || typeFilter.toLowerCase( ).equals( comp.getComponentId( ).name( ) ) ) {
-        if ( !listAll && ( hostFilter == null || Internets.testLocal( hostFilter ) ) ) {
-          if ( comp.hasLocalService( ) ) {
-            final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
-            if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
-                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
-              reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
-                {
-                  this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-                  this.setLocalEpoch( reply.getBaseEpoch( ) );
-                  this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-                  if ( showEvents ) {
-                    this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                             TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-                    if ( !showEventStacks ) {
-                      for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
-                        a.setStackTrace( "" );
-                      }
-                    }
-                  }
+    
+    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = new Function<ServiceConfiguration, ServiceStatusType>( ) {
+      
+      @Override
+      public ServiceStatusType apply( final ServiceConfiguration config ) {
+        return new ServiceStatusType( ) {
+          {
+            this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+            this.setLocalEpoch( reply.getBaseEpoch( ) );
+            try {
+              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+            } catch ( Exception ex ) {
+              this.setLocalState( "n/a: " + ex.getMessage( ) );
+            }
+            if ( showEvents ) {
+              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+              if ( !showEventStacks ) {
+                for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                  a.setStackTrace( "" );
                 }
-              } );
+              }
             }
           }
-        } else {
-          for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
-            if ( ( partitionFilter == null || partitionFilter.equals( config.getPartition( ) ) )
-                 && ( hostFilter == null || hostFilter.equals( config.getHostName( ) ) )
-                 && ( stateFilter == null || stateFilter.toUpperCase( ).equals( config.lookupState( ).toString( ) ) ) ) {
-              reply.getServiceStatuses( ).add( new ServiceStatusType( ) {
-                {
-                  this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-                  this.setLocalEpoch( reply.getBaseEpoch( ) );
-                  try {
-                    this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-                  } catch ( Exception ex ) {
-                    this.setLocalState( "n/a: " + ex.getMessage( ) );
-                  }
-                  if ( showEvents ) {
-                    this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                             TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-                    if ( !showEventStacks ) {
-                      for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
-                        a.setStackTrace( "" );
-                      }
-                    }
-                  }
-                }
-              } );
-            }
+        };
+      }
+    };
+    
+    List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
+      {
+        if ( request.getByPartition( ) != null ) {
+          Partitions.exists( request.getByPartition( ) );
+          this.add( Filters.host( request.getByPartition( ) ) );
+        }
+        if ( request.getByState( ) != null ) {
+          Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
+          this.add( Filters.state( stateFilter ) );
+        }
+        this.add( Filters.host( request.getByHost( ) ) );
+        this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListInternal( ) ) );
+      }
+    };    
+    Predicate<Component> componentFilter = Filters.componentType( compId );
+    Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
+    
+    for ( Component comp : Components.list( ) ) {
+      if ( componentFilter.apply( comp ) ) {
+        for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+          if( configPredicate.apply( config ) ) {
+            reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
           }
         }
       }

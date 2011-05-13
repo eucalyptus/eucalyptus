@@ -128,7 +128,7 @@ public class DescribeServicesType extends ServiceTransitionType {
   Boolean listInternal;
   Boolean showEvents;
   Boolean showEventStacks;
-  String byType;
+  String byServiceType;
   String byHost;
   String byState;
   String byPartition;
