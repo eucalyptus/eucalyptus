@@ -82,11 +82,7 @@ public class Services {
           this.setFullName( input.getFullName( ).toString( ) );
           this.setName( input.getName( ) );
           this.setType( input.getComponentId( ).getName( ) );
-          try {
-            this.setUri( input.getComponentId( ).makeExternalRemoteUri( input.getHostName( ), input.getPort( ) ).toString( ) );
-          } catch ( Exception ex ) {
-            this.setUri( input.getComponentId( ).makeExternalRemoteUri( "localhost", input.getComponentId( ).getPort( ) ).toString( ) );
-          }
+          this.setUri( input.getComponentId( ).makeExternalRemoteUri( input.getHostName( ), input.getPort( ) ).toString( ) );
         }
       };
     }

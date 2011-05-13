@@ -125,6 +125,7 @@ public class ServiceStatusDetail extends EucalyptusData {
 }
 public class DescribeServicesType extends ServiceTransitionType {
   Boolean listAll;
+  Boolean listInternal;
   Boolean showEvents;
   Boolean showEventStacks;
   String byType;

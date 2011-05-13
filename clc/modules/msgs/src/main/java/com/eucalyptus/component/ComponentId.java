@@ -276,6 +276,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     String uri;
     URI u = null;
     port = ( port == -1 ) ? this.getPort( ) : port;
+    hostName = ( port == -1 ) ? Internets.localhost( ) : hostName;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );

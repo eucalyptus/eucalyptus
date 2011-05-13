@@ -268,6 +268,7 @@ public class EmpyreanService {
     final String partitionFilter = request.getByPartition( );
     final String stateFilter = request.getByState( );
     final boolean listAll = Boolean.TRUE.equals( request.getListAll( ) );
+    final boolean listInternal = Boolean.TRUE.equals( request.getListInternal( ) );
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     for ( Component comp : Components.list( ) ) {

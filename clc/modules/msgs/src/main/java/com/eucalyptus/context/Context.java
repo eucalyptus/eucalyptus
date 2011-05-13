@@ -44,6 +44,7 @@ public class Context {
       this.message = msg;
     }};
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
+    this.user = FakePrincipals.SYSTEM_USER;
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
