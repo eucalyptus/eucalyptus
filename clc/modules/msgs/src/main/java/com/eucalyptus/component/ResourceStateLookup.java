@@ -63,7 +63,7 @@
 
 package com.eucalyptus.component;
 
-import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
 public abstract class ResourceStateLookup<T extends Number> extends AbstractListenableFuture<T> {

@@ -66,35 +66,26 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.net.SocketException;
-import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.ForwardImages;
-import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.StorageProperties;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -340,12 +331,6 @@ public class SystemConfiguration extends AbstractPersistent {
     if(sysConf.getCloudHost() == null) {
       String ipAddr = SystemConfiguration.getInternalIpAddress ();
       sysConf.setCloudHost(ipAddr);
-    }
-    if(sysConf.getDefaultKernel() == null) {
-      sysConf.setDefaultRamdisk( ForwardImages.defaultKernel( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
-    }
-    if(sysConf.getDefaultRamdisk() == null) {
-      sysConf.setDefaultRamdisk( ForwardImages.defaultRamdisk( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
     }
     if(sysConf.getDnsDomain() == null) {
       sysConf.setDnsDomain(DNSProperties.DOMAIN);
