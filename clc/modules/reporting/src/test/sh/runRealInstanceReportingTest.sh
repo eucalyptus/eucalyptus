@@ -1,8 +1,10 @@
 #!/bin/sh
 
 
-# How long to sleep after starting instances
-SLEEP_TIME=$((60*21))
+# Set timing
+WRITE_INTERVAL_MS=60000
+SLEEP_TIME_SECS=$(((WRITE_INTERVAL_MS*2)/1000))
+
 
 # Set image paths
 EKI=foo
@@ -25,7 +27,7 @@ wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservl
 if [ "$?" -ne "0" ]
 then
 	echo "Wget failed to clear all prior data."
-	exit -1
+	#exit -1
 fi
 
 # Check that the data is cleared
@@ -33,19 +35,20 @@ LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --data
 if [ "$LINE_CNT" -ne "0" ]
 then
 	echo "Data not cleared"
-	exit -1
+	#exit -1
 else
 	echo "Data cleared"
 fi
 
 
 # Generate data
+wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.instance.FalseDataGenerator&methodName=setWriteIntervalMs&methodArgs=$WRITE_INTERVAL_MS"
 euca-run-instances -n 4 --kernel $EKI --ramdisk $ERI $EMI
 euca-run-instances -n 4 --kernel $EKI --ramdisk $ERI $EMI
 euca-run-instances -n 4 --kernel $EKI --ramdisk $ERI $EMI
 
-echo "Sleeping for $SLEEP_TIME seconds..."
-sleep $SLEEP_TIME
+echo "Sleeping for $SLEEP_TIME_SECS seconds..."
+sleep $SLEEP_TIME_SECS
 
 
 # Check that the data exists and has been inserted 
