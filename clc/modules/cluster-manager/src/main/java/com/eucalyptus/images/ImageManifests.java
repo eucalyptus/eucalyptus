@@ -282,6 +282,8 @@ public class ImageManifests {
             }
           } else {
             this.platform = Image.Platform.windows;
+            this.kernelId = null;
+            this.ramdiskId = null;
           }
         }
       }
