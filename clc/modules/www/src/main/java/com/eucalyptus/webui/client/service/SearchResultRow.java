@@ -22,12 +22,23 @@ public class SearchResultRow implements Serializable {
   };
   
   private ArrayList<String> row = new ArrayList<String>( );
+  // Row specific extra field descriptions
+  private ArrayList<SearchResultFieldDesc> extraFields = new ArrayList<SearchResultFieldDesc>( );
   
   public SearchResultRow( ) {
   }
   
   public SearchResultRow( List<String> row ) {
-    this.row.addAll( row );
+    this( row, null );
+  }
+  
+  public SearchResultRow( List<String> row, List<SearchResultFieldDesc> extra ) {
+    if ( row != null ) {
+      this.row.addAll( row );
+    }
+    if ( extra != null ) {
+      this.extraFields.addAll( extra );
+    }
   }
   
   public String getField( int i ) {
@@ -61,5 +72,13 @@ public class SearchResultRow implements Serializable {
       }
     }
     return true;
+  }
+
+  public void setExtraFields( ArrayList<SearchResultFieldDesc> extraFields ) {
+    this.extraFields = extraFields;
+  }
+
+  public ArrayList<SearchResultFieldDesc> getExtraFields( ) {
+    return extraFields;
   }
 }

@@ -3,24 +3,24 @@ package com.eucalyptus.webui.client.activity;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
-import com.eucalyptus.webui.client.place.ServicePlace;
+import com.eucalyptus.webui.client.place.ConfigPlace;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
-import com.eucalyptus.webui.client.view.ServiceView;
+import com.eucalyptus.webui.client.view.ConfigView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
-public class ServiceActivity extends AbstractActivity {
+public class ConfigActivity extends AbstractActivity {
   
   public static final String TITLE = "EUCALYPTUS SERVICE COMPONENTS";
   
-  private static final Logger LOG = Logger.getLogger( ServiceActivity.class.getName( ) );
+  private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
   
   private ClientFactory clientFactory;
-  private ServicePlace place;
+  private ConfigPlace place;
   
-  public ServiceActivity( ServicePlace place, ClientFactory clientFactory ) {
+  public ConfigActivity( ConfigPlace place, ClientFactory clientFactory ) {
     this.place = place;
     this.clientFactory = clientFactory;
   }

@@ -27,15 +27,22 @@ public class CategoryTreeModel implements TreeViewModel {
     ImageResource tag( );
     
     @Source( "image/cog_alt_12x12_gray.png" )
-    ImageResource service( );
+    ImageResource config( );
     @Source( "image/user_12x16_gray.png" )
     ImageResource user( );
+    @Source( "image/group_12x11_gray.png" )
+    ImageResource group( );    
     @Source( "image/article_12x12_gray.png" )
     ImageResource report( );
     @Source( "image/home_12x12_gray.png" )
     ImageResource home( );
     @Source( "image/image_12x12_gray.png" )
     ImageResource image( );
+    @Source( "image/tag_stroke_12x12_gray.png" )
+    ImageResource type( );
+    @Source( "image/arrow_down_12x12_gray.png" )
+    ImageResource down( );
+    
 
   }
   
@@ -88,11 +95,14 @@ public class CategoryTreeModel implements TreeViewModel {
       images = GWT.create( Images.class );
       imageMap.put( images.def( ).getName( ), AbstractImagePrototype.create( images.def( ) ).getHTML( ) );
       imageMap.put( images.tag( ).getName( ), AbstractImagePrototype.create( images.tag( ) ).getHTML( ) );
-      imageMap.put( images.service( ).getName( ), AbstractImagePrototype.create( images.service( ) ).getHTML( ) );
+      imageMap.put( images.config( ).getName( ), AbstractImagePrototype.create( images.config( ) ).getHTML( ) );
       imageMap.put( images.user( ).getName( ), AbstractImagePrototype.create( images.user( ) ).getHTML( ) );
       imageMap.put( images.report( ).getName( ), AbstractImagePrototype.create( images.report( ) ).getHTML( ) );
       imageMap.put( images.home( ).getName( ), AbstractImagePrototype.create( images.home( ) ).getHTML( ) );
       imageMap.put( images.image( ).getName( ), AbstractImagePrototype.create( images.image( ) ).getHTML( ) );
+      imageMap.put( images.type( ).getName( ), AbstractImagePrototype.create( images.type( ) ).getHTML( ) );
+      imageMap.put( images.group( ).getName( ), AbstractImagePrototype.create( images.group( ) ).getHTML( ) );
+      imageMap.put( images.down( ).getName( ), AbstractImagePrototype.create( images.down( ) ).getHTML( ) );
     }    
   }
   

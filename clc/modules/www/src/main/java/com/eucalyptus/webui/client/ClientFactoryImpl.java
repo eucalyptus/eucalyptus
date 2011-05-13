@@ -19,8 +19,8 @@ import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.LoadingProgressViewImpl;
 import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.LoginViewImpl;
-import com.eucalyptus.webui.client.view.ServiceView;
-import com.eucalyptus.webui.client.view.ServiceViewImpl;
+import com.eucalyptus.webui.client.view.ConfigView;
+import com.eucalyptus.webui.client.view.ConfigViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
@@ -59,7 +59,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private LoadingProgressView loadingProgressView;
 	private ShellView shellView;
 	private StartView startView;
-	private ServiceView serviceView;
+	private ConfigView serviceView;
 	private LoadingAnimationView loadingAnimationView;
 	private ErrorSinkView errorSinkView;
 	private AccountView accountView;
@@ -128,9 +128,9 @@ public class ClientFactoryImpl implements ClientFactory {
   }
 
   @Override
-  public ServiceView getServiceView( ) {
+  public ConfigView getServiceView( ) {
     if ( serviceView == null ) {
-      serviceView = new ServiceViewImpl( );
+      serviceView = new ConfigViewImpl( );
     }
     return serviceView;
   }  

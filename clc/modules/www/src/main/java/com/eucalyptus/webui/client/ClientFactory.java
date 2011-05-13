@@ -9,7 +9,7 @@ import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.LoginView;
-import com.eucalyptus.webui.client.view.ServiceView;
+import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
 import com.google.gwt.activity.shared.ActivityManager;
@@ -98,7 +98,7 @@ public interface ClientFactory {
   /**
    * @return the impl. of ServiceView
    */
-  ServiceView getServiceView( );
+  ConfigView getServiceView( );
 	
   /**
    * @return the impl. of LoadingAnimationView

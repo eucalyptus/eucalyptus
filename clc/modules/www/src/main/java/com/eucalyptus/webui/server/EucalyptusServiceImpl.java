@@ -8,16 +8,16 @@ import java.util.HashMap;
 import java.util.List;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
-import com.eucalyptus.webui.client.service.SearchRange;
-import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
-import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
+import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.Session;
-import com.google.gwt.thirdparty.guava.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {

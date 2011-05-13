@@ -4,11 +4,11 @@ import com.google.gwt.place.shared.Place;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
-public class ServicePlace extends Place {
+public class ConfigPlace extends Place {
 
   private String search;
   
-  public ServicePlace( String search ) {
+  public ConfigPlace( String search ) {
     this.search = search;
   }
   
@@ -16,16 +16,16 @@ public class ServicePlace extends Place {
     return this.search;
   }
   
-  @Prefix( "service" )
-  public static class Tokenizer implements PlaceTokenizer<ServicePlace> {
+  @Prefix( "config" )
+  public static class Tokenizer implements PlaceTokenizer<ConfigPlace> {
 
     @Override
-    public ServicePlace getPlace( String token ) {
-      return new ServicePlace( token );
+    public ConfigPlace getPlace( String token ) {
+      return new ConfigPlace( token );
     }
 
     @Override
-    public String getToken( ServicePlace place ) {
+    public String getToken( ConfigPlace place ) {
       return place.getSearch( );
     }
     
