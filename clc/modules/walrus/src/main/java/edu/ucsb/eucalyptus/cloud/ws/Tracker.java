@@ -64,7 +64,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-import com.eucalyptus.util.ExecutionException;
+import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
