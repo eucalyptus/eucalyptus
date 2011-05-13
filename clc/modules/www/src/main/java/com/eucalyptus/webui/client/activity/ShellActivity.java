@@ -14,6 +14,7 @@ import com.eucalyptus.webui.client.place.LogoutPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
@@ -110,6 +111,9 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
       @Override
       public void onFailure( Throwable caught ) {
         LOG.log( Level.WARNING, "Cannot get login user profile. Maybe session is invalid: " + caught );
+        if ( EucalyptusServiceException.INVALID_SESSION.equals( caught.getMessage( ) ) ) {
+          clientFactory.getLocalSession( ).clearSession( );
+        }
         clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
       }
       
