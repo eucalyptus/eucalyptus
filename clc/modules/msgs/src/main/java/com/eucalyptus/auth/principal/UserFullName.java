@@ -67,16 +67,14 @@ import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
-import com.google.common.collect.ImmutableList;
 
 public class UserFullName extends AccountFullName implements FullName {
   private static Logger LOG = Logger.getLogger( UserFullName.class );
   private final String userId;
   private final String userName;
   private UserFullName( User user ) throws AuthException {
-    super( user.getAccount( ), "user", user.getName( ) );
+    super( Accounts.lookupAccountFullNameByUserId( user.getUserId( ) ), "user", user.getName( ) );
     this.userId = user.getUserId( );
     this.userName = user.getName( );
   }
