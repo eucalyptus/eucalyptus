@@ -263,13 +263,19 @@ public class ImageManifests {
           this.kernelId = null;
           this.ramdiskId = null;
         } else {
-          this.kernelId = this.xpathHelper.apply( Image.Type.kernel.getManifestPath( ) );
-          this.ramdiskId = this.xpathHelper.apply( Image.Type.ramdisk.getManifestPath( ) );
+          String kId = this.xpathHelper.apply( Image.Type.kernel.getManifestPath( ) );
+          String rId = this.xpathHelper.apply( Image.Type.ramdisk.getManifestPath( ) );
           this.imageType = Image.Type.machine;
           if ( !manifestName.startsWith( Image.Platform.windows.toString( ) ) ) {
             this.platform = Image.Platform.linux;
-            ImageManifests.checkPrivileges( this.kernelId );
-            ImageManifests.checkPrivileges( this.ramdiskId );
+            if( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+              ImageManifests.checkPrivileges( this.kernelId );
+              this.kernelId = kId;
+            }
+            if( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+              ImageManifests.checkPrivileges( this.ramdiskId );
+              this.ramdiskId = rId;
+            }
           } else {
             this.platform = Image.Platform.windows;
           }
