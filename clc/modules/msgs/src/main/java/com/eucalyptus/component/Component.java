@@ -204,7 +204,7 @@ public class Component implements HasName<Component> {
       return services.first( ).getUri( );
     } else {
       for ( ServiceConfiguration s : services ) {
-        if ( s.isLocal( ) ) {
+        if ( s.isVmLocal( ) ) {
           return s.getUri( );
         }
       }
@@ -458,7 +458,7 @@ public class Component implements HasName<Component> {
   
   public Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
     Service service = null;
-    if ( ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
+    if ( ( config.isVmLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
     } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
@@ -505,7 +505,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).isLocal( ) ) {
+              if ( s.getServiceConfiguration( ).isVmLocal( ) ) {
                 getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
@@ -518,7 +518,7 @@ public class Component implements HasName<Component> {
               setPartition( s.getServiceConfiguration( ).getPartition( ) );
               setName( s.getServiceConfiguration( ).getName( ) );
               setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).isLocal( ) ) {
+              if ( s.getServiceConfiguration( ).isVmLocal( ) ) {
                 getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
               } else {
                 getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
@@ -546,7 +546,7 @@ public class Component implements HasName<Component> {
       Service ret = this.services.remove( fullName );
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
-      } else if ( ret.getServiceConfiguration( ).isLocal( ) ) {
+      } else if ( ret.getServiceConfiguration( ).isVmLocal( ) ) {
         this.localService.compareAndSet( ret, null );
       }
       return ret;
@@ -600,13 +600,13 @@ public class Component implements HasName<Component> {
      */
     Service register( ServiceConfiguration config ) throws ServiceRegistrationException {
       Service service = Services.newServiceInstance( config );
-      if ( config.isLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
+      if ( config.isVmLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
         this.localService.set( service );
       }
       this.services.put( config, service );
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
-                          service.getServiceConfiguration( ).isLocal( )
+                          service.getServiceConfiguration( ).isVmLocal( )
                             ? "local"
                             : "remote",
                           config.getName( ), config.getUri( ) ).info( );

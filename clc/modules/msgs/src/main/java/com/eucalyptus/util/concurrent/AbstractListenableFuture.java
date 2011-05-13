@@ -39,13 +39,11 @@
  */
 package com.eucalyptus.util.concurrent;
 
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -53,37 +51,37 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ExecutionList;
 
 /**
  * <p>
- * An abstract base implementation of the listener support provided by {@link ListenableFuture}. This class uses an {@link ExecutionList} to guarantee that all
- * registered listeners will be executed. Listener/Executor pairs are stored in the execution list and executed in the order in which they were added, but
- * because of thread scheduling issues there is no guarantee that the JVM will execute them in order. In addition, listeners added after the task is complete
- * will be executed immediately, even if some previously added listeners have not yet been executed.
+ * An abstract base implementation of the listener support provided by {@link ListenableFuture}.
+ * This class uses an {@link ExecutionList} to guarantee that all registered listeners will be
+ * executed. Listener/Executor pairs are stored in the execution list and executed in the order in
+ * which they were added, but because of thread scheduling issues there is no guarantee that the JVM
+ * will execute them in order. In addition, listeners added after the task is complete will be
+ * executed immediately, even if some previously added listeners have not yet been executed.
  * 
  * <p>
- * This class uses the {@link AbstractFuture} class to implement the {@code ListenableFuture} interface and simply delegates the
- * {@link #addListener(Runnable, ExecutorService)} and {@link #done()} methods to it.
+ * This class uses the {@link AbstractFuture} class to implement the {@code ListenableFuture}
+ * interface and simply delegates the {@link #addListener(Runnable, ExecutorService)} and
+ * {@link #done()} methods to it.
  * 
  * @author Sven Mawson
- * @author chris grzegorczyk <grze@eucalyptus.com> Adopted and repurposed to support callable chaining.
+ * @author chris grzegorczyk <grze@eucalyptus.com> Adopted and repurposed to support callable
+ *         chaining.
  */
-public abstract class AbstractListenableFuture<V>
-    extends AbstractFuture<V> implements ListenableFuture<V> {
-  enum State {
-    PENDING, RUNNING, DONE
-  };
-  
-  private static Logger                   LOG       = Logger.getLogger( AbstractListenableFuture.class );
-  protected final BlockingQueue<Runnable> listeners = new LinkedBlockingQueue<Runnable>( );
-  private static final Runnable           DONE      = new Runnable( ) {
-                                                      public void run( ) {}
-                                                    };
+public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> implements ListenableFuture<V> {
+  private static Logger                           LOG       = Logger.getLogger( AbstractListenableFuture.class );
+  protected final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>( );
+  private final AtomicBoolean                     finished  = new AtomicBoolean( false );
+  private static final Runnable                   DONE      = new Runnable( ) {
+                                                              public void run( ) {}
+                                                            };
   
   protected <T> void add( ExecPair<T> pair ) {
     this.listeners.add( pair );
-    if ( this.listeners.contains( DONE ) ) {
+    if ( this.finished.get( ) ) {
       EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
       this.listeners.remove( pair );
       pair.run( );
@@ -102,7 +100,8 @@ public abstract class AbstractListenableFuture<V>
   }
   
   /**
-   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable, ExecutorService)
+   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable,
+   *      ExecutorService)
    */
   @Override
   public <V> CheckedListenableFuture<V> addListener( Callable<V> listener, ExecutorService executor ) {
@@ -122,8 +121,10 @@ public abstract class AbstractListenableFuture<V>
   @Override
   protected void done( ) {
     this.listeners.add( DONE );
-    while ( this.listeners.peek( ) != DONE ) {
-      this.listeners.poll( ).run( );
+    if( this.finished.compareAndSet( false, true ) ) {
+      while ( this.listeners.peek( ) != DONE ) {
+        this.listeners.poll( ).run( );
+      }
     }
   }
   

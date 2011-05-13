@@ -304,7 +304,7 @@ public class ServiceTransitions {
                               EventType.COMPONENT_SERVICE_ENABLE,
                               parent.getFullName( ).toString( ),
                               parent.toString( ) ).info( );
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
               parent.lookupComponent( ).getBootstrapper( ).check( );
@@ -337,7 +337,7 @@ public class ServiceTransitions {
     CHECK {
       @Override
       public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
               parent.lookupComponent( ).getBootstrapper( ).check( );
@@ -365,7 +365,7 @@ public class ServiceTransitions {
                            EventType.COMPONENT_SERVICE_DISABLE,
                            parent.getFullName( ).toString( ),
                            parent.toString( ) ).info( );
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).disable( );
             parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
@@ -398,7 +398,7 @@ public class ServiceTransitions {
                               EventType.COMPONENT_SERVICE_START,
                               parent.getFullName( ).toString( ),
                               parent.toString( ) ).info( );
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).start( );
             if ( parent.lookupComponent( ).hasLocalService( ) ) {
@@ -429,7 +429,7 @@ public class ServiceTransitions {
     LOAD {
       @Override
       public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isLocal( ) ) {
+        if ( parent.isVmLocal( ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).load( );
             transitionCallback.fire( );
@@ -452,7 +452,7 @@ public class ServiceTransitions {
                            EventType.COMPONENT_SERVICE_STOP,
                            parent.getFullName( ).toString( ),
                            parent.toString( ) ).debug( );
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).stop( );
             parent.lookupComponent( ).getBuilder( ).fireStop( parent );
@@ -481,7 +481,7 @@ public class ServiceTransitions {
     DESTROY {
       @Override
       public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).destroy( );
             transitionCallback.fire( );
@@ -557,7 +557,7 @@ public class ServiceTransitions {
     ENDPOINT_START {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {//TODO:GRZE:URGENT fix this brain-damaged corner case
+        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {//TODO:GRZE:URGENT fix this brain-damaged corner case
           try {
             parent.lookupService( ).getEndpoint( ).start( );
           } catch ( Exception ex ) {
@@ -569,7 +569,7 @@ public class ServiceTransitions {
     ENDPOINT_STOP {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isLocal( ) ) {
+        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {
           try {
             parent.lookupService( ).getEndpoint( ).stop( );
           } catch ( Exception ex ) {
@@ -581,7 +581,7 @@ public class ServiceTransitions {
     SERVICE_CONTEXT_RESTART {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           ServiceContextManager.restartSync( );
         }
       }
@@ -589,7 +589,7 @@ public class ServiceTransitions {
     PIPELINES_ADD {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           PipelineRegistry.getInstance( ).enable( parent.getComponentId( ) );
         }
       }
@@ -597,7 +597,7 @@ public class ServiceTransitions {
     PIPELINES_REMOVE {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
           PipelineRegistry.getInstance( ).disable( parent.getComponentId( ) );
         }
       }

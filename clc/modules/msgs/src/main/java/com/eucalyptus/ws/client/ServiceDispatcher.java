@@ -60,7 +60,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
   
   public static Dispatcher makeRemote( ServiceConfiguration configuration ) {
-    return new RemoteDispatcher( configuration, configuration.getComponentId( ).makeRemoteUri( configuration.getHostName( ), configuration.getPort( ) ) );
+    return new RemoteDispatcher( configuration, configuration.getComponentId( ).makeInternalRemoteUri( configuration.getHostName( ), configuration.getPort( ) ) );
   }
   
   public static Dispatcher makeLocal( ServiceConfiguration configuration ) {

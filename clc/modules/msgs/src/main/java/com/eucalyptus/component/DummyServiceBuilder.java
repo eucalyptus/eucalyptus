@@ -82,7 +82,7 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
   @Override
   public ServiceConfiguration newInstance( String partition, String name, String host, Integer port ) {
     ComponentId compId = this.getComponent( ).getComponentId( );
-    return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.makeRemoteUri( host, port ) );
+    return ServiceConfigurations.createEphemeral( compId, compId.getPartition( ), compId.name( ), compId.makeInternalRemoteUri( host, port ) );
   }
   
   @Override

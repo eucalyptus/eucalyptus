@@ -256,7 +256,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   /**
    * Get the HTTP service path
    */
-  public final URI makeRemoteUri( String hostName, Integer port ) {
+  public final URI makeInternalRemoteUri( String hostName, Integer port ) {
     String uri;
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
@@ -275,6 +275,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
     String uri;
     URI u = null;
+    port = ( port == -1 ) ? this.getPort( ) : port;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );

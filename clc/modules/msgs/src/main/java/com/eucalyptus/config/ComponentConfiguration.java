@@ -133,7 +133,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   public URI getInternalUri( ) {
-    return this.getComponentId( ).makeRemoteUri( this.getHostName( ), this.getPort( ) );
+    return this.getComponentId( ).makeInternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
   
   public String getName( ) {
@@ -161,7 +161,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return Components.lookup( this.getComponentId( ) ).lookupService( this );
   }
   
-  public Boolean isLocal( ) {
+  public Boolean isVmLocal( ) {
     try {
       return this.port == -1
         ? true
@@ -183,7 +183,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Override
   public String toString( ) {
     return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s hostName=%s port=%s servicePath=%s",
-                          this.getComponentId( ), this.isLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
+                          this.getComponentId( ), this.isVmLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
   }
   
   @Override

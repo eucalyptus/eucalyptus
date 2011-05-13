@@ -830,7 +830,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     final ComponentId glId = ComponentIds.lookup( GatherLogService.class );
     final ServiceConfiguration conf = this.getConfiguration( );
     return ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
-                                                  glId.makeRemoteUri( conf.getHostName( ), conf.getPort( ) ) );
+                                                  glId.makeInternalRemoteUri( conf.getHostName( ), conf.getPort( ) ) );
   }
   
   @Override

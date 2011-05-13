@@ -87,12 +87,12 @@ public class MessagableService extends AbstractService implements Service {
   MessagableService( final Service baseService ) {
     this.serviceDelegate = baseService;
     URI remoteUri;
-    if ( this.getServiceConfiguration( ).isLocal( ) ) {
-      remoteUri = this.getComponentId( ).makeRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
+    if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
+      remoteUri = this.getComponentId( ).makeInternalRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
     } else {
-      remoteUri = this.getComponentId( ).makeRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
+      remoteUri = this.getComponentId( ).makeInternalRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
     }
-    this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isLocal( )
+    this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isVmLocal( )
       ? this.getComponentId( ).getLocalEndpointUri( )
       : remoteUri );//TODO:GRZE: fix remote/local swaps
     this.localDispatcher = ServiceDispatcher.makeLocal( this.getServiceConfiguration( ) );

@@ -163,7 +163,7 @@ public class EmpyreanService {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
-        if ( service.isLocal( ) ) {
+        if ( service.isVmLocal( ) ) {
           try {
             comp.startTransition( service );
           } catch ( IllegalStateException ex ) {
@@ -183,7 +183,7 @@ public class EmpyreanService {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
-        if ( service.isLocal( ) ) {
+        if ( service.isVmLocal( ) ) {
           try {
             comp.stopTransition( service ).get( );
           } catch ( IllegalStateException ex ) {
@@ -211,7 +211,7 @@ public class EmpyreanService {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
-        if ( service.isLocal( ) ) {
+        if ( service.isVmLocal( ) ) {
           try {
             comp.enableTransition( service );
           } catch ( IllegalStateException ex ) {

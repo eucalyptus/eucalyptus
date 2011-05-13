@@ -127,7 +127,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       } else if ( comp.hasLocalService( ) ) {
         LOG.info( "load(): " + comp );
         final ServiceConfiguration s = comp.getLocalServiceConfiguration( );
-        if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
+        if ( s.isVmLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
           try {
             comp.loadService( s ).get( );
           } catch ( ServiceRegistrationException ex ) {

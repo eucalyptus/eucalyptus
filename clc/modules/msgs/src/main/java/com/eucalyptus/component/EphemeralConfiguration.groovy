@@ -90,8 +90,8 @@ class EphemeralConfiguration extends ComponentConfiguration {
   }
   
   @Override
-  public Boolean isLocal( ) {
-    return super.isLocal( );
+  public Boolean isVmLocal( ) {
+    return super.isVmLocal( );
   }
   
   @Override

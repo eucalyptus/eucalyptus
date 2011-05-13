@@ -54,7 +54,7 @@ public class ComponentService {
 		
 		LOG.info("Component: " + component + "@" + host);
     ServiceConfiguration service = lookupService( component, host );
-		if(service.isLocal()) {
+		if(service.isVmLocal()) {
 			return request;
  		} else {
  			BaseMessage reply;

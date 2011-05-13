@@ -134,7 +134,7 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public Boolean isLocal( ) {
-    return this.serviceConfiguration.isLocal( );
+    return this.serviceConfiguration.isVmLocal( );
   }
   
   @Override

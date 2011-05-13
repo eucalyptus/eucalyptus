@@ -69,7 +69,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isLocal( ) ) {
+    if ( config.isVmLocal( ) ) {
       java.lang.System.setProperty( "euca.storage.name", config.getName( ) );
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }
