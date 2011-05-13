@@ -86,11 +86,13 @@ import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.NoSuchImageException;
@@ -99,7 +101,10 @@ import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -311,11 +316,35 @@ public class EucalyptusManagement {
       throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
     }
 	}
+	
+	@TypeMapper
+	public enum SystemConfigMapper implements Function<SystemConfiguration,SystemConfigWeb> {
+	  INSTANCE;
 
+    @Override
+    public SystemConfigWeb apply( SystemConfiguration input ) {
+      return new SystemConfigWeb( ) {{
+        setDefaultKernelId( ImageConfiguration.getInstance( ).getDefaultKernelId( ) );
+        setDefaultRamdiskId( ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) );
+      }};
+                                 sysConf.getDefaultKernel(),
+                                 sysConf.getDefaultRamdisk(),
+                                 sysConf.getMaxUserPublicAddresses(),
+                                 sysConf.isDoDynamicPublicAddresses(),
+                                 sysConf.getSystemReservedPublicAddresses(),
+                                 sysConf.getDnsDomain(),
+                                 sysConf.getNameserver(),
+                                 sysConf.getNameserverAddress(),
+                                 sysConf.getCloudHost( ));;
+    }
+	  
+	}
+	
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
-		LOG.debug( "Sending cloud host: " + sysConf.getCloudHost( ) );
+		LOG.debug( "Sending cloud host: " + Internets.localhostAddress( ) );
+		return SystemConfigMapper.INSTANCE.apply( sysConf );
 		return new SystemConfigWeb( 
 				sysConf.getDefaultKernel(),
 				sysConf.getDefaultRamdisk(),
@@ -424,7 +453,7 @@ public class EucalyptusManagement {
 		String cloudRegisterId = null;
 	    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (SystemConfiguration.getInternalIpAddress() + ":8443");
+		cloudInfo.setInternalHostPort (Internets.localhostAddress( ).getHostAddress( ) + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

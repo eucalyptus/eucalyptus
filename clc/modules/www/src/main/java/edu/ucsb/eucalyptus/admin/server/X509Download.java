@@ -65,11 +65,9 @@ package edu.ucsb.eucalyptus.admin.server;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletOutputStream;
@@ -78,18 +76,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Notifications;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.crypto.util.PEMFiles;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import com.eucalyptus.util.Internets;
 
 public class X509Download extends HttpServlet {
   
@@ -195,6 +194,8 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
+      String localHost = Internets.localhostAddress( ).getCanonicalHostName( );
+      sb.append( "\nexport EC2_URL=" + Eucalyptus.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
       if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
         ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
         String uri = walrusConfig.getUri( ).toASCIIString( );
@@ -203,14 +204,13 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  Walrus URL is not configured." );
       }
-      sb.append( "\nexport AWS_SNS_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Notifications" ) );
-      sb.append( "\nexport EC2_URL=" + SystemConfiguration.getCloudUrl( ) );
-      sb.append( "\nexport EUARE_URL=" + SystemConfiguration.getCloudUrl( ).replaceAll( "/Eucalyptus", "/Euare" ) );
+      sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
+      sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
       sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
-      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + userNumber + "'" );
+      sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
       sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
       sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );

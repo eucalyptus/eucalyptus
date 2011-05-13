@@ -63,7 +63,6 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +82,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmType;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -103,7 +101,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 
 public class ClusterEndpoint implements Startable {
@@ -365,7 +362,7 @@ public class ClusterEndpoint implements Startable {
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
+    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", Internets.localhostAddress( ).getCanonicalHostName( ) ) );
     try {
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );

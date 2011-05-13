@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.images;
+package com.eucalyptus.address;
 
 import java.util.NoSuchElementException;
 import javax.persistence.Column;
@@ -82,38 +82,39 @@ import com.eucalyptus.entities.RecoverablePersistenceException;
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "cloud_image_configuration" )
+@Table( name = "cloud_address_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
-public class ImageConfiguration extends AbstractPersistent {
+@ConfigurableClass( root = "cloud.addresses", description = "Configuration options controlling the handling of public/elastic addresses." )
+public class AddressingConfiguration extends AbstractPersistent {
   @Transient
-  private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
-  @ConfigurableField( displayName = "default_visibility", description = "The default value used to determine whether or not images are marked 'public' when first registered." )
-  @Column( name = "config_image_is_public", nullable = false, columnDefinition = "boolean default true" )
-  private Boolean       defaultVisibility;
+  private static Logger LOG = Logger.getLogger( AddressingConfiguration.class );
   
-  @ConfigurableField( displayName = "default_kernel_id", description = "The default used for running images which do not have a kernel specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_kernel_id", nullable = false )
-  private String        defaultKernelId;
+  @ConfigurableField( displayName = "max_addresses_per_user", description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
+  @Column( name = "config_addr_max_per_user", nullable = false )
+  private Integer       maxUserPublicAddresses;
   
-  @ConfigurableField( displayName = "default_ramdisk_id", description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
-  @Column( name = "config_image_default_ramdisk_id", nullable = false )
-  private String        defaultRamdiskId;
+  @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available." )
+  @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
+  private Boolean       doDynamicPublicAddresses;
+
+  @ConfigurableField( displayName = "static_address_pool", description = "Public addresses are assigned to instances by the system only from a pool of reserved instances whose size is determined by this value." )
+  @Column( name = "config_addr_reserved_public_addresses" )
+  private Integer       systemReservedPublicAddresses;
   
-  protected ImageConfiguration( ) {
+  protected AddressingConfiguration( ) {
     super( );
   }
   
-  public static ImageConfiguration getInstance( ) {
-    ImageConfiguration ret = null;
+  private static AddressingConfiguration getInstance( ) {
+    AddressingConfiguration ret = null;
     try {
-      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
+      ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
     } catch ( NoSuchElementException ex1 ) {
       try {
-        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+        ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
       } catch ( RecoverablePersistenceException ex ) {
         LOG.error( ex, ex );
-        ret = new ImageConfiguration( );
+        ret = new AddressingConfiguration( );
       }
     }
     return ret;
@@ -121,32 +122,38 @@ public class ImageConfiguration extends AbstractPersistent {
   
   @PrePersist
   protected void initialize( ) {
-    if ( this.defaultVisibility == null ) {
-      this.defaultVisibility = Boolean.TRUE;
+    if( this.maxUserPublicAddresses == null ) {
+      this.maxUserPublicAddresses = 5; 
+    }
+    if( this.doDynamicPublicAddresses == null ) {
+      this.doDynamicPublicAddresses = Boolean.TRUE;
+    }
+    if( this.systemReservedPublicAddresses == null ) {
+      this.systemReservedPublicAddresses = 0;
     }
   }
-  
-  public Boolean getDefaultVisibility( ) {
-    return this.defaultVisibility;
+
+  public Integer getMaxUserPublicAddresses( ) {
+    return this.maxUserPublicAddresses;
   }
-  
-  public void setDefaultVisibility( Boolean defaultVisibility ) {
-    this.defaultVisibility = defaultVisibility;
+
+  public void setMaxUserPublicAddresses( Integer maxUserPublicAddresses ) {
+    this.maxUserPublicAddresses = maxUserPublicAddresses;
   }
-  
-  public String getDefaultKernelId( ) {
-    return this.defaultKernelId;
+
+  public Boolean getDoDynamicPublicAddresses( ) {
+    return this.doDynamicPublicAddresses;
   }
-  
-  public void setDefaultKernelId( String defaultKernelId ) {
-    this.defaultKernelId = defaultKernelId;
+
+  public void setDoDynamicPublicAddresses( Boolean doDynamicPublicAddresses ) {
+    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
   }
-  
-  public String getDefaultRamdiskId( ) {
-    return this.defaultRamdiskId;
+
+  public Integer getSystemReservedPublicAddresses( ) {
+    return this.systemReservedPublicAddresses;
   }
-  
-  public void setDefaultRamdiskId( String defaultRamdiskId ) {
-    this.defaultRamdiskId = defaultRamdiskId;
+
+  public void setSystemReservedPublicAddresses( Integer systemReservedPublicAddresses ) {
+    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
   }
 }

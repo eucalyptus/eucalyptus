@@ -65,8 +65,6 @@ package com.eucalyptus.dns;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import org.apache.log4j.Logger;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.DClass;
@@ -77,10 +75,9 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
-
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-
+import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class TransientZone extends Zone {
@@ -106,7 +103,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( )+"." ) );
+        Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( )+"." ) );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -132,7 +129,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( ) +".") );
+        Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( ) +".") );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -248,7 +245,7 @@ public class TransientZone extends Zone {
 	    refresh, retry, expires, minimum );
 	  long nsTTL = 604800;
 	  Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-	    Name.fromString( InetAddress.getByName( SystemConfiguration.getCloudHostAddress( ) ).getCanonicalHostName( ) +".") );
+	    Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( ) +".") );
 	  return new TransientZone( name, new Record[] { soarec, nsrec } );
 	} catch ( Exception e ) {
 	  LOG.error( e, e );
