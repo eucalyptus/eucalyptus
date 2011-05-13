@@ -66,7 +66,7 @@
 package com.eucalyptus.storage;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 

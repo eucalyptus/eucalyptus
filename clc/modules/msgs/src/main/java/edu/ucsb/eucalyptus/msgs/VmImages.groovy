@@ -205,6 +205,8 @@ public class ImageDetails extends EucalyptusData {
   String rootDeviceName = "/dev/sda1";
   String name;
   String description;
+  String virtualizationType;
+  String hypervisor;
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
 

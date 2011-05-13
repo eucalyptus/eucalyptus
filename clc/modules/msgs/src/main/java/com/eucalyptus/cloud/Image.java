@@ -12,6 +12,7 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
   
   public interface StaticDiskImage extends Image {
     public abstract String getImageLocation( );
+    public abstract String getSignature( );
   }
     
   public static final String TYPE_MANIFEST_XPATH = "/manifest/image/type/text()";
@@ -56,7 +57,6 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
       public String getManifestPath( ) {
         return "/manifest/machine_configuration/ramdisk_id/text()";
       }
-      
     };
     public abstract String getTypePrefix( );
     public abstract String getManifestPath( );

@@ -75,7 +75,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.DRBDInfo;

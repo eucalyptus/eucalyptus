@@ -197,7 +197,7 @@ public class ImageUtil {
     return size;
   }
   
-  public static void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
+  public static void checkStoredImage( final Image.StaticDiskImage imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null ) try {
       Document inputSource = null;
       try {
@@ -212,8 +212,7 @@ public class ImageUtil {
       try {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
-      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
-                                                                                                                                 "Manifest signature has changed since registration." );
+      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
       try {
         if( imgInfo instanceof Image.StaticDiskImage ) {

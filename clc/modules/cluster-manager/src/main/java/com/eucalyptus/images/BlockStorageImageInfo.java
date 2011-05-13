@@ -61,67 +61,80 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.configurable;
+package com.eucalyptus.images;
 
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 
-@org.hibernate.annotations.Entity
+@Entity
 @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_config" )
-@Table( name = "configurable_property" )
+@PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ConfigurableEntity extends AbstractPersistent {
-  private String declaringClassName;
-  private String declaringFieldName;
-  private String value;
+@DiscriminatorValue( value = "blockstorage" )
+public class BlockStorageImageInfo extends ImageInfo {
+  @Column( name = "image_snapshot_id" )
+  private String  snapshotId;
+  @Column( name = "image_volume_size" )
+  private Integer volumeSize;
+  @Column( name = "image_del_vol_on_terminate" )
+  private Boolean deleteOnTerminate;
   
-  ConfigurableEntity( String declaringClassName, String declaringFieldName, String value ) {
+  BlockStorageImageInfo( ) {
     super( );
-    this.declaringClassName = declaringClassName;
-    this.declaringFieldName = declaringFieldName;
-    this.value = value;
+    this.setImageType( Image.Type.machine );
   }
   
-  public static class SinglePropertyEntry extends AbstractConfigurableProperty {
-    
-    public SinglePropertyEntry( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description,
-                                PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
-                                PropertyChangeListener changeListener ) {
-      super( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
-    }
-    
-    public SinglePropertyEntry( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description,
-                                PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-      super( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
-    }
-    
-    @Override
-    public String getValue( ) {
-      String declaringClassName = this.getDefiningClass( ).getCanonicalName( );
-      String declaringFieldName = this.getFieldName( );
-      try {
-        Transactions.one( new ConfigurableEntity( declaringClassName, declaringFieldName, null ), new Tx<ConfigurableEntity>( ) {
-
-          @Override
-          public void fire( ConfigurableEntity t ) throws Throwable {}});
-      } catch ( TransactionException ex ) {
-        return this.getDefaultValue( );
-      }
-    }
-    
-    @Override
-    public String setValue( String s ) {
-      return null;
-    }
+  BlockStorageImageInfo( String imageId ) {
+    super( imageId );
+    this.setImageType( Image.Type.machine );
+  }
+  
+  BlockStorageImageInfo( String imageId, String snapshotId, Integer volumeSize, Boolean deleteOnTerminate ) {
+    super( imageId );
+    this.snapshotId = snapshotId;
+    this.volumeSize = volumeSize;
+    this.deleteOnTerminate = deleteOnTerminate;
+    this.setImageType( Image.Type.machine );
+  }
+  
+  BlockStorageImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription,
+                         String snapshotId, Integer volumeSize, Boolean deleteOnTerminate,
+                         Image.Architecture arch, Image.Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, arch, platform );
+    this.snapshotId = snapshotId;
+    this.volumeSize = volumeSize;
+    this.deleteOnTerminate = deleteOnTerminate;
     
   }
+
+  public String getSnapshotId( ) {
+    return this.snapshotId;
+  }
+
+  public void setSnapshotId( String snapshotId ) {
+    this.snapshotId = snapshotId;
+  }
+
+  public Integer getVolumeSize( ) {
+    return this.volumeSize;
+  }
+
+  public void setVolumeSize( Integer volumeSize ) {
+    this.volumeSize = volumeSize;
+  }
+
+  public Boolean getDeleteOnTerminate( ) {
+    return this.deleteOnTerminate;
+  }
+
+  public void setDeleteOnTerminate( Boolean deleteOnTerminate ) {
+    this.deleteOnTerminate = deleteOnTerminate;
+  }
+  
 }

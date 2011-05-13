@@ -78,7 +78,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 
 public class AOEManager implements StorageExportManager {

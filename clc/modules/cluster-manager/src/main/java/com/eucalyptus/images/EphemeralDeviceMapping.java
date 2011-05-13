@@ -79,21 +79,21 @@ import com.eucalyptus.cloud.Image.DeviceMappingType;
 public class EphemeralDeviceMapping extends DeviceMapping {
   @Column( name = "metadata_device_mapping_ephemeral_number" )
   private Integer ephemeralNumber;
-
+  
   public EphemeralDeviceMapping( ) {
     super( );
     this.setDeviceMappingType( DeviceMappingType.ephemeral );
   }
-
-  public EphemeralDeviceMapping( ImageInfo parent, String deviceName, Integer ephemeralNumber ) {
-    super( parent, DeviceMappingType.ephemeral, deviceName );
-    this.ephemeralNumber = ephemeralNumber;
+  
+  public EphemeralDeviceMapping( ImageInfo parent, String deviceName, String virtualName ) {
+    super( parent, DeviceMappingType.ephemeral, deviceName, virtualName );
+    this.ephemeralNumber = Integer.parseInt( virtualName.replace( "ephemeral", "" ) );
   }
-
+  
   public Integer getEphemeralNumber( ) {
     return this.ephemeralNumber;
   }
-
+  
   public void setEphemeralNumber( Integer ephemeralNumber ) {
     this.ephemeralNumber = ephemeralNumber;
   }

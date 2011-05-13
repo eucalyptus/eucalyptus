@@ -63,26 +63,74 @@
 
 package com.eucalyptus.images;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.cloud.Image.DeviceMappingType;
+import javax.persistence.Column;
+import javax.persistence.Lob;
+import javax.persistence.MappedSuperclass;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "suppress" )
-public class SuppressDeviceMappping extends DeviceMapping {
+@MappedSuperclass
+public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
+  @Lob
+  @Column( name = "metadata_image_signature" )
+  private String                signature;
+  
+  @Column( name = "metadata_image_path" )
+  private String                imageLocation;
+  
+  @Column( name = "metadata_image_size" )
+  private Long                  imageSize;
+  
+  @Column( name = "metadata_image_bundle_size" )
+  private Long                  imageBundleSize;
 
-  protected SuppressDeviceMappping( ) {
-    super( );
-    this.setDeviceMappingType( DeviceMappingType.suppress );
+  protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
+                    final String imageLocation, final Long imageSize, final Long imageBundleSize,
+                    final Image.Architecture arch, final Image.Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, arch, platform );
+    this.imageLocation = imageLocation;
+    this.imageSize = imageSize;
+    this.imageBundleSize = imageBundleSize;
   }
 
-  public SuppressDeviceMappping( ImageInfo parent, String deviceName ) {
-    super( parent, DeviceMappingType.suppress, deviceName, null );
+  protected PutGetImageInfo( ) {
+    super( );
+  }
+
+  protected PutGetImageInfo( String imageId ) {
+    super( imageId );
+  }
+
+  public String getSignature( ) {
+    return this.signature;
+  }
+
+  public void setSignature( String signature ) {
+    this.signature = signature;
+  }
+
+  public String getImageLocation( ) {
+    return this.imageLocation;
+  }
+
+  public void setImageLocation( String imageLocation ) {
+    this.imageLocation = imageLocation;
+  }
+
+  public Long getImageSize( ) {
+    return this.imageSize;
+  }
+
+  public void setImageSize( Long imageSize ) {
+    this.imageSize = imageSize;
+  }
+
+  public Long getImageBundleSize( ) {
+    return this.imageBundleSize;
+  }
+
+  public void setImageBundleSize( Long imageBundleSize ) {
+    this.imageBundleSize = imageBundleSize;
   }
 
 }

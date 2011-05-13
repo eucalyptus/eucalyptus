@@ -1,6 +1,7 @@
 package com.eucalyptus.images;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -18,10 +19,14 @@ import com.eucalyptus.util.TransactionFireException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.TypeMapping;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
+import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
@@ -53,9 +58,14 @@ public class Images {
     @Override
     public ImageDetails apply( ImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
+      i.setName( arg0.getName( ) );
+      i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+//TODO      i.setRootDeviceName( arg0.getD )
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      if ( arg0 instanceof Image.StaticDiskImage ) {
+        i.setImageLocation( ( ( StaticDiskImage ) arg0 ).getImageLocation( ) );
+      }
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );
       i.setImageState( arg0.getState( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -65,6 +75,31 @@ public class Images {
         i.setRamdiskId( ( ( MachineImageInfo ) arg0 ).getRamdiskId( ) );
         i.setPlatform( ( ( MachineImageInfo ) arg0 ).getPlatform( ).toString( ) );
       }
+      if ( arg0 instanceof BlockStorageImageInfo ) {
+        i.setRootDeviceType( "ebs" );
+      }
+      i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), new Function<DeviceMapping, BlockDeviceMappingItemType>( ) {
+        
+        @Override
+        public BlockDeviceMappingItemType apply( DeviceMapping input ) {
+          BlockDeviceMappingItemType ret = new BlockDeviceMappingItemType( );
+          ret.setDeviceName( input.getDeviceName( ) );
+          if ( input instanceof BlockStorageDeviceMapping ) {
+            final BlockStorageDeviceMapping ebsDev = ( BlockStorageDeviceMapping ) input;
+            ret.setEbs( new EbsDeviceMapping( ) {
+              {
+                this.setVirtualName( ebsDev.getVirtualName( ) );
+                this.setSnapshotId( ebsDev.getSnapshotId( ) );
+                this.setVolumeSize( ebsDev.getSize( ) );
+                this.setDeleteOnTermination( ebsDev.getDelete( ) );
+              }
+            } );
+          } else {
+            ret.setVirtualName( input.getVirtualName( ) );
+          }
+          return null;
+        }
+      } ) );
       return i;
     }
   }
@@ -112,7 +147,7 @@ public class Images {
         img.setState( Image.State.deregistered );
       }
       db.commit( );
-      if( img instanceof Image.StaticDiskImage ) {
+      if ( img instanceof Image.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
     } catch ( EucalyptusCloudException e ) {
@@ -178,12 +213,13 @@ public class Images {
         
         @Override
         public void fire( Snapshot t ) throws Throwable {
-
-        }
+                        //TODO:GRZE:OMGFIXME check more here.
+                        
+                      }
       } );
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
-    } catch ( TransactionException ex ) {
+    } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     }
@@ -191,20 +227,22 @@ public class Images {
   }
   
   public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
-    ImageInfo ret = null;
-    String imageName = ( imageNameArg != null ) ? imageNameArg : manifest.getName( );
+    PutGetImageInfo ret = null;
+    String imageName = ( imageNameArg != null )
+      ? imageNameArg
+      : manifest.getName( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                   imageName, imageDescription, manifest.getImageLocation( ),
+                                   imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ),
+                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ),
+                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
     }
     if ( ret == null ) {
@@ -212,7 +250,7 @@ public class Images {
     } else {
       ret.setSignature( manifest.getSignature( ) );
       ret.setState( Image.State.available );
-      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+      EntityWrapper<PutGetImageInfo> db = EntityWrapper.get( PutGetImageInfo.class );
       try {
         ret = db.merge( ret );
         db.commit( );
@@ -227,19 +265,23 @@ public class Images {
 //    }
 //    imageInfo.grantPermission( ctx.getAccount( ) );
       LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-      if( ret instanceof Image.StaticDiskImage ) {
+      if ( ret instanceof Image.StaticDiskImage ) {
         WalrusUtil.triggerCaching( ( StaticDiskImage ) ret );
       }
       return ret;
     }
   }
-
+  
   public static ImageConfiguration configuration( ) {
     return ImageConfiguration.getInstance( );
   }
-
+  
   public static String lookupDefaultKernelId( ) {
-    return;
+    return ImageConfiguration.getInstance( ).getDefaultKernelId( );
+  }
+  
+  public static String lookupDefaultRamdiskId( ) {
+    return ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
   }
   
 }

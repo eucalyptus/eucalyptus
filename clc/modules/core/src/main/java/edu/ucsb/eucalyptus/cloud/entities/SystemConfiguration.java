@@ -108,9 +108,7 @@ public class SystemConfiguration extends AbstractPersistent {
   public SystemConfiguration( ) {
   }
 
-  public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses,
-                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses,
-                              final String dnsDomain, final String nameserver, final String nameserverAddress, final String cloudHost ) {
+  public SystemConfiguration( final String dnsDomain, final String nameserver, final String nameserverAddress ) {
     this.dnsDomain = dnsDomain;
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;

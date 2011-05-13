@@ -321,7 +321,7 @@ public class Emis {
       ramdiskId = bootSet.getMachine( ).getRamdiskId( );
     }
     if ( ramdiskId == null || "".equals( ramdiskId ) ) {
-      ramdiskId = SystemConfiguration.getSystemConfiguration( ).getDefaultRamdisk( );
+      ramdiskId = ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
     }
     Preconditions.checkNotNull( ramdiskId, "Attempt to resolve a ramdiskId for " + bootSet.toString( ) + " during request " + ( ctx != null
         ? ctx.getRequest( ).toSimpleString( )

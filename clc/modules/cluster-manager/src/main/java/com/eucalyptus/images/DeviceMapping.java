@@ -98,7 +98,10 @@ public class DeviceMapping extends AbstractPersistent {
   
   @Column( name = "metadata_device_mapping_device_name" )
   private String                  deviceName;
-  
+
+  @Column( name = "metadata_device_mapping_virtual_name" )
+  private String                  virtualName;
+
   @ManyToOne
   @JoinColumn( name = "metadata_device_mapping_for_image_id" )
   private ImageInfo               parent;
@@ -106,10 +109,11 @@ public class DeviceMapping extends AbstractPersistent {
   protected DeviceMapping( ) {
   }
   
-  public DeviceMapping( ImageInfo parent, DeviceMappingType deviceMappingType, String deviceName ) {
+  public DeviceMapping( ImageInfo parent, DeviceMappingType deviceMappingType, String deviceName, String virtualName ) {
     this.parent = parent;
     this.deviceName = deviceName;
     this.deviceMappingType = deviceMappingType;
+    this.virtualName = virtualName;
   }
   
   public String getDeviceName( ) {
@@ -134,6 +138,14 @@ public class DeviceMapping extends AbstractPersistent {
 
   protected void setDeviceMappingType( Image.DeviceMappingType deviceMappingType ) {
     this.deviceMappingType = deviceMappingType;
+  }
+
+  public String getVirtualName( ) {
+    return this.virtualName;
+  }
+
+  public void setVirtualName( String virtualName ) {
+    this.virtualName = virtualName;
   }
   
 }

@@ -105,7 +105,7 @@ public class AddressingConfiguration extends AbstractPersistent {
     super( );
   }
   
-  private static AddressingConfiguration getInstance( ) {
+  public static AddressingConfiguration getInstance( ) {
     AddressingConfiguration ret = null;
     try {
       ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );

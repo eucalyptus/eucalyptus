@@ -142,7 +142,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   private static AbstractSystemAddressManager getProvider( ) {
-    String provider = "" + edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
+    String provider = "" + AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( )
                       + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
                         @Override
                         public boolean apply( Cluster arg0 ) {
@@ -166,11 +166,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static int getSystemReservedAddressCount( ) {
-    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getSystemReservedPublicAddresses( );
+    return AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( );
   }
   
   public static int getUserMaxAddresses( ) {
-    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getMaxUserPublicAddresses( );
+    return AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( );
   }
   
   //TODO: add config change event listener ehre.

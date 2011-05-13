@@ -68,7 +68,6 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.NoSuchElementException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -82,9 +81,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.Platform;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -92,10 +89,8 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
@@ -106,7 +101,6 @@ import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
-import edu.ucsb.eucalyptus.util.XMLParser;
 
 public class ImageManifests {
   private static Logger LOG = Logger.getLogger( ImageManifests.class );
@@ -180,8 +174,8 @@ public class ImageManifests {
     private final String             manifest;
     private final Document           inputSource;
     private final String             name;
-    private final Long               size        = -1l;
-    private final Long               bundledSize = -1l;
+    private final Long               size;
+    private final Long               bundledSize;
     private XPath                    xpath;
     private Function<String, String> xpathHelper;
     private String                   encryptedKey;
@@ -213,7 +207,11 @@ public class ImageManifests {
         
         @Override
         public String apply( String input ) {
-          return ( String ) ImageManifest.this.xpath.evaluate( input, ImageManifest.this.inputSource, XPathConstants.STRING );
+          try {
+            return ( String ) ImageManifest.this.xpath.evaluate( input, ImageManifest.this.inputSource, XPathConstants.STRING );
+          } catch ( XPathExpressionException ex ) {
+            return null;
+          }
         }
       };
       
@@ -221,14 +219,9 @@ public class ImageManifests {
       this.name = ( ( temp = this.xpathHelper.apply( "/manifest/image/name/text()" ) ) != null )
         ? temp
         : manifestName.replace( ".manifest.xml", "" );
-      try {
-        this.signature = ( ( temp = this.xpathHelper.apply( "//signature" ) ) != null )
-          ? temp
-          : null;
-      } catch ( XPathExpressionException e ) {
-        LOG.warn( e.getMessage( ) );
-        throw new EucalyptusCloudException( "Failed to parse manifest file for the required field:  signature.  Cause: " + e.getMessage( ), e );
-      }
+      this.signature = ( ( temp = this.xpathHelper.apply( "//signature" ) ) != null )
+        ? temp
+        : null;
       this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
       this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
       Predicate<Image.Type> checkIdType = new Predicate<Image.Type>( ) {
@@ -280,17 +273,11 @@ public class ImageManifests {
           } else {
             this.platform = Image.Platform.windows;
           }
-        }        
+        }
       }
     }
     
     private boolean checkManifest( User user ) throws EucalyptusCloudException {
-      try {} catch ( XPathExpressionException ex1 ) {
-        LOG.error( ex1 );
-        throw new EucalyptusCloudException(
-                                            "Failed to parse manifest file for one of the following required fields:  ec2_encrypted_iv, ec2_encrypted_key, or signature.  Cause: "
-                                                + ex1.getMessage( ), ex1 );
-      }
       String image = this.manifest.replaceAll( ".*<image>", "<image>" ).replaceAll( "</image>.*", "</image>" );
       String machineConfiguration = this.manifest.replaceAll( ".*<machine_configuration>", "<machine_configuration>" ).replaceAll( "</machine_configuration>.*",
                                                                                                                                    "</machine_configuration>" );

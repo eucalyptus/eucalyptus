@@ -84,7 +84,7 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionExceptionjava.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 

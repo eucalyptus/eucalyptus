@@ -125,9 +125,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Column( name = "metadata_image_description" )
   private String                description;
   
-  @Column( name = "metadata_image_path" )
-  private String                imageLocation;
-  
   @Column( name = "metadata_image_arch" )
   @Enumerated( EnumType.STRING )
   private Image.Architecture    architecture;
@@ -141,11 +138,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   @Column( name = "metadata_image_type" )
   @Enumerated( EnumType.STRING )
-  private Type                  imageType;
-  
-  @Lob
-  @Column( name = "metadata_image_signature" )
-  private String                signature;
+  private Image.Type            imageType;
   
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -168,22 +161,14 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this( );
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
-  
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, 
-                    final String imageDescription, final Image.Architecture arch, final Image.Platform platform ) {
-    this( userFullName, imageId, imageName, imageDescription, null, arch, platform );
-  }
-  
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final String imageLocation,
-                    final Image.Architecture arch,
-                    final Image.Platform platform ) {
+
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Image.Architecture arch, final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     assertThat( arch, notNullValue( ) );
     assertThat( imageName, notNullValue( ) );
     assertThat( imageName, notNullValue( ) );
     assertThat( platform, notNullValue( ) );
     this.setState( Image.State.pending );
-    this.imageLocation = imageLocation;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
     this.architecture = arch;
     this.platform = platform;
@@ -209,28 +194,12 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.architecture = architecture;
   }
   
-  protected String getImageLocation( ) {
-    return imageLocation;
-  }
-  
-  protected void setImageLocation( String imageLocation ) {
-    this.imageLocation = imageLocation;
-  }
-  
   public Boolean getImagePublic( ) {
     return imagePublic;
   }
   
   public void setImagePublic( Boolean aPublic ) {
     imagePublic = aPublic;
-  }
-  
-  public String getSignature( ) {
-    return signature;
-  }
-  
-  public void setSignature( final String signature ) {
-    this.signature = signature;
   }
   
   private Set<LaunchPermission> getPermissions( ) {
