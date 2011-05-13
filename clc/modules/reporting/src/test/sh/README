@@ -15,7 +15,7 @@ fake-data tests).
 --- FAKE-DATA TESTS ---
 
 Fake-data tests are used because we cannot generate enough real data
-quickly enough to test the reporting system. It would require starting
+quickly enough to test the reports. It would require starting
 thousands of instances and running them for hours. So we generate fake
 events instead.
 
@@ -27,8 +27,8 @@ The fake-data tests are in the following scripts:
 Each will return 0 upon success.
 
 The fake data tests generate reports in CSV format, then verify the
-correctness of those reports. The tests verify correctness using a tool
-called CsvChecker which is checked into the source repository; it
+correctness of those reports, using a tool called CsvChecker which
+is checked into the source repository. The CsvChecker tool
 compares a CSV file against a reference CSV file based upon rules.
 The CsvChecker tool relies upon reference CSV files which are located
 in this directoy (instanceReference.csv, storageReference.csv,
