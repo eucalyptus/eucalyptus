@@ -8,6 +8,14 @@ import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 @RemoteServiceRelativePath("backend")
 public interface EucalyptusService extends RemoteService {
   
+  /**
+   * User signs in by name and password.
+   * 
+   * @param fullname
+   * @param password
+   * @return
+   * @throws EucalyptusServiceException
+   */
   Session login( String fullname, String password ) throws EucalyptusServiceException;
   
   LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException;

@@ -110,7 +110,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
       @Override
       public void onFailure( Throwable caught ) {
         LOG.log( Level.WARNING, "Cannot get login user profile. Maybe session is invalid: " + caught );
-        clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );
+        clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
       }
       
       @Override

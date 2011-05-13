@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.EucalyptusService;
@@ -17,33 +19,58 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.Session;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
 
   private static final long serialVersionUID = 1L;
-
+  
+  private static User verifySession( Session session ) throws EucalyptusServiceException {
+    WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
+    if ( ws == null ) {
+      throw new EucalyptusServiceException( EucalyptusServiceException.INVALID_SESSION );
+    }
+    return EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
+  }
+  
   @Override
   public Session login( String fullname, String password ) throws EucalyptusServiceException {
-    return new Session( "FAKESESSIONID" );
+    if ( fullname == null || password == null ) {
+      throw new EucalyptusServiceException( "Empty user name or password" );
+    }
+    // Parse userId in the follow forms:
+    // 1. "user" (meaning "user" in "eucalyptus" account)
+    // 2. "user@account"
+    String[] splits = fullname.split( "@", 2 );
+    String userName = splits[0];
+    String accountName = Account.SYSTEM_ACCOUNT;
+    if ( splits.length > 1 ) {
+      accountName = splits[1];
+    }
+    EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
+    return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
   @Override
   public LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException {
-    return new LoginUserProfile( "admin", "eucalyptus" );
+    User user = verifySession( session );
+    try {
+      return new LoginUserProfile( user.getName( ), user.getAccount( ).getName( ) );
+    } catch ( Exception e ) {
+      throw new EucalyptusServiceException( "Failed to retrieve user profile" );
+    }
   }
 
   @Override
   public HashMap<String, String> getSystemProperties( Session session ) throws EucalyptusServiceException {
-    HashMap<String, String> props = Maps.newHashMap( );
-    props.put( "version", "Eucalyptus EEE 3.0" );
-    props.put( "search-result-page-size", "5" );
-    return props;
+    verifySession( session );
+    return WebProperties.getProperties( );
   }
 
   @Override
   public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
+    verifySession( session );
+    // TODO(wenye): use system properties?
     ArrayList<CategoryTag> tags = Lists.newArrayList( );
     ArrayList<CategoryItem> list = Lists.newArrayList( );
     list.add( new CategoryItem( "Start", "Start guide", "home", "start:" ) );
