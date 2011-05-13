@@ -158,6 +158,14 @@ public class FalseDataGenerator
 		StorageUsageLog.getStorageUsageLog().purgeLog(MAX_MS);
 	}
 
+	@ExposedCommand
+	public static void removeAllData()
+	{
+		System.out.println(" ----> REMOVING ALL DATA");
+
+		StorageUsageLog.getStorageUsageLog().purgeLog(Long.MAX_VALUE);
+	}
+
 	public static void printFalseData()
 	{
 		System.out.println(" ----> PRINTING FALSE DATA");

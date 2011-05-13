@@ -32,7 +32,7 @@ public class StorageEventPoller
 
 	public void writeEvents()
 	{
-		LOG.info("Queue poll:" + System.currentTimeMillis());
+		LOG.debug("Queue poll:" + System.currentTimeMillis());
 		
 		EntityWrapper<StorageUsageSnapshot> entityWrapper =
 			EntityWrapper.get( StorageUsageSnapshot.class );
@@ -64,7 +64,7 @@ public class StorageEventPoller
 					event = receiver.receiveEventNoWait())
 			{
 				StorageEvent storageEvent = (StorageEvent) event;
-				LOG.info("Receive event:" + storageEvent.toString());
+				LOG.debug("Receive event:" + storageEvent.toString());
 				UsageDataKey key = new UsageDataKey(storageEvent.getOwnerId(),
 						storageEvent.getAccountId(),
 						storageEvent.getClusterName(),

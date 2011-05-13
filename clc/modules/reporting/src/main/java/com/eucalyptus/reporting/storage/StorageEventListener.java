@@ -37,7 +37,7 @@ public class StorageEventListener
 				EntityWrapper.get( StorageUsageSnapshot.class );
 			try {
 
-				LOG.info("Receive event:" + storageEvent.toString());
+				LOG.debug("Receive event:" + storageEvent.toString());
 
 				/* Load usageDataMap if starting up
 				 */
