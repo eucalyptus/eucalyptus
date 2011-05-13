@@ -547,7 +547,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         public CheckedListenableFuture<Cluster> call( ) throws Exception {
           final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.STARTING,
                                                                                                       State.STARTING_AUTHENTICATING,
-                                                                                                      State.STARTING_NOTREADY, State.NOTREADY );
+                                                                                                      State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
           CheckedListenableFuture<Cluster> future = null;
           Exception error = null;
           for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {

@@ -271,10 +271,14 @@ public class ImageManifests {
             if( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.kernelId );
               this.kernelId = kId;
+            } else {
+              this.kernelId = null;
             }
             if( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.ramdiskId );
               this.ramdiskId = rId;
+            } else {
+              this.ramdiskId = null;
             }
           } else {
             this.platform = Image.Platform.windows;
