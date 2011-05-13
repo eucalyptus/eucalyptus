@@ -209,9 +209,9 @@ public class BasicService extends AbstractService implements Service {
             public void run( ) {
               try {
                 if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
-                  BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) );
+                  BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
                 } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                  BasicService.this.stateMachine.transition( State.DISABLED );
+                  BasicService.this.stateMachine.transition( State.DISABLED ).get( );
                 }
               } catch ( Throwable ex ) {
                 LOG.debug( "CheckRunner caught an exception: " + ex );
