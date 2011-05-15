@@ -256,7 +256,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
     // device on all distros (some versions of 'losetup' allow a file
     // argument with '-f' options, but some do not)
     for (int i=0; i<10; i++) {
+        sem_p (loop_sem);
         output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
+        sem_v (loop_sem);
         if (output==NULL) // there was a problem
             break;
         if (strstr (output, "/dev/loop")) {
@@ -300,9 +302,6 @@ int diskutil_unloop (const char * lodev)
     char * output;
 
     logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
-    output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
-    if (output)
-        free (output);
 
     // we retry because we have seen spurious errors from 'losetup -d' on Xen:
     //     ioctl: LOOP_CLR_FD: Device or resource bus
@@ -365,7 +364,9 @@ int diskutil_tune (const char * lodev)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot tune file system on '%s'\n", lodev);
         ret = ERROR;
@@ -433,7 +434,9 @@ int diskutil_mount (const char * dev, const char * mnt_pt)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot mount device '%s' on '%s'\n", dev, mnt_pt);
         ret = ERROR;
@@ -449,7 +452,9 @@ int diskutil_umount (const char * dev)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot unmount device '%s'\n", dev);
         ret = ERROR;
