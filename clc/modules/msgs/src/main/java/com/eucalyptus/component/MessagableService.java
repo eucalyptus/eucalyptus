@@ -84,7 +84,7 @@ public class MessagableService extends AbstractService implements Service {
   
   /** ASAP:FIXME:GRZE **/
   
-  MessagableService( final Service baseService ) { 
+  MessagableService( final Service baseService ) {
     this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
@@ -210,15 +210,15 @@ public class MessagableService extends AbstractService implements Service {
   public int compareTo( final ServiceConfiguration o ) {
     return this.serviceDelegate.compareTo( o );
   }
-
+  
   public Collection<ServiceCheckRecord> getDetails( ) {
     return this.serviceDelegate.getDetails( );
   }
-
+  
   public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
     return this.serviceDelegate.getStateMachine( );
   }
-
+  
   @Override
   public void cleanUp( ) {
     this.serviceDelegate.cleanUp( );
