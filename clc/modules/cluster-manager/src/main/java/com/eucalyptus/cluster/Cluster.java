@@ -580,7 +580,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
     }
     if ( error != null ) {
-      throw new ServiceRegistrationException( error );
+      this.configuration.info( error );
     }
   }
   
