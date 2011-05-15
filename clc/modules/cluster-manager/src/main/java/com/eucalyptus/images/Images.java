@@ -235,15 +235,18 @@ public class Images {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                    manifest.getArchitecture( ), manifest.getPlatform( ) );\
+                                    break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
+        break;
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
+        break;
     }
     if ( ret == null ) {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
