@@ -199,5 +199,8 @@ public class MissingService extends AbstractService implements Service {
   public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
     return null;
   }
+
+  @Override
+  public void cleanUp( ) {}
   
 }

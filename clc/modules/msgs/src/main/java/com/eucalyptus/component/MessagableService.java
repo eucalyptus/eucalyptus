@@ -84,7 +84,7 @@ public class MessagableService extends AbstractService implements Service {
   
   /** ASAP:FIXME:GRZE **/
   
-  MessagableService( final Service baseService ) {
+  MessagableService( final Service baseService ) { 
     this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
