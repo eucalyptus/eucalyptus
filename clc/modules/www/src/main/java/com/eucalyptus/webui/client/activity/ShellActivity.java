@@ -193,8 +193,16 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   @Override
   public void logout( ) {
     this.clientFactory.getLocalSession( ).clearSession( );
-    //this.clientFactory.getMainHistorian( ).newItem( "", false );
-    //this.clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
+    this.clientFactory.getBackendService( ).logout( this.clientFactory.getLocalSession( ).getSession( ), new AsyncCallback<Void>( ) {
+      @Override
+      public void onFailure( Throwable arg0 ) {
+        // Don't care about failure.
+      }
+      @Override
+      public void onSuccess( Void arg0 ) {
+        LOG.log( Level.INFO, "User signed out." );
+      }
+    } );
     this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
   }
 

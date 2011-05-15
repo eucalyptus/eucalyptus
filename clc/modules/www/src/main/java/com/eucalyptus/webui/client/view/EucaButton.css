@@ -156,3 +156,10 @@ a.big.button span.icon,button.big span.icon {
 	height:6px;
     gwt-image:'minusWhite';
 }
+
+@sprite a.button span.icon.floppy,button span.icon.floppy {
+    gwt-image:'floppyGray';
+}
+@sprite a.button:hover span.icon.floppy,button:hover span.icon.floppy {
+    gwt-image:'floppyWhite';
+}

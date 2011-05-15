@@ -17,6 +17,8 @@
 }
 
 .cellTableHeader {
+  font-size:90%;
+  font-weight:bold;
   border-bottom: 1px solid #CCCCCC;
   padding: 3px 15px;
   text-align: left;
@@ -26,7 +28,7 @@
 }
 
 .cellTableCell {
-  padding: 2px 15px;
+  padding: 4px 15px;
   overflow: hidden;
 }
 

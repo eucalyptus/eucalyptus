@@ -33,7 +33,6 @@ public class ShellViewImpl extends Composite implements ShellView {
   private static final int ANIMATE_DURATION = 200;//ms
   
   public static final int DIRECTORY_WIDTH = 240;//px
-  public static final int DETAIL_WIDTH = 300;//px
   public static final int LOG_HEIGHT = 160;//px
   
   @UiField
@@ -83,9 +82,9 @@ public class ShellViewImpl extends Composite implements ShellView {
   }
   
   @Override
-  public void showDetail( ) {
+  public void showDetail( int width ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
-    parent.setWidgetSize( detail, DETAIL_WIDTH );
+    parent.setWidgetSize( detail, width );
   }
 
   @Override

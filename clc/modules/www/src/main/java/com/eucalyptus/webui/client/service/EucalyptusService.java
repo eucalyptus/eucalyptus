@@ -18,12 +18,60 @@ public interface EucalyptusService extends RemoteService {
    */
   Session login( String fullname, String password ) throws EucalyptusServiceException;
   
+  /**
+   * Logout current user.
+   * 
+   * @throws EucalyptusServiceException
+   */
+  void logout( Session session ) throws EucalyptusServiceException;
+  
+  /**
+   * Get the login user profile
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
   LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException;
   
+  /**
+   * Get system properties.
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
   HashMap<String, String> getSystemProperties( Session session ) throws EucalyptusServiceException;
   
+  /**
+   * Get category tree data.
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
   ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
  
+  /**
+   * Search system configurations.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search accounts.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
   SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
 }

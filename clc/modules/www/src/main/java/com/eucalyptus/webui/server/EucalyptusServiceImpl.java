@@ -51,6 +51,13 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
+
+  @Override
+  public void logout( Session session ) throws EucalyptusServiceException {
+    verifySession( session );
+    WebSessionManager.getInstance( ).removeSession( session.getId( ) );
+  }
+
   @Override
   public LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException {
     User user = verifySession( session );
@@ -91,6 +98,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     tags.add( new CategoryTag( "Miscs", list ) );    
     return tags;
   }
+  
+  @Override
+  public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    verifySession( session );
+    return null;
+  }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
                                                                    new SearchResultRow( Arrays.asList( "test1", "1" ) ),
@@ -109,6 +122,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
                                                                          );
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    verifySession( session );
+    
     System.out.println( "New search: " + range );
     
     final int sortField = range.getSortField( );

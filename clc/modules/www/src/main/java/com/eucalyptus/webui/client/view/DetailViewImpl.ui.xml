@@ -13,6 +13,7 @@
             height:1em;
             padding-top:0.8em;
             padding-bottom:1em;
+            padding-right:4px;
             font-size:70%;
             color:#666666;
             text-align:center;
@@ -29,21 +30,63 @@
         	color:#2E52A4;
         	cursor:pointer;
         }
+        .toolbar {
+        	padding-bottom:4px;
+        }
+        .middle {
+        	margin-left:auto;
+        	margin-right:auto;
+        }
     </ui:style>
+    
+    <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.DetailViewImpl.GridStyle">
+        .grid {
+        	width:100%;
+            font-size:85%;
+            color:#292929;
+        }
+        .grid td {
+        	padding-top:4px;
+        	padding-bottom:4px;
+            vertical-align:middle;
+        }
+        .grid input[type='text'] {
+            width:99%;
+            background-color:transparent;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;        
+        }
+    </ui:style>
+    
+    <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
     
     <g:DockLayoutPanel styleName="{style.boundingBox}" unit="EM">
         <g:north size="1.5">
             <g:HTMLPanel>
                 <div class="{style.title}">
-                    DETAILS&nbsp;
+                    <span ui:field="title">DETAILS</span>&nbsp;
                     <g:Anchor styleName="{style.close}" ui:field="close">&#91;X&#93;</g:Anchor>
                 </div>
             </g:HTMLPanel>
         </g:north>
+        <g:south size="2">
+            <g:HTMLPanel addStyleNames="{style.toolbar}">
+                <table class="{style.middle}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="save">
+                                    <span class="{global.buttonCss.floppy} {global.buttonCss.icon}"/>Save
+                                </g:Anchor>                            
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </g:HTMLPanel>
+        </g:south>
         <g:center>
-            <g:ScrollPanel styleName="{style.scroll}">
-                
-            </g:ScrollPanel>
+            <g:ScrollPanel styleName="{style.scroll}" ui:field="content"/>
         </g:center>
     </g:DockLayoutPanel>
     

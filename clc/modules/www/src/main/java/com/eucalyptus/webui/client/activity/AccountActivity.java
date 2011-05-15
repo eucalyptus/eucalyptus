@@ -30,6 +30,8 @@ public class AccountActivity extends AbstractActivity implements SearchResultRan
   
   private static final int DEFAULT_PAGE_SIZE = 25;
   
+  private static final int DETAIL_PANE_SIZE = 360;//px
+  
   private AccountPlace place;
   private ClientFactory clientFactory;
   
@@ -90,7 +92,7 @@ public class AccountActivity extends AbstractActivity implements SearchResultRan
       
       @Override
       public void onSuccess( SearchResult result ) {
-        LOG.log( Level.WARNING, "Search success:" + result.getLength( ) );
+        LOG.log( Level.INFO, "Search success:" + result.getLength( ) );
         displayData( result );
       }
       
@@ -106,7 +108,7 @@ public class AccountActivity extends AbstractActivity implements SearchResultRan
   @Override
   public void onSelectionChange( Set<SearchResultRow> selection ) {
     LOG.log( Level.INFO, "Showing detail." );
-    this.clientFactory.getShellView( ).showDetail( );
+    this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
   }
   
 }

@@ -112,4 +112,16 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return result;
   }
 
+  @Override
+  public void logout( Session session ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }

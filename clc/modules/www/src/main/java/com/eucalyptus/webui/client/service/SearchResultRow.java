@@ -48,6 +48,30 @@ public class SearchResultRow implements Serializable {
   public void setField( int i, String val ) {
     row.set( i, val );
   }
+
+  public void addField( String val ) {
+    row.add( val );
+  }
+  
+  public void setExtraFieldDesc( int i, SearchResultFieldDesc desc ) {
+    this.extraFields.set( i, desc );
+  }
+
+  public void addExtraFieldDesc( SearchResultFieldDesc desc ) {
+    this.extraFields.add( desc );
+  }
+  
+  public SearchResultFieldDesc getExtraFieldDesc( int i ) {
+    return this.extraFields.get( i );
+  }
+  
+  public void setExtraFieldDescs( List<SearchResultFieldDesc> descs ) {
+    this.extraFields.addAll( descs );
+  }
+  
+  public List<SearchResultFieldDesc> getExtraFieldDescs( ) {
+    return this.extraFields;
+  }
   
   @Override
   public String toString( ) {
@@ -74,11 +98,4 @@ public class SearchResultRow implements Serializable {
     return true;
   }
 
-  public void setExtraFields( ArrayList<SearchResultFieldDesc> extraFields ) {
-    this.extraFields = extraFields;
-  }
-
-  public ArrayList<SearchResultFieldDesc> getExtraFields( ) {
-    return extraFields;
-  }
 }

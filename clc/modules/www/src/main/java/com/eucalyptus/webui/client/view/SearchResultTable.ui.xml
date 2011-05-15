@@ -11,7 +11,8 @@
 	    .cellTable {
 	    	font-size:95%;
 	    	color:#292929;
-	    	border-bottom:1px solid #CCCCCC
+            border-top:1px solid #CCCCCC;	    	
+	    	border-bottom:1px solid #CCCCCC;
 	    }
 	    .tableBox {
 	    	width:99%;

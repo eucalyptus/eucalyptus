@@ -20,6 +20,7 @@ public interface GlobalResources extends ClientBundle {
     String active( );
     String negative( );
     String big( );
+    String floppy( );
   }
   
   @Source( "EucaButton.css" )
@@ -34,5 +35,10 @@ public interface GlobalResources extends ClientBundle {
   ImageResource minusGray( );
   @Source( "image/minus_12x3_white.png" )
   ImageResource minusWhite( );
+
+  @Source( "image/floppy_12x12_gray.png" )
+  ImageResource floppyGray( );
+  @Source( "image/floppy_12x12_white.png" )
+  ImageResource floppyWhite( );
   
 }
