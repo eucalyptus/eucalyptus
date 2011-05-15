@@ -124,6 +124,7 @@ public class Automata {
         @Override
         public CheckedListenableFuture<P> call( ) {
           try {
+            LOG.trace( "Invoking transition for state " + toState + " for " + hasFsm );
             res.set( fsm.transition( toState ).get( ) );
           } catch ( IllegalStateException ex1 ) {
             LOG.error( ex1 , ex1 );
