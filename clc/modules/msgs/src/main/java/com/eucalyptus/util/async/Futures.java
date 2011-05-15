@@ -90,19 +90,32 @@ public class Futures {
    */
   public static <T extends ListenableFuture<V>, V> Callable<T> combine( final Callable<T> firstCall, final Callable<T> secondCall ) {
     final CheckedListenableFuture<V> resultFuture = Futures.newGenericeFuture( );
+    final CheckedListenableFuture<T> intermediateFuture = Futures.newGenericeFuture( );
     
     final Callable<T> chainingCallable = new Callable<T>( ) {
       
       @Override
       public T call( ) {
         try {
-          final T res = firstCall.call( );
           Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
             
             @Override
             public void run( ) {
               try {
-                res.get( );
+                final T res = firstCall.call( );
+                intermediateFuture.set( res );
+              } catch ( Exception ex ) {
+                intermediateFuture.setException( ex );
+                resultFuture.setException( ex );
+              }
+            }
+          } );
+          Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
+            
+            @Override
+            public void run( ) {
+              try {
+                intermediateFuture.get( );
                 try {
                   T res2 = secondCall.call( );
                   resultFuture.set( res2.get( ) );
