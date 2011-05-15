@@ -229,7 +229,7 @@ public class BasicService extends AbstractService implements Service {
           Thread.currentThread( ).interrupt( );
         } catch ( ExecutionException ex ) {
           config.error( ex.getCause( ) );
-          config.lookupService( ).setGoal( Component.State.DISABLED );
+//          config.lookupService( ).setGoal( Component.State.DISABLED );
         }
       }
     }
