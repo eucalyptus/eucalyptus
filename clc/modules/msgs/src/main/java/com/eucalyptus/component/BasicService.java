@@ -201,34 +201,35 @@ public class BasicService extends AbstractService implements Service {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
     } else if ( event instanceof Hertz && Bootstrap.isFinished( ) && ( ( Hertz ) event ).isAsserted( 10l ) ) {
-      ServiceConfiguration config = this.getServiceConfiguration( );
+      final ServiceConfiguration config = this.getServiceConfiguration( );
       if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
         try {
           Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
             @Override
             public void run( ) {
               try {
-                if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
+                if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
+                  config.lookupComponent( ).enableTransition( config );
+                } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
+                  config.lookupComponent( ).disableTransition( config );
+                } else if( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
                   BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
+                } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
+                  BasicService.this.stateMachine.transition( State.DISABLED ).get( );
                 } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
                   BasicService.this.stateMachine.transition( State.DISABLED ).get( );
                 }
               } catch ( Throwable ex ) {
                 LOG.debug( "CheckRunner caught an exception: " + ex );
+                BasicService.this.getServiceConfiguration( ).info( ex );
               }
             }
           } ).get( );
         } catch ( InterruptedException ex ) {
-          config.error( ex );
-          config.lookupService( ).setGoal( Component.State.DISABLED );
+          Thread.currentThread( ).interrupt( );
         } catch ( ExecutionException ex ) {
           config.error( ex.getCause( ) );
           config.lookupService( ).setGoal( Component.State.DISABLED );
-        }
-        if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
-          config.lookupComponent( ).enableTransition( config );
-        } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
-          config.lookupComponent( ).disableTransition( config );
         }
       }
     }

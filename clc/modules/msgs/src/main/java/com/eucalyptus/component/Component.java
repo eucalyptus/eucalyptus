@@ -77,7 +77,6 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -86,10 +85,7 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -332,9 +328,9 @@ public class Component implements HasName<Component> {
       try {
         ServiceTransitions.destroyTransitionChain( configuration ).get( );
       } catch ( ExecutionException ex1 ) {
-        configuration.error( ex1 );
+        LOG.error( ex1 );
       } catch ( InterruptedException ex1 ) {
-        configuration.error( ex1 );
+        LOG.error( ex1 );
       }
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
