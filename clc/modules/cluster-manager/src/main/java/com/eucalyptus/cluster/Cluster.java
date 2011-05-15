@@ -413,7 +413,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           case PENDING:
           case STARTING:
             if ( tick.isAsserted( Cluster.STATE_INTERVAL_PENDING ) ) {
-              transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.STARTING, State.STARTING_AUTHENTICATING,
+              transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
                                                          State.STARTING_NOTREADY,
                                                          State.NOTREADY, State.DISABLED );
             }
