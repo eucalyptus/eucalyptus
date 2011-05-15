@@ -333,7 +333,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
     STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
     PENDING, /** Component.State.NOTREADY: cluster unreachable **/
-    STARTING, STARTING_AUTHENTICATING, STARTING_NOTREADY, /** Component.State.NOTREADY:enter() **/
+    AUTHENTICATING, STARTING, STARTING_NOTREADY, /** Component.State.NOTREADY:enter() **/
     NOTREADY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
     DISABLED, /** Component.State.DISABLED -> DISABLED: service ready, not current primary **/
     /** Component.State.DISABLED -> Component.State.ENABLED **/
@@ -346,7 +346,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public enum Transition implements Automata.Transition<Transition> {
     RESTART_BROKEN, PRESTART,
     /** pending setup **/
-    START, STARTING_CERTS, STARTING_SERVICES,
+    AUTHENTICATE, START, START_CHECK, STARTING_SERVICES,
     NOTREADYCHECK,
     ENABLE, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
 
@@ -372,9 +372,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
-        this.from( State.PENDING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( Cluster.ComponentStatePredicates.STARTED );
-        this.from( State.STARTING ).to( State.STARTING_AUTHENTICATING ).error( State.PENDING ).on( Transition.START ).run( LogRefresh.CERTS );
-        this.from( State.STARTING_AUTHENTICATING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.STARTING_CERTS ).run( Refresh.SERVICEREADY );
+        this.from( State.PENDING ).to( State.AUTHENTICATING  ).error( State.PENDING ).on( Transition.AUTHENTICATE ).run( LogRefresh.CERTS );
+        this.from( State.AUTHENTICATING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( Cluster.ComponentStatePredicates.STARTED );
+        this.from( State.STARTING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.START_CHECK ).run( Refresh.SERVICEREADY );
         this.from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
