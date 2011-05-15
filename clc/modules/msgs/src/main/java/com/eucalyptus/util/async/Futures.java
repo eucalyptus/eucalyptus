@@ -46,6 +46,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 
@@ -117,7 +119,7 @@ public class Futures {
                 resultFuture.setException( ex );
               }
             }
-          } );
+          }, Threads.lookup( Empyrean.class, Futures.class ) );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }
