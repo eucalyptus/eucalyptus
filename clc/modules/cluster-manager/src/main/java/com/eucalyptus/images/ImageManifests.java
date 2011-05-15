@@ -257,7 +257,7 @@ public class ImageManifests {
           this.platform = Image.Platform.linux;
           this.kernelId = null;
           this.ramdiskId = null;
-        } else if ( checkIdType.apply( Image.Type.kernel ) ) {
+        } else if ( checkIdType.apply( Image.Type.ramdisk ) ) {
           this.imageType = Image.Type.ramdisk;
           this.platform = Image.Platform.linux;
           this.kernelId = null;
