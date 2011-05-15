@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,19 +32,8 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.component.MessagableService;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
@@ -161,15 +147,16 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         ? request.get( ).toSimpleString( )
         : "REQUEST IS NULL" ) );
       if ( t instanceof RetryableConnectionException ) {
-
+        LOG.error( t.getMessage( ) );
       } else if ( t instanceof ConnectionException ) {
-
+        LOG.error( t.getMessage( ) );
       } else if ( t instanceof IOException ) {
-
+        LOG.error( t.getMessage( ) );
       }
       this.response.setException( t );
     } else if ( t != null && this.response.isDone( ) ) {
       LOG.error( t.getMessage( ) );
+      this.response.setException( t );
     }
     if ( this.connectFuture != null ) {
       if ( this.connectFuture.isDone( ) && this.connectFuture.isSuccess( ) ) {
