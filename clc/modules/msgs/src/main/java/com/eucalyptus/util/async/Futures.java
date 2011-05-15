@@ -97,7 +97,7 @@ public class Futures {
       public T call( ) {
         try {
           final T res = firstCall.call( );
-          res.addListener( new Runnable( ) {
+          Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
             
             @Override
             public void run( ) {
@@ -119,7 +119,7 @@ public class Futures {
                 resultFuture.setException( ex );
               }
             }
-          }, Threads.lookup( Empyrean.class, Futures.class ) );
+          } );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }
