@@ -112,6 +112,7 @@ public class ComponentRegistrationHandler {
                 future.get( 1000, TimeUnit.MILLISECONDS );
                 try {
                   component.enableTransition( newComponent ).get( );
+                  break;
                 } catch ( IllegalStateException ex ) {
                   LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
                   continue;
