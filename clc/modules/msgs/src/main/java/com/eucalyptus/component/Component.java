@@ -298,11 +298,12 @@ public class Component implements HasName<Component> {
     this.lookupRegisteredService( config );
     if ( State.INITIALIZED.isIn( config ) ) {
       try {
-        return config.lookupStateMachine( ).transitionByName( Transition.LOADING );
+        config.lookupStateMachine( ).transitionByName( Transition.LOADING ).get( );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
-    } else if ( State.LOADED.isIn( config ) ) {
+    } 
+    if ( State.LOADED.isIn( config ) ) {
       return Futures.predestinedFuture( config );
     } else {
       return Futures.predestinedFuture( config );
