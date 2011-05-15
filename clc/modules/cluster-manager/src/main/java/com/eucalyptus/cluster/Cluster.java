@@ -555,8 +555,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         
         @Override
         public CheckedListenableFuture<Cluster> call( ) throws Exception {
-          final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.STARTING,
-                                                                                                      State.STARTING_AUTHENTICATING,
+          final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING, State.STARTING,
                                                                                                       State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
           CheckedListenableFuture<Cluster> future = null;
           Exception error = null;
@@ -593,8 +592,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void enable( ) throws ServiceRegistrationException {
     try {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.STARTING,
-                                                                                                  State.STARTING_AUTHENTICATING,
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING, 
                                                                                                   State.STARTING_NOTREADY, State.NOTREADY,
                                                                                                   State.DISABLED,
                                                                                                   State.ENABLING, State.ENABLING_RESOURCES,
