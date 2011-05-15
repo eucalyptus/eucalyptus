@@ -107,9 +107,9 @@ public class ComponentRegistrationHandler {
             if( !future.isDone( ) ) {
               LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
             }
-            for( int i = 0; i < 10; i++ ) {
+            for( int i = 0; i < 3; i++ ) {
               try {
-                future.get( 100, TimeUnit.MILLISECONDS );
+                future.get( 1000, TimeUnit.MILLISECONDS );
                 try {
                   component.enableTransition( newComponent ).get( );
                 } catch ( IllegalStateException ex ) {
