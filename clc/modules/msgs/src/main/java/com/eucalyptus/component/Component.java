@@ -527,10 +527,6 @@ public class Component implements HasName<Component> {
       return serviceSnapshot;
     }
     
-    public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
-      return this.deregister( config.getFullName( ) );
-    }
-    
     /**
      * Deregisters the service with the provided {@link FullName}.
      * 
@@ -539,12 +535,17 @@ public class Component implements HasName<Component> {
      * @throws NoSuchElementException if no {@link Service} is registered with the provided
      *           {@link FullName}
      */
-    public Service deregister( FullName fullName ) throws NoSuchElementException {
-      Service ret = this.services.remove( fullName );
+    public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
+      Service ret = this.services.remove( config );
       if ( ret == null ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + fullName );
+        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
       } else if ( ret.getServiceConfiguration( ).isVmLocal( ) ) {
         this.localService.compareAndSet( ret, null );
+      }
+      try {
+        ret.cleanUp( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
       return ret;
     }

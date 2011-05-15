@@ -103,9 +103,9 @@ public class AbstractService {
     } else if ( event instanceof LifecycleEvents.Disable ) {
       this.doDisable( ( LifecycleEvents.Disable ) event );
     } else if ( event instanceof LifecycleEvents.ServiceErrorEvent ) {
-      this.doState( ( LifecycleEvents.ServiceErrorEvent ) event );
+      this.doError( ( LifecycleEvents.ServiceErrorEvent ) event );
     } else if ( event instanceof LifecycleEvents.ServiceStateEvent ) {
-      this.doError( ( LifecycleEvents.ServiceStateEvent ) event );
+      this.doState( ( LifecycleEvents.ServiceStateEvent ) event );
     }
   }
   
@@ -129,7 +129,7 @@ public class AbstractService {
     submitRecord( ServiceChecks.createRecord( event.getReference( ), event.toString( ) ) );
   }
   
-  protected void doState( ServiceErrorEvent event ) {
+  protected void doState( ServiceStateEvent event ) {
     LOG.debug( event );
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );
@@ -140,7 +140,7 @@ public class AbstractService {
     details.put( record.getTimestamp( ).getTime( ), record );
   }
   
-  protected void doError( ServiceStateEvent event ) {
+  protected void doError( ServiceErrorEvent event ) {
     LOG.debug( event );
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );

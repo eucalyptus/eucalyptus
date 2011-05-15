@@ -97,25 +97,19 @@ public class Futures {
       @Override
       public T call( ) {
         try {
+          try {
+            final T res = firstCall.call( );
+            intermediateFuture.set( res );
+          } catch ( Exception ex ) {
+            intermediateFuture.setException( ex );
+            resultFuture.setException( ex );
+          }
           Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
             
             @Override
             public void run( ) {
               try {
-                final T res = firstCall.call( );
-                intermediateFuture.set( res );
-              } catch ( Exception ex ) {
-                intermediateFuture.setException( ex );
-                resultFuture.setException( ex );
-              }
-            }
-          } );
-          Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
-            
-            @Override
-            public void run( ) {
-              try {
-                intermediateFuture.get( );
+                intermediateFuture.get( ).get( );
                 try {
                   T res2 = secondCall.call( );
                   resultFuture.set( res2.get( ) );

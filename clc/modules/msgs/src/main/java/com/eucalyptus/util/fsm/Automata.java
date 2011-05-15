@@ -118,22 +118,33 @@ public class Automata {
   private static <S extends Automata.State, P extends HasFullName<P>> List<Callable<CheckedListenableFuture<P>>> makeTransitionCallables( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
     final List<Callable<CheckedListenableFuture<P>>> callables = Lists.newArrayList( );
     final StateMachine<P, S, ?> fsm = hasFsm.getStateMachine( );
-    for ( final S toState : toStates ) {
+    if ( toStates.length > 0 ) {
+      for ( final S toState : toStates ) {
+        callables.add( new Callable<CheckedListenableFuture<P>>( ) {
+          
+          @Override
+          public CheckedListenableFuture<P> call( ) {
+            try {
+              return fsm.transition( toState );
+            } catch ( final IllegalStateException ex ) {
+              return Futures.predestinedFailedFuture( ex );
+            } catch ( final ExistingTransitionException ex ) {
+              return Futures.predestinedFailedFuture( ex.getCause( ) );
+            } catch ( final UndeclaredThrowableException ex ) {
+              return Futures.predestinedFailedFuture( ex.getCause( ) );
+            } catch ( final Throwable ex ) {
+              return Futures.predestinedFailedFuture( ex );
+            }
+          }
+        } );
+      }
+    } else {
       callables.add( new Callable<CheckedListenableFuture<P>>( ) {
         
         @Override
         public CheckedListenableFuture<P> call( ) {
-          try {
-            return fsm.transition( toState );
-          } catch ( final IllegalStateException ex ) {
-            return Futures.predestinedFailedFuture( ex );
-          } catch ( final ExistingTransitionException ex ) {
-            return Futures.predestinedFailedFuture( ex.getCause( ) );
-          } catch ( final UndeclaredThrowableException ex ) {
-            return Futures.predestinedFailedFuture( ex.getCause( ) );
-          } catch ( final Throwable ex ) {
-            return Futures.predestinedFailedFuture( ex );
-          }
+          CheckedListenableFuture<P> ret = Futures.predestinedFuture( hasFsm.getStateMachine( ).getParent( ) );
+          return ret;
         }
       } );
     }

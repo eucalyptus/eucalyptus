@@ -207,21 +207,23 @@ public class BasicService extends AbstractService implements Service {
           Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
             @Override
             public void run( ) {
-              try {
-                if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
-                  config.lookupComponent( ).enableTransition( config );
-                } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
-                  config.lookupComponent( ).disableTransition( config );
-                } else if( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
-                  BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
-                } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                  BasicService.this.stateMachine.transition( State.DISABLED ).get( );
-                } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                  BasicService.this.stateMachine.transition( State.DISABLED ).get( );
+              if( !Bootstrap.isFinished( ) ) {
+                return;
+              } else {
+                try {
+                  if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
+                    config.lookupComponent( ).enableTransition( config );
+                  } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
+                    config.lookupComponent( ).disableTransition( config );
+                  } else if( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
+                    BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
+                  } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
+                    config.lookupComponent( ).disableTransition( config );
+                  }
+                } catch ( Throwable ex ) {
+                  LOG.debug( "CheckRunner caught an exception: " + ex );
+                  BasicService.this.getServiceConfiguration( ).info( ex );
                 }
-              } catch ( Throwable ex ) {
-                LOG.debug( "CheckRunner caught an exception: " + ex );
-                BasicService.this.getServiceConfiguration( ).info( ex );
               }
             }
           } ).get( );
@@ -299,4 +301,9 @@ public class BasicService extends AbstractService implements Service {
     return this.stateMachine;
   }
   
+  @Override
+  public void cleanUp( ) {
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
 }

@@ -110,22 +110,21 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
-      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
                                                                                                            Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED );
         
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
-        transitionResult = result.get( );
+        return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        transitionResult = Futures.predestinedFailedFuture( ex );
+        Thread.currentThread( ).interrupt( );
+        return Futures.predestinedFailedFuture( ex );
       } catch ( ExecutionException ex ) {
         LOG.error( ex.getCause( ), ex.getCause( ) );
-        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+        return Futures.predestinedFailedFuture( ex.getCause( ) );
       }
-      return transitionResult;
     } else {
       return Futures.predestinedFuture( config );
     }
@@ -133,22 +132,21 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
     if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
-      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
                                                                                                            Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED,
                                                                                                            Component.State.DISABLED, Component.State.ENABLED );
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
-        transitionResult = result.get( );
+        return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        transitionResult = Futures.predestinedFailedFuture( ex );
+        Thread.currentThread( ).interrupt( );
+        return Futures.predestinedFailedFuture( ex );
       } catch ( ExecutionException ex ) {
         LOG.error( ex.getCause( ), ex.getCause( ) );
-        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+        return Futures.predestinedFailedFuture( ex.getCause( ) );
       }
-      return transitionResult;
     } else {
       return Futures.predestinedFuture( config );
     }
@@ -156,20 +154,19 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
     if ( !State.DISABLED.equals( config.lookupState( ) ) ) {
-      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED );
         Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
-        transitionResult = result.get( );
+        return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        transitionResult = Futures.predestinedFailedFuture( ex );
+        Thread.currentThread( ).interrupt( );
+        return Futures.predestinedFailedFuture( ex );
       } catch ( ExecutionException ex ) {
         LOG.error( ex.getCause( ), ex.getCause( ) );
-        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+        return Futures.predestinedFailedFuture( ex.getCause( ) );
       }
-      return transitionResult;
     } else {
       return Futures.predestinedFuture( config );
     }

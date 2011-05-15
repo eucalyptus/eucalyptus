@@ -109,5 +109,10 @@ public interface Service extends EventListener<Event>, HasFullName<ServiceConfig
   ServiceEndpoint getEndpoint( );
 
   public abstract StateMachine<ServiceConfiguration, State, Transition> getStateMachine( );
+
+  /**
+   * TODO: DOCUMENT Service.java
+   */
+  void cleanUp( );
   
 }

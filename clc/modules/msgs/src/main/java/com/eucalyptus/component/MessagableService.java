@@ -218,5 +218,10 @@ public class MessagableService extends AbstractService implements Service {
   public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
     return this.serviceDelegate.getStateMachine( );
   }
+
+  @Override
+  public void cleanUp( ) {
+    this.serviceDelegate.cleanUp( );
+  }
   
 }

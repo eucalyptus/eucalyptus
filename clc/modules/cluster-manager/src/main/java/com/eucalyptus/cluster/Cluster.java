@@ -559,43 +559,47 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public void start( ) throws ServiceRegistrationException {
     Clusters.getInstance( ).registerDisabled( this );
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                                                                State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
-    Exception error = null;
-    try {
-      for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-        try {
-          transition.call( ).get( );
-          break;
-        } catch ( Exception ex ) {
-          LOG.error( ex );
-          error = ex;
+    if( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING, State.STARTING,
+                                                                                                  State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
+      Exception error = null;
+      try {
+        for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+          try {
+            transition.call( ).get( );
+            break;
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            error = ex;
+          }
+          TimeUnit.SECONDS.sleep( 1 );
         }
-        TimeUnit.SECONDS.sleep( 1 );
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex , ex );
+      } finally {
+        ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
+        ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
       }
-    } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
-    } finally {
-      ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
-      ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
-    }
-    if ( error != null ) {
-      this.configuration.info( error );
+      if ( error != null ) {
+        this.configuration.info( error );
+      }
     }
   }
   
   public void enable( ) throws ServiceRegistrationException {
-    try {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING, 
-                                                                                                  State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                                  State.DISABLED,
-                                                                                                  State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                                  State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                                  State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                                  State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
-    } catch ( NoSuchElementException ex ) {
-      throw ex;
+    if( !State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+      try {
+        final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING, 
+                                                                                                    State.STARTING_NOTREADY, State.NOTREADY,
+                                                                                                    State.DISABLED,
+                                                                                                    State.ENABLING, State.ENABLING_RESOURCES,
+                                                                                                    State.ENABLING_NET, State.ENABLING_VMS,
+                                                                                                    State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
+                                                                                                    State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+        Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+      } catch ( NoSuchElementException ex ) {
+        throw ex;
+      }
     }
   }
   
