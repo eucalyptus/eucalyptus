@@ -66,10 +66,10 @@ package com.eucalyptus.util.fsm;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -120,26 +120,20 @@ public class Automata {
     final StateMachine<P, S, ?> fsm = hasFsm.getStateMachine( );
     for ( final S toState : toStates ) {
       callables.add( new Callable<CheckedListenableFuture<P>>( ) {
-        final CheckedListenableFuture<P> res = Futures.newGenericeFuture( );
+        
         @Override
         public CheckedListenableFuture<P> call( ) {
           try {
-            LOG.trace( "Invoking transition for state " + toState + " for " + hasFsm );
-            res.set( fsm.transition( toState ).get( ) );
-          } catch ( IllegalStateException ex1 ) {
-            LOG.error( ex1 , ex1 );
-            res.setException( ex1 );
-          } catch ( ExecutionException ex1 ) {
-            LOG.error( ex1 , ex1 );
-            res.setException( ex1 );
-          } catch ( InterruptedException ex1 ) {
-            LOG.error( ex1 , ex1 );
-            res.setException( ex1 );
-          } catch ( ExistingTransitionException ex1 ) {
-            LOG.error( ex1 , ex1 );
-            res.setException( ex1 );
+            return fsm.transition( toState );
+          } catch ( final IllegalStateException ex ) {
+            return Futures.predestinedFailedFuture( ex );
+          } catch ( final ExistingTransitionException ex ) {
+            return Futures.predestinedFailedFuture( ex.getCause( ) );
+          } catch ( final UndeclaredThrowableException ex ) {
+            return Futures.predestinedFailedFuture( ex.getCause( ) );
+          } catch ( final Throwable ex ) {
+            return Futures.predestinedFailedFuture( ex );
           }
-          return res;
         }
       } );
     }
