@@ -104,6 +104,7 @@ public class S3EventListener
 						S3SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
 						S3UsageSnapshot sus =
 							new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
+						sus.setAllSnapshot(true);
 						System.out.println("Storing:" + sus);
 						entityWrapper.add(sus);						
 					}

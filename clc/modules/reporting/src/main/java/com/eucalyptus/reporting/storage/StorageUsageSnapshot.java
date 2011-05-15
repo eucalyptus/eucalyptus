@@ -1,9 +1,6 @@
 package com.eucalyptus.reporting.storage;
 
-import javax.persistence.Embedded;
-import javax.persistence.EmbeddedId;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 /**
@@ -21,7 +18,9 @@ class StorageUsageSnapshot
 	protected SnapshotKey key;
 	@Embedded
 	protected StorageUsageData usageData;
-
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot;
+	
 	protected StorageUsageSnapshot()
 	{
 		
@@ -41,6 +40,16 @@ class StorageUsageSnapshot
 	public StorageUsageData getUsageData()
 	{
 		return usageData;
+	}
+
+	public Boolean getAllSnapshot()
+	{
+		return allSnapshot;
+	}
+
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
 	}
 
 	public String toString()

@@ -107,6 +107,7 @@ public class StorageEventListener
 						SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
 						StorageUsageSnapshot sus =
 							new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
+						sus.setAllSnapshot(true);
 						System.out.println("Storing:" + sus);
 						entityWrapper.add(sus);						
 					}

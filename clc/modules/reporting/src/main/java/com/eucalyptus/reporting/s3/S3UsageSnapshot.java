@@ -1,9 +1,6 @@
 package com.eucalyptus.reporting.s3;
 
-import javax.persistence.Embedded;
-import javax.persistence.EmbeddedId;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 /**
@@ -21,7 +18,10 @@ class S3UsageSnapshot
 	protected S3SnapshotKey key;
 	@Embedded
 	protected S3UsageData usageData;
-
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot = false;
+	
+	
 	protected S3UsageSnapshot()
 	{
 		
@@ -41,6 +41,16 @@ class S3UsageSnapshot
 	public S3UsageData getUsageData()
 	{
 		return usageData;
+	}
+
+	public Boolean getAllSnapshot()
+	{
+		return allSnapshot;
+	}
+
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
 	}
 
 	public String toString()

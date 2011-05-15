@@ -33,8 +33,8 @@ public class S3UsageLog
 		return instance;
 	}
 
-	public Iterator<S3UsageSnapshot> scanLog(Period period)
-	{
+	Iterator<S3UsageSnapshot> scanLog(Period period)
+	{		
 		EntityWrapper<InstanceAttributes> entityWrapper =
 			EntityWrapper.get( InstanceAttributes.class );
 		try {
