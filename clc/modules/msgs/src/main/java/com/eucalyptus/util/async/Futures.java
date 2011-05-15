@@ -105,52 +105,103 @@ public class Futures {
    */
   public static <P> Callable<CheckedListenableFuture<P>> combine( final Callable<CheckedListenableFuture<P>> firstCall, final Callable<CheckedListenableFuture<P>> secondCall ) {
     final CheckedListenableFuture<P> resultFuture = Futures.newGenericeFuture( );
+    final CheckedListenableFuture<P> secondFuture = Futures.newGenericeFuture( );
+    final CheckedListenableFuture<P> firstFuture = Futures.newGenericeFuture( );
+    
+    Runnable first = new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+        CheckedListenableFuture<P> res = firstCall.call( );
+        
+      }
+    };
+    Runnable second = new Runnable( ) {
+      @Override
+      public void run( ) {
+        
+      }
+    };
+
+    Threads.lookup( Empyrean.class, Futures.class, firstCall.getClass( ).getCanonicalName( ) ).execute( );
+    
+    firstFuture.addListener( new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+
+      }
+    }, Threads.lookup( Empyrean.class, Futures.class, firstCall.getClass( ).getCanonicalName( ) ) );
+    
+    Runnable secondFollower = new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+
+      }
+    };
+    
     final Callable<CheckedListenableFuture<P>> chainingCallable = new Callable<CheckedListenableFuture<P>>( ) {
       
       @Override
       public CheckedListenableFuture<P> call( ) throws Exception {
         try {
-          final CheckedListenableFuture<P> firstFuture = firstCall.call( );
-          firstFuture.addListener( new Runnable( ) {
+          final Future<CheckedListenableFuture<P>> firstFuture = Threads.lookup( Empyrean.class, Futures.class, firstCall.getClass( ).getCanonicalName( ) ).submit( firstCall );
+          Runnable firstFollower = new Runnable( ) {
             
             @Override
             public void run( ) {
               try {
-                final P val = firstFuture.get( );
+                final CheckedListenableFuture<P> val = firstFuture.get( );
                 if ( secondCall == null ) {
-                  resultFuture.set( val );
+                  try {
+                    resultFuture.set( val.get( ) );
+                  } catch ( Exception ex ) {
+                    resultFuture.setException( ex );
+                  }
                 } else {
                   try {
-                    final CheckedListenableFuture<P> secondFuture = secondCall.call( );
-                    secondFuture.addListener( new Runnable( ) {
+                    final Future<CheckedListenableFuture<P>> secondFuture = Threads.lookup( Empyrean.class, Futures.class,
+                                                                                            secondCall.getClass( ).getCanonicalName( ) ).submit( secondCall );
+                    
+                    Runnable secondFollower = new Runnable( ) {
                       
                       @Override
                       public void run( ) {
-                        if ( !secondFuture.isDone( ) ) {
-                          LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
-                        }
-                        Exception lastEx = null;
-                        for ( int i = 0; i < 10; i++ ) {
-                          try {
-                            P res = secondFuture.get( 100, TimeUnit.MILLISECONDS );
-                            resultFuture.set( secondFuture.get( ) );
-                            return;
-                          } catch ( final ExecutionException ex ) {
-                            resultFuture.setException( ex );
-                            return;
-                          } catch ( final InterruptedException ex ) {
-                            Automata.LOG.error( "BUG BUG BUG Interrupted calling .get() on a Future which isDone(): " + ex.getMessage( ), ex );
-                            resultFuture.setException( ex );
-                            Thread.currentThread( ).interrupt( );
-                            return;
-                          } catch ( TimeoutException ex ) {
-                            Logs.exhaust( ).error( ex );
-                            lastEx = ex;
-                            continue;
+                        CheckedListenableFuture<P> res = secondFuture.get( );
+                        Runnable secondRunnable = new Runnable( ) {
+                          
+                          @Override
+                          public void run( ) {
+                            if ( !secondRes.isDone( ) ) {
+                              LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
+                            }
+                            Exception lastEx = null;
+                            for ( int i = 0; i < 10; i++ ) {
+                              try {
+                                P res = secondFuture.get( 100, TimeUnit.MILLISECONDS );
+                                resultFuture.set( secondFuture.get( ) );
+                                return;
+                              } catch ( final ExecutionException ex ) {
+                                resultFuture.setException( ex );
+                                return;
+                              } catch ( final InterruptedException ex ) {
+                                Automata.LOG.error( "BUG BUG BUG Interrupted calling .get() on a Future which isDone(): " + ex.getMessage( ), ex );
+                                resultFuture.setException( ex );
+                                Thread.currentThread( ).interrupt( );
+                                return;
+                              } catch ( TimeoutException ex ) {
+                                Logs.exhaust( ).error( ex );
+                                lastEx = ex;
+                                continue;
+                              }
+                            }
                           }
-                        }
+                        };
+                        
                       }
-                    }, Threads.lookup( Empyrean.class, Futures.class, secondCall.getClass( ).getCanonicalName( ) ) );
+                    };
+//                    secondFuture.addListener( , Threads.lookup( Empyrean.class, Futures.class, secondCall.getClass( ).getCanonicalName( ) ) );
                   } catch ( final Exception ex ) {
                     resultFuture.setException( ex );
                   }
@@ -162,7 +213,7 @@ public class Futures {
                 resultFuture.setException( ex );
               }
             }
-          }, Threads.lookup( Empyrean.class, Futures.class, firstCall.getClass( ).getCanonicalName( ) ) );
+          };
         } catch ( final Exception ex ) {
           Automata.LOG.error( ex, ex );
           resultFuture.setException( ex );
