@@ -109,6 +109,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
     result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
+    result.setTotalSize( result.length( ) );
+    result.setRange( range );
     Log.debug( "Configuration result: " + result );
     return result;
   }
