@@ -99,10 +99,8 @@ public class Futures {
         try {
           try {
             final T res = firstCall.call( );
-            res.get( );
             intermediateFuture.set( res );
           } catch ( Exception ex ) {
-            LOG.error( ex, ex );
             intermediateFuture.setException( ex );
             resultFuture.setException( ex );
           }
@@ -123,10 +121,8 @@ public class Futures {
                 Thread.currentThread( ).interrupt( );
                 resultFuture.setException( ex );
               } catch ( ExecutionException ex ) {
-                LOG.error( ex, ex );
-                resultFuture.setException( ex );
+                resultFuture.setException( ex.getCause( ) );
               } catch ( Exception ex ) {
-                LOG.error( ex, ex );
                 resultFuture.setException( ex );
               }
             }
