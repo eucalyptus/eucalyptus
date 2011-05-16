@@ -64,8 +64,6 @@
 package com.eucalyptus.component;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
@@ -115,21 +113,6 @@ public class ComponentRegistrationHandler {
           
           @Override
           public void run( ) {
-            for ( int i = 0; i < 3; i++ ) {
-              try {
-                future.get( 1000, TimeUnit.MILLISECONDS );
-              } catch ( TimeoutException ex1 ) {
-                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
-                continue;
-              } catch ( ExecutionException ex1 ) {
-                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
-                continue;
-              } catch ( InterruptedException ex1 ) {
-                LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
-                Thread.currentThread( ).interrupt( );
-                break;
-              }
-            }
             for ( int i = 0; i < 3; i++ ) {
               try {
                 component.enableTransition( newComponent ).get( );
