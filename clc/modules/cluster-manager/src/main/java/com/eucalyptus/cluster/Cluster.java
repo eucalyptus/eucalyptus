@@ -207,7 +207,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       public boolean apply( final Cluster input ) {
         if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
           try {
-            AsyncRequests.newRequest( new EnableServiceCallback( input ) ).dispatch( input.configuration ).get( );
+            AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
           } catch ( ExecutionException ex ) {
             input.errors.add( ex.getCause( ) );
@@ -238,7 +238,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             LOG.error( ex, ex );
           }
           try {
-            AsyncRequests.newRequest( new DisableServiceCallback( input ) ).dispatch( input.configuration ).get( );
+            AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
           } catch ( ExecutionException ex ) {
             input.errors.add( ex.getCause( ) );
