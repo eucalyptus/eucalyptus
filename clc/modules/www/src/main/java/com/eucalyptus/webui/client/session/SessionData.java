@@ -32,6 +32,10 @@ public class SessionData {
   
   public int getIntProperty( String name, int def ) {
     try {
+      String value = getProperty( name );
+      if ( value == null ) {
+        return def;
+      }
       return Integer.parseInt( getProperty( name ) );
     } catch ( Exception e ) {
       return def;
