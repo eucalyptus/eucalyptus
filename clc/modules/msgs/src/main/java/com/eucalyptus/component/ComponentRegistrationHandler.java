@@ -138,7 +138,7 @@ public class ComponentRegistrationHandler {
     }
   }
   
-  public static boolean deregister( Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
+  public static boolean deregister( final Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
     final ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
@@ -152,7 +152,7 @@ public class ComponentRegistrationHandler {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
     }
-    ServiceConfiguration conf;
+    final ServiceConfiguration conf;
     try {
       conf = builder.lookupByName( name );
     } catch ( ServiceRegistrationException e ) {
@@ -161,13 +161,27 @@ public class ComponentRegistrationHandler {
       throw e;
     }
     try {
-      try {
-//        builder.getComponent( ).disableTransition( conf ).get( );
-//        builder.getComponent( ).stopTransition( conf ).get( );
-        builder.getComponent( ).destroyTransition( conf );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
+      final CheckedListenableFuture<ServiceConfiguration> future = component.stopTransition( conf );
+      Runnable followRunner = new Runnable( ) {
+        public void run( ) {
+          try {
+            future.get( );
+            for ( int i = 0; i < 3; i++ ) {
+              try {
+                component.destroyTransition( conf );
+                break;
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                continue;
+              }
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex,
+                       ex );
+          }
+        }
+      };
+      Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, conf.getFullName( ).toString( ) ).submit( followRunner );
       builder.remove( conf );
       return true;
     } catch ( Throwable e ) {
