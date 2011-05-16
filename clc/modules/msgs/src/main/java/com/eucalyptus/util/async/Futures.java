@@ -112,18 +112,21 @@ public class Futures {
             public void run( ) {
               try {
                 intermediateFuture.get( ).get( );
+                try {
+                  T res2 = secondCall.call( );
+                  resultFuture.set( res2.get( ) );
+                } catch ( Exception ex ) {
+                  resultFuture.setException( ex );
+                }
               } catch ( InterruptedException ex ) {
                 LOG.error( ex );
                 Thread.currentThread( ).interrupt( );
+                resultFuture.setException( ex );
               } catch ( ExecutionException ex ) {
                 LOG.error( ex, ex );
+                resultFuture.setException( ex );
               } catch ( Exception ex ) {
                 LOG.error( ex, ex );
-              }
-              try {
-                T res2 = secondCall.call( );
-                resultFuture.set( res2.get( ) );
-              } catch ( Exception ex ) {
                 resultFuture.setException( ex );
               }
             }
