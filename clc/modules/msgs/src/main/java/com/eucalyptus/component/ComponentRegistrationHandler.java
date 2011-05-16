@@ -118,7 +118,7 @@ public class ComponentRegistrationHandler {
                   continue;
                 } catch ( ExecutionException ex ) {
                   LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  break;
+                  continue;
                 } catch ( InterruptedException ex ) {
                   LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
                   Thread.currentThread( ).interrupt( );
@@ -129,7 +129,7 @@ public class ComponentRegistrationHandler {
                 continue;
               } catch ( ExecutionException ex1 ) {
                 LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
-                break;
+                continue;
               } catch ( InterruptedException ex1 ) {
                 LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
                 Thread.currentThread( ).interrupt( );
