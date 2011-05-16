@@ -219,6 +219,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             try {
               Clusters.getInstance( ).enable( input.getName( ) );
             } catch ( NoSuchElementException ex ) {
+              Clusters.getInstance( ).register( input );
               LOG.error( ex , ex );
             }
           }
