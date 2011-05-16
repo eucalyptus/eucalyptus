@@ -579,6 +579,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         try {
           try {
             transition.call( ).get( );
+            error = null;
             break;
           } catch ( Exception ex ) {
             LOG.error( ex );
