@@ -563,6 +563,12 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void start( ) throws ServiceRegistrationException {
     Clusters.getInstance( ).registerDisabled( this );
+    try {
+      ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
+      ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
     this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     if( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
       final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING, State.STARTING,
@@ -581,10 +587,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         }
       } catch ( InterruptedException ex ) {
         LOG.error( ex , ex );
-      } finally {
-        ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
-        ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
-      }
+      } 
       if ( error != null ) {
         this.configuration.info( error );
       }
