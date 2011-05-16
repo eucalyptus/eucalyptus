@@ -17,6 +17,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionFireException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -50,58 +52,125 @@ public class Images {
     return query.getDisplayName( );
   }
   
-  public static class ImageInfoToDetails implements TypeMapping<ImageInfo, ImageDetails> {
+  @TypeMapper
+  public enum KernelImageDetails implements TypeMapping<KernelImageInfo, ImageDetails> {
+    INSTANCE;
+    
     @Override
-    public ImageDetails apply( ImageInfo arg0 ) {
+    public ImageDetails apply( KernelImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
       i.setName( arg0.getName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
-//TODO      i.setRootDeviceName( arg0.getD )
       i.setImageId( arg0.getDisplayName( ) );
-      if ( arg0 instanceof Image.StaticDiskImage ) {
-        i.setImageLocation( ( ( StaticDiskImage ) arg0 ).getImageLocation( ) );
-      }
-      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
-      if ( arg0 instanceof MachineImageInfo ) {
-        i.setImageType( ( ( MachineImageInfo ) arg0 ).getImageType( ).toString( ) );
-        i.setKernelId( ( ( MachineImageInfo ) arg0 ).getKernelId( ) );
-        i.setRamdiskId( ( ( MachineImageInfo ) arg0 ).getRamdiskId( ) );
-        i.setPlatform( ( ( MachineImageInfo ) arg0 ).getPlatform( ).toString( ) );
-      }
-      if ( arg0 instanceof BlockStorageImageInfo ) {
-        i.setRootDeviceType( "ebs" );
-      }
-      i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), new Function<DeviceMapping, BlockDeviceMappingItemType>( ) {
-        
-        @Override
-        public BlockDeviceMappingItemType apply( DeviceMapping input ) {
-          BlockDeviceMappingItemType ret = new BlockDeviceMappingItemType( );
-          ret.setDeviceName( input.getDeviceName( ) );
-          if ( input instanceof BlockStorageDeviceMapping ) {
-            final BlockStorageDeviceMapping ebsDev = ( BlockStorageDeviceMapping ) input;
-            ret.setEbs( new EbsDeviceMapping( ) {
-              {
-                this.setVirtualName( ebsDev.getVirtualName( ) );
-                this.setSnapshotId( ebsDev.getSnapshotId( ) );
-                this.setVolumeSize( ebsDev.getSize( ) );
-                this.setDeleteOnTermination( ebsDev.getDelete( ) );
-              }
-            } );
-          } else {
-            ret.setVirtualName( input.getVirtualName( ) );
-          }
-          return null;
-        }
-      } ) );
+      i.setPlatform( Image.Platform.linux.toString( ) );
+//      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
+//      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
+//      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
+//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
+//      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
       return i;
     }
   }
   
-  public static ImageInfoToDetails TO_IMAGE_DETAILS = new ImageInfoToDetails( );
-  public static ImageInfo          ALL              = new ImageInfo( );
+  @TypeMapper
+  public enum RamdiskImageDetails implements TypeMapping<RamdiskImageInfo, ImageDetails> {
+    INSTANCE;
+    
+    @Override
+    public ImageDetails apply( RamdiskImageInfo arg0 ) {
+      ImageDetails i = new ImageDetails( );
+      i.setName( arg0.getName( ) );
+      i.setDescription( arg0.getDescription( ) );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      i.setPlatform( Image.Platform.linux.toString( ) );
+//      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
+//      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
+//      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
+//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
+//      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      return i;
+    }
+  }
+  
+  @TypeMapper
+  public enum MachineImageDetails implements TypeMapping<MachineImageInfo, ImageDetails> {
+    INSTANCE;
+    
+    @Override
+    public ImageDetails apply( MachineImageInfo arg0 ) {
+      ImageDetails i = new ImageDetails( );
+      i.setName( arg0.getName( ) );
+      i.setDescription( arg0.getDescription( ) );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      //TODO      i.setRootDeviceName( arg0.getD )
+      i.setRootDeviceName( "/dev/sda1" );
+      i.setRootDeviceType( "instance-store" );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setKernelId( arg0.getKernelId( ) );
+      i.setRamdiskId( arg0.getRamdiskId( ) );
+      i.setPlatform( arg0.getPlatform( ).toString( ) );
+      i.setPlatform( Image.Platform.linux.toString( ) );
+      i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
+//      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
+//      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
+//      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
+//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
+//      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      return i;
+    }
+  }
+  
+  @TypeMapper
+  public enum DeviceMappingDetails implements Function<DeviceMapping, BlockDeviceMappingItemType> {
+    INSTANCE;
+    @Override
+    public BlockDeviceMappingItemType apply( DeviceMapping input ) {
+      BlockDeviceMappingItemType ret = new BlockDeviceMappingItemType( );
+      ret.setDeviceName( input.getDeviceName( ) );
+      if ( input instanceof BlockStorageDeviceMapping ) {
+        final BlockStorageDeviceMapping ebsDev = ( BlockStorageDeviceMapping ) input;
+        ret.setEbs( new EbsDeviceMapping( ) {
+          {
+            this.setVirtualName( ebsDev.getVirtualName( ) );
+            this.setSnapshotId( ebsDev.getSnapshotId( ) );
+            this.setVolumeSize( ebsDev.getSize( ) );
+            this.setDeleteOnTermination( ebsDev.getDelete( ) );
+          }
+        } );
+      } else {
+        ret.setVirtualName( input.getVirtualName( ) );
+      }
+      return ret;
+    }
+  }
+  
+  public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
+                                                                     
+                                                                     @Override
+                                                                     public ImageDetails apply( ImageInfo input ) {
+                                                                       return TypeMappers.transform( input, ImageDetails.class );
+                                                                     }
+                                                                   };
+  public static ImageInfo                         ALL              = new ImageInfo( );
   
   /**
    * TODO: DOCUMENT Images.java
