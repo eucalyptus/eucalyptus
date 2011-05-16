@@ -25,7 +25,9 @@ public class EucalyptusWebInterface implements EntryPoint {
     // Make sure we catch any uncaught exceptions, for debugging purpose.
     GWT.setUncaughtExceptionHandler( new GWT.UncaughtExceptionHandler( ) {
       public void onUncaughtException( Throwable e ) {
-        LOG.log( Level.SEVERE, e.getMessage( ), e );
+        if ( e != null ) {
+          LOG.log( Level.SEVERE, e.getMessage( ) );
+        }
       }
     } );
     GWT.<GlobalResources>create( GlobalResources.class ).buttonCss( ).ensureInjected( );
