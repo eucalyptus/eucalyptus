@@ -1,14 +1,12 @@
 package com.eucalyptus.config;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -16,7 +14,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 
 
@@ -81,7 +78,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
     try {
       Partition part = Partitions.lookup( config );
       ServiceConfigurations.getInstance( ).store( config );
-      part.link( config );
+//      part.link( config );
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( config.getPartition( ) );
       throw ex;
