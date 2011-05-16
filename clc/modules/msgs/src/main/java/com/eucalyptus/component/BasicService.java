@@ -213,13 +213,13 @@ public class BasicService extends AbstractService implements Service {
                 } else {
                   try {
                     if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
-                      config.lookupComponent( ).enableTransition( config );
+                      config.lookupComponent( ).enableTransition( config ).get( );
                     } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
-                      config.lookupComponent( ).disableTransition( config );
+                      config.lookupComponent( ).disableTransition( config ).get( );
                     } else if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
                       BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
                     } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                      config.lookupComponent( ).disableTransition( config );
+                      config.lookupComponent( ).disableTransition( config ).get( );
                     }
                   } catch ( Throwable ex ) {
                     LOG.debug( "CheckRunner caught an exception: " + ex );
