@@ -100,30 +100,24 @@ public class ComponentRegistrationHandler {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
         final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
+        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit(
+                                                                                                                                         new Runnable( ) {
+                                                                                                                                           public void run( ) {
+                                                                                                                                             try {
+                                                                                                                                               future.get( );
+                                                                                                                                             } catch ( Exception ex ) {
+                                                                                                                                               LOG.error( ex,
+                                                                                                                                                          ex );
+                                                                                                                                             }
+                                                                                                                                           }
+                                                                                                                                         } );
         future.addListener( new Runnable( ) {
           
           @Override
           public void run( ) {
-            if( !future.isDone( ) ) {
-              LOG.error( "BUG BUG Executing listener for a future which is not yet done." );
-            }
-            for( int i = 0; i < 3; i++ ) {
+            for ( int i = 0; i < 3; i++ ) {
               try {
                 future.get( 1000, TimeUnit.MILLISECONDS );
-                try {
-                  component.enableTransition( newComponent ).get( );
-                  break;
-                } catch ( IllegalStateException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  continue;
-                } catch ( ExecutionException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  continue;
-                } catch ( InterruptedException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  Thread.currentThread( ).interrupt( );
-                  break;
-                }
               } catch ( TimeoutException ex1 ) {
                 LOG.error( ex1, Exceptions.filterStackTrace( ex1, 10 ) );
                 continue;
@@ -136,13 +130,24 @@ public class ComponentRegistrationHandler {
                 break;
               }
             }
+            for ( int i = 0; i < 3; i++ ) {
+              try {
+                component.enableTransition( newComponent ).get( );
+                break;
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                continue;
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                continue;
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                Thread.currentThread( ).interrupt( );
+                break;
+              }
+            }
           }
         }, Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ) );//NOTE: use a thread other than the calling thread.
-        try {
-          future.get( );
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
-        }
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
