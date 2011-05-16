@@ -178,12 +178,14 @@ public class DetailViewImpl extends Composite implements DetailView {
 
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
+    /*
     LOG.log( Level.INFO, "Show data" );
     this.gridValues.clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
       content.setWidget( grid );
     }
+    */
   }
   
   private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
