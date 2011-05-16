@@ -116,13 +116,17 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     } else {
       LOG.log( Level.INFO, "Selection changed to " + selection );
       this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
-      ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
-      descs.addAll( cache.getDescs( ) );
-      descs.addAll( selection.getExtraFieldDescs( ) );
-      this.clientFactory.getDetailView( ).showData( descs, selection.getRow( ) );      
+      showSelectedDetails( );
     }
   }
 
+  private void showSelectedDetails( ) {
+    ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
+    descs.addAll( cache.getDescs( ) );
+    descs.addAll( currentSelected.getExtraFieldDescs( ) );
+    this.clientFactory.getDetailView( ).showData( descs, currentSelected.getRow( ) );          
+  }
+  
   @Override
   public int getPageSize( ) {
     return pageSize;

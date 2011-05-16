@@ -140,7 +140,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   Anchor save;
   
   @UiField
-  ScrollPanel content;
+  ScrollPanel gridPanel;
   
   private Controller controller;
   private Presenter presenter;
@@ -149,7 +149,6 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
-    content.add( new Label( "hello" ) );
   }
   
   @UiHandler( "close" )
@@ -175,23 +174,15 @@ public class DetailViewImpl extends Composite implements DetailView {
   private void closeSelf( ) {
     this.controller.hideDetail( );
   }
-
-  private void addContent( ) {
-    content.clear( );
-    content.setWidget( new Label( "Next" ) );
-  }
   
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
-    addContent( );
-    /*
     LOG.log( Level.INFO, "Show data" );
     this.gridValues.clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
-      content.setWidget( grid );
+      gridPanel.setWidget( grid );
     }
-    */
   }
   
   private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
