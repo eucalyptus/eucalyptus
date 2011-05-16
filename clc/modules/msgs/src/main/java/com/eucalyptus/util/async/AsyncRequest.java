@@ -155,7 +155,16 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           throw ex;
         }
       } else {
-        this.result.setException( new RuntimeException( "Sending asyn request failed for unknown reasons" ) );
+        try {
+          this.result.set( this.requestResult.get( ) );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex , ex );
+          this.result.setException( ex.getCause( ) );
+        } catch ( InterruptedException ex ) {
+          LOG.error( ex , ex );
+          Thread.currentThread( ).interrupt( );
+          this.result.setException( ex );
+        }
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex , ex );
