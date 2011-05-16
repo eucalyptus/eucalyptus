@@ -106,7 +106,7 @@ public class BasicService extends AbstractService implements Service {
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
     }
-
+    
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
@@ -196,7 +196,7 @@ public class BasicService extends AbstractService implements Service {
     return this.goal;
   }
   
-   @Override
+  @Override
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
@@ -208,7 +208,7 @@ public class BasicService extends AbstractService implements Service {
             Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
               @Override
               public void run( ) {
-                if( !Bootstrap.isFinished( ) ) {
+                if ( !Bootstrap.isFinished( ) ) {
                   return;
                 } else {
                   try {
@@ -216,7 +216,7 @@ public class BasicService extends AbstractService implements Service {
                       config.lookupComponent( ).enableTransition( config );
                     } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
                       config.lookupComponent( ).disableTransition( config );
-                    } else if( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
+                    } else if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
                       BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
                     } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
                       config.lookupComponent( ).disableTransition( config );
@@ -232,12 +232,12 @@ public class BasicService extends AbstractService implements Service {
             Thread.currentThread( ).interrupt( );
           } catch ( ExecutionException ex ) {
             config.error( ex.getCause( ) );
-  //          config.lookupService( ).setGoal( Component.State.DISABLED );
+            //          config.lookupService( ).setGoal( Component.State.DISABLED );
           }
         } else {
           ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
           ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-                }
+        }
       }
     }
   }

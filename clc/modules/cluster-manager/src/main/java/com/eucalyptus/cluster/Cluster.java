@@ -465,7 +465,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
               try {
                 t.call( ).get( );
               } catch ( Exception ex ) {
-                Cluster.this.configuration.error( ex );
+                Cluster.this.errors.add( ex );
               }
             }
           } );
@@ -607,6 +607,25 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
         Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+        Exception error = null;
+        for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+          try {
+            try {
+              transition.call( ).get( );
+              error = null;
+              break;
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              error = ex;
+            }
+            TimeUnit.SECONDS.sleep( 1 );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        if ( error != null ) {
+          this.configuration.info( error );
+        }
       } catch ( NoSuchElementException ex ) {
         throw ex;
       }
