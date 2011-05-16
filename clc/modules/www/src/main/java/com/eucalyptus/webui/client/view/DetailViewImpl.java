@@ -180,19 +180,11 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.gridValues.clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
-      this.content.clear( );
-      this.content.add( grid );
+      this.content.setWidget( grid );
     }
   }
   
   private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
-    Grid grid = new Grid( 1, 2 );
-    grid.addStyleName( gridStyle.grid( ) );
-    grid.getColumnFormatter( ).setWidth( 0, "40%" );
-    grid.setWidget( 0, 0, new Label( "Name" ) );
-    grid.setWidget( 0, 1, new TextBox( ) );
-    return grid;
-    /*
     if ( descs == null || descs.size( ) < 1 || vals == null || vals.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Empty or partial input" );
       return null;
@@ -220,7 +212,6 @@ public class DetailViewImpl extends Composite implements DetailView {
       gridValues.add( new HiddenValue( val ) );
     }
     return grid;
-    */
   }
   
   private HasValue getWidget( SearchResultFieldDesc desc, String val ) {
