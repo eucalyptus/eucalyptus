@@ -461,18 +461,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             break;
         }
         if ( transition != null ) {
-          final Callable<CheckedListenableFuture<Cluster>> t = transition;
-          Threads.lookup( ClusterController.class, Cluster.class ).submit( new Runnable( ) {
-            
-            @Override
-            public void run( ) {
-              try {
-                t.call( ).get( );
-              } catch ( Exception ex ) {
-                Cluster.this.errors.add( ex );
-              }
-            }
-          } );
+          try {
+            Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
         }
       }
     } catch ( final IllegalStateException ex ) {
