@@ -337,6 +337,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           } catch ( final InterruptedException e ) {
             LOG.error( e, e );
             parent.errors.add( e );
+          } catch ( final Throwable e ) {
+            LOG.error( e, e );
+            parent.errors.add( e );
           }
         }
       };
