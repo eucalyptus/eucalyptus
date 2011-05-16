@@ -78,7 +78,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
     try {
       Partition part = Partitions.lookup( config );
       ServiceConfigurations.getInstance( ).store( config );
-//      part.link( config );
+      part.syncKeysToDisk( );
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( config.getPartition( ) );
       throw ex;

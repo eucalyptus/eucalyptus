@@ -274,6 +274,10 @@ public class Partition extends AbstractPersistent {
     }
   }
   
+  public void syncKeysToDisk( ) {
+    this.writePartitionKeyFiles( );
+  }
+
   @PostUpdate
   @PostPersist
   private void writePartitionKeyFiles( ) {

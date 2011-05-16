@@ -58,7 +58,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       Partition part = Partitions.lookup( config );
       ServiceConfigurations.getInstance( ).store( config );
-//      part.link( config );
+      part.syncKeysToDisk( );
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( config.getPartition( ) );
       throw ex;
@@ -75,7 +75,6 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   public ClusterConfiguration remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     Partition part = Partitions.lookup( config );
     ClusterConfiguration ret = super.remove( config );
-    part.unlink( ret );
     return ret;
   }
   
