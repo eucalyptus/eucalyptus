@@ -14,15 +14,17 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
   private static Logger LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> callback;
-  private final CheckedListenableFuture<R>  response;
+  private final CheckedListenableFuture<R>  requestResult;
+  private final CheckedListenableFuture<R>  result;
   private final RequestHandler<Q, R>        handler;
   private final CallbackListenerSequence<R> callbackSequence;
   private Q                                 request;
   
   protected AsyncRequest( final TwiceChecked<Q, R> cb ) {
     super( );
-    this.response = new AsyncResponseFuture<R>( );
-    this.handler = new AsyncRequestHandler<Q, R>( this.response );
+    this.result = new AsyncResponseFuture<R>( );
+    this.requestResult = new AsyncResponseFuture<R>( );
+    this.handler = new AsyncRequestHandler<Q, R>( this.requestResult );
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.callback = new TwiceChecked<Q, R>( ) {
 
@@ -31,6 +33,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           cb.fireException( t );
         } catch ( Throwable ex ) {
+          AsyncRequest.this.result.setException( ex );
           LOG.error( ex , ex );
         }
         try {
@@ -48,14 +51,17 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           }
           cb.fire( r );
           try {
+            AsyncRequest.this.result.set( r );
             AsyncRequest.this.callbackSequence.fire( r );
           } catch ( Throwable ex ) {
             LOG.error( ex , ex );
           }
         } catch ( RuntimeException ex ) {
           LOG.error( ex, ex );
+          AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         } catch ( Exception ex ) {
+          AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
       }
@@ -67,7 +73,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         }
       }
     };
-    Callbacks.addListenerHandler( response, this.callback );
+    Callbacks.addListenerHandler( requestResult, this.callback );
   }
   
   /**
@@ -114,14 +120,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         RequestException ex = ( e instanceof RequestException )
           ? ( RequestException ) e
           : new RequestInitializationException( this.callback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
-        this.response.setException( ex );
+        this.result.setException( ex );
         throw ex;
       }
       Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
-        if ( this.response.isDone( ) ) {
+        if ( this.requestResult.isDone( ) ) {
           try {
-            R r = this.response.get( 1, TimeUnit.MILLISECONDS );
+            R r = this.requestResult.get( 1, TimeUnit.MILLISECONDS );
             throw new RequestException( "Request failed but produced a response: " + r, this.getRequest( ) );
           } catch ( ExecutionException e ) {
             if ( e.getCause( ) != null && e.getCause( ) instanceof RequestException ) {
@@ -141,7 +147,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         } else {
           RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
           try {
-            this.response.setException( ex );
+            this.result.setException( ex );
           } catch ( Throwable t ) {}
           throw ex;
         }
@@ -212,7 +218,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> getResponse( ) {
-    return this.response;
+    return this.result;
   }
   
   /**

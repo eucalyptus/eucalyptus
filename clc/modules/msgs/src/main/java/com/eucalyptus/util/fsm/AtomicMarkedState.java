@@ -405,6 +405,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     public void fireException( Throwable t ) {
+      this.transitionFuture.setException( t );
       this.teardown( );
       AtomicMarkedState.this.error( );
     }
