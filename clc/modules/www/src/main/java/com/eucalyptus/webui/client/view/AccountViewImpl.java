@@ -78,4 +78,9 @@ public class AccountViewImpl extends Composite implements AccountView {
     table.setData( result );
   }
 
+  @Override
+  public void clear( ) {
+    this.tablePanel.clear( );
+  }
+
 }

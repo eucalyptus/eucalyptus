@@ -130,6 +130,8 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
+  private static final String LABEL_WIDTH = "36%";
+  
   @UiField
   GridStyle gridStyle;
   
@@ -194,7 +196,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     LOG.log( Level.INFO, "Create grid for descs=" + descs + "\nvalues=" + vals + "\nsize=" + size );    
     Grid grid = new Grid( size, 2 );
     grid.addStyleName( gridStyle.grid( ) );
-    grid.getColumnFormatter( ).setWidth( 0, "40%" );
+    grid.getColumnFormatter( ).setWidth( 0, LABEL_WIDTH );
     int row = 0;
     for ( int i = 0; i < size; i++ ) {
       SearchResultFieldDesc desc = descs.get( i );
@@ -230,6 +232,12 @@ public class DetailViewImpl extends Composite implements DetailView {
   @Override
   public void setController( Controller controller ) {
     this.controller = controller;
+  }
+
+  @Override
+  public void clear( ) {
+    this.gridValues.clear( );
+    this.gridPanel.clear( );
   }
   
 }

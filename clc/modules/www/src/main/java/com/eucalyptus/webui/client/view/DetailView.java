@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.google.gwt.user.client.ui.IsWidget;
 
-public interface DetailView extends IsWidget {
+public interface DetailView extends IsWidget, Clearable {
   
   void setTitle( String title );
   
   void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values );
-  
+    
   void setPresenter( Presenter presenter );
 
   void setController( Controller controller );

@@ -63,5 +63,11 @@ public class ConfigViewImpl extends Composite implements ConfigView {
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;
   }
+
+  @Override
+  public void clear( ) {
+    this.tablePanel.clear( );
+    this.table = null;
+  }
   
 }

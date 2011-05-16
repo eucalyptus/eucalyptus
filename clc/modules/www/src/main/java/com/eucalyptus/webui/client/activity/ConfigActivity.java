@@ -27,7 +27,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
 
   private static final int DEFAULT_PAGE_SIZE = 25;
-  private static final int DETAIL_PANE_SIZE = 360;//px
+  private static final int DETAIL_PANE_SIZE = 400;//px
   
   private ClientFactory clientFactory;
   private ConfigPlace place;
@@ -56,6 +56,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     this.clientFactory.getShellView( ).getDetailView( ).setPresenter( this );
     
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
+    
     // Show loading first
     LoadingAnimationView view = this.clientFactory.getLoadingAnimationView( );
     container.setWidget( view );
@@ -68,6 +69,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
       this.view = this.clientFactory.getConfigView( );
       this.view.setPresenter( this );
       container.setWidget( this.view );
+      this.view.clear( );
     }
     this.view.showSearchResult( result );
   }
@@ -135,6 +137,12 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   @Override
   public void saveValue( ArrayList<String> values ) {
     LOG.log( Level.INFO, "Saving values: " + values );
+  }
+  
+  @Override
+  public void onStop( ) {
+    this.clientFactory.getShellView( ).getDetailView( ).clear( );
+    this.clientFactory.getShellView( ).hideDetail( );
   }
   
 }

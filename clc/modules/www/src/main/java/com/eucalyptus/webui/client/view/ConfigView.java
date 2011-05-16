@@ -2,7 +2,7 @@ package com.eucalyptus.webui.client.view;
 
 import com.google.gwt.user.client.ui.IsWidget;
 
-public interface ConfigView extends IsWidget, CanDisplaySearchResult {
+public interface ConfigView extends IsWidget, CanDisplaySearchResult, Clearable {
 
   void setPresenter( Presenter presenter );
   
