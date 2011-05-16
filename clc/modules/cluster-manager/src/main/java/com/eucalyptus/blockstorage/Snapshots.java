@@ -66,10 +66,10 @@ package com.eucalyptus.blockstorage;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
@@ -84,27 +84,32 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
-  static Snapshot initializeSnapshot( Context ctx, EntityWrapper<Snapshot> db, Volume vol, ServiceConfiguration sc ) {
+  static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) {
     String newId = null;
     Snapshot snap = null;
-    while ( true ) {
-      newId = Crypto.generateId( ctx.getUserFullName( ).getUniqueId( ), SnapshotManager.ID_PREFIX );
+    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
       try {
-        db.getUnique( Snapshot.named( newId ) );
-      } catch ( EucalyptusCloudException e ) {
-        snap = new Snapshot( ctx.getUserFullName( ), newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
-        snap.setVolumeSize( vol.getSize( ) );
-        db.add( snap );
-        break;
+        while ( true ) {
+          newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
+          try {
+            db.getUnique( Snapshot.named( newId ) );
+          } catch ( EucalyptusCloudException e ) {
+            snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
+            snap.setVolumeSize( vol.getSize( ) );
+            db.add( snap );
+            db.commit( );
+            return snap;
+          }
+        }
+      } catch ( Exception ex ) {
+        db.rollback( );
       }
-    }
-    return snap;
   }
 
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
     final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     try {
-      Transactions.one( Snapshot.named( snap.getDisplayName( ) ), new Callback<Snapshot>( ) {
+      Transactions.save( snap, new Callback<Snapshot>( ) {
         
         @Override
         public void fire( Snapshot t ) {

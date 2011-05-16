@@ -64,33 +64,21 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.records.EventClass;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -105,16 +93,12 @@ import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
@@ -146,7 +130,7 @@ public class SnapshotManager {
     }
     ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     vol = Volumes.checkVolumeReady( vol );
-    Snapshot snap = Snapshots.initializeSnapshot( ctx, db, vol, sc );
+    Snapshot snap = Snapshots.initializeSnapshot( ctx, vol, sc );
     snap = Snapshots.startCreateSnapshot( vol, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
