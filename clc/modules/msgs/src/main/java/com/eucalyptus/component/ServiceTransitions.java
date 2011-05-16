@@ -115,7 +115,7 @@ public class ServiceTransitions {
                                                                                                            Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED );
         
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
@@ -137,7 +137,7 @@ public class ServiceTransitions {
                                                                                                            Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED,
                                                                                                            Component.State.DISABLED, Component.State.ENABLED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
@@ -157,7 +157,7 @@ public class ServiceTransitions {
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
@@ -178,7 +178,7 @@ public class ServiceTransitions {
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED, Component.State.STOPPED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         transitionResult = result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
@@ -199,7 +199,7 @@ public class ServiceTransitions {
       try {
         Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED, Component.State.STOPPED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class ).submit( transition );
+        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         transitionResult = result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
