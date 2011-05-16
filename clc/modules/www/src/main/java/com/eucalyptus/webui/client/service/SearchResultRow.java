@@ -41,6 +41,14 @@ public class SearchResultRow implements Serializable {
     }
   }
   
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "extraFields=" ).append( extraFields ).append( "," );
+    sb.append( "rows=" ).append( row );
+    return sb.toString( );
+  }
+  
   public String getField( int i ) {
     return row.get( i );
   }
@@ -71,11 +79,6 @@ public class SearchResultRow implements Serializable {
   
   public List<SearchResultFieldDesc> getExtraFieldDescs( ) {
     return this.extraFields;
-  }
-  
-  @Override
-  public String toString( ) {
-    return row.toString( );
   }
   
   @Override

@@ -26,6 +26,16 @@ public class SearchResult implements Serializable {
     this.descs.addAll( descs );
   }
 
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "totalSize=" ).append( totalSize ).append( "; " );
+    sb.append( "range=[" ).append( range ).append( "]; " );
+    sb.append( "descs=[" ).append( descs ).append( "]; " );
+    sb.append( "rows=[" ).append( rows ).append( "]" );
+    return sb.toString( );
+  }
+  
   public ArrayList<SearchResultFieldDesc> getDescs( ) {
     return descs;
   }

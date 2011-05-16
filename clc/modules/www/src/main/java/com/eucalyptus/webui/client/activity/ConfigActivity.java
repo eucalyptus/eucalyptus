@@ -55,19 +55,19 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     doSearch( URL.decode( place.getSearch( ) ), new SearchRange( 0, pageSize ) );
   }
   
-  private void showView( SearchResult result ) {    
-    this.view = this.clientFactory.getConfigView( );
-    this.view.setPresenter( this );
-    container.setWidget( this.view );
+  private void showView( SearchResult result ) {
+    if ( this.view == null ) {
+      this.view = this.clientFactory.getConfigView( );
+      this.view.setPresenter( this );
+      container.setWidget( this.view );
+    }
+    this.view.showSearchResult( result );
   }
   
   private void displayData( SearchResult result ) {
+    LOG.log( Level.INFO, "Received " + result );
     cache.update( result );
-    
-    if ( this.view == null ) {
-      showView( result );
-    }
-    this.view.showSearchResult( result );
+    showView( result );
   }
   
   private void doSearch( String query, SearchRange range ) {
@@ -93,7 +93,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     SearchResult result = cache.lookup( range );
     if ( result != null ) {
       // Use the cached result if search range does not change
-      displayData( result );
+      showView( result );
     } else {
       doSearch( this.search, range );
     }

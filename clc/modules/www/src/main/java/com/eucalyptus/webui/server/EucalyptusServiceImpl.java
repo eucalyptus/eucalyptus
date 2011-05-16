@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import org.mortbay.log.Log;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryItem;
@@ -108,6 +109,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
     result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
+    Log.debug( "Configuration result: " + result );
     return result;
   }
 
