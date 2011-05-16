@@ -176,8 +176,14 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.controller.hideDetail( );
   }
 
+  private void addContent( ) {
+    content.clear( );
+    content.setWidget( new Label( "Next" ) );
+  }
+  
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
+    addContent( );
     /*
     LOG.log( Level.INFO, "Show data" );
     this.gridValues.clear( );
