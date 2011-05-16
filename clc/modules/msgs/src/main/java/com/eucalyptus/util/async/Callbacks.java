@@ -1,5 +1,6 @@
 package com.eucalyptus.util.async;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -77,10 +78,12 @@ public class Callbacks {
         } catch ( final Throwable ex ) {
           this.LOG.error( EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).toString( ) );
           this.doFail( ex );
+          throw new UndeclaredThrowableException( ex );
         }
       } catch ( final Throwable e ) {
         this.LOG.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ) );
         this.doFail( e );
+        throw new UndeclaredThrowableException( e );
       }
     }
     
