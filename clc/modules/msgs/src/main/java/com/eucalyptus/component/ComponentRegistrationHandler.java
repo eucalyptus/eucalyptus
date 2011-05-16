@@ -98,39 +98,33 @@ public class ComponentRegistrationHandler {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
         final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
-        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit(
-                                                                                                                                         new Runnable( ) {
-                                                                                                                                           public void run( ) {
-                                                                                                                                             try {
-                                                                                                                                               future.get( );
-                                                                                                                                             } catch ( Exception ex ) {
-                                                                                                                                               LOG.error( ex,
-                                                                                                                                                          ex );
-                                                                                                                                             }
-                                                                                                                                           }
-                                                                                                                                         } );
-        future.addListener( new Runnable( ) {
-          
-          @Override
+        Runnable followRunner = new Runnable( ) {
           public void run( ) {
-            for ( int i = 0; i < 3; i++ ) {
-              try {
-                component.enableTransition( newComponent ).get( );
-                break;
-              } catch ( IllegalStateException ex ) {
-                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                continue;
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                continue;
-              } catch ( InterruptedException ex ) {
-                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                Thread.currentThread( ).interrupt( );
-                break;
+            try {
+              future.get( );
+              for ( int i = 0; i < 3; i++ ) {
+                try {
+                  component.enableTransition( newComponent ).get( );
+                  break;
+                } catch ( IllegalStateException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  continue;
+                } catch ( ExecutionException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  continue;
+                } catch ( InterruptedException ex ) {
+                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                  Thread.currentThread( ).interrupt( );
+                  break;
+                }
               }
+            } catch ( Exception ex ) {
+              LOG.error( ex,
+                         ex );
             }
           }
-        }, Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ) );//NOTE: use a thread other than the calling thread.
+        };
+        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner );
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
