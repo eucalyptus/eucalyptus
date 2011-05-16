@@ -64,6 +64,7 @@
 package com.eucalyptus.ws;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -73,16 +74,19 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
@@ -151,16 +155,38 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
         } else if ( Bootstrap.isCloudController( ) ) {
-          Threads.lookup( Empyrean.class, ServiceDispatchBootstrapper.class ).execute( new Runnable( ) {
-            public void run( ) {
-              try {
-                comp.enableTransition( s ).get( );
-              } catch ( Throwable ex ) {
-                s.error( ex );
-                Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+          try {
+            final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
+            Runnable followRunner = new Runnable( ) {
+              public void run( ) {
+                try {
+                  future.get( );
+                  for ( int i = 0; i < 3; i++ ) {
+                    try {
+                      comp.enableTransition( s ).get( );
+                      break;
+                    } catch ( IllegalStateException ex ) {
+                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                      continue;
+                    } catch ( ExecutionException ex ) {
+                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                      continue;
+                    } catch ( InterruptedException ex ) {
+                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                      Thread.currentThread( ).interrupt( );
+                      break;
+                    }
+                  }
+                } catch ( Exception ex ) {
+                  LOG.error( ex,
+                             ex );
+                }
               }
-            }
-          } );
+            };
+            Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, s.getFullName( ).toString( ) ).submit( followRunner );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+          }
         }
       }
     }
