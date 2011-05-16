@@ -99,6 +99,7 @@ public class Futures {
         try {
           try {
             final T res = firstCall.call( );
+            res.get( );
             intermediateFuture.set( res );
           } catch ( Exception ex ) {
             intermediateFuture.setException( ex );
