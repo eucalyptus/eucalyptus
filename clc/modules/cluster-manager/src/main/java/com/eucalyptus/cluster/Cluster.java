@@ -163,7 +163,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   /**
    * 
    */
-  private static final long                              STATE_INTERVAL_NOTREADY      = 10l;
+  private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
   /**
    * 
    */
