@@ -83,7 +83,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
@@ -152,13 +151,16 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
         if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
         } else if ( Bootstrap.isCloudController( ) ) {
-          try {
-            comp.enableTransition( s ).get( );
-            break;
-          } catch ( Throwable ex ) {
-            s.error( ex );
-            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
-          }
+          Threads.lookup( Empyrean.class, ServiceDispatchBootstrapper.class ).execute( new Runnable( ) {
+            public void run( ) {
+              try {
+                comp.enableTransition( s ).get( );
+              } catch ( Throwable ex ) {
+                s.error( ex );
+                Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+              }
+            }
+          } );
         }
       }
     }
