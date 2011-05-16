@@ -110,14 +110,14 @@ public class Snapshots {
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
     final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     try {
-      Transactions.save( snap, new Callback<Snapshot>( ) {
+      Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
         
         @Override
-        public void fire( Snapshot t ) {
+        public void fire( Snapshot s ) {
           try {
             CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
             CreateStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
-            snap.setMappedState( scReply.getStatus( ) );
+            s.setMappedState( scReply.getStatus( ) );
           } catch ( EucalyptusCloudException ex ) {
             throw new UndeclaredThrowableException( ex );
           }
