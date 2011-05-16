@@ -270,22 +270,27 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
+            AsyncRequests.newRequest( factory.newInstance( ) )
                          .sendSync( parent.getLogServiceConfiguration( ) );
+            transitionCallback.fire( );
           } catch ( final ExecutionException e ) {
             if ( e.getCause( ) instanceof FailedRequestException ) {
               LOG.error( e.getCause( ).getMessage( ) );
               parent.errors.add( e );
+              transitionCallback.fireException( e );
             } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
               LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
               parent.errors.add( e );
+              transitionCallback.fireException( e );
             } else {
               LOG.error( e, e );
               parent.errors.add( e );
+              transitionCallback.fireException( e );
             }
           } catch ( final InterruptedException e ) {
             LOG.error( e, e );
             parent.errors.add( e );
+            transitionCallback.fireException( e );
           }
         }
       };

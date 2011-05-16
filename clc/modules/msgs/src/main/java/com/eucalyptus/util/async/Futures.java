@@ -102,6 +102,7 @@ public class Futures {
             res.get( );
             intermediateFuture.set( res );
           } catch ( Exception ex ) {
+            LOG.error( ex, ex );
             intermediateFuture.setException( ex );
             resultFuture.setException( ex );
           }
