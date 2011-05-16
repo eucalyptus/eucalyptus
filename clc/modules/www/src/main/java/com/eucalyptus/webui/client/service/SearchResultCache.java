@@ -18,6 +18,10 @@ public class SearchResultCache {
   public SearchResultCache( ) {
   }
   
+  public ArrayList<SearchResultFieldDesc> getDescs( ) {
+    return descs;
+  }
+  
   public void update( SearchResult result ) {
     if ( !this.sort.isSameSort( result.getRange( ) ) ) {
       restart( result );

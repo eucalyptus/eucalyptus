@@ -1,7 +1,10 @@
 package com.eucalyptus.webui.client.view;
 
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -10,12 +13,11 @@ import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
 import com.google.gwt.user.client.ui.Anchor;
-import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Grid;
-import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.PasswordTextBox;
 import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
@@ -32,6 +34,101 @@ public class DetailViewImpl extends Composite implements DetailView {
     String grid( );
   }
   
+  interface HasValue {
+    String getValue( );
+    Widget getWidget( );
+  }
+  
+  class HiddenValue implements HasValue {
+    
+    private String value; 
+    
+    public HiddenValue( String value ) {
+      this.value = value;
+    }
+    
+    @Override
+    public String getValue( ) {
+      return this.value;
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return null;
+    }
+    
+  }
+  
+  class TextBoxValue implements HasValue {
+    
+    private TextBox textBox;
+    
+    public TextBoxValue( String value, boolean enabled ) {
+      this.textBox = new TextBox( );
+      this.textBox.setEnabled( enabled );
+      this.textBox.setValue( value == null ? "" : value );
+    }
+    
+    @Override
+    public String getValue( ) {
+      return textBox.getValue( );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return textBox;
+    }
+    
+  }
+  
+  class PasswordTextBoxValue implements HasValue {
+    
+    private PasswordTextBox textBox;
+    
+    public PasswordTextBoxValue( String value, boolean enabled ) {
+      this.textBox = new PasswordTextBox( );
+      this.textBox.setEnabled( enabled );
+      this.textBox.setValue( value == null ? "" : value );
+    }
+    
+    @Override
+    public String getValue( ) {
+      return textBox.getValue( );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return textBox;
+    }
+    
+  }
+  
+  class CheckBoxValue implements HasValue {
+    
+    private CheckBox checkBox;
+    
+    public CheckBoxValue( String value, boolean enabled ) {
+      this.checkBox = new CheckBox( );
+      this.checkBox.setEnabled( enabled );
+      if ( value != null && "true".equalsIgnoreCase( value ) ) {
+        this.checkBox.setValue( true );
+      } else {
+        this.checkBox.setValue( false );
+      }
+    }
+    
+    @Override
+    public String getValue( ) {
+      return checkBox.getValue( ).toString( );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return checkBox;
+    }
+    
+  }
+  
   @UiField
   GridStyle gridStyle;
   
@@ -45,6 +142,8 @@ public class DetailViewImpl extends Composite implements DetailView {
   ScrollPanel content;
   
   private Presenter presenter;
+  
+  private ArrayList<HasValue> gridValues = new ArrayList<HasValue>( );
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -102,4 +201,56 @@ public class DetailViewImpl extends Composite implements DetailView {
   private void closeSelf( ) {
     this.presenter.hideDetail( );
   }
+
+  @Override
+  public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
+    clear( );
+    this.content.add( createGrid( descs, gridValues ) );
+  }
+  
+  private void clear( ) {
+    this.gridValues.clear( );
+    this.content.clear( );
+  }
+  
+  private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
+    if ( descs == null || descs.size( ) < 1 || vals == null || vals.size( ) < 1 ) {
+      LOG.log( Level.WARNING, "Empty or partial input" );
+      return null;
+    }
+    int size = Math.min( descs.size( ), vals.size( ) );
+    Grid grid = new Grid( size, 2 );
+    grid.addStyleName( gridStyle.grid( ) );
+    grid.getColumnFormatter( ).setWidth( 0, "40%" );
+    int row = 0;
+    for ( int i = 0; i < size; i++ ) {
+      SearchResultFieldDesc desc = descs.get( i );
+      String val = vals.get( i );
+      if ( desc != null && !desc.getHidden( ) ) {
+        HasValue widget = getWidget( desc, val );
+        if ( widget != null ) {
+          gridValues.add( widget );
+          grid.setWidget( row, 0, new Label( desc.getTitle( ) ) );
+          grid.setWidget( row, 1, widget.getWidget( ) );
+          row++;
+          continue;
+        }
+      }
+      gridValues.add( new HiddenValue( val ) );
+    }
+    return grid;
+  }
+  
+  private HasValue getWidget( SearchResultFieldDesc desc, String val ) {
+    switch ( desc.getType( ) ) {
+      case TEXT:
+        return new TextBoxValue( val, desc.getEditable( ) );
+      case HIDDEN:
+        return new PasswordTextBoxValue( val, desc.getEditable( ) );
+      case BOOLEAN:
+        return new CheckBoxValue( val, desc.getEditable( ) );
+    }
+    return null;
+  }
+  
 }

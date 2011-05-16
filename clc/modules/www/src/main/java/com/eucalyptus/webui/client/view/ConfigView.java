@@ -6,7 +6,7 @@ public interface ConfigView extends IsWidget, CanDisplaySearchResult {
 
   void setPresenter( Presenter presenter );
   
-  public interface Presenter extends SearchRangeChangeHandler, SingleSelectionChangeHandler, KnowsPageSize {  
+  public interface Presenter extends SearchRangeChangeHandler, SingleSelectionChangeHandler, KnowsPageSize, ValueSaveHandler {  
   }
   
 }

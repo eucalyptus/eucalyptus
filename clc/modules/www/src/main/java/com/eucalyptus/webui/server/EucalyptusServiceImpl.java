@@ -6,7 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import org.mortbay.log.Log;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryItem;
@@ -24,6 +24,8 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
 
+  private static final Logger LOG = Logger.getLogger( EucalyptusServiceImpl.class );
+  
   private static final long serialVersionUID = 1L;
   
   private static User verifySession( Session session ) throws EucalyptusServiceException {
@@ -111,7 +113,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
-    Log.debug( "Configuration result: " + result );
+    LOG.debug( "Configuration result: " + result );
     return result;
   }
 

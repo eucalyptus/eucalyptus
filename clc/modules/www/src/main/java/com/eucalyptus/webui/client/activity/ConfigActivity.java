@@ -38,6 +38,8 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   private AcceptsOneWidget container;
   private ConfigView view;
   
+  private SearchResultRow currentSelected = null;
+  
   public ConfigActivity( ConfigPlace place, ClientFactory clientFactory ) {
     this.place = place;
     this.search = URL.decode( place.getSearch( ) );
@@ -48,10 +50,14 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   @Override
   public void start( AcceptsOneWidget container, EventBus eventBus ) {
     this.container = container;
+    // Hide detail view at the beginning
+    this.clientFactory.getShellView( ).hideDetail( );
+    
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     // Show loading first
     LoadingAnimationView view = this.clientFactory.getLoadingAnimationView( );
     container.setWidget( view );
+    
     doSearch( URL.decode( place.getSearch( ) ), new SearchRange( 0, pageSize ) );
   }
   
@@ -101,12 +107,26 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
 
   @Override
   public void onSelectionChange( SearchResultRow selection ) {
-    this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
+    this.currentSelected = selection;
+    if ( selection == null ) {
+      this.clientFactory.getShellView( ).hideDetail( );
+    } else {
+      this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
+      ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
+      descs.addAll( cache.getDescs( ) );
+      descs.addAll( selection.getExtraFieldDescs( ) );
+      this.clientFactory.getDetailView( ).showData( descs, selection.getRow( ) );      
+    }
   }
 
   @Override
   public int getPageSize( ) {
     return pageSize;
+  }
+
+  @Override
+  public void saveValue( ArrayList<String> values ) {
+    LOG.log( Level.INFO, "Saving values: " + values );
   }
   
 }

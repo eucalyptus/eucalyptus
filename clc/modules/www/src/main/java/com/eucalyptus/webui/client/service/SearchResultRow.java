@@ -77,8 +77,12 @@ public class SearchResultRow implements Serializable {
     this.extraFields.addAll( descs );
   }
   
-  public List<SearchResultFieldDesc> getExtraFieldDescs( ) {
+  public ArrayList<SearchResultFieldDesc> getExtraFieldDescs( ) {
     return this.extraFields;
+  }
+  
+  public ArrayList<String> getRow( ) {
+    return this.row;
   }
   
   @Override
