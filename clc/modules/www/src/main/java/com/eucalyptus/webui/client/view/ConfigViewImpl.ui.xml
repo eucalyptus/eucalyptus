@@ -5,8 +5,6 @@
     <ui:style>
     </ui:style>
     
-    <g:HTMLPanel>
-        Service
-    </g:HTMLPanel>
+    <g:LayoutPanel ui:field="tablePanel"/>
     
 </ui:UiBinder> 

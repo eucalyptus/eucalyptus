@@ -3,13 +3,10 @@ package com.eucalyptus.webui.client.view;
 import java.util.ArrayList;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
-import com.google.gwt.cell.client.CheckboxCell;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.dom.client.Style.Unit;
-import com.google.gwt.resources.client.ClientBundle.Source;
-import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.cellview.client.CellTable;
@@ -54,12 +51,12 @@ public class SearchResultTable extends Composite {
   SimplePager pager;
 
   private ArrayList<SearchResultFieldDesc> fieldDescs;
-  private SearchResultRangeChangeHandler changeHandler;
+  private final SearchRangeChangeHandler changeHandler;
   private SelectionModel<SearchResultRow> selectionModel;
   // Not all column are displayed in the table. This maps table column to data field index.
-  private ArrayList<Integer> tableColIdx = new ArrayList<Integer>( );
+  private final ArrayList<Integer> tableColIdx = new ArrayList<Integer>( );
   
-  public SearchResultTable( int pageSize, ArrayList<SearchResultFieldDesc> fieldDescs, SearchResultRangeChangeHandler changeHandler, SelectionModel<SearchResultRow> selectionModel ) {
+  public SearchResultTable( int pageSize, ArrayList<SearchResultFieldDesc> fieldDescs, SearchRangeChangeHandler changeHandler, SelectionModel<SearchResultRow> selectionModel ) {
     this.changeHandler = changeHandler;
     this.fieldDescs = fieldDescs;
     this.selectionModel = selectionModel;
@@ -78,7 +75,7 @@ public class SearchResultTable extends Composite {
     if ( cellTable != null ) {
       cellTable.setRowCount( data.getTotalSize( ), true );
       //cellTable.setVisibleRange( data.getStart( ), data.getLength( ) );
-      cellTable.setRowData( data.getStart( ), data.getRows( ) );
+      cellTable.setRowData( data.getRange( ).getStart( ), data.getRows( ) );
     }
   }
   
@@ -90,6 +87,9 @@ public class SearchResultTable extends Composite {
     // Initialize columns
     for ( int i = 0; i < this.fieldDescs.size( ); i++ ) {
       SearchResultFieldDesc desc = this.fieldDescs.get( i );
+      if ( desc.getTableDisplay( ) != TableDisplay.MANDATORY ) {
+        continue;
+      }
       final int index = i;
       TextColumn<SearchResultRow> col = new TextColumn<SearchResultRow>( ) {
         @Override
@@ -117,8 +117,6 @@ public class SearchResultTable extends Composite {
   }
   
   public void load( ) {
-    cellTable.getColumnSortList( ).push( cellTable.getColumn( 0 ) );
-    
     AsyncDataProvider<SearchResultRow> dataProvider = new AsyncDataProvider<SearchResultRow>( ) {
       @Override
       protected void onRangeChanged( HasData<SearchResultRow> display ) {
@@ -128,8 +126,9 @@ public class SearchResultTable extends Composite {
           sr.setStart( range.getStart( ) );
           sr.setLength( range.getLength( ) );
         }
-        if ( cellTable.getColumnSortList( ) != null ) {
-          ColumnSortInfo sort = cellTable.getColumnSortList( ).get( 0 );
+        ColumnSortList sortList = cellTable.getColumnSortList( );
+        if ( sortList != null && sortList.size( ) > 0 ) {
+          ColumnSortInfo sort = sortList.get( 0 );
           if ( sort != null ) {
             sr.setSortField( tableColIdx.get( cellTable.getColumnIndex( ( Column<SearchResultRow, ?> ) sort.getColumn( ) ) ) );
             sr.setAscending( sort.isAscending( ) );

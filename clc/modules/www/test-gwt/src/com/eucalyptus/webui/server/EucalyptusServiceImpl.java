@@ -101,7 +101,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       }
     } );
     int resultLength = Math.min( range.getLength( ), DATA.size( ) - range.getStart( ) );
-    SearchResult result = new SearchResult( DATA.size( ), range.getStart( ), resultLength );
+    SearchResult result = new SearchResult( DATA.size( ), range );
     result.setDescs( FIELDS );
     result.setRows( DATA.subList( range.getStart( ), range.getStart( ) + resultLength ) );
     

@@ -59,7 +59,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private LoadingProgressView loadingProgressView;
 	private ShellView shellView;
 	private StartView startView;
-	private ConfigView serviceView;
+	private ConfigView configView;
 	private LoadingAnimationView loadingAnimationView;
 	private ErrorSinkView errorSinkView;
 	private AccountView accountView;
@@ -128,11 +128,11 @@ public class ClientFactoryImpl implements ClientFactory {
   }
 
   @Override
-  public ConfigView getServiceView( ) {
-    if ( serviceView == null ) {
-      serviceView = new ConfigViewImpl( );
+  public ConfigView getConfigView( ) {
+    if ( configView == null ) {
+      configView = new ConfigViewImpl( );
     }
-    return serviceView;
+    return configView;
   }  
   
   @Override

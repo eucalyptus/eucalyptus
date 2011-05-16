@@ -25,6 +25,13 @@ public class SearchRange implements Serializable {
     this.setAscending( true );
   }
   
+  public SearchRange( int start, int length, int sortField, boolean ascending ) {
+    this.setStart( start );
+    this.setLength( length );
+    this.setSortField( sortField );
+    this.setAscending( ascending );
+  }
+  
   @Override
   public String toString( ) {
     return "start=" + start + ", length=" + length + ", sortField=" + sortField + ", ascending=" + ascending;
@@ -43,6 +50,13 @@ public class SearchRange implements Serializable {
          ( this.length == that.length ) &&
          ( this.sortField == that.sortField ) &&
          ( this.ascending == that.ascending ) ) {
+      return true;
+    }
+    return false;
+  }
+  
+  public boolean isSameSort( SearchRange that ) {
+    if ( that != null && this.sortField == that.sortField && this.ascending == that.ascending ) {
       return true;
     }
     return false;

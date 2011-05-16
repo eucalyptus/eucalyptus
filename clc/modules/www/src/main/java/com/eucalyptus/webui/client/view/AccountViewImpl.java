@@ -39,8 +39,7 @@ public class AccountViewImpl extends Composite implements AccountView {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
 
-  @Override
-  public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs, SearchResultRangeChangeHandler changeHandler ) {
+  public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new Handler( ) {
@@ -61,19 +60,22 @@ public class AccountViewImpl extends Composite implements AccountView {
       }
     } );
     */    
-    table = new SearchResultTable( pageSize, fieldDescs, changeHandler, selectionModel );
+    table = new SearchResultTable( pageSize, fieldDescs, this.presenter, selectionModel );
     tablePanel.add( table );
     table.load( );
   }
 
   @Override
-  public void setData( SearchResult data ) {
-    table.setData( data );
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
   }
 
   @Override
-  public void setPresenter( Presenter presenter ) {
-    this.presenter = presenter;
+  public void showSearchResult( SearchResult result ) {
+    if ( this.table == null ) {
+      initializeTable( this.presenter.getPageSize( ), result.getDescs( ) );
+    }
+    table.setData( result );
   }
 
 }

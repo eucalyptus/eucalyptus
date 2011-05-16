@@ -9,18 +9,16 @@ public class SearchResult implements Serializable {
   private static final long serialVersionUID = 1L;
   
   private int totalSize;
-  private int start;
-  private int length;
+  private SearchRange range;
   private ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
   private ArrayList<SearchResultRow> rows = new ArrayList<SearchResultRow>( );
   
   public SearchResult( ) {
   }
   
-  public SearchResult( int totalSize, int start, int length ) {
+  public SearchResult( int totalSize, SearchRange range ) {
     this.totalSize = totalSize;
-    this.start = start;
-    this.length = length;
+    this.range = range;
   }
 
   public void setDescs( List<SearchResultFieldDesc> descs ) {
@@ -36,6 +34,14 @@ public class SearchResult implements Serializable {
     this.rows.clear( );
     this.rows.addAll( rows );
   }
+  
+  public void addRows( List<SearchResultRow> rows ) {
+    this.rows.addAll( rows );
+  }
+  
+  public void addRow( SearchResultRow row ) {
+    this.rows.add( row );
+  }
 
   public ArrayList<SearchResultRow> getRows( ) {
     return rows;
@@ -49,20 +55,19 @@ public class SearchResult implements Serializable {
     return totalSize;
   }
 
-  public void setStart( int start ) {
-    this.start = start;
+  public void setRange( SearchRange range ) {
+    this.range = range;
   }
 
-  public int getStart( ) {
-    return start;
+  public SearchRange getRange( ) {
+    return range;
   }
 
-  public void setLength( int length ) {
-    this.length = length;
-  }
-
-  public int getLength( ) {
-    return length;
+  /**
+   * @return the actual length.
+   */
+  public int length( ) {
+    return this.rows.size( );
   }
   
 }

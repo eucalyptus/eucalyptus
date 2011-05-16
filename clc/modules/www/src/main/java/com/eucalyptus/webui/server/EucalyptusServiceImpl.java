@@ -102,7 +102,13 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    return null;
+    SearchResult result = new SearchResult( );
+    result.setDescs( ConfigurationWebBackend.COMMON_CONFIG_FIELD_DESCS );
+    result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
+    result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
+    return result;
   }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
@@ -143,7 +149,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       }
     } );
     int resultLength = Math.min( range.getLength( ), DATA.size( ) - range.getStart( ) );
-    SearchResult result = new SearchResult( DATA.size( ), range.getStart( ), resultLength );
+    SearchResult result = new SearchResult( DATA.size( ), range );
     result.setDescs( FIELDS );
     result.setRows( DATA.subList( range.getStart( ), range.getStart( ) + resultLength ) );
     

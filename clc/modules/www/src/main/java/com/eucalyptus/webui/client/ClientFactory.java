@@ -98,7 +98,7 @@ public interface ClientFactory {
   /**
    * @return the impl. of ServiceView
    */
-  ConfigView getServiceView( );
+  ConfigView getConfigView( );
 	
   /**
    * @return the impl. of LoadingAnimationView
