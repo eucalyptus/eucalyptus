@@ -26,7 +26,7 @@ public class EucalyptusWebInterface implements EntryPoint {
     GWT.setUncaughtExceptionHandler( new GWT.UncaughtExceptionHandler( ) {
       public void onUncaughtException( Throwable e ) {
         if ( e != null ) {
-          LOG.log( Level.SEVERE, e.getMessage( ) );
+          LOG.log( Level.SEVERE, e.getMessage( ), e );
         }
       }
     } );
