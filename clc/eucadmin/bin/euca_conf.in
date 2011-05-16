@@ -156,6 +156,18 @@ class EucaConf(object):
                                                            'component_name']},
                                metavar='<partition> <host>',
                                help='remove storage controller from EUCALYPTUS')
+        self.parser.add_option('--register-vmwarebroker',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='add new vmwarebroker to EUCALYPTUS')
+        self.parser.add_option('--deregister-vmwarebroker',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               metavar='<partition> <host>',
+                               help='remove vmwarebroker from EUCALYPTUS')
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='list registered walrus(es)')
@@ -487,7 +499,10 @@ class EucaConf(object):
         host = self.options.host_name
         if not (partition and component_name and host):
             self.parser.error('Requires partition, component and host')
-        port = getattr(self.options, port_option)
+        if port_option:
+            port = getattr(self.options, port_option)
+        else:
+            port = None
         cls = boto.utils.find_class(module_name, class_name)
         req = cls(debug=self.debug)
         data = req.main(partition=partition, name=component_name,
@@ -537,6 +552,19 @@ class EucaConf(object):
                           use_scp=(not self.options.no_scp))
                 req.sync()
 
+    def do_register_vmwarebroker(self):
+        if hasattr(self.options, 'register_vmwarebroker'):
+            self._do_register('eucadmin.registervmwarebroker',
+                              'RegisterVMwareBroker', None)
+            if not self.options.no_sync:
+                path = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path], path, self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
     def _do_deregister(self, option_name, module_name, class_name):
         if hasattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
@@ -551,7 +579,7 @@ class EucaConf(object):
                             'DeregisterCluster')
 
     def do_deregister_walrus(self):
-        self._do_deregister('deregister_walruses',
+        self._do_deregister('deregister_walrus',
                             'eucadmin.deregisterwalrus',
                             'DeregisterWalrus')
 
@@ -559,6 +587,11 @@ class EucaConf(object):
         self._do_deregister('deregister_sc',
                             'eucadmin.deregisterstoragecontroller',
                             'DeregisterStorageController')
+
+    def do_deregister_sc(self):
+        self._do_deregister('deregister_vmwarebroker',
+                            'eucadmin.deregistervmwarebroker',
+                            'DeregisterVMwareBroker')
 
     def _sync_node(self, node):
         path = os.path.join(self.config['EUCALYPTUS'],
