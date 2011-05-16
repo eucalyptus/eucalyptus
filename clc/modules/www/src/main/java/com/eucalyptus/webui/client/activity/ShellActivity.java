@@ -192,7 +192,6 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
 
   @Override
   public void logout( ) {
-    this.clientFactory.getLocalSession( ).clearSession( );
     this.clientFactory.getBackendService( ).logout( this.clientFactory.getLocalSession( ).getSession( ), new AsyncCallback<Void>( ) {
       @Override
       public void onFailure( Throwable arg0 ) {
@@ -203,6 +202,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
         LOG.log( Level.INFO, "User signed out." );
       }
     } );
+    this.clientFactory.getLocalSession( ).clearSession( );    
     this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
   }
 
