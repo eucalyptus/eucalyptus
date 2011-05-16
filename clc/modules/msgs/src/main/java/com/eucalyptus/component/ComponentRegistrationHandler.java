@@ -138,7 +138,11 @@ public class ComponentRegistrationHandler {
             }
           }
         }, Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ) );//NOTE: use a thread other than the calling thread.
-        
+        try {
+          future.get( );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
