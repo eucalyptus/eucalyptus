@@ -63,12 +63,12 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 
 public class EnableServiceCallback extends SubjectMessageCallback<Cluster, EnableServiceType, EnableServiceResponseType> {
@@ -80,7 +80,11 @@ public class EnableServiceCallback extends SubjectMessageCallback<Cluster, Enabl
   @Override
   public void fire( EnableServiceResponseType msg ) {
     LOG.debug( "Enabled service: " + msg );
-    Clusters.getInstance( ).enable( this.getSubject( ) );
+    try {
+      Clusters.getInstance( ).enable( this.getSubject( ) );
+    } catch ( NoSuchElementException ex ) {
+      Clusters.getInstance( ).register( this.getSubject( ) );
+    }
   }
   
 }
