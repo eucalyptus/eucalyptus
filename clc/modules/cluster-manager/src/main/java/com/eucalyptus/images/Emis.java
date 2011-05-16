@@ -72,36 +72,39 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
 import com.google.common.base.Preconditions;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
-  public static final Lookup<MachineImageInfo> lookupMachineImg       = new Lookup<MachineImageInfo>( ) {
-                                                                        @Override
-                                                                        public MachineImageInfo lookup( String identifier ) {
-                                                                          return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
-                                                                        }
-                                                                      };
-  public static final Lookup<KernelImageInfo>  lookupKernelImg        = new Lookup<KernelImageInfo>( ) {
-                                                                        @Override
-                                                                        public KernelImageInfo lookup( String identifier ) {
-                                                                          return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
-                                                                        }
-                                                                      };
-  public static final Lookup<RamdiskImageInfo> lookupRamdiskImg       = new Lookup<RamdiskImageInfo>( ) {
-                                                                        @Override
-                                                                        public RamdiskImageInfo lookup( String identifier ) {
-                                                                          return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
-                                                                        }
-                                                                      };
-  private static Logger                        LOG                    = Logger.getLogger( Emis.class );
+  public enum LookupMachine implements Lookup<MachineImageInfo> {
+    INSTANCE;
+    @Override
+    public MachineImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
+    }
+  }
+  
+  public enum LookupKernel implements Lookup<KernelImageInfo> {
+    INSTANCE;
+    @Override
+    public KernelImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
+    }
+  }
+  
+  public enum LookupRamdisk implements Lookup<RamdiskImageInfo> {
+    INSTANCE;
+    @Override
+    public RamdiskImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
+    }
+  }
+  
+  private static Logger LOG = Logger.getLogger( Emis.class );
   
   public static class BootableSet {
     private final MachineImageInfo disk;
@@ -203,7 +206,7 @@ public class Emis {
   
   public static BootableSet newBootableSet( String imageId ) throws EucalyptusCloudException {
     try {
-      return new BootableSet( Lookups.doPrivileged( imageId, lookupMachineImg ) );
+      return new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
     } catch ( AuthException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( ex );
@@ -223,7 +226,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = Lookups.doPrivileged( kernelId, lookupKernelImg );
+      KernelImageInfo kernel = Lookups.doPrivileged( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( AuthException ex ) {
       LOG.error( ex, ex );
@@ -247,7 +250,7 @@ public class Emis {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, lookupRamdiskImg );
+        RamdiskImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( AuthException ex ) {
         LOG.error( ex, ex );

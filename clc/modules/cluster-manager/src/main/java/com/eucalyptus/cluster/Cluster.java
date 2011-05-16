@@ -606,25 +606,31 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_NET, State.ENABLING_VMS,
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-        Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
-        Exception error = null;
-        for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-          try {
+        try {
+          CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+          Exception error = null;
+          for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
             try {
-              transition.call( ).get( );
-              error = null;
-              break;
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              error = ex;
+              try {
+                res.get( );
+                error = null;
+                break;
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+                error = ex;
+              }
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex, ex );
             }
-            TimeUnit.SECONDS.sleep( 1 );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
           }
-        }
-        if ( error != null ) {
-          this.configuration.info( error );
+          if ( error != null ) {
+            this.configuration.info( error );
+          }
+        } catch ( InterruptedException ex1 ) {
+          LOG.error( ex1 , ex1 );
+        } catch ( ExecutionException ex1 ) {
+          LOG.error( ex1 , ex1 );
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;

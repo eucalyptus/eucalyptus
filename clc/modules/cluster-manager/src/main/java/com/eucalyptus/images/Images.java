@@ -3,28 +3,24 @@ package com.eucalyptus.images;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.State;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.TransactionFireException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.TypeMapping;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -207,23 +203,30 @@ public class Images {
   }
   
   public static ImageInfo createFromDeviceMapping( UserFullName userFullName, BlockDeviceMappingItemType rootBlockDevice ) throws EucalyptusCloudException {
+    Context ctx = Contexts.lookup( );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
-      Transactions.one( Snapshot.named( userFullName, snapshotId ), new Tx<Snapshot>( ) {
-        
+      Snapshot snap = Transactions.one( Snapshot.named( userFullName, snapshotId ), new Tx<Snapshot>( ) {
         @Override
-        public void fire( Snapshot t ) throws Throwable {
-                        //TODO:GRZE:OMGFIXME check more here.
-                        
-                      }
+        public void fire( Snapshot t ) throws Throwable {}
       } );
+      if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
+        throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
+                                            + " because of: you must the owner of the source snapshot." );
+      }
+      BlockStorageImageInfo ret = Transactions.save( new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
+                                                                                snap.getDisplayName( ),
+                                                                                ( snap.getVolumeSize( ) >= rootBlockDevice.getSize( ) )
+                                                                                  ? snap.getVolumeSize( )
+                                                                                  : rootBlockDevice.getEbs( ).getVolumeSize( ),
+                                                                                Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) ) ) );
+      return ret;
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     }
-    return null;
   }
   
   public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
@@ -236,7 +239,7 @@ public class Images {
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
                                     manifest.getArchitecture( ), manifest.getPlatform( ) );
-                                    break;
+        break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),

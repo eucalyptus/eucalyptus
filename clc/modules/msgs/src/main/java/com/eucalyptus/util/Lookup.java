@@ -65,9 +65,6 @@ package com.eucalyptus.util;
 
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Context;
 
 public interface Lookup<T extends HasOwningAccount> {
 
@@ -78,6 +75,6 @@ public interface Lookup<T extends HasOwningAccount> {
    * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    */
-  public T lookup( String identifier );
+  public <V extends T> V lookup( String identifier );
   
 }
