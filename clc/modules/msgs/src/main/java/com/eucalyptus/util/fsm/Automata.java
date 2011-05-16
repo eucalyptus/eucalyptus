@@ -125,7 +125,9 @@ public class Automata {
           @Override
           public CheckedListenableFuture<P> call( ) {
             try {
-              return fsm.transition( toState );
+              CheckedListenableFuture<P> res = fsm.transition( toState );
+              res.get( );
+              return res;
             } catch ( final IllegalStateException ex ) {
               return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
