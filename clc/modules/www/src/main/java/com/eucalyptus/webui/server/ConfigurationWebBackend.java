@@ -1,6 +1,8 @@
 package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
@@ -93,8 +95,8 @@ public class ConfigurationWebBackend {
   // Cluster config extra fields
   public static final ArrayList<SearchResultFieldDesc> CLUSTER_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
   static {
-    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "minVlan", MIN_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
-    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxVlan", MAX_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+    CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "minVlan", MIN_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+    CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxVlan", MAX_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
   }
 
   public static final String SC_DEFAULT_NAME = "sc-default";
@@ -275,6 +277,20 @@ public class ConfigurationWebBackend {
   }
   
   private static void serializeComponentProperties( List<ComponentProperty> properties, SearchResultRow result ) {
+    // Make sure we see consistent order of properties.
+    Collections.<ComponentProperty>sort( properties, new Comparator<ComponentProperty>( ) {
+      @Override
+      public int compare( ComponentProperty r1, ComponentProperty r2 ) {
+        if ( r1 == r2 ) {
+          return 0;
+        }
+        int diff = -1;
+        if ( r1 != null ) {
+          diff = ( r2 != null ) ? r1.getDisplayName( ).compareTo( r2.getDisplayName( ) ) : 1;
+        }
+        return diff;
+      }
+    } );
     for ( ComponentProperty prop : properties ) {
       result.addExtraFieldDesc( new SearchResultFieldDesc( prop.getQualifiedName( ), prop.getDisplayName( ), false, "0px", TableDisplay.NONE, propertyTypeToFieldType( prop.getType( ) ), true, false ) );
       result.addField( prop.getValue( ) );
