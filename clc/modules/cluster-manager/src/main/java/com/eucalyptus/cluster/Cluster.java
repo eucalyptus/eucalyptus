@@ -271,6 +271,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
+            TimeUnit.SECONDS.sleep( 10 );
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
