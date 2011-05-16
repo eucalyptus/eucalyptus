@@ -3,10 +3,8 @@ package com.eucalyptus.util.async;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -32,6 +30,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       public void fireException( Throwable t ) {
         try {
           cb.fireException( t );
+          AsyncRequest.this.result.setException( t );
         } catch ( Throwable ex ) {
           AsyncRequest.this.result.setException( ex );
           LOG.error( ex , ex );
@@ -54,6 +53,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
             AsyncRequest.this.result.set( r );
             AsyncRequest.this.callbackSequence.fire( r );
           } catch ( Throwable ex ) {
+            AsyncRequest.this.result.setException( ex );
             LOG.error( ex , ex );
           }
         } catch ( RuntimeException ex ) {
@@ -130,6 +130,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
             R r = this.requestResult.get( 1, TimeUnit.MILLISECONDS );
             throw new RequestException( "Request failed but produced a response: " + r, this.getRequest( ) );
           } catch ( ExecutionException e ) {
+            this.result.setException( e.getCause( ) );
             if ( e.getCause( ) != null && e.getCause( ) instanceof RequestException ) {
               Logger.getLogger( this.callback.getClass( ) ).error( e.getCause( ) );
               throw ( RequestException ) e.getCause( );
@@ -138,9 +139,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
               throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
             }
           } catch ( RequestException e ) {
+            this.result.setException( e );
             Logger.getLogger( this.callback.getClass( ) ).error( e );
             throw e;
           } catch ( Throwable e ) {
+            this.result.setException( e );
             Logger.getLogger( this.callback.getClass( ) ).error( e );
             throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
           }
@@ -151,9 +154,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           } catch ( Throwable t ) {}
           throw ex;
         }
+      } else {
+        this.result.setException( new RuntimeException( "Sending asyn request failed for unknown reasons" ) );
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex , ex );
+      this.result.setException( ex );
       throw ex;
     }
     return this;
