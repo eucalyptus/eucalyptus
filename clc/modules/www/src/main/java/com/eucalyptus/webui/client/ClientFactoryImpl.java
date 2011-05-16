@@ -63,7 +63,6 @@ public class ClientFactoryImpl implements ClientFactory {
 	private LoadingAnimationView loadingAnimationView;
 	private ErrorSinkView errorSinkView;
 	private AccountView accountView;
-	private DetailView detailView;
 
   @Override
   public LocalSession getLocalSession( ) {
@@ -157,14 +156,6 @@ public class ClientFactoryImpl implements ClientFactory {
       accountView = new AccountViewImpl( );
     }
     return accountView;
-  }
-
-  @Override
-  public DetailView getDetailView( ) {
-    if ( detailView == null ) {
-      detailView = new DetailViewImpl( );
-    }
-    return detailView;
   }
   
   @Override

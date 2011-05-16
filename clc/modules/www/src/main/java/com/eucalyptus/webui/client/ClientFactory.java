@@ -115,9 +115,4 @@ public interface ClientFactory {
    */
   AccountView getAccountView( );
   
-  /**
-   * @return the impl. of DetailView
-   */
-  DetailView getDetailView( );
-  
 }

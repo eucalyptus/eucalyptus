@@ -53,7 +53,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     this.container = container;
     // Hide detail view at the beginning
     this.clientFactory.getShellView( ).hideDetail( );
-    this.clientFactory.getDetailView( ).setPresenter( this );
+    this.clientFactory.getShellView( ).getDetailView( ).setPresenter( this );
     
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     // Show loading first
@@ -124,7 +124,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
     descs.addAll( cache.getDescs( ) );
     descs.addAll( currentSelected.getExtraFieldDescs( ) );
-    this.clientFactory.getDetailView( ).showData( descs, currentSelected.getRow( ) );          
+    this.clientFactory.getShellView( ).getDetailView( ).showData( descs, currentSelected.getRow( ) );          
   }
   
   @Override
