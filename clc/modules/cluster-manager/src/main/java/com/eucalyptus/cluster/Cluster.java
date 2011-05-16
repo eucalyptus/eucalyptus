@@ -270,8 +270,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) )
-                         .sendSync( parent.getLogServiceConfiguration( ) );
+            CheckedListenableFuture res = AsyncRequests.newRequest( factory.newInstance( ) ).dispatch( parent.getLogServiceConfiguration( ) );
+            res.get( );
             transitionCallback.fire( );
           } catch ( final ExecutionException e ) {
             if ( e.getCause( ) instanceof FailedRequestException ) {
