@@ -63,7 +63,6 @@
 
 package com.eucalyptus.component;
 
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
@@ -102,22 +101,7 @@ public class ComponentRegistrationHandler {
           public void run( ) {
             try {
               future.get( );
-              for ( int i = 0; i < 3; i++ ) {
-                try {
-                  component.enableTransition( newComponent ).get( );
-                  break;
-                } catch ( IllegalStateException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  continue;
-                } catch ( ExecutionException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  continue;
-                } catch ( InterruptedException ex ) {
-                  LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                  Thread.currentThread( ).interrupt( );
-                  break;
-                }
-              }
+              component.enableTransition( newComponent );
             } catch ( Exception ex ) {
               LOG.error( ex,
                          ex );

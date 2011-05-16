@@ -64,7 +64,6 @@
 package com.eucalyptus.ws;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -161,22 +160,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
               public void run( ) {
                 try {
                   future.get( );
-                  for ( int i = 0; i < 3; i++ ) {
-                    try {
-                      comp.enableTransition( s ).get( );
-                      break;
-                    } catch ( IllegalStateException ex ) {
-                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                      continue;
-                    } catch ( ExecutionException ex ) {
-                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                      continue;
-                    } catch ( InterruptedException ex ) {
-                      LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
-                      Thread.currentThread( ).interrupt( );
-                      break;
-                    }
-                  }
+                  comp.enableTransition( s );
                 } catch ( Exception ex ) {
                   LOG.error( ex,
                              ex );
