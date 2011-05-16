@@ -142,6 +142,8 @@
       <jvmarg value="-Xmx1024m" />
       <jvmarg value="-Xss1024k" />
       <arg line="-war ${gwt.war.build.dir}" />
+			<arg line="-draftCompile"/>
+			<arg line="-style DETAILED"/> <!-- PRETTY for non-obfuscated Javascript -->
       <arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
     </java>
     <war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
