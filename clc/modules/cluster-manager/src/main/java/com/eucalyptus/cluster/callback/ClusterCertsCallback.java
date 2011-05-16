@@ -21,7 +21,7 @@ public class ClusterCertsCallback extends ClusterLogMessageCallback<GetKeysType,
   @Override
   public void fire( GetKeysResponseType msg ) {
     if( !this.getSubject( ).checkCerts( msg.getCerts( ) ) ) {
-      throw new InvalidCredentialsException( "Cluster credentials are invalid: " + this.getSubject( ).getName( ) );
+      throw new InvalidCredentialsException( "Cluster credentials are invalid: " + this.getSubject( ).getName( ), this.getRequest( ) );
 //    } else if( !Bootstrap.isFinished( ) ) {
 //      throw new InvalidCredentialsException( "Bootstrap hasn't finished yet -- stalling." );
     }
