@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -110,20 +111,18 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) ) {
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
+                                                                                                         Component.State.LOADED,
+                                                                                                         Component.State.NOTREADY, Component.State.DISABLED );
+      Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
       try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
-                                                                                                           Component.State.LOADED,
-                                                                                                           Component.State.NOTREADY, Component.State.DISABLED );
-        
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        Thread.currentThread( ).interrupt( );
-        return Futures.predestinedFailedFuture( ex );
+        throw new UndeclaredThrowableException( ex );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex.getCause( ), ex.getCause( ) );
-        return Futures.predestinedFailedFuture( ex.getCause( ) );
+        LOG.error( ex, ex );
+        throw new UndeclaredThrowableException( ex.getCause( ) );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -132,20 +131,19 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
     if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
-      try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
                                                                                                            Component.State.LOADED,
                                                                                                            Component.State.NOTREADY, Component.State.DISABLED,
                                                                                                            Component.State.DISABLED, Component.State.ENABLED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      try {
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        Thread.currentThread( ).interrupt( );
-        return Futures.predestinedFailedFuture( ex );
+        throw new UndeclaredThrowableException( ex );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex.getCause( ), ex.getCause( ) );
-        return Futures.predestinedFailedFuture( ex.getCause( ) );
+        LOG.error( ex, ex );
+        throw new UndeclaredThrowableException( ex.getCause( ) );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -154,18 +152,17 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
     if ( !State.DISABLED.equals( config.lookupState( ) ) ) {
-      try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      try {
         return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        Thread.currentThread( ).interrupt( );
-        return Futures.predestinedFailedFuture( ex );
+        throw new UndeclaredThrowableException( ex );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex.getCause( ), ex.getCause( ) );
-        return Futures.predestinedFailedFuture( ex.getCause( ) );
+        LOG.error( ex, ex );
+        throw new UndeclaredThrowableException( ex.getCause( ) );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -175,19 +172,18 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> stopTransitionChain( final ServiceConfiguration config ) {
     if ( !State.STOPPED.equals( config.lookupState( ) ) ) {
       CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
-      try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED, Component.State.STOPPED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
-        transitionResult = result.get( );
+      Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      try {
+        return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        transitionResult = Futures.predestinedFailedFuture( ex );
+        throw new UndeclaredThrowableException( ex );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex.getCause( ), ex.getCause( ) );
-        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+        LOG.error( ex, ex );
+        throw new UndeclaredThrowableException( ex.getCause( ) );
       }
-      return transitionResult;
     } else {
       return Futures.predestinedFuture( config );
     }
@@ -195,20 +191,18 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
     if ( !State.PRIMORDIAL.equals( config.lookupState( ) ) ) {
-      CheckedListenableFuture<ServiceConfiguration> transitionResult = null;
-      try {
-        Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
                                                                                                            Component.State.DISABLED, Component.State.STOPPED );
-        Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
-        transitionResult = result.get( );
+      Future<CheckedListenableFuture<ServiceConfiguration>> result = Threads.lookup( Empyrean.class, ServiceTransitions.class, config.getFullName( ).toString( ) ).submit( transition );
+      try {
+        return result.get( );
       } catch ( InterruptedException ex ) {
         LOG.error( ex, ex );
-        transitionResult = Futures.predestinedFailedFuture( ex );
+        throw new UndeclaredThrowableException( ex );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex.getCause( ), ex.getCause( ) );
-        transitionResult = Futures.predestinedFailedFuture( ex.getCause( ) );
+        LOG.error( ex, ex );
+        throw new UndeclaredThrowableException( ex.getCause( ) );
       }
-      return transitionResult;
     } else {
       return Futures.predestinedFuture( config );
     }
