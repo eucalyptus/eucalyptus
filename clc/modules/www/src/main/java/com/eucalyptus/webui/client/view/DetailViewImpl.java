@@ -140,7 +140,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   Anchor save;
   
   @UiField
-  LayoutPanel content;
+  ScrollPanel content;
   
   private Controller controller;
   private Presenter presenter;
@@ -149,6 +149,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
+    content.add( new Label( "hello" ) );
   }
   
   @UiHandler( "close" )
@@ -181,8 +182,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.gridValues.clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
-      this.content.clear( );
-      this.content.add( grid );
+      content.setWidget( grid );
     }
   }
   
