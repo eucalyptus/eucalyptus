@@ -189,10 +189,10 @@ public class ConfigurationWebBackend {
     result.addField( clusterConf.getName( ) );
     result.addField( CLUSTER_TYPE );
     result.addField( clusterConf.getHostName( ) );
-    result.addField( clusterConf.getPort( ).toString( ) );
+    result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
     // Specific
-    result.addField( clusterConf.getMinVlan( ).toString( ) );
-    result.addField( clusterConf.getMaxVlan( ).toString( ) );
+    result.addField( clusterConf.getMinVlan( ) == null ? null : clusterConf.getMinVlan( ).toString( ) );
+    result.addField( clusterConf.getMaxVlan( ) == null ? null : clusterConf.getMaxVlan( ).toString( ) );
   }
   
   /**
@@ -269,7 +269,7 @@ public class ConfigurationWebBackend {
     result.addField( name );
     result.addField( type );
     result.addField( host );
-    result.addField( port.toString( ) );
+    result.addField( port == null ? null : port.toString( ) );
     // Dynamic fields
     serializeComponentProperties( properties, result );
   }
