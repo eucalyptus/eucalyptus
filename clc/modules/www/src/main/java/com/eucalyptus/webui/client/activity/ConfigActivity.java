@@ -11,6 +11,7 @@ import com.eucalyptus.webui.client.service.SearchResultCache;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.session.SessionData;
+import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.google.gwt.activity.shared.AbstractActivity;
@@ -19,7 +20,7 @@ import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
-public class ConfigActivity extends AbstractActivity implements ConfigView.Presenter {
+public class ConfigActivity extends AbstractActivity implements ConfigView.Presenter, DetailView.Presenter {
   
   public static final String TITLE = "EUCALYPTUS SERVICE COMPONENTS";
   
@@ -52,6 +53,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
     this.container = container;
     // Hide detail view at the beginning
     this.clientFactory.getShellView( ).hideDetail( );
+    this.clientFactory.getDetailView( ).setPresenter( this );
     
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     // Show loading first
@@ -109,8 +111,10 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   public void onSelectionChange( SearchResultRow selection ) {
     this.currentSelected = selection;
     if ( selection == null ) {
+      LOG.log( Level.INFO, "Selection changed to null" );      
       this.clientFactory.getShellView( ).hideDetail( );
     } else {
+      LOG.log( Level.INFO, "Selection changed to " + selection );
       this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
       ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
       descs.addAll( cache.getDescs( ) );

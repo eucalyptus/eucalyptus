@@ -141,43 +141,15 @@ public class DetailViewImpl extends Composite implements DetailView {
   @UiField
   ScrollPanel content;
   
+  private Controller controller;
   private Presenter presenter;
   
   private ArrayList<HasValue> gridValues = new ArrayList<HasValue>( );
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
-    createGrid( );
   }
   
-  private TextBox getTextBox( ) {
-    TextBox textBox = new TextBox( );
-    textBox.setEnabled( false );
-    //textBox.addStyleName( gridStyle.textbox( ) );
-    return textBox;
-  }
-  
-  private CheckBox getCheckBox( ) {
-    CheckBox checkBox = new CheckBox( );
-    //checkBox.addStyleName( gridStyle.checkbox( ) );
-    return checkBox;
-  }
-  
-  private void createGrid( ) {
-    Grid grid = new Grid( 3, 2 );
-    grid.addStyleName( gridStyle.grid( ) );
-    grid.getColumnFormatter( ).setWidth( 0, "40%" );
-    grid.setWidget( 0, 0, new Label( "Name" ) );
-    grid.setWidget( 0, 1, getTextBox( ) );
-    grid.setWidget( 1, 0, new Label( "Enable" ) );
-    grid.setWidget( 1, 1, getCheckBox( ) );
-    grid.setWidget( 2, 0, new Label( "Name" ) );
-    grid.setWidget( 2, 1, getTextBox( ) );
-    
-    this.content.clear( );
-    this.content.add( grid );        
-  }
-
   @UiHandler( "close" )
   void handleCloseEvent( ClickEvent e ) {
     closeSelf( );
@@ -199,13 +171,16 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
   
   private void closeSelf( ) {
-    this.presenter.hideDetail( );
+    this.controller.hideDetail( );
   }
 
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
     clear( );
-    this.content.add( createGrid( descs, gridValues ) );
+    Grid grid = createGrid( descs, gridValues );
+    if ( grid != null ) {
+      this.content.add( grid );
+    }
   }
   
   private void clear( ) {
@@ -251,6 +226,11 @@ public class DetailViewImpl extends Composite implements DetailView {
         return new CheckBoxValue( val, desc.getEditable( ) );
     }
     return null;
+  }
+
+  @Override
+  public void setController( Controller controller ) {
+    this.controller = controller;
   }
   
 }

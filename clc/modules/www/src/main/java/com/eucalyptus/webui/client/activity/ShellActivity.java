@@ -42,7 +42,7 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  * @author Ye Wen (wenye@eucalyptus.com)
  *
  */
-public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Presenter, SearchHandler {
+public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Controller, SearchHandler {
   
   private static final Logger LOG = Logger.getLogger( ShellActivity.class.getName( ) );
   
@@ -99,7 +99,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
     shellView.getHeaderView( ).getUserSetting( ).setPresenter( this );
     shellView.getHeaderView( ).setSearchHandler( this );
     
-    shellView.getDetailView( ).setPresenter( this );
+    shellView.getDetailView( ).setController( this );
     
     container.setWidget( shellView );
   }

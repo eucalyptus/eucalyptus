@@ -11,9 +11,14 @@ public interface DetailView extends IsWidget {
   void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values );
   
   void setPresenter( Presenter presenter );
+
+  void setController( Controller controller );
   
-  public interface Presenter {
-    void hideDetail( );
+  public interface Presenter extends ValueSaveHandler {
+  }
+  
+  public interface Controller {
+    void hideDetail( );    
   }
   
 }
