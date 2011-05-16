@@ -76,7 +76,7 @@ class Check(object):
                 self.euca_user_group_id = user_data.pw_gid
             except KeyError:
                 msg = 'User %s does not exist' % self.euca_user_name
-                self.issues.append(msg)
+                self.messages.append(msg)
                 self.status = 1
 
     def check_nc(self):

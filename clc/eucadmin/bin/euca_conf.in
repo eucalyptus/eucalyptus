@@ -37,6 +37,34 @@ import boto.utils
 import boto.exception
 import eucadmin.configfile
 
+import bdb
+import traceback
+try:
+    import epdb as debugger
+except ImportError:
+    import pdb as debugger
+
+def euca_except_hook(debugger_flag, debug_flag):
+    def excepthook(typ, value, tb):
+        if typ is bdb.BdbQuit:
+            sys.exit(1) 
+        sys.excepthook = sys.__excepthook__
+
+        if debugger_flag and sys.stdout.isatty() and sys.stdin.isatty():
+            if debugger.__name__ == 'epdb':
+                debugger.post_mortem(tb, typ, value)
+            else:
+                debugger.post_mortem(tb)
+        elif debug_flag:
+            print traceback.print_tb(tb)
+            sys.exit(1)
+        else:
+            print value
+            sys.exit(1)
+
+    return excepthook
+
+
 DefaultEucaDir = '@prefix@'
 DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
 
@@ -45,14 +73,14 @@ RegOptions = {
     'host' : ['-H', '--host', 'host_name'],
     'component' : ['-C', '--component', 'component_name']}
 
+# list of services which can be checked
+CheckableServices = ['cc', 'cloud', 'nc', 'sc',
+                     'walrus', 'vmware', 'vmwarebroker']
+
+# list of services which can be enabled/disabled
+EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
+
 class EucaConf(object):
-
-    # list of services which can be checked
-    CheckedServices = ['cc', 'cloud', 'nc', 'sc',
-                       'walrus', 'vmware', 'vmwarebroker']
-
-    # list of services which can be enabled/disabled
-    EnabledServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 
     def __init__(self, filepath=None):
         self.debug = 0
@@ -202,7 +230,7 @@ class EucaConf(object):
                                help='returns the value or <name>')
         self.parser.add_option('--import-conf', action='store',
                                type='string', dest='import_conf_file',
-                               help='import variables from another eucalyptus.conf')
+                               help='import vars from another eucalyptus.conf')
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
                                help='perform initial setup')
@@ -226,6 +254,9 @@ class EucaConf(object):
                                help='pre-flight checks')
         self.parser.add_option('--debug', action='store_true',
                                default=False, help='Enable debug output')
+        self.parser.add_option('--debugger', action='store_true',
+                               default=False,
+                               help='Enable interactive debugger on error')
         self.parser.add_option(RegOptions['partition'][0],
                                RegOptions['partition'][1],
                                action='store', type='string',
@@ -355,22 +386,11 @@ class EucaConf(object):
         self.update_config_file()
         if self.options.debug:
             self.debug = 2
-        try:
-            for name, method in inspect.getmembers(self):
-                if name.startswith('do_') and inspect.ismethod(method):
-                    method()
-        except boto.exception.BotoClientError, e:
-            print e.reason
-            status = 1
-        except Exception, e:
-            if self.options.debug:
-                import traceback
-                traceback.print_exc()
-            else:
-                print "Error occurred: "
-                print e
-            status = 1
-        sys.exit(status)
+        sys.excepthook = euca_except_hook(self.options.debugger,
+                                          self.options.debug)
+        for name, method in inspect.getmembers(self):
+            if name.startswith('do_') and inspect.ismethod(method):
+                method()
 
     def do_get_credentials(self):
         if self.options.get_credentials:
@@ -388,8 +408,8 @@ class EucaConf(object):
 
     def do_check(self):
         if self.options.check_what:
-            if self.options.check_what not in self.CheckedServices:
-                print 'check requires one of %s' % self.CheckedServices
+            if self.options.check_what not in CheckableServices:
+                print 'check requires one of %s' % CheckableServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
@@ -402,8 +422,8 @@ class EucaConf(object):
 
     def do_enable(self):
         if self.options.enable_what:
-            if self.options.enable_what not in self.EnabledServices:
-                print 'enable requires one of %s' % self.EnabledServices
+            if self.options.enable_what not in EnableableServices:
+                print 'enable requires one of %s' % EnableableServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
             req = cls(self.config, self.options.enable_what, True)
@@ -411,8 +431,8 @@ class EucaConf(object):
 
     def do_disable(self):
         if self.options.disable_what:
-            if self.options.disable_what not in self.EnabledServices:
-                print 'disable requires one of %s' % self.EnabledServices
+            if self.options.disable_what not in EnableableServices:
+                print 'disable requires one of %s' % EnableableServices
                 sys.exit(1)
             cls = boto.utils.find_class('eucadmin.enable', 'Enable')
             req = cls(self.config, self.options.disable_what, False)
