@@ -29,10 +29,10 @@ public class SearchResult implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "totalSize=" ).append( totalSize ).append( "; " );
-    sb.append( "range=[" ).append( range ).append( "]; " );
-    sb.append( "descs=[" ).append( descs ).append( "]; " );
-    sb.append( "rows=[" ).append( rows ).append( "]" );
+    sb.append( "totalSize=" ).append( totalSize ).append( "\n" );
+    sb.append( "range=[" ).append( range ).append( "]\n" );
+    sb.append( "descs=[" ).append( descs ).append( "]\n" );
+    sb.append( "rows=[" ).append( rows ).append( "]\n" );
     return sb.toString( );
   }
   

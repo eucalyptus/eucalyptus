@@ -176,6 +176,7 @@ public class DetailViewImpl extends Composite implements DetailView {
 
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
+    LOG.log( Level.INFO, "Show data" );
     clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
@@ -193,6 +194,7 @@ public class DetailViewImpl extends Composite implements DetailView {
       LOG.log( Level.WARNING, "Empty or partial input" );
       return null;
     }
+    LOG.log( Level.INFO, "Create grid for " + descs + ": " + vals );
     int size = Math.min( descs.size( ), vals.size( ) );
     Grid grid = new Grid( size, 2 );
     grid.addStyleName( gridStyle.grid( ) );

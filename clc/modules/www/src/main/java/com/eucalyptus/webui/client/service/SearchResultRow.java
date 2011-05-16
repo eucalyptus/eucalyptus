@@ -44,8 +44,10 @@ public class SearchResultRow implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
+    sb.append( "(" );
     sb.append( "extraFields=" ).append( extraFields ).append( "," );
     sb.append( "rows=" ).append( row );
+    sb.append( ")" );
     return sb.toString( );
   }
   

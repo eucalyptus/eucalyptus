@@ -69,6 +69,7 @@ public class SearchResultFieldDesc implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
+    sb.append( "(" );
     sb.append( "name=" ).append( name ).append( "," );
     sb.append( "title=" ).append( title ).append( "," );
     sb.append( "sortable=" ).append( sortable ).append( "," );
@@ -77,6 +78,7 @@ public class SearchResultFieldDesc implements Serializable {
     sb.append( "type=" ).append( type ).append( "," );
     sb.append( "editable=" ).append( editable ).append( "," );
     sb.append( "hidden=" ).append( hidden );
+    sb.append( ")" );
     return sb.toString( );
   }
   
