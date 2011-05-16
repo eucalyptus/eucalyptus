@@ -86,7 +86,7 @@
             </g:HTMLPanel>
         </g:south>
         <g:center>
-            <g:ScrollPanel styleName="{style.scroll}" ui:field="content"/>
+            <g:LayoutPanel styleName="{style.scroll}" ui:field="content"/>
         </g:center>
     </g:DockLayoutPanel>
     

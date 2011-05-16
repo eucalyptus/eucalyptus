@@ -17,6 +17,7 @@ import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Grid;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.PasswordTextBox;
 import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.TextBox;
@@ -139,7 +140,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   Anchor save;
   
   @UiField
-  ScrollPanel content;
+  LayoutPanel content;
   
   private Controller controller;
   private Presenter presenter;
@@ -177,14 +178,12 @@ public class DetailViewImpl extends Composite implements DetailView {
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
     LOG.log( Level.INFO, "Show data" );
-    this.content.setWidget( new Label( "Hello" ) );
-    /*
     this.gridValues.clear( );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
-      this.content.setWidget( grid );
+      this.content.clear( );
+      this.content.add( grid );
     }
-    */
   }
   
   private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
