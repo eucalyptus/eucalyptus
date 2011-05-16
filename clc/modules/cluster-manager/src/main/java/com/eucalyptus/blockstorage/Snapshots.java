@@ -84,7 +84,7 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
-  static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) {
+  static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) throws EucalyptusCloudException {
     String newId = null;
     Snapshot snap = null;
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
@@ -103,6 +103,7 @@ public class Snapshots {
         }
       } catch ( Exception ex ) {
         db.rollback( );
+        throw new EucalyptusCloudException( "Failed to initialize snapshot state because of: " + ex.getMessage( ), ex );
       }
   }
 

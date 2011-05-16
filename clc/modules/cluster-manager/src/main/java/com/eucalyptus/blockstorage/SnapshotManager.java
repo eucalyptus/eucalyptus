@@ -130,7 +130,7 @@ public class SnapshotManager {
     }
     ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     vol = Volumes.checkVolumeReady( vol );
-    Snapshot snap = Snapshots.initializeSnapshot( ctx, vol, sc );
+    Snapshot snap = Snapshots.initializeSnapshot( ctx.getUserFullName( ), vol, sc );
     snap = Snapshots.startCreateSnapshot( vol, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
