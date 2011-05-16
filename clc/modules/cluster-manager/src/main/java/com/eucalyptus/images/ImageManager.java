@@ -67,11 +67,9 @@ package com.eucalyptus.images;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -80,41 +78,25 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.ImageUserGroup;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.WalrusUtil;
-import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.component.ResourceLookup;
-import com.eucalyptus.component.ResourceLookupException;
-import com.eucalyptus.component.ResourceOwnerLookup;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
-import com.eucalyptus.images.ProductCode;
-import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import com.eucalyptus.vm.VmState;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
@@ -175,6 +157,7 @@ public class ImageManager {
       
       @Override
       public boolean apply( ImageInfo t ) {
+        t.getDeviceMappings( );
         if ( showMyImages && requestAccountId.equals( t.getOwnerAccountId( ) ) ) {
           LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their images and is owner." );
         } else if ( showMyAllowedImages && t.isAllowed( requestAccount ) ) {
