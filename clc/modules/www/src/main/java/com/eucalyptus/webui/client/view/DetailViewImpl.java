@@ -194,8 +194,8 @@ public class DetailViewImpl extends Composite implements DetailView {
       LOG.log( Level.WARNING, "Empty or partial input" );
       return null;
     }
-    LOG.log( Level.INFO, "Create grid for " + descs + ": " + vals );
     int size = Math.min( descs.size( ), vals.size( ) );
+    LOG.log( Level.INFO, "Create grid for descs=" + descs + "\nvalues=" + vals + "\nsize=" + size );    
     Grid grid = new Grid( size, 2 );
     grid.addStyleName( gridStyle.grid( ) );
     grid.getColumnFormatter( ).setWidth( 0, "40%" );
@@ -206,6 +206,7 @@ public class DetailViewImpl extends Composite implements DetailView {
       if ( desc != null && !desc.getHidden( ) ) {
         HasValue widget = getWidget( desc, val );
         if ( widget != null ) {
+          LOG.log( Level.INFO, "Adding row " + row + " with " + widget.getClass( ).getName( ) );
           gridValues.add( widget );
           grid.setWidget( row, 0, new Label( desc.getTitle( ) ) );
           grid.setWidget( row, 1, widget.getWidget( ) );
