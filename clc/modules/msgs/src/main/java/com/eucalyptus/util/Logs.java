@@ -11,6 +11,7 @@ import org.apache.log4j.Priority;
 import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Configurator;
 import org.apache.log4j.spi.LoggerRepository;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.BaseDirectory;
@@ -128,19 +129,30 @@ public class Logs {
   }
   
   public static void init( ) {
-    Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-    Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
-    Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
-    if ( Logs.EXTREME ) {
-      System.setProperty( "euca.log.level", "TRACE" );
-      System.setProperty( "euca.exhaust.level", "TRACE" );
-      System.setProperty( "euca.log.exhaustive", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.cc", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.db", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.external", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-    }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
+    if( Bootstrap.isInitializeSystem( ) ) {
+      System.setProperty( "euca.log.level", "INFO" );
+      System.setProperty( "euca.exhaust.level", "INFO" );
+      System.setProperty( "euca.log.exhaustive", "INFO" );
+      System.setProperty( "euca.log.exhaustive.cc", "INFO" );
+      System.setProperty( "euca.log.exhaustive.user", "INFO" );
+      System.setProperty( "euca.log.exhaustive.db", "INFO" );
+      System.setProperty( "euca.log.exhaustive.external", "INFO" );
+      System.setProperty( "euca.log.exhaustive.user", "INFO" );
+    } else {
+      Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+      Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
+      Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
+      if ( Logs.EXTREME ) {
+        System.setProperty( "euca.log.level", "TRACE" );
+        System.setProperty( "euca.exhaust.level", "TRACE" );
+        System.setProperty( "euca.log.exhaustive", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.cc", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
+        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+      }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
+    }
     try {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
