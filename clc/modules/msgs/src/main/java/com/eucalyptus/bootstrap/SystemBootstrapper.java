@@ -71,12 +71,12 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
@@ -134,8 +134,8 @@ public class SystemBootstrapper {
 
   private static void initializeSystem( ) {
     try {
-      SystemCredentialProvider.initializeCredentials( );
-      MysqlDatabaseBootstrapper.initializeDatabase( );
+      GroovyUtil.exec( "com.eucalyptus.component.auth.SystemCredentialProvider.initializeCredentials( );" );
+      GroovyUtil.exec( "com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper.initializeDatabase( );" );
       System.exit( 0 );
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
