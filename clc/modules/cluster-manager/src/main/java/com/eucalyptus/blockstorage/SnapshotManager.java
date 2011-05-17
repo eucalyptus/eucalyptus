@@ -202,22 +202,22 @@ public class SnapshotManager {
     try {
       List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
       
-      for ( Snapshot v : snapshots ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, v.getDisplayName( ), v.getOwner( ) ) ) {
-          LOG.debug( "Skip snapshot " + v.getDisplayName( ) + " due to access right" );
+      for ( Snapshot snap : snapshots ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
+          LOG.debug( "Skip snapshot " + snap.getDisplayName( ) + " due to access right" );
           continue;
         }
-        DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( v.getDisplayName( ) ) );
-        if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( v.getDisplayName( ) ) ) {
+        DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
+        if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {
-            ServiceConfiguration sc = Partitions.lookupService( Storage.class, v.getPartition( ) );
+            ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getPartition( ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-              v.setMappedState( storageSnapshot.getStatus( ) );
-              edu.ucsb.eucalyptus.msgs.Snapshot snapReply = v.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+              snap.setMappedState( storageSnapshot.getStatus( ) );
+              edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
               if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
               snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-              snapReply.setOwnerId( v.getOwnerAccountId( ) );
+              snapReply.setOwnerId( snap.getOwnerAccountId( ) );
               reply.getSnapshotSet( ).add( snapReply );
             }
           } catch ( NoSuchElementException e ) {

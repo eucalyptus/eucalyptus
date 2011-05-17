@@ -190,7 +190,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   
   @Override
   public String getPartition( ) {
-    return ComponentIds.lookup( Eucalyptus.class ).name( );
+    return this.volumePartition;
   }
   
   @Override
