@@ -82,5 +82,25 @@ public interface EucalyptusService extends RemoteService {
    * @throws EucalyptusServiceException
    */
   SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+
+  /**
+   * Search VM types.
+   * 
+   * @param session
+   * @param query
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupVmType( Session session, String query, SearchRange range ) throws EucalyptusServiceException;
+
+  /**
+   * Set VmType values.
+   * 
+   * @param session
+   * @param result
+   * @throws EucalyptusServiceException
+   */
+  void setVmType( Session session, SearchResultRow result ) throws EucalyptusServiceException;
   
 }

@@ -66,7 +66,7 @@
         <g:north size="1.5">
             <g:HTMLPanel>
                 <div class="{style.title}">
-                    <span ui:field="title">DETAILS</span>&nbsp;
+                    <span ui:field="title">PROPERTIES</span>&nbsp;
                     <g:Anchor styleName="{style.close}" ui:field="close">&#91;X&#93;</g:Anchor>
                 </div>
             </g:HTMLPanel>

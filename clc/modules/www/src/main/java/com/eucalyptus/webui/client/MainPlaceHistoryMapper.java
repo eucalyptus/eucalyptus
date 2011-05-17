@@ -5,6 +5,7 @@ import com.eucalyptus.webui.client.place.ErrorSinkPlace;
 import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.ConfigPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
+import com.eucalyptus.webui.client.place.VmTypePlace;
 import com.google.gwt.place.shared.PlaceHistoryMapper;
 import com.google.gwt.place.shared.WithTokenizers;
 
@@ -13,6 +14,7 @@ import com.google.gwt.place.shared.WithTokenizers;
   ErrorSinkPlace.Tokenizer.class,
   ConfigPlace.Tokenizer.class,
   AccountPlace.Tokenizer.class,
+  VmTypePlace.Tokenizer.class,
 } )
 public interface MainPlaceHistoryMapper extends PlaceHistoryMapper {
 

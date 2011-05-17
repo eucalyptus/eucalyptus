@@ -191,4 +191,26 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     }
   }
 
+  @Override
+  public SearchResult lookupVmType( Session session, String query, SearchRange range ) throws EucalyptusServiceException {
+    verifySession( session );
+    SearchResult result = new SearchResult( );
+    result.setDescs( VmTypeWebBackend.COMMON_CONFIG_FIELD_DESCS );
+    result.addRows( VmTypeWebBackend.getVmTypes( ) );
+    result.setTotalSize( result.length( ) );
+    result.setRange( range );
+    LOG.debug( "VmType result: " + result );
+    return result;
+  }
+
+  @Override
+  public void setVmType( Session session, SearchResultRow vmType ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( vmType == null ) {
+      throw new EucalyptusServiceException( "Empty UI input for VmType" );
+    }
+    LOG.debug( "Set VmType: " + vmType );
+    VmTypeWebBackend.setVmType( vmType );
+  }
+
 }

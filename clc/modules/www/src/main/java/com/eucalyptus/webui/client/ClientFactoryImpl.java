@@ -25,6 +25,8 @@ import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.StartViewImpl;
+import com.eucalyptus.webui.client.view.VmTypeView;
+import com.eucalyptus.webui.client.view.VmTypeViewImpl;
 import com.google.gwt.activity.shared.ActivityManager;
 import com.google.gwt.activity.shared.ActivityMapper;
 import com.google.gwt.core.client.GWT;
@@ -63,6 +65,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private LoadingAnimationView loadingAnimationView;
 	private ErrorSinkView errorSinkView;
 	private AccountView accountView;
+	private VmTypeView vmTypeView;
 
   @Override
   public LocalSession getLocalSession( ) {
@@ -156,6 +159,14 @@ public class ClientFactoryImpl implements ClientFactory {
       accountView = new AccountViewImpl( );
     }
     return accountView;
+  }
+  
+  @Override
+  public VmTypeView getVmTypeView( ) {
+    if ( vmTypeView == null ) {
+      vmTypeView = new VmTypeViewImpl( );
+    }
+    return vmTypeView;
   }
   
   @Override

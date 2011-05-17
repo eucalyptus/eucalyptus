@@ -12,6 +12,7 @@ import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
+import com.eucalyptus.webui.client.view.VmTypeView;
 import com.google.gwt.activity.shared.ActivityManager;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.place.shared.Place;
@@ -114,5 +115,10 @@ public interface ClientFactory {
    * @return the impl. of AccountView
    */
   AccountView getAccountView( );
+  
+  /**
+   * @return the impl. of VmTypeView
+   */
+  VmTypeView getVmTypeView( );
   
 }

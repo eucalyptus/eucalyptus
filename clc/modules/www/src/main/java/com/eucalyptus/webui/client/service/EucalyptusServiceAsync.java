@@ -21,5 +21,9 @@ public interface EucalyptusServiceAsync {
   void lookupConfiguration( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
   void setConfiguration( Session session, SearchResultRow config, AsyncCallback<Void> callback );
+
+  void lookupVmType( Session session, String query, SearchRange range, AsyncCallback<SearchResult> asyncCallback );
+
+  void setVmType( Session session, SearchResultRow result, AsyncCallback<Void> asyncCallback );
   
 }

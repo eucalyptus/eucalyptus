@@ -4,56 +4,26 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
-import com.eucalyptus.webui.client.place.ConfigPlace;
+import com.eucalyptus.webui.client.place.VmTypePlace;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.HasValueWidget;
-import com.eucalyptus.webui.client.view.ConfigView;
+import com.eucalyptus.webui.client.view.VmTypeView;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class ConfigActivity extends AbstractSearchResultActivity implements ConfigView.Presenter, DetailView.Presenter {
-  
-  public static final String TITLE = "SYSTEM CONFIGURATIONS";
+public class VmTypeActivity extends AbstractSearchResultActivity implements VmTypeView.Presenter, DetailView.Presenter {
+
+  public static final String TITLE = "VIRTUAL MACHINE TYPES";
   
   private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
-
+    
   protected SearchResultRow currentSelected = null;
 
-  public ConfigActivity( ConfigPlace place, ClientFactory clientFactory ) {
+  public VmTypeActivity( VmTypePlace place, ClientFactory clientFactory ) {
     super( place, clientFactory );
-  }
-  
-  @Override
-  protected void showView( SearchResult result ) {
-    if ( this.view == null ) {
-      this.view = this.clientFactory.getConfigView( );
-      ( ( ConfigView ) this.view ).setPresenter( this );
-      container.setWidget( this.view );
-      ( ( ConfigView ) this.view ).clear( );
-    }
-    ( ( ConfigView ) this.view ).showSearchResult( result );
-  }
-
-  @Override
-  protected void doSearch( String query, SearchRange range ) {
-    LOG.log( Level.INFO, "'service' new search: " + query );
-    this.clientFactory.getBackendService( ).lookupConfiguration( this.clientFactory.getLocalSession( ).getSession( ), query, range, new AsyncCallback<SearchResult>( ) {
-
-      @Override
-      public void onFailure( Throwable cause ) {
-        LOG.log( Level.WARNING, "Failed to get configurations: " + cause );
-        displayData( null );
-      }
-
-      @Override
-      public void onSuccess( SearchResult result ) {
-        displayData( result );
-      }
-      
-    } );
   }
 
   @Override
@@ -87,7 +57,7 @@ public class ConfigActivity extends AbstractSearchResultActivity implements Conf
     for ( int i = 0; i < values.size( ); i++ ) {
       result.addField( values.get( i ).getValue( ) );
     }
-    this.clientFactory.getBackendService( ).setConfiguration( this.clientFactory.getLocalSession( ).getSession( ), result, new AsyncCallback<Void>( ) {
+    this.clientFactory.getBackendService( ).setVmType( this.clientFactory.getLocalSession( ).getSession( ), result, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable cause ) {
@@ -103,8 +73,38 @@ public class ConfigActivity extends AbstractSearchResultActivity implements Conf
   }
 
   @Override
+  protected void doSearch( String query, SearchRange range ) {
+    LOG.log( Level.INFO, "'service' new search: " + query );
+    this.clientFactory.getBackendService( ).lookupVmType( this.clientFactory.getLocalSession( ).getSession( ), query, range, new AsyncCallback<SearchResult>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        displayData( null );
+      }
+
+      @Override
+      public void onSuccess( SearchResult result ) {
+        displayData( result );
+      }
+      
+    } );
+  }
+
+  @Override
   protected String getTitle( ) {
     return TITLE;
   }
 
+  @Override
+  protected void showView( SearchResult result ) {
+    if ( this.view == null ) {
+      this.view = this.clientFactory.getVmTypeView( );
+      ( ( VmTypeView ) this.view ).setPresenter( this );
+      container.setWidget( this.view );
+      ( ( VmTypeView ) this.view ).clear( );
+    }
+    ( ( VmTypeView ) this.view ).showSearchResult( result );
+  }
+
+  
 }

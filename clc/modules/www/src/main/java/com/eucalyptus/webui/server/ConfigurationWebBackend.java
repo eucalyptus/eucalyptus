@@ -20,6 +20,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -43,7 +44,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
  */
 public class ConfigurationWebBackend {
   
-  public static final String ID = "ID";
+  public static final String ID = "Id";
   public static final String NAME = "Name";
   public static final String TYPE = "Type";
   public static final String HOST = "Host";
@@ -160,7 +161,7 @@ public class ConfigurationWebBackend {
    * 
    * @param input
    */
-  public static void setCloudConfiguration( SearchResultRow input ) {
+  public static void setCloudConfiguration( SearchResultRow input ) throws EucalyptusServiceException {
     EntityWrapper<SystemConfiguration> db = EntityWrapper.get( SystemConfiguration.class );
     SystemConfiguration sysConf = null;
     try {
@@ -178,6 +179,7 @@ public class ConfigurationWebBackend {
         DNSProperties.update( );
       } catch ( Exception e1 ) {
         LOG.error( "Failed to set system configuration", e1 );
+        throw new EucalyptusServiceException( "Failed to set system configuration", e1 );
       }
     }
     try {
@@ -234,7 +236,7 @@ public class ConfigurationWebBackend {
    * 
    * @param input
    */
-  public static void setClusterConfiguration( SearchResultRow input ) {
+  public static void setClusterConfiguration( SearchResultRow input ) throws EucalyptusServiceException {
     try {
       ClusterConfiguration clusterConf = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, input.getField( 1 ) );
       deserializeClusterConfiguration( clusterConf, input );
@@ -242,6 +244,7 @@ public class ConfigurationWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to set cluster configuration" );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to set cluster configuration", e );
     }
   }
   
@@ -355,7 +358,7 @@ public class ConfigurationWebBackend {
    * 
    * @param input
    */
-  public static void setStorageConfiguration( SearchResultRow input ) {
+  public static void setStorageConfiguration( SearchResultRow input ) throws EucalyptusServiceException  {
     int i = 0;
     i++;//id
     String name = input.getField( i++ );
@@ -382,6 +385,7 @@ public class ConfigurationWebBackend {
       LOG.error( "Error sending update configuration message to storage controller: " + updateStorageConfiguration );
       LOG.error( "The storage controller's configuration may be out of sync!" );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to update storage configuration", e ); 
     }
   }
 
@@ -416,7 +420,7 @@ public class ConfigurationWebBackend {
    * 
    * @param input
    */
-  public static void setWalrusConfiguration( SearchResultRow input ) {
+  public static void setWalrusConfiguration( SearchResultRow input ) throws EucalyptusServiceException  {
     ArrayList<ComponentProperty> properties = Lists.newArrayList( );
     deserializeComponentProperties( properties, input, COMMON_CONFIG_FIELD_DESCS.size( ) );
     UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
@@ -428,6 +432,7 @@ public class ConfigurationWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to set Walrus configuration", e );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to set Walrus configuration", e );
     }
   }
   
