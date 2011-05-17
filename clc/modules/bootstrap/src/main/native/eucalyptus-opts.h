@@ -48,11 +48,16 @@ struct eucalyptus_opts
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
   int initialize_flag;	/**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. (default=off).  */
   const char *initialize_help; /**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. help description.  */
-  char ** bind_addr_arg;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address..  */
-  char ** bind_addr_orig;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address. original value given at command line.  */
-  unsigned int bind_addr_min; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address.'s minimum occurreces */
-  unsigned int bind_addr_max; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address.'s maximum occurreces */
-  const char *bind_addr_help; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address. help description.  */
+  char ** bind_addr_arg;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size..  */
+  char ** bind_addr_orig;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size. original value given at command line.  */
+  unsigned int bind_addr_min; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size.'s minimum occurreces */
+  unsigned int bind_addr_max; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size.'s maximum occurreces */
+  const char *bind_addr_help; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size. help description.  */
+  char ** bootstrap_host_arg;	/**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available..  */
+  char ** bootstrap_host_orig;	/**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available. original value given at command line.  */
+  unsigned int bootstrap_host_min; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available.'s minimum occurreces */
+  unsigned int bootstrap_host_max; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available.'s maximum occurreces */
+  const char *bootstrap_host_help; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -65,8 +70,6 @@ struct eucalyptus_opts
   char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/opt/grze_eee/var/run/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
   const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
-  int verbose_flag;	/**< @brief DEPRECATEDVerbose bootstrapper output. (default=off).  */
-  const char *verbose_help; /**< @brief DEPRECATEDVerbose bootstrapper output. help description.  */
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
   char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
   const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
@@ -114,8 +117,12 @@ struct eucalyptus_opts
   unsigned int jvm_args_min; /**< @brief Arguments to pass to the JVM.'s minimum occurreces */
   unsigned int jvm_args_max; /**< @brief Arguments to pass to the JVM.'s maximum occurreces */
   const char *jvm_args_help; /**< @brief Arguments to pass to the JVM. help description.  */
+  int jmx_flag;	/**< @brief Launch with JMX enabled. (default=off).  */
+  const char *jmx_help; /**< @brief Launch with JMX enabled. help description.  */
   int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
   const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
+  int verbose_flag;	/**< @brief Launch the JVM w/ verbose output flags. (default=off).  */
+  const char *verbose_help; /**< @brief Launch the JVM w/ verbose output flags. help description.  */
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
   char * debug_port_orig;	/**< @brief Set the port to use for the debugger. original value given at command line.  */
   const char *debug_port_help; /**< @brief Set the port to use for the debugger. help description.  */
@@ -137,11 +144,11 @@ struct eucalyptus_opts
   unsigned int home_given ;	/**< @brief Whether home was given.  */
   unsigned int initialize_given ;	/**< @brief Whether initialize was given.  */
   unsigned int bind_addr_given ;	/**< @brief Whether bind-addr was given.  */
+  unsigned int bootstrap_host_given ;	/**< @brief Whether bootstrap-host was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */
   unsigned int kill_given ;	/**< @brief Whether kill was given.  */
   unsigned int pidfile_given ;	/**< @brief Whether pidfile was given.  */
-  unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int log_appender_given ;	/**< @brief Whether log-appender was given.  */
   unsigned int exhaustive_given ;	/**< @brief Whether exhaustive was given.  */
@@ -161,7 +168,9 @@ struct eucalyptus_opts
   unsigned int java_home_given ;	/**< @brief Whether java-home was given.  */
   unsigned int jvm_name_given ;	/**< @brief Whether jvm-name was given.  */
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
+  unsigned int jmx_given ;	/**< @brief Whether jmx was given.  */
   unsigned int debug_given ;	/**< @brief Whether debug was given.  */
+  unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */
   unsigned int profile_given ;	/**< @brief Whether profile was given.  */
