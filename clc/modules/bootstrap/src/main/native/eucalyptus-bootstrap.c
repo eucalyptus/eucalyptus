@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
 	gid_t gid = 0;
 	if (arguments(argc, argv, args) != 0)
 		exit(1);
-	debug = args->verbose_flag || args->debug_flag;
+	debug = args->debug_flag;
 	if (args->kill_flag == 1)
 		return stop_child(args);
 	if (checkuser(GETARG(args, user), &uid, &gid) == 0)
@@ -740,14 +740,15 @@ int java_init(euca_opts *args, java_home_t *data) {
 				GETARG(args, debug_port),
 				(args->debug_suspend_flag ? "y" : "n"));
 	}
-	if (args->debug_flag || args->profile_flag) {
+	if (args->jmx_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(
-				args, home));
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
+	}
+	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");
 		JVM_ARG(opt[++x], "-XX:+PrintGCTimeStamps");
 		JVM_ARG(opt[++x], "-XX:+PrintGCDetails");
