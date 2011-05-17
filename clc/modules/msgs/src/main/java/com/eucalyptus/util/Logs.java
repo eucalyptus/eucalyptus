@@ -128,14 +128,26 @@ public class Logs {
   }
   
   public static void init( ) {
-    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
+    Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+    Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
+    Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
+    if ( Logs.EXTREME ) {
+      System.setProperty( "euca.log.level", "TRACE" );
+      System.setProperty( "euca.exhaust.level", "TRACE" );
+      System.setProperty( "euca.log.exhaustive", "TRACE" );
+      System.setProperty( "euca.log.exhaustive.cc", "TRACE" );
+      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+      System.setProperty( "euca.log.exhaustive.db", "TRACE" );
+      System.setProperty( "euca.log.exhaustive.external", "TRACE" );
+      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+    }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
       System.setOut( new PrintStream( System.out ) {
         public void print( final String string ) {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null
               ? "null"
-              : string.replaceAll( "\\n*$", "" ) ) );
+              : string.replaceAll( "\\n*\\z", "" ) ) );
           }
         }
       }
@@ -147,7 +159,7 @@ public class Logs {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             Logs.exhaust( ).error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null
               ? "null"
-              : string.replaceAll( "\\n*$", "" ) ) );
+              : string.replaceAll( "\\n*\\z", "" ) ) );
           }
         }
       }
@@ -158,6 +170,5 @@ public class Logs {
       t.printStackTrace( );
       System.exit( 1 );
     }
-    
   }
 }

@@ -71,6 +71,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
@@ -115,8 +116,10 @@ public class SystemBootstrapper {
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
       Bootstrap.init( );
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      stage.load( );
+      if( !Bootstrap.isInitializeSystem( ) ) {
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        stage.load( );
+      }
       return true;
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
@@ -128,26 +131,41 @@ public class SystemBootstrapper {
       return false;
     }
   }
+
+  private static void initializeSystem( ) {
+    try {
+      SystemCredentialProvider.initializeCredentials( );
+      MysqlDatabaseBootstrapper.initializeDatabase( );
+      System.exit( 0 );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      System.exit( 1 );
+    }
+  }
   
   public boolean load( ) throws Throwable {
-    try {
-      // TODO: validation-api
-      /** @NotNull */
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      do {
-        stage.load( );
-      } while ( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      LOG.fatal( t, t );
-      System.exit( 1 );
-      throw t;
-    }
-    for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.LOADING );
+    if( Bootstrap.isInitializeSystem( ) ) {
+      SystemBootstrapper.initializeSystem( );
+    } else {
+      try {
+        // TODO: validation-api
+        /** @NotNull */
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        do {
+          stage.load( );
+        } while ( ( stage = Bootstrap.transition( ) ) != null );
+      } catch ( BootstrapException e ) {
+        e.printStackTrace( );
+        throw e;
+      } catch ( Throwable t ) {
+        t.printStackTrace( );
+        LOG.fatal( t, t );
+        System.exit( 1 );
+        throw t;
+      }
+      for ( Component c : Components.whichCanLoad( ) ) {
+        Bootstrap.applyTransition( c, Component.Transition.LOADING );
+      }
     }
     return true;
   }

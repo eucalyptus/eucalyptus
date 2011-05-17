@@ -62,8 +62,6 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -77,15 +75,10 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -421,6 +414,11 @@ public class Bootstrap {
   public static Boolean isCloudController( ) {
     return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
+  
+  public static boolean isInitializeSystem( ) {
+    return Boolean.TRUE.parseBoolean( System.getProperty( "euca.initialize" ) );
+  }
+  
   
   /**
    * Prepares the system to execute the bootstrap sequence defined by {@link Bootstrap.Stage}.
