@@ -87,6 +87,7 @@ int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *
 int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
 int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 
 int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);

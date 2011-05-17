@@ -26,8 +26,8 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
@@ -107,7 +107,6 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( systemThreadFactory == null ) {
-        System.setProperty( "euca.ws.port", "" + PORT );
         systemThreadFactory = ChannelUtil.getSystemThreadFactory( );
         serverPipelineFactory = ChannelUtil.getServerPipeline( );
         serverBossThreadPool = ChannelUtil.getServerBossThreadPool( );
@@ -175,7 +174,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        if( !LogLevels.TRACE ) {
+        if( !Logs.TRACE ) {
           LOG.info( "Creating server boss thread pool. (log level TRACE for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
@@ -197,7 +196,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverWorkerThreadPool == null ) {
-        if( !LogLevels.TRACE ) {
+        if( !Logs.TRACE ) {
           LOG.info( "Creating server worker thread pool. (log level TRACE for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
@@ -229,7 +228,7 @@ public class ChannelUtil {
     ChannelUtil.setupServer( );
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    if( !LogLevels.TRACE ) {
+    if( !Logs.TRACE ) {
       LOG.info( "Creating server bootstrap. (log level TRACE for details)" );
     } else {
       LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );

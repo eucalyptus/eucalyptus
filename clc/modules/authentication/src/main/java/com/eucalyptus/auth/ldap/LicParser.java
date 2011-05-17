@@ -23,6 +23,8 @@ public class LicParser {
   
   private static final Logger LOG = Logger.getLogger( LicParser.class );
   
+  private static final String COMMENT = "_comment";
+  
   private static final String LDAP_URL_PREFIX = "ldap://";
   
   // Supported authentication methods
@@ -115,6 +117,9 @@ public class LicParser {
     JSONObject groupsPartition = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.GROUPS_PARTITION );
     for ( Object t : groupsPartition.keySet( ) ) {
       String partitionName = ( String ) t;
+      if ( partitionName.equalsIgnoreCase( COMMENT ) ) {
+        continue;
+      }
       Set<String> groupSet = Sets.newHashSet( );
       groupSet.addAll( JsonUtils.getArrayByType( String.class, groupsPartition, partitionName ) );
       lic.getGroupsPartition( ).put( partitionName, groupSet );
@@ -152,6 +157,9 @@ public class LicParser {
   private void parseUserInfoMap( JSONObject map, LdapIntegrationConfiguration lic ) throws JSONException {
     for ( Object m : map.keySet( ) ) {
       String attr = ( String ) m;
+      if ( attr.equalsIgnoreCase( COMMENT ) ) {
+        continue;
+      }
       String name = JsonUtils.getByType( String.class, map, attr );
       lic.getUserInfoAttributes( ).put( attr, name );
     }

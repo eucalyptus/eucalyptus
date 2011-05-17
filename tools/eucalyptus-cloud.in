@@ -82,7 +82,6 @@ export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus services"
 NAME=""
 ANT="`which ant 2> /dev/null`"
-JAVA="`which java 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
 # available services
@@ -174,40 +173,6 @@ read_ws_list() {
 	done
 }
 
-check_java() {
-	java_min_version="1.6.0"
-
-	# we need a good JAVA_HOME
-	if [ -z "$JAVA_HOME" ]; then
-		# user didn't setup JAVA_HOME, let's look for it
-		if [ -z "$JAVA" ]; then
-			echo "Cannot find java!"
-			exit 1
-		fi
-		JAVA_HOME="`readlink -f $JAVA`"
-		JAVA_HOME="`dirname $JAVA_HOME|sed 's:/jre/bin::'`"
-		if [ ! -d $JAVA_HOME ]; then
-			echo "Cannot find a good JAVA_HOME"
-			exit 1
-		fi
-	fi
-	
-	# to be sure we are using the right java/JAVA_HOME
-	JAVA="$JAVA_HOME/jre/bin/java"
-
-	# let's see if we can find a decent java
-	if [ -x "$JAVA" ]; then
-		java_version=`$JAVA -version 2>&1 | grep "java version" | sed -e 's/.*java version "\(.*\)".*/\1/'`
-		if [ `expr $java_version "<" $java_min_version` -eq 0 ]; then
-			export JAVA_HOME
-			return 
-		fi
-	fi
-
-	echo "Eucalyptus needs java version >= $java_min_version"
-	exit 1
-}
-
 do_start() {
 	if [ -z "$CLOUD_OPTS" ]; then
 		local CLOUD_OPTS="--log-level=INFO"
@@ -219,8 +184,6 @@ do_start() {
 		exit 1
 	fi
 
-	check_java
-	
 	cd $EUCALYPTUS/etc/eucalyptus
 
 	# options from the configuration file

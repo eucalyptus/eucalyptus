@@ -23,10 +23,10 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.TestDescription;
 import com.eucalyptus.upgrade.TestListener;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Predicate;
 import com.google.common.collect.*;
 
@@ -125,8 +125,8 @@ public class TestHarness
 							.getProperty("euca.log.level"));
 					boolean doDebug = "DEBUG".equals(System
 							.getProperty("euca.log.level")) || doTrace;
-					LogLevels.DEBUG = doDebug;
-					LogLevels.TRACE = doDebug;
+					Logs.DEBUG = doDebug;
+					Logs.TRACE = doDebug;
 
 					if ((StandalonePersistence.eucaDest = System
 							.getProperty("euca.upgrade.destination")) == null) {

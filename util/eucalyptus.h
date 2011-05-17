@@ -81,9 +81,9 @@ permission notice:
 #define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
-#define EUCALYPTUS_NC_CHECK_BUCKET "/usr/local/bin/euca-check-bucket" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/local/bin/euca-bundle-upload" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_DELETE_BUNDLE "/usr/local/bin/euca-delete-bundle" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_CHECK_BUCKET "/usr/bin/euca-check-bucket" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/bin/euca-bundle-upload" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_DELETE_BUNDLE "/usr/bin/euca-delete-bundle" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -128,6 +128,8 @@ permission notice:
 #define EUCA_MAX_VOLUMES 256
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
+#define EUCA_MAX_PARTITIONS 99 // partitions per disk
+#define EUCA_MAX_DISKS 26 // disks per bus: sd[a-z]
 #define DEFAULT_NC_CACHE_SIZE 999999 // in MB
 #define DEFAULT_NC_WORK_SIZE  999999 // in MB
 #define DEFAULT_SWAP_SIZE 512 /* in MB */

@@ -100,7 +100,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
 						if (prop instanceof SingletonDatabasePropertyEntry) {
 							addProp = prop;
 						} else if (prop instanceof MultiDatabasePropertyEntry) {
-							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getName());
+							addProp = ((MultiDatabasePropertyEntry) prop).getClone(s.getPartition());
 						}
 						if ( addProp != null ) {
 							PropertyDirectory.addProperty(addProp);

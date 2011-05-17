@@ -74,10 +74,10 @@ permission notice:
 
 #include "ipc.h"
 #include "misc.h"
-#include <handlers.h>
-#include <storage.h>
-#include <eucalyptus.h>
-#include <euca_auth.h>
+#include "handlers.h"
+#include "eucalyptus.h"
+#include "euca_auth.h"
+#include "backing.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -101,6 +101,7 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
+        nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
 
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
@@ -155,14 +156,12 @@ static void * rebooting_thread (void *arg)
 {
     virConnectPtr *conn;
     ncInstance * instance = (ncInstance *)arg;
- 
     struct stat statbuf;
     int rc = 0;
-    char xml_path [MAX_PATH];
-    snprintf (xml_path, MAX_PATH, "%s/%s/%s/libvirt.xml", scGetInstancePath(), instance->userId, instance->instanceId);
-    char * xml = file2str (xml_path);
+
+    char * xml = file2str (instance->libvirtFilePath);
     if (xml == NULL) {
-        logprintfl (EUCAERROR, "cannot obtain XML file %s\n", xml_path);
+        logprintfl (EUCAERROR, "cannot obtain XML file %s\n", instance->libvirtFilePath);
         return NULL;
     }
 
@@ -271,15 +270,16 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   sem_p (inst_sem); 
   instance = find_instance(&global_instances, instanceId);
   if (instance) {
-    snprintf(userId, 48, "%s", instance->userId);
+          snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
+          snprintf(userId, 48, "%s", instance->userId);
   }
   sem_v (inst_sem);
+
   if (!instance) {
     logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
     return(1);
   }
 
-  snprintf(console_file, 1024, "%s/%s/%s/console.append.log", scGetInstancePath(), userId, instanceId);
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
     fd = open(console_file, O_RDONLY);
@@ -293,7 +293,9 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     }
   }
   
-  snprintf(console_file, MAX_PATH, "%s/%s/%s/console.log", scGetInstancePath(), userId, instanceId);
+  sem_p (inst_sem); 
+  snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
+  sem_v (inst_sem);
 
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
@@ -425,7 +427,7 @@ doAttachVolume (	struct nc_state_t *nc,
 
         sem_p (inst_sem);
         volume = add_volume (instance, volumeId, remoteDev, localDevTag, localDevReal, "attached");
-        scSaveInstanceInfo(instance); /* to enable NC recovery */
+        save_instance_struct (instance); // for surviving restart
         sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to save the volume record, aborting volume attachment\n");
@@ -534,7 +536,7 @@ doDetachVolume (	struct nc_state_t *nc,
         if (grab_inst_sem)  
             sem_p (inst_sem);
         volume = free_volume (instance, volumeId, remoteDev, localDevTag);
-        scSaveInstanceInfo(instance); /* to enable NC recovery */
+        save_instance_struct (instance); // for surviving restart
         if (grab_inst_sem)  
             sem_v (inst_sem);
         if ( volume == NULL ) {

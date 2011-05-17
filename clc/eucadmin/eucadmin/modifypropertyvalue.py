@@ -28,6 +28,8 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
+import sys
+import os
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
@@ -39,6 +41,28 @@ def encode_prop(param, dict, value):
         sys.exit(1)
     dict['Name'] = t[0]
     dict['Value'] = t[1]
+    
+def encode_prop_from_file(param, dict, value):
+    t = value.split('=')
+    if len(t) != 2:
+        print "Options must be of the form KEY=VALUE: %s" % value
+        sys.exit(1)
+    dict['Name'] = t[0]
+    #TODO - this should be better integrated with boto.roboto
+    path = t[1]
+    if path == '-':
+        value = sys.stdin.read()
+    else:
+        path = os.path.expanduser(path)
+        path = os.path.expandvars(path)
+        if os.path.isfile(path):
+            fp = open(path)
+            value = fp.read()
+            fp.close()
+        else:
+            print 'Error: Unable to read file: %s' % path
+            sys.exit(1)
+    dict['Value'] = value
     
 class ModifyPropertyValue(AWSQueryRequest):
   
@@ -56,9 +80,9 @@ class ModifyPropertyValue(AWSQueryRequest):
               Param(name='property_from_file',
                     short_name='f',
                     long_name='property-from-file',
-                    ptype='file',
+                    ptype='string',
                     optional=True,
-                    encoder=encode_prop,
+                    encoder=encode_prop_from_file,
                     doc='Modify property with content of file')]
           
     def get_connection(self, **args):

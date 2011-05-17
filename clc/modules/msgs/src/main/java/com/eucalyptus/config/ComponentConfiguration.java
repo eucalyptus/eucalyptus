@@ -63,6 +63,8 @@
  */
 package com.eucalyptus.config;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.component.Component;
@@ -70,7 +72,10 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilderRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
@@ -109,10 +114,18 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.servicePath = servicePath;
   }
   
-  public String getUri() {
-    return "http://" + this.getHostName() + ":" + this.getPort() + this.getServicePath();
+  public InetSocketAddress getSocketAddress( ) {
+    return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
   }
   
+  public URI getUri() {
+    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
+  }
+  
+  public URI getInternalUri() {
+    return this.getComponentId( ).makeRemoteUri( this.getHostName( ), this.getPort( ) );
+  }
+
   public String getName() {
     return name;
   }
@@ -219,6 +232,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
 
   public void setName( String name ) {
     this.name = name;
+  }
+
+  @Override
+  public ServiceBuilder lookupBuilder( ) {
+    return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
   }
 }
   

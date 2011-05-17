@@ -6,6 +6,7 @@ clc/lib
 *.ajsv
 *.class
 */generated/
+autom4te.cache
 Makedefs
 config.log
 config.status

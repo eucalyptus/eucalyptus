@@ -14,6 +14,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.DeregisterClusterType;
@@ -28,14 +29,14 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.SubDirectory;
 
-@DiscoverableServiceBuilder( com.eucalyptus.component.id.ClusterController.class )
+@DiscoverableServiceBuilder( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration> {
   static Logger LOG                 = Logger.getLogger( ClusterBuilder.class );
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+    if ( !Partitions.testPartitionCredentialsDirectory( partition ) ) {
       throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
     } else {
       return super.checkAdd( partition, name, host, port );
@@ -50,9 +51,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           Clusters.getInstance( ).register( newCluster );
@@ -84,7 +85,7 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public Component getComponent( ) {
-    return Components.lookup( com.eucalyptus.component.id.ClusterController.class );
+    return Components.lookup( ClusterController.class );
   }
   
   @Override
@@ -113,11 +114,14 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Tearing down cluster: " + config );
-    Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
-    Cluster clusterInstance = Clusters.getInstance( ).lookup( config.getName( ) );
-    clusterInstance.stop( );
+    try {
+      LOG.info( "Tearing down cluster: " + config );
+      Cluster cluster = Clusters.getInstance( ).lookup( config.getName( ) );
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+      cluster.stop( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex , ex );
+    }
     super.fireStop( config );
   }
   
@@ -132,9 +136,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
           Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
           newCluster.start( );
@@ -157,9 +161,9 @@ public class ClusterBuilder extends DatabaseServiceBuilder<ClusterConfiguration>
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Disabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
           try {
             Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );

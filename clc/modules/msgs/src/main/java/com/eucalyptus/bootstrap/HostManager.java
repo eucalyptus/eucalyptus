@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -180,9 +180,9 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     if ( !Internets.testReachability( addr ) ) {
       return false;
     } else {
-      for ( Component c : Components.list( ) ) {
+      for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
         try {
-          ServiceConfiguration config = c.initService( addr );
+          ServiceConfiguration config = c.initRemoteService( addr );
           c.loadService( config );
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex, ex );
@@ -206,7 +206,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Components.lookup( Eucalyptus.class ).isLocal( ) );
+    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Components.lookup( Eucalyptus.class ).isAvailableLocally( ) );
     if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
       LOG.info( "Receiving initial view..." );
       this.currentView.set( newView, !isFirstDb );

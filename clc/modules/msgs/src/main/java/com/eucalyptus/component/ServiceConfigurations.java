@@ -23,10 +23,13 @@ public class ServiceConfigurations {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
 
-  public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
-    ComponentId compId = component.getComponentId( );
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getCanonicalHostName( ), compId.makeRemoteUri( host.getCanonicalHostName( ),
+  public static ServiceConfiguration createEphemeral( ComponentId compId, InetAddress host ) {
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeRemoteUri( host.getHostAddress( ),
                                                                                                                            compId.getPort( ) ) );
+  }
+
+  public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
+    return createEphemeral( component.getComponentId( ), host );
   }
   
   public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {
@@ -103,101 +106,6 @@ public class ServiceConfigurations {
       db.rollback( );
       throw new PersistenceException( ex );
     }
-  }
-
-  static class EphemeralConfiguration extends ComponentConfiguration {
-    URI         uri;
-    ComponentId c;
-    
-    public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
-      super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
-      this.uri = uri;
-      this.c = c;
-    }
-    
-    public ComponentId lookupComponentId( ) {
-      return c;
-    }
-    
-    public String getUri( ) {
-      return this.uri.toASCIIString( );
-    }
-
-    @Override
-    public String getName( ) {
-      return super.getName( );
-    }
-
-    @Override
-    public Boolean isLocal( ) {
-      return super.isLocal( );
-    }
-
-    @Override
-    public int compareTo( ServiceConfiguration that ) {
-      return super.compareTo( that );
-    }
-
-    @Override
-    public String toString( ) {
-      return super.toString( );
-    }
-
-    @Override
-    public int hashCode( ) {
-      return super.hashCode( );
-    }
-
-    @Override
-    public boolean equals( Object that ) {
-      return super.equals( that );
-    }
-
-    @Override
-    public String getPartition( ) {
-      return super.getPartition( );
-    }
-
-    @Override
-    public void setPartition( String partition ) {
-      super.setPartition( partition );
-    }
-
-    @Override
-    public String getHostName( ) {
-      return super.getHostName( );
-    }
-
-    @Override
-    public void setHostName( String hostName ) {
-      super.setHostName( hostName );
-    }
-
-    @Override
-    public Integer getPort( ) {
-      return super.getPort( );
-    }
-
-    @Override
-    public void setPort( Integer port ) {
-      super.setPort( port );
-    }
-
-    @Override
-    public String getServicePath( ) {
-      return super.getServicePath( );
-    }
-
-    @Override
-    public void setServicePath( String servicePath ) {
-      super.setServicePath( servicePath );
-    }
-
-    @Override
-    public void setName( String name ) {
-      super.setName( name );
-    }
-    
   }
   
 }

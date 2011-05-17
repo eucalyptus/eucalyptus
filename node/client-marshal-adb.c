@@ -742,11 +742,12 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     adb_ncBundleInstanceType_t * request = adb_ncBundleInstanceType_create (env);
     
     // set standard input fields
+    adb_ncBundleInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncBundleInstanceType_set_correlationId (request, env, meta->correlationId);
-        adb_ncBundleInstanceType_set_userId (request, env, meta->userId);
+        if (meta->correlationId) { meta->correlationId = NULL; }
+        EUCA_MESSAGE_MARSHAL(ncBundleInstanceType, request, meta);
     }
-    
+
     // set op-specific input fields
     adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
     adb_ncBundleInstanceType_set_bucketName(request, env, bucketName);
@@ -785,9 +786,10 @@ int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
     adb_ncCancelBundleTaskType_t * request = adb_ncCancelBundleTaskType_create (env);
     
     // set standard input fields
+    adb_ncCancelBundleTaskType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncCancelBundleTaskType_set_correlationId (request, env, meta->correlationId);
-        adb_ncCancelBundleTaskType_set_userId (request, env, meta->userId);
+        if (meta->correlationId) { meta->correlationId = NULL; }
+        EUCA_MESSAGE_MARSHAL(ncCancelBundleTaskType, request, meta);
     }
     
     // set op-specific input fields

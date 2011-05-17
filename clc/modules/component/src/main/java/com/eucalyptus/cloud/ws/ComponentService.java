@@ -71,7 +71,7 @@ public class ComponentService {
     Component destinationComponent = Components.lookup( component );
     String canonicalHostName = Internets.toAddress( host ).getCanonicalHostName( );
     for( Service s : destinationComponent.getServices( ) ) {
-		  if( Internets.toAddress( s.getHost( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
+		  if( Internets.toAddress( s.getServiceConfiguration( ).getHostName( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
 		    return s;
 		  }
 		}

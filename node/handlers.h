@@ -77,6 +77,7 @@ permission notice:
 struct nc_state_t {
 	struct handlers *H;             // selected handler
 	struct handlers *D;             // default  handler
+    hypervisorCapabilityType capability;
 	vnetConfig *vnetconfig;		// network config
 	// globals
 	int  config_network_port;
@@ -230,7 +231,6 @@ int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *r
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
-
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 
 #endif /* HANDLERS_FANOUT */
@@ -272,7 +272,7 @@ void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
 int check_iscsi(char* dev_string);
-void parse_target(char *dev_string);
+//void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
