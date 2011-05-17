@@ -177,6 +177,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     if ( type == null ) {
       throw new EucalyptusServiceException( "Empty configuration type" );
     }
+    LOG.debug( "Set: " + config );
     if ( ConfigurationWebBackend.CLOUD_TYPE.equals( type ) ) {
       ConfigurationWebBackend.setCloudConfiguration( config );
     } else if ( ConfigurationWebBackend.CLUSTER_TYPE.equals( type ) ) {

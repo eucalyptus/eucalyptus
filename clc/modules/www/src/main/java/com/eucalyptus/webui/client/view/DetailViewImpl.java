@@ -171,6 +171,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   @UiHandler( "save" )
   void handleSave( ClickEvent e ) {
     LOG.log( Level.INFO, "Save!" );
+    presenter.saveValue( gridValues );
   }
 
   @Override
