@@ -767,6 +767,10 @@ int java_init(euca_opts *args, java_home_t *data) {
 		JVM_ARG(opt[++x], "-X%s", args->jvm_args_arg[i]);
 	for (i = 0; i < args->define_given; i++)
 		JVM_ARG(opt[++x], "-D%s", args->define_arg[i]);
+	for (i = 0; i < args->bootstrap_host_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->define_arg[i]);
+	for (i = 0; i < args->bind_addr_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->define_arg[i]);
 
 	opt[++x].optionString = java_class_path;
 	opt[x].extraInfo = NULL;

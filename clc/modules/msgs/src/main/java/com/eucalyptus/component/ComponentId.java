@@ -276,13 +276,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     String uri;
     URI u = null;
     port = ( port == -1 ) ? this.getPort( ) : port;
-    hostName = ( port == -1 ) ? Internets.localhost( ) : hostName;
+    hostName = ( port == -1 ) ? Internets.localHostAddress( ) : hostName;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
-      uri = String.format( this.getExternalUriPattern( ), Internets.localhost( ), this.getPort( ) );
+      uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );

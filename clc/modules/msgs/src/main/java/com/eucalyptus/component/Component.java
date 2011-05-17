@@ -262,7 +262,7 @@ public class Component implements HasName<Component> {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
     } else {//if ( this.identity.isAlwaysLocal( ) || this.identity.isCloudLocal( ) ) {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
-      String fakeName = Internets.localhost( );
+      String fakeName = Internets.localHostAddress( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
                                                                     uri.getHost( ), uri.getPort( ) );
       this.serviceRegistry.register( config );

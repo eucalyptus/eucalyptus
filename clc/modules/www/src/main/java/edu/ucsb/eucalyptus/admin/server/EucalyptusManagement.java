@@ -338,7 +338,7 @@ public class EucalyptusManagement {
           setDnsDomain( input.getDnsDomain( ) );
           setNameserver( input.getNameserver( ) );
           setNameserverAddress( input.getNameserverAddress( ) );
-          setCloudHost( Internets.localhostAddress( ).getCanonicalHostName( ) );
+          setCloudHost( Internets.localHostInetAddress( ).getCanonicalHostName( ) );
         }
       };
     }
@@ -348,7 +348,7 @@ public class EucalyptusManagement {
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
-		LOG.debug( "Sending cloud host: " + Internets.localhostAddress( ) );
+		LOG.debug( "Sending cloud host: " + Internets.localHostInetAddress( ) );
 		return TypeMappers.lookup( SystemConfiguration.class, SystemConfigWeb.class ).apply( sysConf );
 	}
 
@@ -461,7 +461,7 @@ public class EucalyptusManagement {
 		String cloudRegisterId = null;
 	    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (Internets.localhostAddress( ).getHostAddress( ) + ":8443");
+		cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

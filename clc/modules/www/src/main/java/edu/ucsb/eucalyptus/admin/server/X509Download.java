@@ -194,7 +194,7 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      String localHost = Internets.localhostAddress( ).getCanonicalHostName( );
+      String localHost = Internets.localHostInetAddress( ).getCanonicalHostName( );
       sb.append( "\nexport EC2_URL=" + Eucalyptus.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
       if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
         ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );

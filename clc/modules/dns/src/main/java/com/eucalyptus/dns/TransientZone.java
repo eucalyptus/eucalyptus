@@ -103,7 +103,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( )+"." ) );
+        Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( )+"." ) );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -129,7 +129,7 @@ public class TransientZone extends Zone {
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
       Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-        Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( ) +".") );
+        Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) +".") );
       return new TransientZone( name, new Record[] { soarec, nsrec } );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -245,7 +245,7 @@ public class TransientZone extends Zone {
 	    refresh, retry, expires, minimum );
 	  long nsTTL = 604800;
 	  Record nsrec = new NSRecord( name, DClass.IN, nsTTL,
-	    Name.fromString( Internets.localhostAddress( ).getCanonicalHostName( ) +".") );
+	    Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) +".") );
 	  return new TransientZone( name, new Record[] { soarec, nsrec } );
 	} catch ( Exception e ) {
 	  LOG.error( e, e );

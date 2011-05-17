@@ -362,7 +362,7 @@ public class ClusterEndpoint implements Startable {
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", Internets.localhostAddress( ).getCanonicalHostName( ) ) );
+    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", Internets.localHostInetAddress( ).getCanonicalHostName( ) ) );
     try {
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
