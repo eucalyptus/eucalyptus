@@ -124,7 +124,7 @@ public class Snapshots {
         }
       } );
     } catch ( ExecutionException ex ) {
-      SnapshotManager.LOG.error( ex.getCause( ), ex.getCause( ) );
+      LOG.error( ex.getCause( ), ex.getCause( ) );
       throw new EucalyptusCloudException( ex );
     }
     try {
