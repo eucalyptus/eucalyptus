@@ -61,37 +61,26 @@
   ANY SUCH LICENSES OR RIGHTS.
 */
 
-#ifndef HELPERS_H
-#define HELPERS_H
+#include "data.h"
+#include "blobstore.h"
 
-#include "misc.h" // bolean
-#include "ipc.h" // sem
+#define MAX_ARTIFACT_DEPS 16
+#define MAX_ARTIFACT_SIG 4096
 
-#define MBR_BLOCKS (62 + 4)
-#define SECTOR_SIZE 512
+typedef struct _artifact {
+    char id [EUCA_MAX_PATH]; // host-unique ID for the artifact (can be empty for a sentinel)
+    char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (can be empty for a sentinel)
+    boolean may_be_cached; // the underlying blob may reside in cache (it will not be modified by an instance)
+    boolean must_be_file; // the bits for this artifact must reside in a regular file (rather than just on a block device)
+    int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (can be NULL for a sentinel)
+    long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
+    virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
+    blockblob * bb; // blockblob handle for the artifact, when it is open
+    struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
+} artifact;
 
-int diskutil_init (void);
-sem * diskutil_get_loop_sem (void);
-int diskutil_cleanup (void);
-int diskutil_ddzero (const char * path, const long long sectors, boolean zero_fill);
-int diskutil_dd (const char * in, const char * out, const int bs, const long long count);
-int diskutil_dd2 (const char * in, const char * out, const int bs, const long long count, const long long seek, const long long skip);
-int diskutil_mbr (const char * path, const char * type);
-int diskutil_part (const char * path, char * part_type, const char * fs_type, const long long first_sector, const long long last_sector);
-int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size);
-int diskutil_unloop (const char * lodev);
-int diskutil_mkswap (const char * lodev, const long long size_bytes);
-int diskutil_mkfs (const char * lodev, const long long size_bytes);
-int diskutil_tune (const char * lodev);
-int diskutil_sectors (const char * path, const int part, long long * first, long long * last);
-int diskutil_mount (const char * dev, const char * mnt_pt);
-int diskutil_umount (const char * dev);
-int diskutil_write2file (const char * file, const char * str);
-int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk);
-int diskutil_grub_mbr (const char * path, const int part);
-int diskutil_ch (const char * path, const char * user, const int perms);
-int diskutil_mkdir (const char * path);
-int diskutil_cp (const char * from, const char * to);
-long long round_up_sec   (long long bytes);
-long long round_down_sec (long long bytes);
-#endif
+artifact * art_free (artifact * a);
+int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
+int vbr_parse (virtualMachine * vm, ncMetadata * meta);
+artifact * vbr_alloc_tree (virtualMachine * vm);
+int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix);

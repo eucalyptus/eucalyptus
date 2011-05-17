@@ -136,10 +136,14 @@ permission notice:
 #define MAX_PATH_SIZE 4096 // TODO: remove
 
 #define MEGABYTE 1048576
+
+// return codes
 #define OK 0
 #define ERROR 1
 #define ERROR_FATAL 1
 #define ERROR_RETRY -1
+#define READER 2
+#define WRITER 3
 
 typedef enum instance_states_t { // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */

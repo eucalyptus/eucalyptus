@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -58,9 +61,9 @@ permission notice:
   ANY SUCH LICENSES OR RIGHTS.
 */
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
+#define __USE_GNU /* strnlen */
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
 #include <limits.h> /* INT_MAX */
@@ -84,6 +87,7 @@ permission notice:
 #include "eucalyptus.h"
 #include "vnetwork.h"
 #include "euca_auth.h"
+#include "vbr.h"
 
 #include "windows-bundle.h"
 
@@ -96,196 +100,6 @@ static int
 doInitialize (struct nc_state_t *nc) 
 {
 	return OK;
-}
-
-static int // returns OK or ERROR
-prep_location ( // picks a service URI and prepends it to resourceLocation in VBR 
-               virtualBootRecord * vbr, 
-               ncMetadata * meta, 
-               const char * typeName)
-{
-    int i;
-    
-    for (i=0; i<meta->servicesLen; i++) {
-        serviceInfoType * service = &(meta->services[i]);
-        if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
-            char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
-            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
-            return OK;
-        }
-    }
-    logprintfl (EUCAERROR, "failed to find service '%s' in eucalyptusMessage\n", typeName);
-    return ERROR;
-}
-
-static int // returns OK or ERROR
-parse_vbr ( // parses the VBR as supplied by a client, checks values, and fills out almost the rest of the struct with typed values
-           ncMetadata * meta, 
-           ncInstance * instance, 
-           virtualBootRecord * vbr) 
-{
-    // check the type (the only mandatory field)
-    if (strstr (vbr->typeName, "machine") == vbr->typeName) { 
-        vbr->type = NC_RESOURCE_IMAGE; 
-        instance->params.image = vbr;
-    } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
-        vbr->type = NC_RESOURCE_KERNEL; 
-        instance->params.kernel = vbr;
-    } else if (strstr (vbr->typeName, "ramdisk") == vbr->typeName) { 
-        vbr->type = NC_RESOURCE_RAMDISK; 
-        instance->params.ramdisk = vbr;
-    } else if (strstr (vbr->typeName, "ephemeral") == vbr->typeName) { 
-        vbr->type = NC_RESOURCE_EPHEMERAL; 
-        if (strstr (vbr->typeName, "ephemeral0") == vbr->typeName) { // TODO: remove
-            instance->params.ephemeral0 = vbr;
-        }
-    } else if (strstr (vbr->typeName, "swap") == vbr->typeName) { // TODO: remove
-        vbr->type = NC_RESOURCE_SWAP; 
-        instance->params.swap = vbr;
-    } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
-        vbr->type = NC_RESOURCE_EBS;
-    } else {
-        logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-        return ERROR;
-    }
-        
-    // identify the type of resource location from location string
-    int error = OK;
-    if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
-        vbr->locationType = NC_LOCATION_URL;
-        strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-    } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation ||
-               strchr (vbr->resourceLocation, ',')) { // TODO: remove this transitionary iSCSI crutch?
-        vbr->locationType = NC_LOCATION_IQN;
-    } else if (strcasestr (vbr->resourceLocation, "aoe://") == vbr->resourceLocation ||
-               strcasestr (vbr->resourceLocation, "/dev/") == vbr->resourceLocation ) { // TODO: remove this transitionary AoE crutch
-        vbr->locationType = NC_LOCATION_AOE;
-    } else if (strcasestr (vbr->resourceLocation, "walrus://") == vbr->resourceLocation) {
-        vbr->locationType = NC_LOCATION_WALRUS;
-        error = prep_location (vbr, meta, "walrus");
-    } else if (strcasestr (vbr->resourceLocation, "cloud://") == vbr->resourceLocation) {
-        vbr->locationType = NC_LOCATION_CLC;
-        error = prep_location (vbr, meta, "cloud");
-    } else if (strcasestr (vbr->resourceLocation, "sc://") == vbr->resourceLocation ||
-               strcasestr (vbr->resourceLocation, "storage://") == vbr->resourceLocation) { // TODO: is it 'sc' or 'storage'?
-        vbr->locationType = NC_LOCATION_SC;
-        error = prep_location (vbr, meta, "sc");
-    } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
-        if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
-            logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
-            return ERROR;
-        }            
-        vbr->locationType = NC_LOCATION_NONE;
-    } else {
-        logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
-        return ERROR;
-    }
-
-    if (error!=OK) {
-        logprintfl (EUCAERROR, "Error: URL for resourceLocation '%s' is not in the message\n", vbr->resourceLocation);
-        return ERROR;
-    }
-    
-    // device can be 'none' only for kernel and ramdisk types
-    if (!strcmp (vbr->guestDeviceName, "none")) {
-        if (vbr->type!=NC_RESOURCE_KERNEL &&
-            vbr->type!=NC_RESOURCE_RAMDISK) {
-            logprintfl (EUCAERROR, "Error: guestDeviceName not specified for resource '%s'\n", vbr->resourceLocation);
-            return ERROR;
-        }
-        
-    } else { // should be a valid device
-        
-        // trim off "/dev/" prefix, if present, and verify the rest
-        if (strstr (vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
-            logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
-            char buf [10];
-            strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
-            strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
-        }
-        
-        if (strlen (vbr->guestDeviceName)<3 ||
-            (vbr->guestDeviceName [0] == 'x' && strlen(vbr->guestDeviceName) < 4)) {
-            logprintfl (EUCAERROR, "Error: invalid guestDeviceName '%s'\n", vbr->guestDeviceName);
-            return ERROR;
-        }
-        
-        {
-            int letters_len = 3; // e.g. "sda"
-            if (vbr->guestDeviceName [0] == 'x') letters_len = 4; // e.g., "xvda"
-            char t = vbr->guestDeviceName [0]; // type
-            char d = vbr->guestDeviceName [letters_len-2]; // the 'd'
-            char n = vbr->guestDeviceName [letters_len-1]; // the disk number
-            long long int p = 0;
-            if (strlen (vbr->guestDeviceName) > letters_len) {
-                errno = 0;
-                p = strtoll (vbr->guestDeviceName + letters_len, NULL, 10);
-                if (errno!=0) { 
-                    logprintfl (EUCAERROR, "Error: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    return ERROR; 
-                } 
-                if (p<1 || p>EUCA_MAX_PARTITIONS) {
-                    logprintfl (EUCAERROR, "Error: unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
-                    return ERROR;
-                }
-                vbr->partitionNumber = p;
-            } else {
-                vbr->partitionNumber = 0;
-            }
-            
-            switch (t) {
-            case 'h': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_IDE; break;
-            case 's': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_SCSI; break;
-            case 'f': vbr->guestDeviceType = DEV_TYPE_FLOPPY; vbr->guestDeviceBus = BUS_TYPE_IDE; break;
-            case 'v': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_VIRTIO; break;
-            case 'x': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_XEN; break;
-            default:
-                logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                return ERROR; 
-            }
-            if (d!='d') {
-                logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                return ERROR; 
-            }
-            assert (EUCA_MAX_DISKS >= 'z'-'a');
-            if (!(n>='a' && n<='z')) {
-                logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                return ERROR; 
-            }
-            vbr->diskNumber = n - 'a';
-        }
-    }
-    
-    // parse ID
-    if (strlen (vbr->id)<4) {
-        logprintfl (EUCAERROR, "Error: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
-        return ERROR;
-    }
-    
-    // parse disk formatting instructions (none = do not format)
-    if (strstr (vbr->formatName, "none") == vbr->formatName) { vbr->format = NC_FORMAT_NONE;
-    } else if (strstr (vbr->formatName, "ext2") == vbr->formatName) { vbr->format = NC_FORMAT_EXT2;
-    } else if (strstr (vbr->formatName, "ext3") == vbr->formatName) { vbr->format = NC_FORMAT_EXT3;
-    } else if (strstr (vbr->formatName, "ntfs") == vbr->formatName) { vbr->format = NC_FORMAT_NTFS;
-    } else if (strstr (vbr->formatName, "swap") == vbr->formatName) { vbr->format = NC_FORMAT_SWAP;
-    } else {
-        logprintfl (EUCAERROR, "Error: failed to parse resource format '%s'\n", vbr->formatName);
-        return ERROR;
-    }
-    if (vbr->type==NC_RESOURCE_EPHEMERAL || vbr->type==NC_RESOURCE_SWAP) { // TODO: should we allow ephemeral/swap that reside remotely?
-        if (vbr->size<1) {
-            logprintfl (EUCAERROR, "Error: invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
-            return ERROR;
-        }
-    } else {
-        //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { // TODO: check for size!=-1 
-        if (vbr->format!=NC_FORMAT_NONE) {
-            logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
-            return ERROR;
-        }
-    }
-    
-    return OK;
 }
 
 static int
@@ -334,38 +148,8 @@ doRunInstance(	struct nc_state_t *nc,
     instance->launchTime = time (NULL);
 
     // parse and sanity-check the virtual boot record
-    unsigned char partitions [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS]; // for validating partitions
-    bzero (partitions, sizeof (partitions));
-    for (int i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
-        virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
-
-        if (parse_vbr (meta, instance, vbr) != OK)
+    if (vbr_parse (&(instance->params), meta) != OK)
             goto error;
-
-        if (vbr->type!=NC_RESOURCE_KERNEL && vbr->type!=NC_RESOURCE_RAMDISK)
-            partitions [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = 1;            
-    }
-
-    // ensure that partitions are contiguous and that partitions and disks are not mixed
-    for (int i=0; i<BUS_TYPES_TOTAL; i++) { // each bus type is treated separatedly
-        for (int j=0; j<EUCA_MAX_DISKS; j++) {
-            int has_partitions = 0;
-            for (int k=EUCA_MAX_PARTITIONS-1; k>=0; k--) { // count down 
-                if (partitions [i][j][k]) {
-                    if (k==0 && has_partitions) {
-                        logprintfl (EUCAERROR, "Error: specifying both disk and a partition on the disk is not allowed\n");
-                        goto error;
-                    }
-                    has_partitions = 1;
-                } else {
-                    if (k!=0 && has_partitions) {
-                        logprintfl (EUCAERROR, "Error: gaps in partition table are not allowed\n");
-                        goto error;
-                    }
-                }
-            }
-        }
-    }
 
     change_state(instance, STAGING);
 

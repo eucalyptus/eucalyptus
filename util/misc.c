@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -1840,6 +1843,25 @@ char * strdupcat (char * original, char * new)
     return ret;
 }
 
+// calculates and md5 hash of 'str' and places it into 'buf' in hex
+int str2md5str (char * buf, unsigned int buf_size, const char * str)
+{
+        if (buf_size < (MD5_DIGEST_LENGTH * 2 + 1)) 
+                return ERROR;
+
+        unsigned char md5digest [MD5_DIGEST_LENGTH];
+        if (MD5 ((const unsigned char *)str, strlen (str), md5digest)==NULL)
+                return ERROR;
+        
+        char * p = buf;
+        for (int i=0; i<MD5_DIGEST_LENGTH; i++) {
+                sprintf (p, "%02x", md5digest [i]);
+                p += 2;
+        }
+
+        return OK;
+}
+
 // returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
 // or NULL if there was an error; the string must be freed by the caller
 char * file2md5str (const char * path)
@@ -1921,4 +1943,12 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
 
     free (path_copy);
     return ret;
+}
+
+// time since 1970 in microseconds
+long long time_usec (void)
+{
+    struct timeval tv;
+    gettimeofday (&tv, NULL);
+    return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
