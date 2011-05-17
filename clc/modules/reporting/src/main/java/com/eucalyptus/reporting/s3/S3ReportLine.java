@@ -7,28 +7,26 @@ public class S3ReportLine
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
 	
-	private final String label;
-	private final String groupBy;
+	private final S3ReportLineKey key;
 	private final S3UsageSummary summary;
 	private final Units units;
 
-	S3ReportLine(String label, String groupBy,
+	S3ReportLine(S3ReportLineKey key,
 			S3UsageSummary summary, Units units)
 	{
-		this.label = label;
-		this.groupBy = groupBy;
+		this.key = key;
 		this.summary = summary;
 		this.units = units;
 	}
 
 	public String getLabel()
 	{
-		return label;
+		return key.getLabel();
 	}
 
 	public String getGroupBy()
 	{
-		return groupBy;
+		return key.getGroupByLabel();
 	}
 
 	public Long getBucketsNumMax()
