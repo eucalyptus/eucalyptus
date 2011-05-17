@@ -32,8 +32,8 @@ public class S3ReportLineGenerator
 	public List<S3ReportLine> getReportLines(Period period, GroupByCriterion groupByCrit,
 			GroupByCriterion crit, Units displayUnits)
 	{
-		Map<ReportLineKey, S3ReportLine> reportLineMap =
-			new HashMap<ReportLineKey, S3ReportLine>();
+		Map<S3ReportLineKey, S3ReportLine> reportLineMap =
+			new HashMap<S3ReportLineKey, S3ReportLine>();
 		
 		S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
 		Map<S3SnapshotKey, S3UsageSummary> usageMap = 
@@ -41,9 +41,9 @@ public class S3ReportLineGenerator
 		for (S3SnapshotKey key: usageMap.keySet()) {
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = getAttributeValue(groupByCrit, key);
-			ReportLineKey lineKey = new ReportLineKey(critVal, groupVal);
+			S3ReportLineKey lineKey = new S3ReportLineKey(critVal, groupVal);
 			if (!reportLineMap.containsKey(lineKey)) {
-				reportLineMap.put(lineKey, new S3ReportLine(critVal, groupVal,
+				reportLineMap.put(lineKey, new S3ReportLine(lineKey,
 						new S3UsageSummary(), displayUnits));
 			}
 			S3ReportLine reportLine = reportLineMap.get(lineKey);
@@ -52,7 +52,7 @@ public class S3ReportLineGenerator
 		}
 
 		final List<S3ReportLine> results = new ArrayList<S3ReportLine>();
-		for (ReportLineKey lineKey: reportLineMap.keySet()) {
+		for (S3ReportLineKey lineKey: reportLineMap.keySet()) {
 			results.add(reportLineMap.get(lineKey));
 		}
 		
@@ -74,70 +74,4 @@ public class S3ReportLineGenerator
 	}
 	
 	
-	private class ReportLineKey
-	{
-		private String critVal;
-		private String groupByVal;
-		
-		public ReportLineKey(String critVal, String groupByVal)
-		{
-			super();
-			this.critVal = critVal;
-			this.groupByVal = groupByVal;
-		}
-		
-		public String getCritVal()
-		{
-			return critVal;
-		}
-		
-		public String getGroupByVal()
-		{
-			return groupByVal;
-		}
-		
-		@Override
-		public int hashCode()
-		{
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result
-					+ ((critVal == null) ? 0 : critVal.hashCode());
-			result = prime * result
-					+ ((groupByVal == null) ? 0 : groupByVal.hashCode());
-			return result;
-		}
-		
-		@Override
-		public boolean equals(Object obj)
-		{
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ReportLineKey other = (ReportLineKey) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (critVal == null) {
-				if (other.critVal != null)
-					return false;
-			} else if (!critVal.equals(other.critVal))
-				return false;
-			if (groupByVal == null) {
-				if (other.groupByVal != null)
-					return false;
-			} else if (!groupByVal.equals(other.groupByVal))
-				return false;
-			return true;
-		}
-		
-		private S3ReportLineGenerator getOuterType()
-		{
-			return S3ReportLineGenerator.this;
-		}
-		
-	}
 }
