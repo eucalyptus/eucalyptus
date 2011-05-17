@@ -157,7 +157,7 @@ public class ImageManager {
       
       @Override
       public boolean apply( ImageInfo t ) {
-        t.getDeviceMappings( );
+        for( DeviceMapping deviceMapping : t.getDeviceMappings( ) );
         if ( showMyImages && requestAccountId.equals( t.getOwnerAccountId( ) ) ) {
           LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their images and is owner." );
         } else if ( showMyAllowedImages && t.isAllowed( requestAccount ) ) {
