@@ -2743,6 +2743,7 @@ int ccGetStateString(char *statestr, int n) {
 int ccCheckState() {
   char localDetails[1024];
   int ret=0;
+  char cmd[MAX_PATH];
 
   if (!config) {
     return(1);
@@ -2761,7 +2762,6 @@ int ccCheckState() {
   
   // shellouts
   {
-    char cmd[MAX_PATH];
     snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
     if (check_file(cmd)) {
       logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
