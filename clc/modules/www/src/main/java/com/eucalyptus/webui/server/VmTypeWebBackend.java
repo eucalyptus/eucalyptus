@@ -27,7 +27,7 @@ public class VmTypeWebBackend {
   // Common fields
   public static final ArrayList<SearchResultFieldDesc> COMMON_CONFIG_FIELD_DESCS = Lists.newArrayList( );
   static {
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "40%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
+    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "40%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( CPU, "CPUs", false, "20%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( MEMORY, "Memory (MB)", false, "20%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( DISK, "Disk (GB)", false, "20%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );

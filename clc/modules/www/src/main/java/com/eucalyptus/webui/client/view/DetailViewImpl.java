@@ -8,6 +8,8 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
@@ -59,10 +61,11 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     private TextBox textBox;
     
-    public TextBoxValue( String value, boolean enabled ) {
+    public TextBoxValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
       this.textBox = new TextBox( );
       this.textBox.setEnabled( enabled );
       this.textBox.setValue( value == null ? "" : value );
+      this.textBox.addValueChangeHandler( changeHandler );
     }
     
     @Override
@@ -86,10 +89,11 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     private PasswordTextBox textBox;
     
-    public PasswordTextBoxValue( String value, boolean enabled ) {
+    public PasswordTextBoxValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
       this.textBox = new PasswordTextBox( );
       this.textBox.setEnabled( enabled );
       this.textBox.setValue( value == null ? "" : value );
+      this.textBox.addValueChangeHandler( changeHandler );
     }
     
     @Override
@@ -113,7 +117,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     private CheckBox checkBox;
     
-    public CheckBoxValue( String value, boolean enabled ) {
+    public CheckBoxValue( String value, boolean enabled, ValueChangeHandler<Boolean> changeHandler  ) {
       this.checkBox = new CheckBox( );
       this.checkBox.setEnabled( enabled );
       if ( value != null && "true".equalsIgnoreCase( value ) ) {
@@ -121,6 +125,7 @@ public class DetailViewImpl extends Composite implements DetailView {
       } else {
         this.checkBox.setValue( false );
       }
+      this.checkBox.addValueChangeHandler( changeHandler );
     }
     
     @Override
@@ -192,6 +197,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
     LOG.log( Level.INFO, "Show data" );
     this.gridValues.clear( );
+    this.save.setVisible( false );
     Grid grid = createGrid( descs, gridValues );
     if ( grid != null ) {
       gridPanel.setWidget( grid );
@@ -229,15 +235,34 @@ public class DetailViewImpl extends Composite implements DetailView {
   private HasValueWidget getWidget( SearchResultFieldDesc desc, String val ) {
     switch ( desc.getType( ) ) {
       case TEXT:
-        return new TextBoxValue( val, desc.getEditable( ) );
+        return new TextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<String> event ) {
+            showSaveButton( );
+          }
+        } );
       case HIDDEN:
-        return new PasswordTextBoxValue( val, desc.getEditable( ) );
+        return new PasswordTextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<String> event ) {
+            showSaveButton( );
+          }
+        } );
       case BOOLEAN:
-        return new CheckBoxValue( val, desc.getEditable( ) );
+        return new CheckBoxValue( val, desc.getEditable( ), new ValueChangeHandler<Boolean>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<Boolean> event ) {
+            showSaveButton( );
+          }
+        } );
     }
     return null;
   }
 
+  private void showSaveButton( ) {
+    this.save.setVisible( true );
+  }
+  
   @Override
   public void setController( Controller controller ) {
     this.controller = controller;
@@ -247,6 +272,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   public void clear( ) {
     this.gridValues.clear( );
     this.gridPanel.clear( );
+    this.save.setVisible( false );
   }
   
 }
