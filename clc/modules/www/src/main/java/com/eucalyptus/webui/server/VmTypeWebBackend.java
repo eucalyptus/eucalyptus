@@ -65,7 +65,13 @@ public class VmTypeWebBackend {
       throw new EucalyptusServiceException( "Invalid input" );
     }
     Set<VmType> newVms = Sets.newTreeSet( );
-    newVms.add( input );
+    for ( VmType v : VmTypes.list( ) ) {
+      if ( v.getName( ).equals( input.getName( ) ) ) {
+        newVms.add( input );
+      } else {
+        newVms.add( v );
+      }
+    }
     try {
       VmTypes.update( newVms );
     } catch ( EucalyptusCloudException e ) {
