@@ -6,8 +6,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
-import com.eucalyptus.util.concurrent.AbstractListenableFuture;
 
 public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
   private static Logger LOG = Logger.getLogger( AsyncResponseFuture.class );
@@ -23,10 +23,11 @@ public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
    */
   @Override
   public boolean setException( Throwable exception ) {
-    EventRecord.caller( this.getClass( ), EventType.FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
     boolean r = false;
-    if ( !( r = super.setException( exception ) ) ) {
-      LOG.error( "Duplicate exception: " + exception.getMessage( ) );
+    if ( r = super.setException( exception ) ) {
+      EventRecord.caller( this.getClass( ), EventType.FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
+    } else {
+      Logs.exhaust( ).debug( "Duplicate exception: " + exception.getMessage( ) );
     }
     return r;
   }
@@ -63,10 +64,11 @@ public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
    */
   @Override
   public boolean set( R reply ) {
-    EventRecord.caller( this.getClass( ), EventType.FUTURE, "set(" + reply.getClass( ).getCanonicalName( ) + ")" ).trace( );
     boolean r = false;
-    if( !( r = super.set( reply ) ) ) {
-      LOG.error( "Duplicate response: " + reply );
+    if( r = super.set( reply ) ) {
+      EventRecord.caller( this.getClass( ), EventType.FUTURE, "set(" + reply.getClass( ).getCanonicalName( ) + ")" ).trace( );
+    } else {
+      Logs.exhaust( ).debug( "Duplicate response: " + reply );
     }
     return r;
   }
