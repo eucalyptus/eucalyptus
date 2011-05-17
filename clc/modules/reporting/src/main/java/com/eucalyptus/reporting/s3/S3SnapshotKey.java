@@ -17,7 +17,9 @@ public class S3SnapshotKey
 	protected final String accountId;
 	@Column(name="timestamp_ms", nullable=false)
 	protected final Long timestampMs;
-	
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot = false;
+
 	
 	protected S3SnapshotKey()
 	{
@@ -26,6 +28,15 @@ public class S3SnapshotKey
 		this.timestampMs = null;
 	}
 
+	/**
+	 * Copy constructor to avoid Hibernate badness.
+	 */
+	public S3SnapshotKey(S3SnapshotKey key)
+	{
+		this(new String(key.getOwnerId()), new String(key.getAccountId()),
+				new Long(key.getTimestampMs()));
+	}
+	
 	public S3SnapshotKey(String ownerId, String accountId, Long timestampMs)
 	{
 		this.ownerId = ownerId;
@@ -48,6 +59,16 @@ public class S3SnapshotKey
 		return timestampMs;
 	}
 
+	public Boolean getAllSnapshot()
+	{
+		return allSnapshot;
+	}
+
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
+	}
+	
 	public S3SnapshotKey newKey(long newTimestampMs)
 	{
 		return new S3SnapshotKey(ownerId, accountId, new Long(newTimestampMs));
@@ -56,8 +77,57 @@ public class S3SnapshotKey
 	@Override
 	public String toString()
 	{
-		return String.format("[owner:%s,account:%s,timestamp:%d]", ownerId,
-				accountId, timestampMs);
+		return String.format("[owner:%s,account:%s,timestamp:%d,all:%b]", ownerId,
+				accountId, timestampMs, allSnapshot);
 	}
 
+	@Override
+	public int hashCode()
+	{
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((accountId == null) ? 0 : accountId.hashCode());
+		result = prime * result
+				+ ((allSnapshot == null) ? 0 : allSnapshot.hashCode());
+		result = prime * result + ((ownerId == null) ? 0 : ownerId.hashCode());
+		result = prime * result
+				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		S3SnapshotKey other = (S3SnapshotKey) obj;
+		if (accountId == null) {
+			if (other.accountId != null)
+				return false;
+		} else if (!accountId.equals(other.accountId))
+			return false;
+		if (allSnapshot == null) {
+			if (other.allSnapshot != null)
+				return false;
+		} else if (!allSnapshot.equals(other.allSnapshot))
+			return false;
+		if (ownerId == null) {
+			if (other.ownerId != null)
+				return false;
+		} else if (!ownerId.equals(other.ownerId))
+			return false;
+		if (timestampMs == null) {
+			if (other.timestampMs != null)
+				return false;
+		} else if (!timestampMs.equals(other.timestampMs))
+			return false;
+		return true;
+	}
+
+	
 }

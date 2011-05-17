@@ -38,6 +38,26 @@ public class S3UsageSummary
 	{
 		return objectsMegsSecs;
 	}
+	
+	public void setBucketsNumMax(long bucketsNumMax)
+	{
+		this.bucketsNumMax = bucketsNumMax;
+	}
+
+	public void setObjectsMegsMax(long objectsMegsMax)
+	{
+		this.objectsMegsMax = objectsMegsMax;
+	}
+	
+	public void addObjectsMegsSecs(long objectsMegsSecs)
+	{
+		this.objectsMegsSecs += objectsMegsSecs;
+	}
+
+	public void setObjectsMegsSecs(long objectsMegsSecs)
+	{
+		this.objectsMegsSecs = objectsMegsSecs;
+	}
 
 	public void updateValues(long objectsMegs, long bucketsNum, long durationSecs)
 	{

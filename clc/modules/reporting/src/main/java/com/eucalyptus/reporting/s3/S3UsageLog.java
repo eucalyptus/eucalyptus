@@ -265,5 +265,204 @@ public class S3UsageLog
 			throw new RuntimeException(ex);
 		}
 	}
+	
+	/**
+	 * <p>Gather a Map of all S3 resource usage for a period.
+	 */
+    public Map<S3SnapshotKey, S3UsageSummary> getUsageSummaryMap(Period period)
+    {
+    	log.info("GetUsageSummaryMap period:" + period);
+    	final Map<S3SnapshotKey, S3UsageSummary> usageMap =
+    		new HashMap<S3SnapshotKey, S3UsageSummary>();
+
+
+    	EntityWrapper<S3UsageSummary> entityWrapper =
+			EntityWrapper.get(S3UsageSummary.class);
+		try {
+
+			/* Find the latest snapshot before the period beginning, by
+			 * iteratively querying before the period beginning, moving
+			 * backward in exponentially growing intervals
+			 */
+			long foundTimestampMs = 0l;
+	    	final long oneHourMs = 60*60*1000;
+			for ( int i=2 ;
+				  (period.getBeginningMs() - oneHourMs*(long)i) > 0 ;
+				  i=(int)Math.pow(i, 2))
+			{
+				
+				long startingMs = period.getBeginningMs() - (oneHourMs*i);
+				@SuppressWarnings("rawtypes")
+				Iterator iter =
+					entityWrapper.createQuery(
+						"from S3UsageSnapshot as sus"
+						+ " WHERE sus.key.timestampMs > ?"
+						+ " AND sus.key.timestampMs < ?"
+						+ " AND sus.key.allSnapshot = true")
+						.setLong(0, new Long(startingMs))
+						.setLong(1, new Long(period.getBeginningMs()))
+						.iterate();
+				while (iter.hasNext()) {
+					S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+					foundTimestampMs = snapshot.getSnapshotKey().getTimestampMs();
+					log.info("Found latest timestamp before beginning:"
+							+ foundTimestampMs);
+				}
+				if (foundTimestampMs != 0l) break;
+				
+			}
+
+			/* Start query from last snapshot before report beginning, iterate
+			 * through the data, and accumulate all reporting info through the
+			 * report end. We will accumulate a fraction of a snapshot at the
+			 * beginning and end, since report boundaries will not likely
+			 * coincide with sampling period boundaries.
+			 */
+			Map<S3SnapshotKey,S3DataAccumulator> dataAccumulatorMap =
+				new HashMap<S3SnapshotKey,S3DataAccumulator>();
+			
+			@SuppressWarnings("rawtypes")
+			Iterator iter = entityWrapper.createQuery(
+					"from S3UsageSnapshot as sus"
+					+ " WHERE sus.key.timestampMs > ?"
+					+ " AND sus.key.timestampMs < ?")
+					.setLong(0, new Long(foundTimestampMs))
+					.setLong(1, new Long(period.getEndingMs()))
+					.iterate();
+			
+			while (iter.hasNext()) {
+				
+				S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+				S3SnapshotKey key = snapshot.getSnapshotKey();
+				key = new S3SnapshotKey(key); //use copy to prevent hibernate writes
+				key.setAllSnapshot(false);
+
+				if ( key.getTimestampMs() < period.getBeginningMs()
+					 || !dataAccumulatorMap.containsKey(key) ) {
+
+					//new accumulator, discard earlier accumulators from before report beginning
+					S3DataAccumulator accumulator =
+						new S3DataAccumulator(key.getTimestampMs(),
+								snapshot.getUsageData(), new S3UsageSummary());
+					dataAccumulatorMap.put(key, accumulator);
+
+				} else {
+					
+					/* Within interval; accumulate resource usage by adding
+					 * to accumulator, for this key.
+					 */
+					S3DataAccumulator accumulator =	dataAccumulatorMap.get( key );
+
+					/* Extrapolate fractional usage for snapshots which occurred
+					 * before report beginning.
+					 */
+					long beginningMs = Math.max( period.getBeginningMs(),
+							accumulator.getLastTimestamp() );
+					//query above specifies timestamp is before report end
+					long endingMs = key.getTimestampMs()-1;
+					long durationSecs = (endingMs - beginningMs) / 1000;
+
+					accumulator.accumulateUsage( durationSecs );		
+					accumulator.setLastTimestamp(key.getTimestampMs());
+					accumulator.setLastUsageData(snapshot.getUsageData());
+					log.info("Accumulate usage, begin:" + beginningMs
+							+ " end:" + endingMs);
+
+				}
+
+			}
+
+			/* Accumulate fractional data usage at end of reporting period.
+			 */
+			for ( S3SnapshotKey key: dataAccumulatorMap.keySet() ) {
+				
+				S3DataAccumulator accumulator =	dataAccumulatorMap.get( key );
+				long beginningMs = Math.max( period.getBeginningMs(),
+						accumulator.getLastTimestamp() );
+				long endingMs = period.getEndingMs() - 1;
+				long durationSecs = ( endingMs-beginningMs ) / 1000;
+				accumulator.accumulateUsage( durationSecs );
+				log.info("Accumulate end usage, begin:" + beginningMs
+						+ " end:" + endingMs);
+
+				//add to results
+				usageMap.put( key, accumulator.getCurrentSummary() );
+			}
+			
+
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			log.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+
+        return usageMap;
+    }
+
+    private class S3DataAccumulator
+    {
+    	private Long lastTimestamp;
+    	private S3UsageData lastUsageData;
+    	private S3UsageSummary currentSummary;
+    	
+    	public S3DataAccumulator(Long lastTimestamp,
+				S3UsageData lastUsageData, S3UsageSummary currentSummary)
+		{
+			super();
+			this.lastTimestamp = lastTimestamp;
+			this.lastUsageData = lastUsageData;
+			this.currentSummary = currentSummary;
+		}
+
+		public Long getLastTimestamp()
+		{
+			return lastTimestamp;
+		}
+		
+    	public void setLastTimestamp(Long lastTimestamp)
+		{
+			this.lastTimestamp = lastTimestamp;
+		}
+		
+		public void setLastUsageData(S3UsageData lastUsageData)
+		{
+			this.lastUsageData = lastUsageData;
+		}
+
+		public S3UsageSummary getCurrentSummary()
+		{
+			return currentSummary;
+		}
+		
+		/**
+		 * <p>Accumulate usage. We've been holding on to the last usage data
+		 * seen. Now we know how long that usage data prevails. Add the usage
+		 * to the summary. 
+		 */
+    	public void accumulateUsage( long durationSecs )
+    	{
+    		
+    		if (lastUsageData != null) {
+    			
+				currentSummary.addObjectsMegsSecs(
+						lastUsageData.getObjectsMegs() * durationSecs);
+
+				currentSummary.setObjectsMegsMax(
+						Math.max(currentSummary.getObjectsMegsMax(),
+								 lastUsageData.getObjectsMegs()));
+				currentSummary.setBucketsNumMax(
+						Math.max(currentSummary.getBucketsNumMax(),
+								lastUsageData.getBucketsNum()));
+				this.lastUsageData = null;
+				log.info("Accumulate "
+						+ (lastUsageData.getObjectsMegs() * durationSecs));
+
+    		}    		
+    	}
+    	
+    }
+
+    
 
 }

@@ -19,6 +19,15 @@ public class S3UsageData
 		this.objectsMegs    = new Long(0);
 	}
 
+	/**
+	 * Copy constructor to avoid Hibernate badness.
+	 */
+	public S3UsageData(S3UsageData usageData)
+	{
+		this(new Long(usageData.getBucketsNum()), new Long(usageData.getObjectsNum()),
+				new Long(usageData.getObjectsMegs()));
+	}
+	
 	public S3UsageData(Long bucketsNum, Long objectsNum, Long objectsMegs)
 	{
 		if (bucketsNum == null || objectsNum == null || objectsMegs == null)
