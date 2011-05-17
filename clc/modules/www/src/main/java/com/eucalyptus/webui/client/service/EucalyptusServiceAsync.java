@@ -19,5 +19,7 @@ public interface EucalyptusServiceAsync {
   void lookupAccount( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
   void lookupConfiguration( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void setConfiguration( Session session, SearchResultRow config, AsyncCallback<Void> callback );
   
 }

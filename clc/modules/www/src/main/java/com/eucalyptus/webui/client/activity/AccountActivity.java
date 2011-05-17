@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.activity;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +16,7 @@ import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.SearchRangeChangeHandler;
 import com.google.gwt.activity.shared.AbstractActivity;
@@ -23,7 +25,7 @@ import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
-public class AccountActivity extends AbstractActivity implements AccountView.Presenter {
+public class AccountActivity extends AbstractActivity implements AccountView.Presenter, DetailView.Presenter {
   
   public static final String TITLE = "USER ACCOUNTS";
   
@@ -121,6 +123,12 @@ public class AccountActivity extends AbstractActivity implements AccountView.Pre
   @Override
   public int getPageSize( ) {
     return this.pageSize;
+  }
+
+  @Override
+  public void saveValue( ArrayList<HasValueWidget> values ) {
+    // TODO Auto-generated method stub
+    
   }
   
 }

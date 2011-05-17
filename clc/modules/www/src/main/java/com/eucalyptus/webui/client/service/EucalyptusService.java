@@ -64,6 +64,15 @@ public interface EucalyptusService extends RemoteService {
   SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
   /**
+   * Set system configurations.
+   * 
+   * @param session
+   * @param config
+   * @throws EucalyptusServiceException
+   */
+  void setConfiguration( Session session, SearchResultRow config ) throws EucalyptusServiceException;
+  
+  /**
    * Search accounts.
    * 
    * @param session

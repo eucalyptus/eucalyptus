@@ -4,6 +4,6 @@ import java.util.ArrayList;
 
 public interface ValueSaveHandler {
 
-  void saveValue( ArrayList<String> values );
+  void saveValue( ArrayList<HasValueWidget> values );
   
 }

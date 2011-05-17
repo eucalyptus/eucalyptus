@@ -35,12 +35,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     String grid( );
   }
   
-  interface HasValue {
-    String getValue( );
-    Widget getWidget( );
-  }
-  
-  class HiddenValue implements HasValue {
+  class HiddenValue implements HasValueWidget {
     
     private String value; 
     
@@ -60,7 +55,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class TextBoxValue implements HasValue {
+  class TextBoxValue implements HasValueWidget {
     
     private TextBox textBox;
     
@@ -80,9 +75,14 @@ public class DetailViewImpl extends Composite implements DetailView {
       return textBox;
     }
     
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
   }
   
-  class PasswordTextBoxValue implements HasValue {
+  class PasswordTextBoxValue implements HasValueWidget {
     
     private PasswordTextBox textBox;
     
@@ -102,9 +102,14 @@ public class DetailViewImpl extends Composite implements DetailView {
       return textBox;
     }
     
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
   }
   
-  class CheckBoxValue implements HasValue {
+  class CheckBoxValue implements HasValueWidget {
     
     private CheckBox checkBox;
     
@@ -128,6 +133,11 @@ public class DetailViewImpl extends Composite implements DetailView {
       return checkBox;
     }
     
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
   }
   
   private static final String LABEL_WIDTH = "36%";
@@ -147,7 +157,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   private Controller controller;
   private Presenter presenter;
   
-  private ArrayList<HasValue> gridValues = new ArrayList<HasValue>( );
+  private ArrayList<HasValueWidget> gridValues = new ArrayList<HasValueWidget>( );
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -202,7 +212,7 @@ public class DetailViewImpl extends Composite implements DetailView {
       SearchResultFieldDesc desc = descs.get( i );
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
-        HasValue widget = getWidget( desc, val );
+        HasValueWidget widget = getWidget( desc, val );
         if ( widget != null ) {
           LOG.log( Level.INFO, "Adding row " + row + " with " + widget.getClass( ).getName( ) );
           gridValues.add( widget );
@@ -217,7 +227,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     return grid;
   }
   
-  private HasValue getWidget( SearchResultFieldDesc desc, String val ) {
+  private HasValueWidget getWidget( SearchResultFieldDesc desc, String val ) {
     switch ( desc.getType( ) ) {
       case TEXT:
         return new TextBoxValue( val, desc.getEditable( ) );

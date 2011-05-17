@@ -101,21 +101,6 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     tags.add( new CategoryTag( "Miscs", list ) );    
     return tags;
   }
-  
-  @Override
-  public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
-    SearchResult result = new SearchResult( );
-    result.setDescs( ConfigurationWebBackend.COMMON_CONFIG_FIELD_DESCS );
-    result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
-    result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
-    result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
-    result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
-    result.setTotalSize( result.length( ) );
-    result.setRange( range );
-    LOG.debug( "Configuration result: " + result );
-    return result;
-  }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
                                                                    new SearchResultRow( Arrays.asList( "test1", "1" ) ),
@@ -164,6 +149,45 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     }
     
     return result;
+  }
+
+  
+  @Override
+  public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    verifySession( session );
+    SearchResult result = new SearchResult( );
+    result.setDescs( ConfigurationWebBackend.COMMON_CONFIG_FIELD_DESCS );
+    result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
+    result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
+    result.setTotalSize( result.length( ) );
+    result.setRange( range );
+    LOG.debug( "Configuration result: " + result );
+    return result;
+  }
+  
+  @Override
+  public void setConfiguration( Session session, SearchResultRow config ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( config == null ) {
+      throw new EucalyptusServiceException( "Empty config to save" );
+    }
+    String type = config.getField( ConfigurationWebBackend.TYPE_FIELD_INDEX );
+    if ( type == null ) {
+      throw new EucalyptusServiceException( "Empty configuration type" );
+    }
+    if ( ConfigurationWebBackend.CLOUD_TYPE.equals( type ) ) {
+      ConfigurationWebBackend.setCloudConfiguration( config );
+    } else if ( ConfigurationWebBackend.CLUSTER_TYPE.equals( type ) ) {
+      ConfigurationWebBackend.setClusterConfiguration( config );
+    } else if ( ConfigurationWebBackend.STORAGE_TYPE.equals( type ) ) {
+      ConfigurationWebBackend.setStorageConfiguration( config );
+    } else if ( ConfigurationWebBackend.WALRUS_TYPE.equals( type ) ) {
+      ConfigurationWebBackend.setWalrusConfiguration( config );
+    } else {
+      throw new EucalyptusServiceException( "Wrong configuration type: " + type );
+    }
   }
 
 }

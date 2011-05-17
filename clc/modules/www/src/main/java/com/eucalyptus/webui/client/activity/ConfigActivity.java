@@ -12,6 +12,7 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.google.gwt.activity.shared.AbstractActivity;
@@ -19,6 +20,7 @@ import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
+import com.google.gwt.user.client.ui.HasValue;
 
 public class ConfigActivity extends AbstractActivity implements ConfigView.Presenter, DetailView.Presenter {
   
@@ -34,6 +36,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   private int pageSize;
   
   private String search;
+  private SearchRange range;
   private SearchResultCache cache = new SearchResultCache( );
   
   private AcceptsOneWidget container;
@@ -100,6 +103,7 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
 
   @Override
   public void handleRangeChange( SearchRange range ) {
+    this.range = range;
     SearchResult result = cache.lookup( range );
     if ( result != null ) {
       // Use the cached result if search range does not change
@@ -133,16 +137,44 @@ public class ConfigActivity extends AbstractActivity implements ConfigView.Prese
   public int getPageSize( ) {
     return pageSize;
   }
-
-  @Override
-  public void saveValue( ArrayList<String> values ) {
-    LOG.log( Level.INFO, "Saving values: " + values );
-  }
   
   @Override
   public void onStop( ) {
     this.clientFactory.getShellView( ).getDetailView( ).clear( );
     this.clientFactory.getShellView( ).hideDetail( );
   }
-  
+
+  @Override
+  public void saveValue( ArrayList<HasValueWidget> values ) {
+    if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
+      LOG.log( Level.WARNING, "No valid values or empty selection" );
+    }
+    LOG.log( Level.INFO, "Saving: " + values );
+    SearchResultRow result = new SearchResultRow( );
+    result.setExtraFieldDescs( this.currentSelected.getExtraFieldDescs( ) );
+    for ( int i = 0; i < values.size( ); i++ ) {
+      result.addField( values.get( i ).getValue( ) );
+    }
+    this.clientFactory.getBackendService( ).setConfiguration( this.clientFactory.getLocalSession( ).getSession( ), result, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable cause ) {
+        LOG.log( Level.WARNING, "Failed to set configuration.", cause );
+      }
+
+      @Override
+      public void onSuccess( Void arg0 ) {
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
+  protected void reloadCurrentRange( ) {
+    if ( this.range != null ) {
+      cache.clear( );
+      doSearch( this.search, range );      
+    }
+  }
+
 }

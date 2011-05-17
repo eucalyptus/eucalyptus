@@ -72,6 +72,8 @@ public class ConfigurationWebBackend {
   public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE_HIDDEN = "KEYVALUEHIDDEN";
   public static final String COMPONENT_PROPERTY_TYPE_BOOLEAN = "BOOLEAN";
   
+  public static final int TYPE_FIELD_INDEX = 2;
+  
   // Common fields
   public static final ArrayList<SearchResultFieldDesc> COMMON_CONFIG_FIELD_DESCS = Lists.newArrayList( );
   static {

@@ -70,11 +70,15 @@ public class SearchResultCache {
     return result;
   }
 
-  public void restart( SearchResult newResult ) {
+  public void clear( ) {
     this.sort = NULL_SORT;
     this.totalSize = 0;
     this.descs.clear( );
-    this.rows.clear( );
+    this.rows.clear( );    
+  }
+  
+  public void restart( SearchResult newResult ) {
+    clear( );
     if ( newResult != null ) {
       this.sort = newResult.getRange( );
       this.totalSize = newResult.getTotalSize( );
