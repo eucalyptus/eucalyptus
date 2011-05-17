@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
@@ -19,7 +20,7 @@ public class Transactions {
   public static <T> EntityWrapper<T> join( ) {
     return ( EntityWrapper<T> ) dbtl.get( );
   }
-
+  
   /**
    * TODO:GRZE: make this friendly wrt multiple types
    * 
@@ -171,16 +172,21 @@ public class Transactions {
     }
   }
   
-  public static <T> List<T> filter( T search, Predicate<T> c ) {
+  public static <T> List<T> filter( T search, Predicate<T> condition ) {
+    return filteredTransform( search, condition, (Function<T,T>) Functions.identity( ) );
+  }
+  
+  public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) {
     assertThat( search, notNullValue( ) );
-    List<T> res = Lists.newArrayList( );
-    EntityWrapper<T> db = EntityWrapper.get( search );
-    dbtl.set( db );
+    assertThat( condition, notNullValue( ) );
+    assertThat( transform, notNullValue( ) );
+    List<O> res = Lists.newArrayList( );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       List<T> queryResults = db.query( search );
       for ( T t : queryResults ) {
-        if ( c.apply( t ) ) {
-          res.add( t );
+        if ( condition.apply( t ) ) {
+          res.add( transform.apply( t ) );
         }
       }
       db.commit( );
@@ -192,5 +198,4 @@ public class Transactions {
     }
     return res;
   }
-  
 }

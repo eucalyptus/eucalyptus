@@ -153,11 +153,10 @@ public class ImageManager {
     final boolean showPublic = executable.remove( "all" );
     final boolean showMyImages = owners.remove( "self" );
     final boolean showMyAllowedImages = executable.remove( "self" );
-    List<ImageInfo> images = Transactions.filter( new ImageInfo( ), new Predicate<ImageInfo>( ) {
+    final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
       
       @Override
       public boolean apply( ImageInfo t ) {
-        for( DeviceMapping deviceMapping : t.getDeviceMappings( ) );
         if ( showMyImages && requestAccountId.equals( t.getOwnerAccountId( ) ) ) {
           LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their images and is owner." );
         } else if ( showMyAllowedImages && t.isAllowed( requestAccount ) ) {
@@ -193,11 +192,20 @@ public class ImageManager {
         }
         return true;
       }
-    } );
-    List<ImageDetails> imageDetailsList = Lists.transform( images, Images.TO_IMAGE_DETAILS );
+    };
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), imageFilter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
+  }
+  
+  public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {
+    return new Predicate<BlockDeviceMappingItemType>( ) {
+      @Override
+      public boolean apply( BlockDeviceMappingItemType input ) {
+        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
+      }
+    };
   }
   
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
@@ -213,22 +221,16 @@ public class ImageManager {
       }
     }
     ImageInfo imageInfo = null;
-    final String rootDevName = request.getRootDeviceName( );
+    final String rootDevName = ( request.getRootDeviceName( ) != null ) ? request.getRootDeviceName( ) : "/dev/sda1";
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
-    Predicate<BlockDeviceMappingItemType> checkEbsRoot = new Predicate<BlockDeviceMappingItemType>( ) {
-      
-      @Override
-      public boolean apply( BlockDeviceMappingItemType input ) {
-        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
-      }
-    };
     if ( request.getImageLocation( ) != null ) {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), manifest );
-    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), checkEbsRoot ) ) {
-      BlockDeviceMappingItemType rootBlockDevice = Iterables.find( request.getBlockDeviceMappings( ), checkEbsRoot );
+      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), null )
+      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), manifest,  );
+    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), findEbsRoot( rootDevName ) ) ) {
+      BlockDeviceMappingItemType rootBlockDevice = Iterables.find( request.getBlockDeviceMappings( ), findEbsRoot( rootDevName ) );
       imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootBlockDevice );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
@@ -422,11 +424,13 @@ public class ImageManager {
     if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to create an image from instance " + request.getInstanceId( ) + " as " + ctx.getUser( ).getName( ) );
     }
-    if( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
-      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: " + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
+    if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
+                                          + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
     }
-    if( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
-      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
+    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
+                                          + vm.getState( ).getName( ) );
     }
     Cluster cluster = null;
     try {
