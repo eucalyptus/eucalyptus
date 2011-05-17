@@ -5,10 +5,6 @@ package com.eucalyptus.reporting.s3;
  * time. It contains statistics of aggregate usage like megs-seconds and maximum
  * usage.
  * 
- * <p>S3UsageSummary is not a bean. S3UsageSummary <i>accumulates</i>
- * data through the <pre>update</pre> method and then returns resulting
- * statistics using the various <pre>get</pre> methods.
- * 
  * @author tom.werges
  */
 public class S3UsageSummary
@@ -65,6 +61,14 @@ public class S3UsageSummary
 		this.bucketsNumMax    = Math.max(this.bucketsNumMax, bucketsNum);
 		
 		this.objectsMegsSecs   += objectsMegs   * durationSecs;
+	}
+	
+	void addUsage(S3UsageSummary summary)
+	{
+		this.objectsMegsMax   = Math.max(this.objectsMegsMax, summary.getObjectsMegsMax());
+		this.bucketsNumMax    = Math.max(this.bucketsNumMax, summary.getBucketsNumMax());
+		
+		this.objectsMegsSecs  += summary.getObjectsMegsSecs();		
 	}
 	
 	@Override
