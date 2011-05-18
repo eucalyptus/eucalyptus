@@ -10,6 +10,7 @@ import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.ConfigView;
+import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.VmTypeView;
@@ -120,5 +121,10 @@ public interface ClientFactory {
    * @return the impl. of VmTypeView
    */
   VmTypeView getVmTypeView( );
+  
+  /**
+   * @return the impl. of ReportView
+   */
+  ReportView getReportView( );
   
 }

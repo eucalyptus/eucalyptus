@@ -274,5 +274,10 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.gridPanel.clear( );
     this.save.setVisible( false );
   }
+
+  @Override
+  public void disableSave( ) {
+    this.save.setVisible( false );
+  }
   
 }

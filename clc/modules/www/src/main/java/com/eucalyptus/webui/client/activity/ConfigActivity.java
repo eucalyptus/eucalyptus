@@ -96,6 +96,7 @@ public class ConfigActivity extends AbstractSearchResultActivity implements Conf
 
       @Override
       public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
       }
       

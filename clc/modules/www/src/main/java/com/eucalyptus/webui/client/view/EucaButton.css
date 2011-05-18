@@ -163,3 +163,10 @@ a.big.button span.icon,button.big span.icon {
 @sprite a.button:hover span.icon.floppy,button:hover span.icon.floppy {
     gwt-image:'floppyWhite';
 }
+
+@sprite a.button span.icon.report,button span.icon.report {
+    gwt-image:'reportGray';
+}
+@sprite a.button:hover span.icon.report,button:hover span.icon.report {
+    gwt-image:'reportWhite';
+}

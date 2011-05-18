@@ -2,6 +2,7 @@ package com.eucalyptus.webui.client.view;
 
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.CssResource.NotStrict;
 import com.google.gwt.resources.client.ImageResource;
 
 public interface GlobalResources extends ClientBundle {
@@ -21,6 +22,7 @@ public interface GlobalResources extends ClientBundle {
     String negative( );
     String big( );
     String floppy( );
+    String report( );
   }
   
   @Source( "EucaButton.css" )
@@ -40,5 +42,10 @@ public interface GlobalResources extends ClientBundle {
   ImageResource floppyGray( );
   @Source( "image/floppy_12x12_white.png" )
   ImageResource floppyWhite( );
+
+  @Source( "image/article_12x12_gray.png" )
+  ImageResource reportGray( );
+  @Source( "image/article_12x12_white.png" )
+  ImageResource reportWhite( );
   
 }

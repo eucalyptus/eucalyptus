@@ -124,4 +124,22 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return null;
   }
 
+  @Override
+  public void setConfiguration( Session session, SearchResultRow config ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public SearchResult lookupVmType( Session session, String query, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void setVmType( Session session, SearchResultRow result ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
 }

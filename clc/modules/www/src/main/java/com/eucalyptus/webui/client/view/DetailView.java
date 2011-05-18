@@ -9,7 +9,9 @@ public interface DetailView extends IsWidget, Clearable {
   void setTitle( String title );
   
   void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values );
-    
+  
+  void disableSave( );
+  
   void setPresenter( Presenter presenter );
 
   void setController( Controller controller );

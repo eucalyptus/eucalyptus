@@ -4,12 +4,14 @@ import com.eucalyptus.webui.client.activity.AccountActivity;
 import com.eucalyptus.webui.client.activity.ErrorSinkActivity;
 import com.eucalyptus.webui.client.activity.LogoutActivity;
 import com.eucalyptus.webui.client.activity.ConfigActivity;
+import com.eucalyptus.webui.client.activity.ReportActivity;
 import com.eucalyptus.webui.client.activity.StartActivity;
 import com.eucalyptus.webui.client.activity.VmTypeActivity;
 import com.eucalyptus.webui.client.place.AccountPlace;
 import com.eucalyptus.webui.client.place.ErrorSinkPlace;
 import com.eucalyptus.webui.client.place.LogoutPlace;
 import com.eucalyptus.webui.client.place.ConfigPlace;
+import com.eucalyptus.webui.client.place.ReportPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.place.VmTypePlace;
 import com.google.gwt.activity.shared.Activity;
@@ -39,6 +41,8 @@ public class MainActivityMapper implements ActivityMapper {
       return new AccountActivity( ( AccountPlace )place, this.clientFactory );
     } else if ( place instanceof VmTypePlace ) {
       return new VmTypeActivity( ( VmTypePlace )place, this.clientFactory );
+    } else if ( place instanceof ReportPlace ) {
+      return new ReportActivity( ( ReportPlace )place, this.clientFactory );
     }
     return null;
   }

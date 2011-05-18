@@ -21,6 +21,8 @@ import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.LoginViewImpl;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.ConfigViewImpl;
+import com.eucalyptus.webui.client.view.ReportView;
+import com.eucalyptus.webui.client.view.ReportViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
@@ -66,6 +68,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private ErrorSinkView errorSinkView;
 	private AccountView accountView;
 	private VmTypeView vmTypeView;
+	private ReportView reportView;
 
   @Override
   public LocalSession getLocalSession( ) {
@@ -167,6 +170,14 @@ public class ClientFactoryImpl implements ClientFactory {
       vmTypeView = new VmTypeViewImpl( );
     }
     return vmTypeView;
+  }
+  
+  @Override
+  public ReportView getReportView( ) {
+    if ( reportView == null ) {
+      reportView = new ReportViewImpl( );
+    }
+    return reportView;
   }
   
   @Override

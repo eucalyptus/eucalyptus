@@ -66,6 +66,7 @@ public class VmTypeActivity extends AbstractSearchResultActivity implements VmTy
 
       @Override
       public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
       }
       
