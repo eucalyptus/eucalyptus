@@ -1895,15 +1895,8 @@ char * file2md5str (const char * path)
     return md5string;
 }
 
-// calculates a Jenkins hash of 'str' and places it into 'buf' in hex
-int hexjenkins (char * buf, unsigned int buf_size, const char * str)
-{
-        snprintf (buf, buf_size, "%08x", jenkins (str, strlen (str)));
-        return OK;
-}
-
 // Jenkins hash function (from http://en.wikipedia.org/wiki/Jenkins_hash_function)
-uint32_t jenkins (char * key, size_t len)
+uint32_t jenkins (const char * key, size_t len)
 {
         uint32_t hash, i;
         for (hash = i = 0; i < len; ++i) {
@@ -1916,6 +1909,13 @@ uint32_t jenkins (char * key, size_t len)
         hash += (hash << 15);
         
         return hash;
+}
+
+// calculates a Jenkins hash of 'str' and places it into 'buf' in hex
+int hexjenkins (char * buf, unsigned int buf_size, const char * str)
+{
+        snprintf (buf, buf_size, "%08x", jenkins (str, strlen (str)));
+        return OK;
 }
 
 // given path=A/B/C and only A existing, create A/B and, unless

@@ -1374,7 +1374,7 @@ blockblob * blockblob_open ( blobstore * bs,
     if (blobstore_lock(bs, timeout_usec)==-1) { // lock it so we can create blob's file atomically
         goto free; // failed to obtain a lock on the blobstore
     }
-    int created_directory = ensure_blockblob_metadata_path (bs, bb->id);
+    int created_directory = ensure_blockblob_metadata_path (bs, bb->id); // TODO: maybe don't create directories needlessly if flags==0?
     if (created_directory==-1) {
         propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
         goto unlock;

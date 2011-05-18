@@ -84,4 +84,4 @@ artifact * art_free (artifact * a);
 int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, const char * key);
-int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix);
+int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);

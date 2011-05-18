@@ -300,6 +300,7 @@ int diskutil_unloop (const char * lodev)
 {
     int ret = OK;
     char * output;
+    int retried = 0;
 
     logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
 
@@ -316,11 +317,14 @@ int diskutil_unloop (const char * lodev)
             free (output);
             break;
         }
-        logprintfl (EUCAINFO, "WARNING: cannot dettach loop device %s (will retry)\n", lodev);
+        logprintfl (EUCAINFO, "WARNING: cannot detach loop device %s (will retry)\n", lodev);
+        retried++;
         sleep (1);
     }
     if (ret == ERROR) {
       logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
+    } else if (retried) {
+        logprintfl (EUCAINFO, "succeeded to detach %s after %d retries\n", lodev, retried);
     }
 
     return ret;

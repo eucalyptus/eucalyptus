@@ -852,79 +852,40 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define STORE_TIMEOUT_USEC 1000000LL*5
+#define STORE_TIMEOUT_USEC 10
 
-static int // returns READER, WRITER, or ERROR
-find_or_create_blob ( // either opens a blockblob as a reader or, failing that, creates it
+static int // returns OK or BLOBSTORE_ERROR_ error codes
+find_or_create_blob ( // either opens a blockblob or creates it
+                     int do_create, // create if non-zero, open if 0
                      blobstore * bs, // the blobstore in which to open/create blockblob
                      const char * id, // id of the blockblob
                      long long size_bytes, // size of the blockblob
                      const char * sig, // signature of the blockblob
                      blockblob ** bbp) // RESULT: opened blockblob handle or NULL if ERROR is returned
 {
-    long long started = time_usec();
     blockblob * bb = NULL;
-    int ret = ERROR;
+    int ret = OK;
     
-    int flags = 0; // start as a reader
-    long long timeout = STORE_TIMEOUT_USEC; // with a long timeout
-    do {
-        bb = blockblob_open (bs, id, size_bytes, flags, sig, timeout);
-        if (bb) { // success!
-            if (flags) {
-                ret = WRITER;
-            } else {
-                ret = READER;
-            }
-            * bbp = bb;
-            break;
-        }
-        
-        // open failed
-        int err = blobstore_get_error();
-        
-        if (err==BLOBSTORE_ERROR_NOENT) { // entry does not exist
-            flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // try creating
-            timeout = 0LL;
+    int flags = 0; // for opening
+    if (do_create) {
+        flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // for creating
+    }
+    bb = blockblob_open (bs, id, size_bytes, flags, sig, STORE_TIMEOUT_USEC);
+    if (bb) { // success!
+        * bbp = bb;
+    } else {
+        ret = blobstore_get_error();
+    }
 
-        } else if (err==BLOBSTORE_ERROR_SIGNATURE) { // wrong signature or length
-            
-            // open with any signature and delete the old one
-            bb = blockblob_open (bs, id, 0, 0, NULL, 0); // TODO: should there be a non-zero timeout?
-            if (bb && blockblob_delete (bb, 0) == 0) {
-                flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // try creating
-                bb = NULL; // ok because delete frees the handle
-            } else {
-                logprintfl (EUCAERROR, "error: failed to delete blob '%s' with non-matching signature\n", id);
-                break; // give up
-            }
-
-        } else if (err==BLOBSTORE_ERROR_NOSPC) { // no space in the cache
-            logprintfl (EUCAWARN, "error: insufficient space for blob '%s'\n", id);
-            break; // give up
-            
-        } else if (err==BLOBSTORE_ERROR_AGAIN) {
-            if (timeout>0) { // timed out waiting
-                logprintfl (EUCAWARN, "error: timed out waiting for blob '%s'\n", id);
-                break; // give up
-
-            } else { // maybe the write timed out, try reading again
-                flags = 0; 
-                timeout = STORE_TIMEOUT_USEC;
-            }                
-        } else {
-            logprintfl (EUCAWARN, "error; unkown error while preparing artifacts\n");
-            break;
-        }
-        usleep (100); // safety sleep 
-
-    } while ((time_usec()-started) < STORE_TIMEOUT_USEC);
-    
     return ret;
 }
 
-static int // returns READER, WRITER, or ERROR
+#define FIND 0
+#define CREATE 1
+
+static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_artifact ( // finds and opens or creates artifact's blob either in cache or in work blobstore
+                         int do_create, // create if non-zero, open if 0
                          const artifact * a, // artifact to create or open
                          blobstore * work_bs, // work blobstore 
                          blobstore * cache_bs, // OPTIONAL cache blobstore
@@ -945,86 +906,114 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     
     // first, try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
-        ret = find_or_create_blob (cache_bs, id_cache, a->size_bytes, a->sig, bbp);
+        ret = find_or_create_blob (do_create, cache_bs, id_cache, a->size_bytes, a->sig, bbp);
+
+        // some errors from cache are OK
+        if (ret!=BLOBSTORE_ERROR_NOENT &&
+            ret!=BLOBSTORE_ERROR_EXIST &&
+            ret!=BLOBSTORE_ERROR_NOSPC &&
+            ret!=BLOBSTORE_ERROR_AGAIN &&
+            ret!=BLOBSTORE_ERROR_SIGNATURE) {
+            return ret; // either OK or some bad error
+        }
     }
     
-    if (ret==ERROR) { // we don't care what the error is, I guess
-        ret = find_or_create_blob (work_bs, id_work, a->size_bytes, a->sig, bbp);
-    }
-
-    return ret;
+    return find_or_create_blob (do_create, work_bs, id_work, a->size_bytes, a->sig, bbp);
 }
 
 
-int // returns OK or ERROR
+int // returns OK or BLOBSTORE_ERROR_ error codes
 art_implement_tree ( // traverse artifact tree and create/download/combine artifacts
                     artifact * root, // root of the tree
                     blobstore * work_bs, // work blobstore 
                     blobstore * cache_bs, // OPTIONAL cache blobstore
-                    const char * work_prefix) // OPTIONAL instance-specific prefix for forming work blob IDs
+                    const char * work_prefix, // OPTIONAL instance-specific prefix for forming work blob IDs
+                    long long timeout_usec) // timeout for the whole process, in microseconds or 0 for no timeout
 {
-    int num_opened_deps = 0;
-    boolean do_create = TRUE;
-    boolean do_deps = TRUE;
-    int ret = ERROR;
+    long long started = time_usec();
     assert (root);
     assert (work_bs);
 
-    if (!root->creator) // sentinel nodes do not have a creator
-        do_create = FALSE;
+    int ret;
+    int tries = 0;
+    do { // we may have to retry multiple times due to competition
+        int num_opened_deps = 0;
+        boolean do_deps = TRUE;
+        boolean do_create = TRUE;
 
-    if (strlen (root->id)) {
-        assert (root->creator);
-        switch (find_or_create_artifact (root, work_bs, cache_bs, work_prefix, &(root->bb))) {
-        case READER:
-            logprintfl (EUCADEBUG, "found an existing artifact %03d/%s\n", root->seq, root->id);
-            do_deps = FALSE;
+        if (tries++)
+            usleep (100); 
+
+        if (!root->creator) // sentinel nodes do not have a creator
             do_create = FALSE;
-            break;
-            
-        case WRITER:
-            break;
+        
+        if (strlen (root->id)) {
+            assert (root->creator);
 
-        case ERROR:
-            goto out;
-        }
-    }
-    
-    if (do_deps) { // recursively go over dependencies, if any
-        for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps [i]; i++) {
-            if (art_implement_tree (root->deps [i], work_bs, cache_bs, work_prefix) != OK) 
+            // try to open the artifact
+            switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
+            case OK:
+                logprintfl (EUCADEBUG, "found an existing artifact %03d/%s\n", root->seq, root->id);
+                do_deps = FALSE;
+                do_create = FALSE;
+                break;
+            case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => create it
+                break; 
+            case BLOBSTORE_ERROR_AGAIN: // timed out
                 goto out;
-            num_opened_deps++;
+                break;
+            default: // all other errors
+                logprintfl (EUCAERROR, "failed to provision artifact %s\n", root->id);
+                goto out;
+            }
         }
-    }
-    
-    if (do_create) {
-        int created = root->creator (root);
-        if (root->bb) { // we have blockblob handle
-            blockblob_close (root->bb); // close WRITE handle no matter what
-            if (created == OK) { // if successfully created, re-open as reader
-                switch (find_or_create_artifact (root, work_bs, cache_bs, work_prefix, &(root->bb))) {
-                case READER:
-                    break;
-                case WRITER: // this should not happen
-                    logprintfl (EUCAERROR, "error: unknown provisioning error (could not re-open blob as read-only)\n");
-                    blockblob_close (root->bb); // close the unexpected writer handle
-                    // fall through
-                case ERROR:
+        
+        if (do_deps) { // recursively go over dependencies, if any
+            for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps [i]; i++) {
+                switch (ret=art_implement_tree (root->deps [i], work_bs, cache_bs, work_prefix, 0)) {
+                case OK:
+                    if (do_create) { // we'll hold the dependency open for the creator
+                        num_opened_deps++;
+                    } else { // this is a sentinel, we're not creating anything, so release the dep immediately
+                        blockblob_close (root->deps [i]->bb);
+                    }
+                    break; // out of the switch statement
+                case BLOBSTORE_ERROR_AGAIN: // timed out
+                    goto out;
+                default: // all other errors
+                    logprintfl (EUCAERROR, "failed to provision dependency %s for artifact %s\n", root->deps [i]->id, root->id);
                     goto out;
                 }
             }
-        } else {
-            if (created != OK)
-                goto out;
         }
-    }
-    
-    ret = OK;
- out:
-    for (int i=0; i<num_opened_deps; i++) {
-        blockblob_close (root->deps [i]->bb);
-    }
+        
+        if (do_create) {
+            // try to create the artifact since last time we checked it did not exist
+            switch (ret=find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
+            case OK:
+                logprintfl (EUCADEBUG, "created a blob for an artifact %03d/%s\n", root->seq, root->id);
+                break;
+            case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
+                ret = BLOBSTORE_ERROR_AGAIN;
+                // fall through
+            case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
+                goto out;
+                break;
+            default: // all other errors
+                logprintfl (EUCAERROR, "failed to create artifact %s (error=%d)\n", root->id, ret);
+                goto out;
+            }
+
+            ret = root->creator (root);
+        }
+
+    out:
+        // close all opened blobs, whether we're trying again or giving up
+        for (int i=0; i<num_opened_deps; i++) {
+            blockblob_close (root->deps [i]->bb);
+        }
+        
+    } while (ret==BLOBSTORE_ERROR_AGAIN && (time_usec()-started)>timeout_usec);
     
     return ret;
 }
@@ -1082,39 +1071,60 @@ static void add_vbr (virtualMachine * vm,
         strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
 }
 
+static int provision (const char * id, const char * key, blobstore * cache_bs, blobstore * work_bs)
+{
+    virtualMachine vm;
+    bzero   (&vm, sizeof (vm));
+
+    add_vbr (&vm, MEGABYTE * 2L, "none", "eki-234BCD", NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "none", "eri-345CDE", NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "none", "emi-123ABC", NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "ext3", "none",       NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "swap", "none",       NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
+    artifact * sentinel = vbr_alloc_tree (&vm, key);
+    if (sentinel == NULL) { 
+        return 1;
+    }
+    printf ("\nallocated artifact tree\n");
+    if (art_implement_tree (sentinel, work_bs, cache_bs, id, 1000000LL * 60) != OK)
+        return 1;
+
+    return 0;
+}
+
+static char * gen_id (char * id, unsigned int size, const char * prefix)
+{
+    snprintf (id, size, "%s/i-%04x", prefix, rand());
+    return id;
+}
+
 static void dummy_err_fn (const char * msg) { }
 
 #define BS_SIZE 20000000000/512
+#define KEY1 "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n"
+#define GEN_ID gen_id (id, sizeof(id), "12345678")
 
 int main (int argc, char ** argv)
 {
+    char id [32];
     int errors = 0;
     char cwd [1024];
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
-
     blobstore_set_error_function (dummy_err_fn);    
 
     printf ("testing vbr.c\n");
 
     blobstore * cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
     blobstore * work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
-
-    virtualMachine vm;
-    bzero   (&vm, sizeof (vm));
-    add_vbr (&vm, MEGABYTE * 2L, "none", "eki-234BCD", NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "none", "eri-345CDE", NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "none", "emi-123ABC", NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "ext3", "none",       NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "swap", "none",       NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
-    artifact * sentinel = vbr_alloc_tree (&vm, "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n");
-    if (sentinel == NULL) { 
-        errors++;
-        goto out;
-    }
-    printf ("\nallocated artifact tree\n");
-    errors += (art_implement_tree (sentinel, work_bs, cache_bs, "12345678/i-123ABC") != OK);
     
+    if (errors += provision (GEN_ID, KEY1, cache_bs, work_bs))
+        goto out;
+
+    for (int i=0; i<5; i++) {
+        errors += provision (GEN_ID, KEY1, cache_bs, work_bs);
+    }
+
 out:
     _exit(errors);
 }

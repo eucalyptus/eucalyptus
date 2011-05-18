@@ -211,7 +211,7 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int hash_b64enc_string(const char *in, char **out);
 char * strdupcat (char * original, char * new);
 int str2md5str (char * buf, unsigned int buf_size, const char * str);
-uint32_t jenkins (char * key, size_t len);
+uint32_t jenkins (const char * key, size_t len);
 int hexjenkins (char * buf, unsigned int buf_size, const char * str);
 char * file2md5str (const char *path);
 int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
