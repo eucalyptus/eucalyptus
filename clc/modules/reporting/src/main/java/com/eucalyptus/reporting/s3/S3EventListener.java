@@ -53,11 +53,11 @@ public class S3EventListener
 								snapshot.getSnapshotKey());
 						usageDataMap.put(key, snapshot.getUsageData());
 						if (snapshot.getSnapshotKey().getAllSnapshot()) {
-							lastAllSnapshotMs = timeMillis;							
+							lastAllSnapshotMs = timeMillis;						
 						}
 						System.out.println("Loaded key:" + key);
 					}
-					LOG.info("Loaded usageDataMap");
+					LOG.info("Loaded usageDataMap, lastSnapshot:" + lastAllSnapshotMs);
 				}
 
 				
