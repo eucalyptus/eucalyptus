@@ -76,50 +76,42 @@
 #include "eucalyptus.h"
 #include "pthread.h"
 
-enum { 
-    MKSWAP=0, 
+enum {
+    CHMOD=0,
+    CHOWN,
+    CP,
+    DD,
+    FILECMD,
+    GRUB,
+    LOSETUP,
+    MKDIR,
     MKEXT3,
+    MKSWAP,
+    MOUNT,
+    PARTED,
     TUNE2FS,
-    FILECMD, 
-    LOSETUP, 
-    MOUNT, 
-    GRUB, 
-    PARTED, 
-    MV, 
-    DD, 
-    SYNC, 
-    MKDIR, 
-    CP, 
-    RSYNC, 
-    UMOUNT, 
-    CAT, 
-    CHOWN, 
-    CHMOD, 
-    ROOTWRAP, 
-    MOUNTWRAP, 
+    UMOUNT,
+    ROOTWRAP,
+    MOUNTWRAP,
     LASTHELPER
 };
 
 static char * helpers [LASTHELPER] = {
-    "mkswap", 
-    "mkfs.ext3", 
+    "chmod",
+    "chown",
+    "cp",
+    "dd",
+    "file",
+    "grub",
+    "losetup",
+    "mkdir",
+    "mkfs.ext3",
+    "mkswap",
+    "mount",
+    "parted",
     "tune2fs",
-    "file", 
-    "losetup", 
-    "mount", 
-    "grub", 
-    "parted", 
-    "mv", 
-    "dd", 
-    "sync", 
-    "mkdir", 
-    "cp", 
-    "rsync", 
-    "umount", 
-    "cat", 
-    "chown", 
-    "chmod", 
-    "euca_rootwrap", 
+    "umount",
+    "euca_rootwrap",
     "euca_mountwrap"
 };
 
@@ -256,7 +248,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
     // device on all distros (some versions of 'losetup' allow a file
     // argument with '-f' options, but some do not)
     for (int i=0; i<10; i++) {
+        sem_p (loop_sem);
         output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
+        sem_v (loop_sem);
         if (output==NULL) // there was a problem
             break;
         if (strstr (output, "/dev/loop")) {
@@ -300,9 +294,6 @@ int diskutil_unloop (const char * lodev)
     char * output;
 
     logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
-    output = pruntf("%s %s", helpers_path[ROOTWRAP], helpers_path[SYNC]);
-    if (output)
-        free (output);
 
     // we retry because we have seen spurious errors from 'losetup -d' on Xen:
     //     ioctl: LOOP_CLR_FD: Device or resource bus
@@ -365,7 +356,9 @@ int diskutil_tune (const char * lodev)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot tune file system on '%s'\n", lodev);
         ret = ERROR;
@@ -433,7 +426,9 @@ int diskutil_mount (const char * dev, const char * mnt_pt)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot mount device '%s' on '%s'\n", dev, mnt_pt);
         ret = ERROR;
@@ -449,7 +444,9 @@ int diskutil_umount (const char * dev)
     int ret = OK;
     char * output;
 
+    sem_p (loop_sem);
     output = pruntf ("%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
+    sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot unmount device '%s'\n", dev);
         ret = ERROR;
@@ -537,19 +534,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         }
         free (output);
     }
-
-    /*
-      if (modules) {
-      while(strlen(modules) && modules[strlen(modules)-1] == '/') {
-      modules[strlen(modules)-1] = '\0';
-      }
-      output = pruntf("%s %s -az %s %s/lib/modules/", helpers_path[ROOTWRAP], helpers_path[RSYNC], modules, tmpdir);
-      if (!output) {
-      logprintfl (EUCAINFO, "ERROR: failed to rsync the modules\n");
-      return ERROR;
-      }
-      }
-    */
 
     char buf [1024];
     snprintf (buf, sizeof (buf), "default=0\ntimeout=5\n\ntitle TheOS\nroot (hd0,%d)\nkernel /boot/%s root=/dev/sda1 ro\n", part, kfile);

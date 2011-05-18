@@ -1,0 +1,59 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="logGray" src="image/document_stroke_12x12_gray.png"></ui:image>
+    <ui:image field="logOrange" src="image/document_stroke_12x12_orange.png"></ui:image>
+        
+    <ui:style>
+        .boundingBox {
+            height:100%;        	
+        }
+        a.button {
+        	height:100%;
+        	display:table;
+        	outline:none;
+            cursor:pointer;
+            cursor:hand;
+            padding-left:6px;
+            padding-right:6px;
+        }
+        a.button span.text {
+            font-size:70%;
+            font-style:italic;
+            color:#666666;        	
+        	display:table-cell;
+        	vertical-align:middle;
+        }
+        @sprite a.button span.icon {
+        	width:12px;
+        	height:12px;
+        	display:table-cell;
+        	vertical-align:middle;
+            gwt-image:'logGray';
+            background-repeat:no-repeat;
+            background-position:center center;
+        }
+        @sprite a.button:active span.icon, a.button:focus span.icon, a.button:hover span.icon {
+            gwt-image:'logOrange';
+            background-repeat:no-repeat;
+            background-position:center center;            
+        }
+    </ui:style>
+    
+    <ui:style field="switchStyle" type="com.eucalyptus.webui.client.view.LogSwitch.SwitchStyle">
+        .inactive {
+            background-color:transparent;        	
+        }
+        .active {
+        	background-color:#DDDDDD;
+        }
+    </ui:style>
+    
+    <g:HTMLPanel styleName="{style.boundingBox}">
+        <g:Anchor styleName="{style.button}" ui:field="switchButton">
+            <span class="{style.icon}"/><span class="{style.text}">&nbsp;LOG</span>
+        </g:Anchor>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

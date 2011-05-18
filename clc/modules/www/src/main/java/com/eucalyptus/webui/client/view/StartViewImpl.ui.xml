@@ -1,0 +1,15 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+
+    <ui:style>
+    </ui:style>
+    
+    <g:HTMLPanel>
+        Welcome to Eucalyptus cloud!
+        <p>
+            <a href="EucalyptusWebInterface.html#start:">Start</a>
+        </p>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 
