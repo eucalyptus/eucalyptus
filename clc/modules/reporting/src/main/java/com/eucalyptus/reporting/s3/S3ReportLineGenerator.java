@@ -36,9 +36,9 @@ public class S3ReportLineGenerator
 			new HashMap<S3ReportLineKey, S3ReportLine>();
 		
 		S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
-		Map<S3SnapshotKey, S3UsageSummary> usageMap = 
+		Map<S3SummaryKey, S3UsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
-		for (S3SnapshotKey key: usageMap.keySet()) {
+		for (S3SummaryKey key: usageMap.keySet()) {
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = getAttributeValue(groupByCrit, key);
 			S3ReportLineKey lineKey = new S3ReportLineKey(critVal, groupVal);
@@ -61,7 +61,7 @@ public class S3ReportLineGenerator
 
 	
 	private static String getAttributeValue(GroupByCriterion criterion,
-			S3SnapshotKey key)
+			S3SummaryKey key)
 	{
 		switch (criterion) {
 			case ACCOUNT:
