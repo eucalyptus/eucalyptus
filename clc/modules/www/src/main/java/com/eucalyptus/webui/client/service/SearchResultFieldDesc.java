@@ -14,11 +14,9 @@ public class SearchResultFieldDesc implements Serializable {
   
   public static enum Type {
     TEXT,
-    FILE,
     HIDDEN,
     BOOLEAN,
-    LIST,
-    ACTION,
+    LINK,
   }
   
   private String name;

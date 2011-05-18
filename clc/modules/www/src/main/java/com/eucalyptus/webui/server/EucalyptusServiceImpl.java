@@ -80,26 +80,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
     verifySession( session );
-    // TODO(wenye): use system properties?
-    ArrayList<CategoryTag> tags = Lists.newArrayList( );
-    ArrayList<CategoryItem> list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Start", "Start guide", "home", "start:" ) );
-    list.add( new CategoryItem( "Configuration", "System configurations", "config", "config:" ) );
-    tags.add( new CategoryTag( "System", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Account", "Accounts", "dollar", "account:" ) );
-    list.add( new CategoryItem( "Group", "User groups", "group", "group:" ) );
-    list.add( new CategoryItem( "User", "Users", "user", "user:" ) );
-    tags.add( new CategoryTag( "Identity", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Image", "Virtual machine images (EMIs)", "image", "image:" ) );
-    list.add( new CategoryItem( "VmType", "Virtual machine types", "type", "vmtype:" ) );
-    list.add( new CategoryItem( "Report", "Resource usage report", "report", "report:" ) );
-    tags.add( new CategoryTag( "Resource", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Extra", "Extra downloads", "down", "extra:" ) );
-    tags.add( new CategoryTag( "Miscs", list ) );    
-    return tags;
+    return Categories.getTags( );
   }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
@@ -123,27 +104,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     
     System.out.println( "New search: " + range );
     
-    final int sortField = range.getSortField( );
-    final boolean ascending = range.isAscending( );
-    Collections.sort( DATA, new Comparator<SearchResultRow>( ) {
-      @Override
-      public int compare( SearchResultRow r1, SearchResultRow r2 ) {
-        if ( r1 == r2 ) {
-          return 0;
-        }
-        // Compare the name columns.
-        int diff = -1;
-        if ( r1 != null ) {
-          diff = ( r2 != null ) ? r1.getField( sortField ).compareTo( r2.getField( sortField ) ) : 1;
-        }
-        return ascending ? diff : -diff;
-      }
-    } );
-    int resultLength = Math.min( range.getLength( ), DATA.size( ) - range.getStart( ) );
-    SearchResult result = new SearchResult( DATA.size( ), range );
-    result.setDescs( FIELDS );
-    result.setRows( DATA.subList( range.getStart( ), range.getStart( ) + resultLength ) );
-    
+    List<SearchResultRow> searchResult = EuareWebBackend.searchAccounts( search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+        
     for ( SearchResultRow row : result.getRows( ) ) {
       System.out.println( "Row: " + row );
     }
@@ -156,7 +121,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
     SearchResult result = new SearchResult( );
-    result.setDescs( ConfigurationWebBackend.COMMON_CONFIG_FIELD_DESCS );
+    result.setDescs( ConfigurationWebBackend.COMMON_FIELD_DESCS );
     result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
     result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
@@ -195,7 +160,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public SearchResult lookupVmType( Session session, String query, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
     SearchResult result = new SearchResult( );
-    result.setDescs( VmTypeWebBackend.COMMON_CONFIG_FIELD_DESCS );
+    result.setDescs( VmTypeWebBackend.COMMON_FIELD_DESCS );
     result.addRows( VmTypeWebBackend.getVmTypes( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );

@@ -22,10 +22,8 @@ public class CategoryTreeModel implements TreeViewModel {
   static interface Images extends ClientBundle {
     @Source( "image/document_stroke_12x12_gray.png" )
     ImageResource def( );
-    
     @Source( "image/tag_fill_12x12_gray.png" )
     ImageResource tag( );
-    
     @Source( "image/cog_alt_12x12_gray.png" )
     ImageResource config( );
     @Source( "image/user_12x16_gray.png" )
@@ -44,7 +42,15 @@ public class CategoryTreeModel implements TreeViewModel {
     ImageResource down( );
     @Source( "image/dollar_12x11_gray.png" )
     ImageResource dollar( );    
-
+    @Source( "image/key_fill_12x12_gray.png" )
+    ImageResource key( );    
+    @Source( "image/lock_fill_12x16_gray.png" )
+    ImageResource lock( );    
+    @Source( "image/sun_12x12_gray.png" )
+    ImageResource sun( );
+    @Source( "image/rightscale_12x12_gray.png" )
+    ImageResource rightscale( );
+    
   }
   
   private static class CategoryTagCell extends AbstractCell<CategoryTag> {
@@ -105,6 +111,10 @@ public class CategoryTreeModel implements TreeViewModel {
       imageMap.put( images.group( ).getName( ), AbstractImagePrototype.create( images.group( ) ).getHTML( ) );
       imageMap.put( images.down( ).getName( ), AbstractImagePrototype.create( images.down( ) ).getHTML( ) );
       imageMap.put( images.dollar( ).getName( ), AbstractImagePrototype.create( images.dollar( ) ).getHTML( ) );
+      imageMap.put( images.key( ).getName( ), AbstractImagePrototype.create( images.key( ) ).getHTML( ) );
+      imageMap.put( images.lock( ).getName( ), AbstractImagePrototype.create( images.lock( ) ).getHTML( ) );
+      imageMap.put( images.sun( ).getName( ), AbstractImagePrototype.create( images.sun( ) ).getHTML( ) );
+      imageMap.put( images.rightscale( ).getName( ), AbstractImagePrototype.create( images.rightscale( ) ).getHTML( ) );
     }    
   }
   

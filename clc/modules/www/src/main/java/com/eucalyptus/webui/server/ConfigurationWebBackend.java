@@ -76,13 +76,13 @@ public class ConfigurationWebBackend {
   public static final int TYPE_FIELD_INDEX = 2;
   
   // Common fields
-  public static final ArrayList<SearchResultFieldDesc> COMMON_CONFIG_FIELD_DESCS = Lists.newArrayList( );
+  public static final ArrayList<SearchResultFieldDesc> COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( ID, ID, false, "0px", TableDisplay.NONE, Type.TEXT, false, true ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, ID, false, "0px", TableDisplay.NONE, Type.TEXT, false, true ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
   }
   // Cloud config extra fields
   public static final ArrayList<SearchResultFieldDesc> CLOUD_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
@@ -143,7 +143,7 @@ public class ConfigurationWebBackend {
   }
   
   private static void deserializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow input ) {
-    int i = COMMON_CONFIG_FIELD_DESCS.size( );
+    int i = COMMON_FIELD_DESCS.size( );
     sysConf.setDefaultKernel( input.getField( i++ ) );
     sysConf.setDefaultRamdisk( input.getField( i++ ) );
     sysConf.setDnsDomain( input.getField( i++ ) );
@@ -220,7 +220,7 @@ public class ConfigurationWebBackend {
   }
   
   private static void deserializeClusterConfiguration( ClusterConfiguration clusterConf, SearchResultRow input ) {
-    int i = COMMON_CONFIG_FIELD_DESCS.size( );
+    int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
       clusterConf.setMaxVlan( val );
@@ -422,7 +422,7 @@ public class ConfigurationWebBackend {
    */
   public static void setWalrusConfiguration( SearchResultRow input ) throws EucalyptusServiceException  {
     ArrayList<ComponentProperty> properties = Lists.newArrayList( );
-    deserializeComponentProperties( properties, input, COMMON_CONFIG_FIELD_DESCS.size( ) );
+    deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
     UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
     updateWalrusConfiguration.setName( WalrusProperties.NAME );
     updateWalrusConfiguration.setProperties( properties );
