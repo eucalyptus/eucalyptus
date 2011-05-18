@@ -880,7 +880,7 @@ int create_instance_backing2 (ncInstance * instance)
     // create backing
     char work_prefix [1024]; // {userId}/{instanceId}
     set_id (instance, NULL, work_prefix, sizeof (work_prefix));
-    artifact * sentinel = vbr_alloc_tree (vm); // compute tree of dependencies
+    artifact * sentinel = vbr_alloc_tree (vm, instance->keyName); // compute tree of dependencies
     if (sentinel == NULL ||
         art_implement_tree (sentinel, work_bs, cache_bs, work_prefix) != OK) { // download/create/combine the dependencies
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);

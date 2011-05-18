@@ -77,10 +77,11 @@ typedef struct _artifact {
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
     blockblob * bb; // blockblob handle for the artifact, when it is open
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
+    int seq; // sequence number of the artifact
 } artifact;
 
 artifact * art_free (artifact * a);
 int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
-artifact * vbr_alloc_tree (virtualMachine * vm);
+artifact * vbr_alloc_tree (virtualMachine * vm, const char * key);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix);

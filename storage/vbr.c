@@ -439,23 +439,34 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     return OK;
 }
 
+#define PRINTART logprintfl(EUCAINFO, "creating artifact %s blob=%s sig=[%s]\n\n", a->id, (a->bb)?(a->bb->id):("none"), a->sig)
 static int vbr_creator (artifact * a)
 {
+    PRINTART;
     return OK;
 }
 
 static int disk_creator (artifact * a)
 {
+    PRINTART;
+    return OK;
+}
+
+static int keyed_disk_creator (artifact * a)
+{
+    PRINTART;
     return OK;
 }
 
 static int iqn_creator (artifact * a)
 {
+    PRINTART;
     return OK;
 }
 
 static int copy_creator (artifact * a)
 {
+    PRINTART;
     return OK;
 }
 
@@ -465,6 +476,7 @@ static int art_add_dep (artifact * a, artifact * dep)
 {
     for (int i = 0; i < MAX_ARTIFACT_DEPS; i++) {
         if (a->deps [i] == NULL) {
+            logprintfl (EUCADEBUG, "added to artifact %03d/%s artifact %03d/%s\n", a->seq, a->id, dep->seq, dep->id);
             a->deps [i] = dep;
             return OK;
         }
@@ -481,14 +493,21 @@ artifact * art_free (artifact * a) // frees the artifact and all its dependencie
     return NULL;
 }
 
+void arts_free (artifact * array [], unsigned int size)
+{
+    for (int i=0; i<size; i++)
+        if (array [i])
+            art_free (array [i]);
+}
+
 static int art_gen_id (char * buf, unsigned int buf_size, const char * first, const char * sig)
 {
-    char md5str [32];
+    char hash [48];
 
-    if (str2md5str (md5str, sizeof (md5str), sig) != OK)
+    if (hexjenkins (hash, sizeof (hash), sig) != OK)
         return ERROR;
     
-    if (snprintf (buf, buf_size, "%s-%s", first, md5str) >= buf_size) // truncation
+    if (snprintf (buf, buf_size, "%s-%s", first, hash) >= buf_size) // truncation
         return ERROR;
 
     return OK;
@@ -501,6 +520,11 @@ static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolea
     artifact * a = calloc (1, sizeof (artifact));
     if (a==NULL)
         return NULL;
+
+    static int seq = 0;
+    a->seq = ++seq; // not thread safe, but seq's are just for debugging
+    logprintfl (EUCADEBUG, "allocated artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", seq, id, size_bytes, vbr, may_be_cached, must_be_file);
+
     if (id)
         strncpy (a->id, id, sizeof (a->id));
     if (sig)
@@ -536,7 +560,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         if (bb_size_bytes < 1) goto w_out;
         vbr->size = bb_size_bytes; // record size now that we know it
 
-        // generate ID of the artifact (append -##### MD5 hash of sig)
+        // generate ID of the artifact (append -##### hash of sig)
         char art_id [48];
         if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) goto w_out;
 
@@ -561,16 +585,22 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         assert (vbr->size > 0L);
 
         char art_sig [ART_SIG_MAX]; // signature for this artifact based on its salient characteristics
-        if (snprintf (art_sig, sizeof (art_sig), "%lld/%s", 
-                      vbr->size, vbr->formatName) >= sizeof (art_sig)) // output was truncated
+        if (snprintf (art_sig, sizeof (art_sig), "id=%s size=%lld format=%s", 
+                      vbr->id, vbr->size, vbr->formatName) >= sizeof (art_sig)) // output was truncated
             break;
 
-        char art_pref [32]; // first part of artifact ID
-        if (snprintf (art_pref, sizeof (art_pref), "part-%05lld%s", 
-                      vbr->size/1048576, vbr->formatName) >= sizeof (art_pref)) // output was truncated
-            break;
+        char buf [32]; // first part of artifact ID
+        char * art_pref;
+        if (strcmp (vbr->id, "none")==0) {
+            if (snprintf (buf, sizeof (buf), "part-%05lld%s", 
+                          vbr->size/1048576, vbr->formatName) >= sizeof (buf)) // output was truncated
+                break;
+            art_pref = buf;
+        } else {
+            art_pref = vbr->id;
+        }
 
-        char art_id [48]; // ID of the artifact (append -##### MD5 hash of sig)
+        char art_id [48]; // ID of the artifact (append -##### hash of sig)
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             break;
 
@@ -599,20 +629,21 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     return a;
 }
 
-static artifact * art_alloc_disk (artifact * partitions [], int num_partitions)
+static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifact * parts [], int num_parts, const char * key)
 {
     char art_sig [ART_SIG_MAX] = ""; 
-    char art_pref [EUCA_MAX_PATH] = "disk-";
+    char art_pref [EUCA_MAX_PATH] = "disk";
     long long disk_size_bytes = 512LL * MBR_BLOCKS;
-    assert (num_partitions);
+    assert (num_parts);
 
-    for (int i = 0; i<num_partitions; i++) {
-        artifact * p = partitions [i];
+    // run through partitions, adding up their signatures and their size
+    for (int i = 0; i<num_parts; i++) {
+        artifact * p = parts [i];
         
         // construct signature for the disk, based on the sigs of underlying components
         char part_sig [ART_SIG_MAX];
-        if ((snprintf (part_sig, sizeof(part_sig), "PARTITION %d\n%s\n\n", 
-                       i, p->sig) >= sizeof (part_sig)) // output truncated
+        if ((snprintf (part_sig, sizeof(part_sig), "PARTITION %d (%s)\n%s\n\n", 
+                       i, p->id, p->sig) >= sizeof (part_sig)) // output truncated
             ||
             ((strlen (art_sig) + strlen (part_sig)) >= sizeof (art_sig))) { // overflow
             logprintfl (EUCAERROR, "error: internal buffers (ART_SI_MAX) too small for signature\n");
@@ -634,8 +665,9 @@ static artifact * art_alloc_disk (artifact * partitions [], int num_partitions)
         // look for the emi-XXXX-YYYY ID that the disk is based on
         // and construct disk-XXXX ID out of it
         if (strcasestr (p->id, "emi-") == p->id) {
-            char * src = p->id + 4;  // position aftter 'emi-'
-            char * dst = art_pref + strlen (art_pref); // position after 'disk-'
+            char * src = p->id + 4;  // position aftter 'emi'
+            char * dst = art_pref + strlen (art_pref); // position after 'disk'
+            * dst++ = '-';
             while ((*src>='0') && (*src<='z') // copy letters and numbers up to a hyphen
                    && (dst-art_pref < sizeof (art_pref))) { // don't overrun dst
                 * dst++ = * src++;
@@ -643,23 +675,105 @@ static artifact * art_alloc_disk (artifact * partitions [], int num_partitions)
             * dst = '\0';
         }
     }
-        
-    char art_id [48]; // ID of the artifact (append -##### MD5 hash of sig)
-    if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
-        return NULL;
     
-    artifact * bootable_disk = art_alloc (art_id, art_sig, disk_size_bytes, TRUE, FALSE, disk_creator, NULL);
-    // TODO: create keyed_disk
+    // run through prerequisites (kernel and ramdisk), if any, adding up their signature
+    for (int i = 0; i<num_prereqs; i++) {
+        artifact * p = prereqs [i];
+        
+        // construct signature for the disk, based on the sigs of underlying components
+        char part_sig [ART_SIG_MAX];
+        if ((snprintf (part_sig, sizeof(part_sig), "PREREQUISITE %s\n%s\n\n", 
+                       p->id, p->sig) >= sizeof (part_sig)) // output truncated
+            ||
+            ((strlen (art_sig) + strlen (part_sig)) >= sizeof (art_sig))) { // overflow
+            logprintfl (EUCAERROR, "error: internal buffers (ART_SI_MAX) too small for signature\n");
+            return NULL;
+        }
+        strncat (art_sig, part_sig, sizeof (art_sig) - strlen (art_sig) - 1);
+    }
+
+    artifact * disk;
+
+    { // allocate the 'bootable' disk artifact
+        char art_id [48]; // ID of the artifact (append -##### hash of sig)
+        if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
+            return NULL;
+        
+        disk = art_alloc (art_id, art_sig, disk_size_bytes, TRUE, FALSE, disk_creator, NULL);
+        if (disk==NULL) {
+            logprintfl (EUCAERROR, "error: failed to allocate an artifact for bootable disk\n");
+            return NULL;
+        }
+    
+        // attach prereqs and partitions as dependencies of the bootable disk
+        for (int i = 0; i<num_prereqs; i++) {
+            artifact * p = prereqs [i];
+            if (art_add_dep (disk, p) != OK) {
+                logprintfl (EUCAERROR, "error: failed to add a prerequisite to an artifact\n");
+                goto free;
+            }
+        }
+        for (int i = 0; i<num_parts; i++) {
+            artifact * p = parts [i];
+            if (art_add_dep (disk, p) != OK) {
+                logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
+                goto free;
+            }
+        }
+    }
+    
+    { // allocate the 'keyed' disk artifact
+
+        // construct signature for the 'keyed' disk by appending the SSH key to 'bootable' disk
+        if (key==NULL)
+            key = "";
+
+        char key_sig [ART_SIG_MAX];
+        if ((snprintf (key_sig, sizeof(key_sig), "KEY /root/.ssh/authorized_keys\n%s\n\n", 
+                       key) >= sizeof (key_sig)) // output truncated
+            ||
+            ((strlen (art_sig) + strlen (key_sig)) >= sizeof (art_sig))) { // overflow
+            logprintfl (EUCAERROR, "error: internal buffers (ART_SI_MAX) too small for signature\n");
+            goto free;
+        }
+        strncat (art_sig, key_sig, sizeof (art_sig) - strlen (key_sig) - 1);
+
+        char art_id [48]; // ID of the artifact (append -##### hash of sig)
+        if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) {
+            goto free;
+        }
+        
+        artifact * keyed_disk = art_alloc (art_id, art_sig, disk_size_bytes, FALSE, FALSE, keyed_disk_creator, NULL);
+        if (keyed_disk==NULL) {
+            logprintfl (EUCAERROR, "error: failed to allocate an artifact for keyed disk\n");
+            goto free;
+        }
+        
+        if (art_add_dep (keyed_disk, disk) != OK) {
+            logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
+            art_free (keyed_disk);
+            goto free;
+        }
+
+        disk = keyed_disk;
+    }
+
+    return disk;
+ free:
+    art_free (disk);
+    return NULL;
 }
 
 artifact * // returns pointer to the root of artifact tree or NULL on error
 vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must free the tree)
-                virtualMachine * vm) // virtual machine containing the VBR
+                virtualMachine * vm, // virtual machine containing the VBR
+                const char * key)
 {
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord * prereq [EUCA_MAX_VBRS];
     int total_prereqs = 0;
     virtualBootRecord * parts  [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];
+    int total_parts = 0;
     bzero (parts, sizeof (parts));
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
@@ -667,14 +781,17 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
             prereq [total_prereqs++] = vbr;
         } else {
             parts [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
+            total_parts++;
         }
     }
- 
+    logprintfl (EUCADEBUG, "found %d prereqs and %d partitions in the VBR\n", total_prereqs, total_parts);
+
     artifact * root = art_alloc (NULL, NULL, -1, IGNORED, IGNORED, NULL, NULL); // allocate a sentinel artifact
     if (root == NULL)
         return NULL;
     
     // first attach the prerequisites
+    artifact * prereq_arts [EUCA_MAX_VBRS];
     for (int i=0; i<total_prereqs; i++) {
         virtualBootRecord * vbr = prereq [i];
         artifact * dep = art_alloc_vbr (vbr, TRUE, FALSE);
@@ -682,6 +799,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
             goto free;
         if (art_add_dep (root, dep) != OK)
             goto free;
+        prereq_arts [i] = dep;
     }
     
     // then attach disks and partitions
@@ -689,27 +807,44 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
         for (int j=0; j<EUCA_MAX_DISKS; j++) {
             int partitions = 0;
             artifact * disk_arts [EUCA_MAX_PARTITIONS];
+            bzero (disk_arts, sizeof (disk_arts));
             for (int k=0; k<EUCA_MAX_PARTITIONS; k++) {
                 virtualBootRecord * vbr = parts [i][j][k];
                 if (vbr) { // either a disk (k==0) or a partition (k>0)
                     disk_arts [k] = art_alloc_vbr (vbr, FALSE, TRUE);
-                    if (disk_arts [k] == NULL)
+                    if (disk_arts [k] == NULL) {
+                        arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
+                    }
                     if (k>0)
                         partitions++; 
                     
                 } else if (partitions) { // there were partitions and we saw them all
                     assert (disk_arts [0] == NULL);
-                    disk_arts [0] = art_alloc_disk (disk_arts + 1, partitions);
+                    disk_arts [0] = art_alloc_disk (prereq_arts, total_prereqs, disk_arts + 1, partitions, key);
                     if (disk_arts [0] == NULL) {
+                        arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
+                    break; // out of the inner loop
+                }
+            }
+            
+            // run though all disk artifacts and either add the disk or all the partitions to sentinel
+            for (int k=0; k<EUCA_MAX_PARTITIONS; k++) {
+                if (disk_arts [k]) {
+                    if (art_add_dep (root, disk_arts [k]) != OK) {
+                        arts_free (disk_arts, EUCA_MAX_PARTITIONS);
+                        goto free;
+                    }
+                    if (k==0) // if there is a disk, then partition artifacts, if any, are already attached to it
+                        break;
                 }
             }
         }
     }
     goto out;
-
+    
  free:
     art_free (root);
 
@@ -717,7 +852,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define STORE_TIMEOUT_USEC 1000000LL*60*2
+#define STORE_TIMEOUT_USEC 1000000LL*5
 
 static int // returns READER, WRITER, or ERROR
 find_or_create_blob ( // either opens a blockblob as a reader or, failing that, creates it
@@ -741,6 +876,7 @@ find_or_create_blob ( // either opens a blockblob as a reader or, failing that, 
             } else {
                 ret = READER;
             }
+            * bbp = bb;
             break;
         }
         
@@ -807,7 +943,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     else 
         strncpy (id_work, a->id, sizeof (id_work));
     
-    // try cache and then work blobstores
+    // first, try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
         ret = find_or_create_blob (cache_bs, id_cache, a->size_bytes, a->sig, bbp);
     }
@@ -827,6 +963,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     blobstore * cache_bs, // OPTIONAL cache blobstore
                     const char * work_prefix) // OPTIONAL instance-specific prefix for forming work blob IDs
 {
+    int num_opened_deps = 0;
     boolean do_create = TRUE;
     boolean do_deps = TRUE;
     int ret = ERROR;
@@ -836,10 +973,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
     if (!root->creator) // sentinel nodes do not have a creator
         do_create = FALSE;
 
-    if (root->id) {
+    if (strlen (root->id)) {
         assert (root->creator);
         switch (find_or_create_artifact (root, work_bs, cache_bs, work_prefix, &(root->bb))) {
         case READER:
+            logprintfl (EUCADEBUG, "found an existing artifact %03d/%s\n", root->seq, root->id);
             do_deps = FALSE;
             do_create = FALSE;
             break;
@@ -852,13 +990,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         }
     }
     
-    int num_opened_deps = 0;
     if (do_deps) { // recursively go over dependencies, if any
         for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps [i]; i++) {
             if (art_implement_tree (root->deps [i], work_bs, cache_bs, work_prefix) != OK) 
                 goto out;
-            else 
-                num_opened_deps++;
+            num_opened_deps++;
         }
     }
     
@@ -892,3 +1028,95 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
     
     return ret;
 }
+
+/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
+
+#ifdef _UNIT_TEST
+
+static blobstore * create_teststore (int size_blocks, const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
+{
+    static int ts = 0;
+    if (ts==0) {
+        ts = ((int)time(NULL))-1292630988;
+    }
+
+    char bs_path [PATH_MAX];
+    snprintf (bs_path, sizeof (bs_path), "%s/test_vbr_%05d_%s", base, ts, name);
+    if (mkdir (bs_path, 0777) == -1) {
+        printf ("failed to create %s\n", bs_path);
+        return NULL;
+    }
+    printf ("created %s\n", bs_path);
+    blobstore * bs = blobstore_open (bs_path, size_blocks, format, revocation, snapshot);
+    if (bs==NULL) {
+        printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        return NULL;
+    }
+    return bs;
+}
+
+// this function sets the fields in a VBR that are required for artifact processing
+static void add_vbr (virtualMachine * vm,
+                    long long size,
+                    char * formatName,
+                    char * id,
+                    ncResourceType type, 
+                    ncResourceLocationType locationType,
+                    int diskNumber,
+                    int partitionNumber,
+                    libvirtBusType guestDeviceBus,
+                    char * preparedResourceLocation)
+{
+    virtualBootRecord * vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
+    vbr->size = size;
+    if (formatName)
+        strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
+    if (id)
+        strncpy (vbr->id, id, sizeof (vbr->id));
+    vbr->type = type;
+    vbr->locationType = locationType;
+    vbr->diskNumber = diskNumber;
+    vbr->partitionNumber = partitionNumber;
+    vbr->guestDeviceBus = guestDeviceBus;
+    if (preparedResourceLocation)
+        strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
+}
+
+static void dummy_err_fn (const char * msg) { }
+
+#define BS_SIZE 20000000000/512
+
+int main (int argc, char ** argv)
+{
+    int errors = 0;
+    char cwd [1024];
+    getcwd (cwd, sizeof (cwd));
+    srandom (time(NULL));
+
+    blobstore_set_error_function (dummy_err_fn);    
+
+    printf ("testing vbr.c\n");
+
+    blobstore * cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+    blobstore * work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+
+    virtualMachine vm;
+    bzero   (&vm, sizeof (vm));
+    add_vbr (&vm, MEGABYTE * 2L, "none", "eki-234BCD", NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "none", "eri-345CDE", NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "none", "emi-123ABC", NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "ext3", "none",       NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, "swap", "none",       NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
+    artifact * sentinel = vbr_alloc_tree (&vm, "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n");
+    if (sentinel == NULL) { 
+        errors++;
+        goto out;
+    }
+    printf ("\nallocated artifact tree\n");
+    errors += (art_implement_tree (sentinel, work_bs, cache_bs, "12345678/i-123ABC") != OK);
+    
+out:
+    _exit(errors);
+}
+
+#endif

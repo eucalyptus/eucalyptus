@@ -1353,7 +1353,7 @@ blockblob * blockblob_open ( blobstore * bs,
         return NULL;
     }
 
-    logprintfl (EUCADEBUG, "{%u} blockblob_open: opening blob id=%s\n", (unsigned int)pthread_self(), id);
+    logprintfl (EUCADEBUG, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
 
     blockblob * bbs = NULL; // a temp LL of blockblobs, used for computing free space and for purging
     blockblob * bb = calloc (1, sizeof (blockblob));
