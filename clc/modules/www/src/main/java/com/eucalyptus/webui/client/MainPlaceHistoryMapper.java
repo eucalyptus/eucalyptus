@@ -15,7 +15,7 @@ import com.google.gwt.place.shared.WithTokenizers;
   ConfigPlace.Tokenizer.class,
   AccountPlace.Tokenizer.class,
   VmTypePlace.Tokenizer.class,
-  ReportPlace.Tokenizer.class,
+  ReportPlace.Tokenizer.class
 } )
 public interface MainPlaceHistoryMapper extends PlaceHistoryMapper {
 
