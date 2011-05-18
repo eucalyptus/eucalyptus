@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.server;
 
-import com.google.gwt.http.client.URL;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 
 public class QueryBuilder {
 
@@ -48,7 +49,11 @@ public class QueryBuilder {
   }
   
   public String url( ) {
-    return URL.encode( BASE + sb.toString( ) );
+    try {
+      return URLEncoder.encode( BASE + sb.toString( ), "UTF-8" );
+    } catch ( UnsupportedEncodingException e ) {
+      return URLEncoder.encode( BASE + sb.toString( ) );
+    }
   }
   
 }
