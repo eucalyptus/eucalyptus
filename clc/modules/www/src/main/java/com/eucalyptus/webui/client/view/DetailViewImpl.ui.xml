@@ -52,12 +52,18 @@
             vertical-align:middle;
         }
         .grid input[type='text'] {
-            width:99%;
+            width:98%;
             background-color:transparent;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
+        .grid input[type='password'] {
+            width:98%;
+            background-color:transparent;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;                
     </ui:style>
     
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
