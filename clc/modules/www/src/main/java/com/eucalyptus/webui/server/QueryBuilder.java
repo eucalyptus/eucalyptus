@@ -3,6 +3,16 @@ package com.eucalyptus.webui.server;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
+/**
+ * Building query string given query components.
+ * 
+ * The format of the query url (containing the URL base)
+ * 
+ * <code> [BASE_URL]#[type]:[subquery] </code>
+ * 
+ * @author wenye
+ *
+ */
 public class QueryBuilder {
 
   public static final String BASE = "EucalyptusWebInterface.html#";
@@ -12,6 +22,7 @@ public class QueryBuilder {
   public static final String NOT = "-";
   
   private StringBuilder sb = new StringBuilder( );
+  private String type;
   
   private QueryBuilder( ) { }
   
@@ -20,7 +31,7 @@ public class QueryBuilder {
   }
   
   public QueryBuilder start( String type ) {
-    sb.append( type ).append( PLACE_SEPARATOR );
+    this.type = type;
     return this;
   }
   
@@ -45,14 +56,18 @@ public class QueryBuilder {
   }
   
   public String query( ) {
+    return this.type + PLACE_SEPARATOR + sb.toString( );
+  }
+  
+  public String subquery( ) {
     return sb.toString( );
   }
   
   public String url( ) {
     try {
-      return URLEncoder.encode( BASE + sb.toString( ), "UTF-8" );
+      return BASE + this.type + PLACE_SEPARATOR + URLEncoder.encode( sb.toString( ), "UTF-8" );
     } catch ( UnsupportedEncodingException e ) {
-      return URLEncoder.encode( BASE + sb.toString( ) );
+      return BASE + this.type + PLACE_SEPARATOR + URLEncoder.encode( sb.toString( ) );
     }
   }
   
