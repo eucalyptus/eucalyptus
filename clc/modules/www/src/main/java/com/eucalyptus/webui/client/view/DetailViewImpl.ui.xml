@@ -53,14 +53,14 @@
         }
         .grid input[type='text'] {
             width:98%;
-            background-color:transparent;
+            background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
         .grid input[type='password'] {
             width:98%;
-            background-color:transparent;
+            background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;                
