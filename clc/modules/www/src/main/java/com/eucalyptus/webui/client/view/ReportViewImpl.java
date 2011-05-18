@@ -121,6 +121,7 @@ public class ReportViewImpl extends Composite implements ReportView {
   }
   
   private void initList( ListBox l, List<String> list ) {
+    l.clear( );
     if ( list == null || list.size( ) < 1 ) {
       l.addItem( "None" );
     } else {
