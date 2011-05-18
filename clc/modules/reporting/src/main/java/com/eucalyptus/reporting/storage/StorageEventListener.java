@@ -18,7 +18,7 @@ public class StorageEventListener
 	private static long WRITE_INTERVAL_MS = 10800000l; //write every 3 hrs
 
 	private Map<UsageDataKey, StorageUsageData> usageDataMap;
-	private long lastStoredMs = 0l;
+	private long lastAllSnapshotMs = 0l;
 
 	public StorageEventListener()
 	{
@@ -52,10 +52,12 @@ public class StorageEventListener
 						UsageDataKey key = new UsageDataKey(
 								snapshot.getSnapshotKey());
 						usageDataMap.put(key, snapshot.getUsageData());
+						if (snapshot.getAllSnapshot()) {
+							lastAllSnapshotMs = timeMillis;							
+						}
 						System.out.println("Loaded key:" + key);
 					}
-					LOG.info("Loaded usageDataMap");
-					lastStoredMs = timeMillis; //TODO
+					LOG.info("Loaded usageDataMap, last allSnapshot:" + lastAllSnapshotMs);
 				}
 
 				
@@ -98,26 +100,27 @@ public class StorageEventListener
 
 				/* Write data to DB
 				 */
-				if ((timeMillis - lastStoredMs) > WRITE_INTERVAL_MS) {
+				if ((timeMillis - lastAllSnapshotMs) > WRITE_INTERVAL_MS) {
 					/* Write all snapshots
 					 */
-					//TODO: move to thread
-					//TODO: how do we know there's an all-snapshot during the report period?
+					LOG.info("Starting allSnapshot...");
 					for (UsageDataKey udk: usageDataMap.keySet()) {
 						SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
 						StorageUsageSnapshot sus =
 							new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
 						sus.setAllSnapshot(true);
-						System.out.println("Storing:" + sus);
-						entityWrapper.add(sus);						
+						LOG.info("Storing as part of allSnapshot:" + sus);
+						entityWrapper.add(sus);
+						lastAllSnapshotMs = timeMillis;
 					}
+					LOG.info("Ending allSnapshot...");
 				} else {
 					/* Write this snapshot
 					 */
 					SnapshotKey snapshotKey = key.newSnapshotKey(timeMillis);
 					StorageUsageSnapshot sus =
 						new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
-					System.out.println("Storing:" + sus);
+					LOG.info("Storing:" + sus);
 					entityWrapper.add(sus);
 				}
 
