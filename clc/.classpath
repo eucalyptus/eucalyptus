@@ -101,11 +101,12 @@
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r08-gwt.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r08.jar" sourcepath="/bzr/third-party/guava-libraries-read-only"/>
-	<classpathentry kind="lib" path="lib/gwt-api-checker-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-dev-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-servlet-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.0.jar"/>
-	<classpathentry kind="lib" path="lib/gwt-user-2.0.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-api-checker-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-dev-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.2.jar"/>
+	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
@@ -181,9 +182,7 @@
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/velocity-1.7.jar"/>
-	<classpathentry kind="lib" path="lib/vijava220090625.jar"/>
-	<classpathentry kind="lib" path="lib/vim.jar"/>
-	<classpathentry kind="lib" path="lib/vim25.jar"/>
+	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1303337201.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
