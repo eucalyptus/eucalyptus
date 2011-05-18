@@ -107,8 +107,9 @@
 	</path>
 	<property name="gwt.build.dir" value="build" />
 	<property name="gwt.war.build.dir" value="build-war" />
-	<property name="gwt.module" value="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
-	<property name="gwt.module.dir" value="edu/ucsb/eucalyptus/admin" />
+	<property name="gwt.module" value="com.eucalyptus.webui.EucalyptusWebInterface" />
+	<property name="gwt.module.rename" value="webui" />
+	<property name="gwt.module.dir" value="com/eucalyptus/webui" />
 	<property name="gwt.war.dir" value="webapps" />
 	<property name="gwt.war" value="${gwt.war.dir}/root.war" />
 
@@ -141,9 +142,9 @@
       <jvmarg value="-Xmx1024m" />
       <jvmarg value="-Xss1024k" />
       <arg line="-war ${gwt.war.build.dir}" />
-      <arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
+      <arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
     </java>
-    <war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
+    <war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
   </target>
 
   <target name="compile-gwt-debug" depends="check-src" unless="gwtc.notRequired">
@@ -156,9 +157,9 @@
 			<arg line="-war ${gwt.war.build.dir}" />
 			<arg line="-draftCompile"/>
 			<arg line="-style DETAILED"/> <!-- PRETTY for non-obfuscated Javascript -->
-			<arg line="edu.ucsb.eucalyptus.admin.EucalyptusWebInterface" />
+			<arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
 		</java>
-		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module}/" />
+		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
 	</target>
 
 	<property name="servlet.dir" value="${euca.var.dir}/webapps" />

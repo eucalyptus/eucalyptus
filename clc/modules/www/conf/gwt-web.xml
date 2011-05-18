@@ -74,11 +74,16 @@
     </user-data-constraint>
   </security-constraint>
 
+  <!-- Default page to serve -->
+  <welcome-file-list>
+    <welcome-file>EucalyptusWebInterface.html</welcome-file>
+  </welcome-file-list>
+
   <servlet>
     <description></description>
-    <display-name>EucalyptusWebBackend</display-name>
-    <servlet-name>EucalyptusWebBackendImpl</servlet-name>
-    <servlet-class>edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl</servlet-class>
+    <display-name>EucalyptusService</display-name>
+    <servlet-name>EucalyptusServiceImpl</servlet-name>
+    <servlet-class>com.eucalyptus.webui.server.EucalyptusServiceImpl</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -106,8 +111,8 @@
 
 
   <servlet-mapping>
-    <servlet-name>EucalyptusWebBackendImpl</servlet-name>
-    <url-pattern>/EucalyptusWebBackend</url-pattern>
+    <servlet-name>EucalyptusServiceImpl</servlet-name>
+    <url-pattern>/backend</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
