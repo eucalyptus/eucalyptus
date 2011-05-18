@@ -1022,6 +1022,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 
 #ifdef _UNIT_TEST
 
+static blobstore * cache_bs;
+static blobstore * work_bs;
+
 static blobstore * create_teststore (int size_blocks, const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
 {
     static int ts = 0;
@@ -1071,6 +1074,8 @@ static void add_vbr (virtualMachine * vm,
         strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
 }
 
+static volatile int provisioned_instances = 0;
+
 static int provision (const char * id, const char * key, blobstore * cache_bs, blobstore * work_bs)
 {
     virtualMachine vm;
@@ -1089,6 +1094,8 @@ static int provision (const char * id, const char * key, blobstore * cache_bs, b
     if (art_implement_tree (sentinel, work_bs, cache_bs, id, 1000000LL * 60) != OK)
         return 1;
 
+    __sync_fetch_and_add (&provisioned_instances, 1); // atomic increment
+
     return 0;
 }
 
@@ -1098,11 +1105,42 @@ static char * gen_id (char * id, unsigned int size, const char * prefix)
     return id;
 }
 
-static void dummy_err_fn (const char * msg) { }
-
 #define BS_SIZE 20000000000/512
 #define KEY1 "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n"
 #define GEN_ID gen_id (id, sizeof(id), "12345678")
+#define COMPETITIVE_PARTICIPANTS 3
+#define COMPETITIVE_ITERATIONS 20
+
+static void * competitor_function (void * ptr)
+{
+    int errors = 0;
+
+    printf ("%u/%u: competitor running with\n", (unsigned int)pthread_self(), (int)getpid());
+    
+    for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
+        char id [32];
+        errors += provision (GEN_ID, KEY1, cache_bs, work_bs);
+        usleep ((long long)(100*((double)random()/RAND_MAX)));
+    }
+    
+    * (long long *) ptr = errors;
+    return NULL;
+}
+
+// check if the blobstore has the expected number of 'block' entries
+static int check_blob (blobstore * bs, const char * keyword, int expect) 
+{
+    char cmd [1024];
+    snprintf (cmd, sizeof (cmd), "exit $(find %s | grep %s | wc -l)", bs->path, keyword);
+    int found = WEXITSTATUS(system (cmd));
+    if (found != expect) {
+        printf ("executed [%s] = %d\n", cmd, found);
+        return 1;
+    }
+    return 0;
+}
+
+static void dummy_err_fn (const char * msg) { }
 
 int main (int argc, char ** argv)
 {
@@ -1115,15 +1153,40 @@ int main (int argc, char ** argv)
 
     printf ("testing vbr.c\n");
 
-    blobstore * cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
-    blobstore * work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+    cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+    work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     
     if (errors += provision (GEN_ID, KEY1, cache_bs, work_bs))
         goto out;
-
+#define CHECK_BLOBS \
+    if (errors += check_blob (cache_bs, "blocks", 6)) goto out; \
+    if (errors += check_blob (work_bs, "blocks", 3 * provisioned_instances)) goto out
+    CHECK_BLOBS;
+    
     for (int i=0; i<5; i++) {
         errors += provision (GEN_ID, KEY1, cache_bs, work_bs);
     }
+    if (errors) {
+        printf ("failed sequential instance provisioning test\n");
+    }
+    CHECK_BLOBS;
+    
+    printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
+    pthread_t threads [COMPETITIVE_PARTICIPANTS];
+    long long thread_par [COMPETITIVE_PARTICIPANTS];
+    int thread_par_sum = 0;
+    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+        pthread_create (&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+    }
+    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+        pthread_join (threads[j], NULL);
+        thread_par_sum += (int)thread_par [j];
+    }
+    printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+    if (errors += thread_par_sum) {
+        printf ("failed parallel instance provisioning test\n");
+    }
+    CHECK_BLOBS;
 
 out:
     _exit(errors);
