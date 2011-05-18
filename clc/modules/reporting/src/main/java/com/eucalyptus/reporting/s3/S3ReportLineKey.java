@@ -12,6 +12,8 @@ public class S3ReportLineKey
 	public S3ReportLineKey(String label, String groupByLabel)
 	{
 		super();
+		if (label==null)
+			throw new IllegalArgumentException("label can't be null");
 		this.label = label;
 		this.groupByLabel = groupByLabel;
 	}
