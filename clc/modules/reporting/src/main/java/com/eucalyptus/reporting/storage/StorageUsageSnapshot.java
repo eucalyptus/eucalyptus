@@ -19,7 +19,7 @@ class StorageUsageSnapshot
 	@Embedded
 	protected StorageUsageData usageData;
 	@Column(name="is_all_snapshot", nullable=false)
-	protected Boolean allSnapshot;
+	protected Boolean allSnapshot = false;
 	
 	protected StorageUsageSnapshot()
 	{
