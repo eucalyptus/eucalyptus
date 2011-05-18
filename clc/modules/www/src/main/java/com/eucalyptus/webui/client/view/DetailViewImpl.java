@@ -37,6 +37,8 @@ public class DetailViewImpl extends Composite implements DetailView {
     String grid( );
   }
   
+  public static final String ANCHOR = ">>";
+  
   class HiddenValue implements HasValueWidget {
     
     private String value; 
@@ -143,6 +145,30 @@ public class DetailViewImpl extends Composite implements DetailView {
       return getValue( );
     }
     
+  }
+  
+  class HyperLinkValue implements HasValueWidget {
+
+    private Anchor anchor;
+    
+    public HyperLinkValue( String url ) {
+      this.anchor = new Anchor( ANCHOR, url );
+    }
+    
+    @Override
+    public String getValue( ) {
+      return this.anchor.getHref( );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return this.anchor;
+    }
+  
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
   }
   
   private static final String LABEL_WIDTH = "36%";
@@ -255,6 +281,8 @@ public class DetailViewImpl extends Composite implements DetailView {
             showSaveButton( );
           }
         } );
+      case LINK:
+        return new HyperLinkValue( val );
     }
     return null;
   }

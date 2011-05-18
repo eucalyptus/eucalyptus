@@ -106,7 +106,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     
     List<SearchResultRow> searchResult = EuareWebBackend.searchAccounts( search );
     SearchResult result = new SearchResult( searchResult.size( ), range );
-    result.setDescs( EuareWebBackend.COMMON_FIELD_DESCS );
+    result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
     result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
         
     for ( SearchResultRow row : result.getRows( ) ) {

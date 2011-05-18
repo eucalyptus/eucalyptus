@@ -16,7 +16,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class AccountActivity extends AbstractSearchActivity implements AccountView.Presenter, DetailView.Presenter {
   
-  public static final String TITLE = "USER ACCOUNTS";
+  public static final String TITLE = "ACCOUNTS";
   
   private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
   
@@ -66,7 +66,7 @@ public class AccountActivity extends AbstractSearchActivity implements AccountVi
 
   @Override
   protected String getTitle( ) {
-    return null;
+    return TITLE;
   }
 
   @Override
