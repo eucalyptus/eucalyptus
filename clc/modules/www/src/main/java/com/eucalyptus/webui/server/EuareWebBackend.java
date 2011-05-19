@@ -308,7 +308,7 @@ public class EuareWebBackend {
     result.addField( key.getAccessKey( ) );
     result.addField( key.isActive( ).toString( ) );
     result.addField( key.getCreateDate( ) == null ? "" : key.getCreateDate( ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).or( NAME, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).not( ACCOUNT, user.getAccount( ).getName( ) ).or( NAME, user.getName( ) ).url( ) );
     return result;
   }
 

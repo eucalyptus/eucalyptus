@@ -35,27 +35,35 @@ public class QueryBuilder {
     return this;
   }
   
-  public QueryBuilder and( String field, String pattern ) {
-    if ( sb.length( ) > 0 ) {
-      sb.append( " " );
-    }
+  private QueryBuilder component( String field, String pattern ) {
     if ( field != null && !"".equals( field ) ) {
       sb.append( field ).append( EQUAL );
     }
     sb.append( pattern );
-    return this;
+    return this;    
+  }
+  
+  public QueryBuilder and( String field, String pattern ) {
+    if ( sb.length( ) > 0 ) {
+      sb.append( " " );
+    }
+    return component( field, pattern );
   }
   
   public QueryBuilder or( String field, String pattern ) {
+    if ( sb.length( ) > 0 ) {
+      sb.append( " " );
+    }
     sb.append( OR );
-    and( field, pattern );
-    return this;
+    return component( field, pattern );
   }
   
   public QueryBuilder not( String field, String pattern ) {
+    if ( sb.length( ) > 0 ) {
+      sb.append( " " );
+    }
     sb.append( NOT );
-    and( field, pattern );
-    return this;
+    return component( field, pattern );
   }
   
   public String query( ) {
