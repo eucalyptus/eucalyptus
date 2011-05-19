@@ -45,9 +45,9 @@ public class HeaderViewImpl extends Composite implements HeaderView {
 
   @UiHandler( "searchBox" )
   void handleSearchBoxKeyPressed( KeyPressEvent e ) {
-    int key = e.getCharCode( );
+    int key = e.getNativeEvent( ).getKeyCode( );
     LOG.log( Level.INFO, "Key Pressed: " + key );
-    if ( KeyCodes.KEY_ENTER == e.getCharCode( ) ) {
+    if ( KeyCodes.KEY_ENTER == key ) {
       searchHandler.search( searchBox.getInput( ) );
     }
   }
