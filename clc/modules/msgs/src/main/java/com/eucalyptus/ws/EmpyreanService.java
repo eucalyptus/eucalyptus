@@ -180,7 +180,9 @@ public class EmpyreanService {
           setServiceId( localService.getServiceId( ) );
           setLocalEpoch( reply.getBaseEpoch( ) );
           setLocalState( localService.getState( ).toString( ) );
-          getDetails( ).addAll( localService.getDetails( ) );
+          if ( localService.getDetails( ) != null ) {
+            getDetails( ).addAll( localService.getDetails( ) );
+          }
         }} );
       }
     }
