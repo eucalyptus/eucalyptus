@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.view;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
@@ -22,8 +23,10 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.PasswordTextBox;
 import com.google.gwt.user.client.ui.ScrollPanel;
+import com.google.gwt.user.client.ui.TextArea;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.datepicker.client.DateBox;
 
 public class DetailViewImpl extends Composite implements DetailView {
   
@@ -38,6 +41,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
   
   public static final String ANCHOR = ">>";
+  public static final int ARTICLE_LINES = 8;
   
   class HiddenValue implements HasValueWidget {
     
@@ -171,6 +175,66 @@ public class DetailViewImpl extends Composite implements DetailView {
     }
   }
   
+  class TextAreaValue implements HasValueWidget {
+    
+    private TextArea textArea;
+    
+    public TextAreaValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
+      this.textArea = new TextArea( );
+      this.textArea.setEnabled( enabled );
+      this.textArea.setVisibleLines( ARTICLE_LINES );
+      this.textArea.setValue( value == null ? "" : value );
+      this.textArea.addValueChangeHandler( changeHandler );
+    }
+
+    @Override
+    public String getValue( ) {
+      return this.textArea.getValue( );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return this.textArea;
+    }
+    
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
+  }
+  
+  class DateBoxValue implements HasValueWidget {
+    
+    private DateBox dateBox;
+    
+    public DateBoxValue( String date, boolean enabled, ValueChangeHandler<Date> changeHandler ) {
+      this.dateBox = new DateBox( );
+      this.dateBox.setEnabled( enabled );
+      if ( date != null && !"".equals( date ) ) {
+        Long value = Long.parseLong( date );
+        this.dateBox.setValue( new Date( value ) );
+      }
+      this.dateBox.addValueChangeHandler( changeHandler );
+    }
+
+    @Override
+    public String getValue( ) {
+      return Long.toString( this.dateBox.getValue( ).getTime( ) );
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return this.dateBox;
+    }
+    
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
+  }
+  
   private static final String LABEL_WIDTH = "36%";
   
   @UiField
@@ -267,6 +331,13 @@ public class DetailViewImpl extends Composite implements DetailView {
             showSaveButton( );
           }
         } );
+      case ARTICLE:
+        return new TextAreaValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<String> event ) {
+            showSaveButton( );
+          }
+        } );        
       case HIDDEN:
         return new PasswordTextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
           @Override
@@ -278,6 +349,13 @@ public class DetailViewImpl extends Composite implements DetailView {
         return new CheckBoxValue( val, desc.getEditable( ), new ValueChangeHandler<Boolean>( ) {
           @Override
           public void onValueChange( ValueChangeEvent<Boolean> event ) {
+            showSaveButton( );
+          }
+        } );
+      case DATE:
+        return new DateBoxValue( val, desc.getEditable( ), new ValueChangeHandler<Date>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<Date> event ) {
             showSaveButton( );
           }
         } );

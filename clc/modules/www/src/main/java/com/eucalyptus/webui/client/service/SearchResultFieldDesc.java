@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.service;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class SearchResultFieldDesc implements Serializable {
 
@@ -13,20 +14,27 @@ public class SearchResultFieldDesc implements Serializable {
   }
   
   public static enum Type {
-    TEXT,
-    HIDDEN,
-    BOOLEAN,
-    LINK,
+    TEXT,       // single line text string
+    ARTICLE,    // multi-line text
+    HIDDEN,     // password like text
+    BOOLEAN,    // boolean
+    DATE,       // date in long
+    ENUM,       // enum value
+    KEYVAL,     // dynamic key value (like single line text but can be removed)
+    NEWKEYVAL,  // empty key value (for adding new)
+    LINK,       // URL link
+    ACTION      // custom action, usually causing a popup
   }
   
-  private String name;
-  private String title;
-  private Boolean sortable;
-  private String width;
-  private TableDisplay tableDisplay;
-  private Type type;
-  private Boolean editable;
-  private Boolean hidden;
+  private String name;                // ID of the field, also used as the key of a KEYVAL
+  private String title;               // title for display
+  private Boolean sortable;           // if sortable in table display
+  private String width;               // width of column for table display
+  private TableDisplay tableDisplay;  // table display type
+  private Type type;                  // value type
+  private Boolean editable;           // if this field is editable
+  private Boolean hidden;             // if this field should be hidden in properties panel
+  private List<String> enumValues;    // the list of enum values for an ENUM
 
   public SearchResultFieldDesc( ) {
   }
@@ -137,6 +145,14 @@ public class SearchResultFieldDesc implements Serializable {
 
   public String getName( ) {
     return name;
+  }
+
+  public void setEnumValues( List<String> enumValues ) {
+    this.enumValues = enumValues;
+  }
+
+  public List<String> getEnumValues( ) {
+    return enumValues;
   }
   
 }

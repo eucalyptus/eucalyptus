@@ -36,6 +36,9 @@ public class QueryBuilder {
   }
   
   public QueryBuilder and( String field, String pattern ) {
+    if ( sb.length( ) > 0 ) {
+      sb.append( " " );
+    }
     if ( field != null && !"".equals( field ) ) {
       sb.append( field ).append( EQUAL );
     }

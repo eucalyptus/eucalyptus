@@ -147,56 +147,72 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
-    
-    System.out.println( "New search: " + range );
-    
+    verifySession( session );    
     List<SearchResultRow> searchResult = EuareWebBackend.searchAccounts( search );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
     result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
-        
-    for ( SearchResultRow row : result.getRows( ) ) {
-      System.out.println( "Row: " + row );
-    }
-    
     return result;
   }
 
   @Override
   public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( user, search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.GROUP_COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
 
   @Override
   public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( user, search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.USER_COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
 
   @Override
   public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( user, search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.POLICY_COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
 
   @Override
   public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( user, search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.KEY_COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
 
   @Override
   public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( user, search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( EuareWebBackend.CERT_COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
 
   @Override
   public SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    verifySession( session );
+    List<SearchResultRow> searchResult = ImageWebBackend.searchImages( search );
+    SearchResult result = new SearchResult( searchResult.size( ), range );
+    result.setDescs( ImageWebBackend.COMMON_FIELD_DESCS );
+    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    return result;
   }
   
 }
