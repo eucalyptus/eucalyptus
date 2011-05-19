@@ -68,9 +68,9 @@ public class QueryBuilder {
   
   public String url( ) {
     try {
-      return BASE + this.type + PLACE_SEPARATOR + URLEncoder.encode( sb.toString( ), "UTF-8" );
+      return BASE + this.type + PLACE_SEPARATOR + UriUtils.encodePathSegment( sb.toString( ), "UTF-8" );
     } catch ( UnsupportedEncodingException e ) {
-      return BASE + this.type + PLACE_SEPARATOR + URLEncoder.encode( sb.toString( ) );
+      throw new RuntimeException( "Failed to use UTF-8 in URL encoding" );
     }
   }
   
