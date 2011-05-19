@@ -1548,7 +1548,8 @@ blockblob * blockblob_open ( blobstore * bs,
 
     }
  out:
-    logprintfl (EUCADEBUG, "{%u} blockblob_open: done with blob id=%s\n", (unsigned int)pthread_self(), id);
+    logprintfl (EUCADEBUG, "{%u} blockblob_open: done with blob id=%s ret=%012lx errno=%d %s\n", 
+                (unsigned int)pthread_self(), id, bb, _blobstore_errno, (bb)?("OK"):blobstore_get_last_msg());
     free_bbs (bbs);
     return bb;
 }

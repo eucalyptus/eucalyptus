@@ -75,13 +75,15 @@ typedef struct _artifact {
     int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (can be NULL for a sentinel)
     long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
+    boolean make_bootable; // tells 'disk_creator' whether to make the disk bootable
     blockblob * bb; // blockblob handle for the artifact, when it is open
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
     int seq; // sequence number of the artifact
+    char instanceId [32]; // here purely for annotating logs
 } artifact;
 
 artifact * art_free (artifact * a);
 int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
-artifact * vbr_alloc_tree (virtualMachine * vm, const char * key);
+artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, const char * sshkey, const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);

@@ -439,34 +439,97 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     return OK;
 }
 
-#define PRINTART logprintfl(EUCAINFO, "creating artifact %s blob=%s sig=[%s]\n\n", a->id, (a->bb)?(a->bb->id):("none"), a->sig)
-static int vbr_creator (artifact * a)
+static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * bb, boolean must_be_file)
 {
-    PRINTART;
+    if (! must_be_file && strlen (blockblob_get_dev (bb))) {
+        strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
+        vbr->backingType = SOURCE_TYPE_BLOCK;
+    } else {
+        strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
+        vbr->backingType = SOURCE_TYPE_FILE;
+    }
+}
+
+// These *_creator funcitons produce an artifact in blobstore, either from
+// scratch (such as Walrus download or a new partition) or by converting,
+// combining, and augmenting existing artifacts.  When invoked, creators
+// can assume that any input blobs and the output blob are open (and 
+// thus locked for their exclusive use).
+
+static int walrus_creator (artifact * a) // creates an artifact by downloading it from Walrus
+{
+    assert (a->bb);
+    assert (a->vbr);
+    virtualBootRecord * vbr = a->vbr;
+    const char * dest_path = blockblob_get_file (a->bb);
+
+    assert (vbr->preparedResourceLocation);
+    logprintfl (EUCAINFO, 
+                "[%s] downloading from Walrus %s\n"
+                "[%s]             to %s\n", 
+                a->instanceId, vbr->preparedResourceLocation, 
+                a->instanceId, dest_path);
+    if (walrus_image_by_manifest_url (vbr->preparedResourceLocation, dest_path, TRUE) != OK) {
+        logprintfl (EUCAERROR, "[%s] error: failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return ERROR;
+    }
+    update_vbr_with_backing_info (vbr, a->bb, a->must_be_file);
+
+    return OK;
+}
+
+static int partition_creator (artifact * a) // creates a new partition from scratch
+{
+    assert (a->bb);
+    assert (a->vbr);
+    virtualBootRecord * vbr = a->vbr;
+    const char * dest_dev = blockblob_get_dev (a->bb);
+
+    assert (dest_dev);
+    logprintfl (EUCAINFO, "[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, vbr->size, vbr->formatName, a->id);
+    int format = ERROR;
+    switch (vbr->format) {
+    case NC_FORMAT_NONE:
+        format = OK;
+        break;
+    case NC_FORMAT_EXT2: // TODO: distinguish ext2 and ext3!
+    case NC_FORMAT_EXT3:
+        format = diskutil_mkfs (dest_dev, vbr->size);
+        break;
+    case NC_FORMAT_SWAP:
+        format = diskutil_mkswap (dest_dev, vbr->size);
+        break;
+    default:
+        logprintfl (EUCAERROR, "[%s] error: format of type %s is NOT IMPLEMENTED\n", a->instanceId, vbr->formatName);
+    }
+    
+    if (format == OK) {
+        update_vbr_with_backing_info (vbr, a->bb, a->must_be_file);
+    } else {
+        logprintfl (EUCAERROR, "[%s] failed to create partition in blob %s\n", a->instanceId, a->id);
+        return ERROR;
+    }
+
     return OK;
 }
 
 static int disk_creator (artifact * a)
 {
-    PRINTART;
     return OK;
 }
 
 static int keyed_disk_creator (artifact * a)
 {
-    PRINTART;
     return OK;
 }
 
 static int iqn_creator (artifact * a)
 {
-    PRINTART;
     return OK;
 }
 
 static int copy_creator (artifact * a)
 {
-    PRINTART;
     return OK;
 }
 
@@ -514,6 +577,7 @@ static int art_gen_id (char * buf, unsigned int buf_size, const char * first, co
 }
 
 #define IGNORED 0 // special value to indicate boolean params that will be ignored
+__thread char * instanceId = "";
 
 static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
 {
@@ -535,6 +599,7 @@ static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolea
     a->creator = creator;
     a->vbr = vbr;
 
+    strncpy (a->instanceId, instanceId, sizeof (a->instanceId)); // for logging
     return a;
 }
 
@@ -565,7 +630,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) goto w_out;
 
         // allocate artifact struct
-        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, FALSE, vbr_creator, vbr);
+        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, FALSE, walrus_creator, vbr);
 
         w_out:
         
@@ -604,7 +669,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             break;
 
-        a = art_alloc (art_id, art_sig, vbr->size, TRUE, FALSE, vbr_creator, vbr);
+        a = art_alloc (art_id, art_sig, vbr->size, TRUE, FALSE, partition_creator, vbr);
         break;
     }
     default:
@@ -629,7 +694,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     return a;
 }
 
-static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifact * parts [], int num_parts, const char * key)
+static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifact * parts [], int num_parts, boolean make_bootable, const char * sshkey)
 {
     char art_sig [ART_SIG_MAX] = ""; 
     char art_pref [EUCA_MAX_PATH] = "disk";
@@ -694,18 +759,19 @@ static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifa
 
     artifact * disk;
 
-    { // allocate the 'bootable' disk artifact
+    { // allocate the 'raw' disk artifact
         char art_id [48]; // ID of the artifact (append -##### hash of sig)
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             return NULL;
         
         disk = art_alloc (art_id, art_sig, disk_size_bytes, TRUE, FALSE, disk_creator, NULL);
         if (disk==NULL) {
-            logprintfl (EUCAERROR, "error: failed to allocate an artifact for bootable disk\n");
+            logprintfl (EUCAERROR, "error: failed to allocate an artifact for raw disk\n");
             return NULL;
         }
-    
-        // attach prereqs and partitions as dependencies of the bootable disk
+        disk->make_bootable = make_bootable;
+
+        // attach prereqs and partitions as dependencies of the raw disk
         for (int i = 0; i<num_prereqs; i++) {
             artifact * p = prereqs [i];
             if (art_add_dep (disk, p) != OK) {
@@ -724,13 +790,13 @@ static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifa
     
     { // allocate the 'keyed' disk artifact
 
-        // construct signature for the 'keyed' disk by appending the SSH key to 'bootable' disk
-        if (key==NULL)
-            key = "";
+        // construct signature for the 'keyed' disk by appending the SSH key to 'raw' disk
+        if (sshkey==NULL)
+            sshkey = "";
 
         char key_sig [ART_SIG_MAX];
         if ((snprintf (key_sig, sizeof(key_sig), "KEY /root/.ssh/authorized_keys\n%s\n\n", 
-                       key) >= sizeof (key_sig)) // output truncated
+                       sshkey) >= sizeof (key_sig)) // output truncated
             ||
             ((strlen (art_sig) + strlen (key_sig)) >= sizeof (art_sig))) { // overflow
             logprintfl (EUCAERROR, "error: internal buffers (ART_SI_MAX) too small for signature\n");
@@ -767,7 +833,9 @@ static artifact * art_alloc_disk (artifact * prereqs [], int num_prereqs, artifa
 artifact * // returns pointer to the root of artifact tree or NULL on error
 vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must free the tree)
                 virtualMachine * vm, // virtual machine containing the VBR
-                const char * key)
+                boolean make_bootable,
+                const char * sshkey,
+                const char * instanceId)
 {
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord * prereq [EUCA_MAX_VBRS];
@@ -821,7 +889,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                     
                 } else if (partitions) { // there were partitions and we saw them all
                     assert (disk_arts [0] == NULL);
-                    disk_arts [0] = art_alloc_disk (prereq_arts, total_prereqs, disk_arts + 1, partitions, key);
+                    disk_arts [0] = art_alloc_disk (prereq_arts, total_prereqs, disk_arts + 1, partitions, make_bootable, sshkey);
                     if (disk_arts [0] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -852,7 +920,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define STORE_TIMEOUT_USEC 10
+#define FIND_BLOB_TIMEOUT_USEC 0
 
 static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_blob ( // either opens a blockblob or creates it
@@ -870,7 +938,9 @@ find_or_create_blob ( // either opens a blockblob or creates it
     if (do_create) {
         flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // for creating
     }
-    bb = blockblob_open (bs, id, size_bytes, flags, sig, STORE_TIMEOUT_USEC);
+    // open with a short timeout (0-1000 usec), as we do not want to block 
+    // here - we let higher-level functions do retries if necessary
+    bb = blockblob_open (bs, id, size_bytes, flags, sig, FIND_BLOB_TIMEOUT_USEC);
     if (bb) { // success!
         * bbp = bb;
     } else {
@@ -908,16 +978,30 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     if (a->may_be_cached && cache_bs) {
         ret = find_or_create_blob (do_create, cache_bs, id_cache, a->size_bytes, a->sig, bbp);
 
-        // some errors from cache are OK
-        if (ret!=BLOBSTORE_ERROR_NOENT &&
-            ret!=BLOBSTORE_ERROR_EXIST &&
-            ret!=BLOBSTORE_ERROR_NOSPC &&
-            ret!=BLOBSTORE_ERROR_AGAIN &&
-            ret!=BLOBSTORE_ERROR_SIGNATURE) {
-            return ret; // either OK or some bad error
+        // for some error conditions from cache we try work blobstore
+        if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
+            (!do_create && ret==BLOBSTORE_ERROR_NOENT) ||
+            (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE) ||
+
+
+            
+            // TODO: remove these!
+            ret==BLOBSTORE_ERROR_NOENT ||
+            ret==BLOBSTORE_ERROR_AGAIN ||
+            ret==BLOBSTORE_ERROR_EXIST
+
+
+
+            ) {
+            goto try_work;
+        } else { // for all others we return the error or success
+            return ret;
         }
     }
-    
+ try_work:
+    if (ret==BLOBSTORE_ERROR_SIGNATURE) {
+        logprintfl (EUCAWARN, "warning: signature mismatch on cached blob %s\n", id_cache); // TODO: maybe invalidate?
+    }
     return find_or_create_blob (do_create, work_bs, id_work, a->size_bytes, a->sig, bbp);
 }
 
@@ -1049,15 +1133,16 @@ static blobstore * create_teststore (int size_blocks, const char * base, const c
 
 // this function sets the fields in a VBR that are required for artifact processing
 static void add_vbr (virtualMachine * vm,
-                    long long size,
-                    char * formatName,
-                    char * id,
-                    ncResourceType type, 
-                    ncResourceLocationType locationType,
-                    int diskNumber,
-                    int partitionNumber,
-                    libvirtBusType guestDeviceBus,
-                    char * preparedResourceLocation)
+                     long long size,
+                     ncResourceFormatType format,
+                     char * formatName,
+                     const char * id,
+                     ncResourceType type, 
+                     ncResourceLocationType locationType,
+                     int diskNumber,
+                     int partitionNumber,
+                     libvirtBusType guestDeviceBus,
+                     char * preparedResourceLocation)
 {
     virtualBootRecord * vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
     vbr->size = size;
@@ -1065,6 +1150,7 @@ static void add_vbr (virtualMachine * vm,
         strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
     if (id)
         strncpy (vbr->id, id, sizeof (vbr->id));
+    vbr->format = format;
     vbr->type = type;
     vbr->locationType = locationType;
     vbr->diskNumber = diskNumber;
@@ -1075,53 +1161,64 @@ static void add_vbr (virtualMachine * vm,
 }
 
 static volatile int provisioned_instances = 0;
+static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 
-static int provision (const char * id, const char * key, blobstore * cache_bs, blobstore * work_bs)
+static int provision (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs)
 {
     virtualMachine vm;
     bzero   (&vm, sizeof (vm));
 
-    add_vbr (&vm, MEGABYTE * 2L, "none", "eki-234BCD", NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "none", "eri-345CDE", NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "none", "emi-123ABC", NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "ext3", "none",       NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, "swap", "none",       NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
-    artifact * sentinel = vbr_alloc_tree (&vm, key);
-    if (sentinel == NULL) { 
+    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
+    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
+
+    instanceId = strstr (id, "/") + 1;
+    artifact * sentinel = vbr_alloc_tree (&vm, FALSE, sshkey, id);
+    if (sentinel == NULL) {
         return 1;
     }
-    printf ("\nallocated artifact tree\n");
-    if (art_implement_tree (sentinel, work_bs, cache_bs, id, 1000000LL * 60) != OK)
+    printf ("allocated artifact tree sentinel=%012lx\n", (unsigned long)sentinel);
+    if (art_implement_tree (sentinel, work_bs, cache_bs, id, 1000000LL * 60 * 2) != OK)
         return 1;
 
-    __sync_fetch_and_add (&provisioned_instances, 1); // atomic increment
+    pthread_mutex_lock (&competitors_mutex);
+    provisioned_instances++;
+    pthread_mutex_unlock (&competitors_mutex);
 
     return 0;
 }
 
 static char * gen_id (char * id, unsigned int size, const char * prefix)
 {
-    snprintf (id, size, "%s/i-%04x", prefix, rand());
+    snprintf (id, size, "%s/i-%08x", prefix, rand());
     return id;
 }
 
 #define BS_SIZE 20000000000/512
 #define KEY1 "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n"
+#define EKI1 "eki-1ABC123"
+#define ERI1 "eri-1BCD234"
+#define EMI1 "emi-1CDE345"
+#define EMI2 "emi-2DEF456"
 #define GEN_ID gen_id (id, sizeof(id), "12345678")
 #define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 20
+#define COMPETITIVE_ITERATIONS 30
 
 static void * competitor_function (void * ptr)
 {
     int errors = 0;
 
-    printf ("%u/%u: competitor running with\n", (unsigned int)pthread_self(), (int)getpid());
+    printf ("%u/%u: competitor running (provisioned=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances);
     
     for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
         char id [32];
-        errors += provision (GEN_ID, KEY1, cache_bs, work_bs);
+        errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs);
         usleep ((long long)(100*((double)random()/RAND_MAX)));
     }
+
+    printf ("%u/%u: competitor done (provisioned=%d errors=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances, errors);
     
     * (long long *) ptr = errors;
     return NULL;
@@ -1131,10 +1228,32 @@ static void * competitor_function (void * ptr)
 static int check_blob (blobstore * bs, const char * keyword, int expect) 
 {
     char cmd [1024];
-    snprintf (cmd, sizeof (cmd), "exit $(find %s | grep %s | wc -l)", bs->path, keyword);
-    int found = WEXITSTATUS(system (cmd));
+    snprintf (cmd, sizeof (cmd), "find %s | grep %s | wc -l", bs->path, keyword);
+    FILE * f = popen (cmd, "r");
+    if (! f) {
+        printf ("error: failed to popen() command '%s'\n", cmd);
+        perror ("test_vbr");
+        return 1;
+    }
+
+    char buf [32];
+    int bytes;
+    if ((bytes = fread (buf, 1, sizeof (buf) - 1, f)) < 1) {
+        printf ("error: failed to fread() from output of '%s' (returned %d)\n", cmd, bytes);
+        perror ("test_vbr");
+        return 1;
+    }
+    buf [bytes] = '\0';
+
+    if (pclose (f)) {
+        printf ("error: failed pclose()\n");
+        perror ("test_vbr");
+        return 1;
+    }
+
+    int found = atoi (buf);
     if (found != expect) {
-        printf ("executed [%s] = %d\n", cmd, found);
+        printf ("error: unexpected disk state: [%s] = %d != %d\n", cmd, found, expect);
         return 1;
     }
     return 0;
@@ -1156,22 +1275,24 @@ int main (int argc, char ** argv)
     cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
     work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     
-    if (errors += provision (GEN_ID, KEY1, cache_bs, work_bs))
+    int emis_in_use = 1;
+    if (errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs))
         goto out;
 #define CHECK_BLOBS \
-    if (errors += check_blob (cache_bs, "blocks", 6)) goto out; \
+    if (errors += check_blob (cache_bs, "blocks", 4 + 2 * emis_in_use)) goto out;  \
     if (errors += check_blob (work_bs, "blocks", 3 * provisioned_instances)) goto out
     CHECK_BLOBS;
     
     for (int i=0; i<5; i++) {
-        errors += provision (GEN_ID, KEY1, cache_bs, work_bs);
+        errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs);
     }
     if (errors) {
-        printf ("failed sequential instance provisioning test\n");
+        printf ("error: failed sequential instance provisioning test\n");
     }
     CHECK_BLOBS;
     
     printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
+    emis_in_use ++; // we'll have threads creating a new EMI
     pthread_t threads [COMPETITIVE_PARTICIPANTS];
     long long thread_par [COMPETITIVE_PARTICIPANTS];
     int thread_par_sum = 0;
@@ -1184,8 +1305,9 @@ int main (int argc, char ** argv)
     }
     printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
     if (errors += thread_par_sum) {
-        printf ("failed parallel instance provisioning test\n");
+        printf ("error: failed parallel instance provisioning test\n");
     }
+    sleep (1);
     CHECK_BLOBS;
 
 out:

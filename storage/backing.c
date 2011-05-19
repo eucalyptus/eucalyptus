@@ -877,10 +877,14 @@ int create_instance_backing2 (ncInstance * instance)
         ensure_directories_exist (instance_path, 0, BACKING_DIRECTORY_PERM);
     }
     
-    // create backing
     char work_prefix [1024]; // {userId}/{instanceId}
     set_id (instance, NULL, work_prefix, sizeof (work_prefix));
-    artifact * sentinel = vbr_alloc_tree (vm, instance->keyName); // compute tree of dependencies
+
+    // compute tree of dependencies
+    artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
+                                          FALSE, // for Xen and KVM we do not need to make disk bootable
+                                          instance->keyName, // the SSH key
+                                          instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
         art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, 1000000L * 60) != OK) { // download/create/combine the dependencies
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);
