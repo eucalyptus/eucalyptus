@@ -1,6 +1,6 @@
 package com.eucalyptus.webui.client.place;
 
-import com.eucalyptus.webui.client.service.Categories;
+import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
@@ -10,7 +10,7 @@ public class ConfigPlace extends SearchPlace {
     super( search );
   }
 
-  @Prefix( Categories.CONFIGURATION )
+  @Prefix( CategoryConstants.CONFIGURATION )
   public static class Tokenizer implements PlaceTokenizer<ConfigPlace> {
 
     @Override

@@ -9,7 +9,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.webui.client.service.Categories;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.EucalyptusService;

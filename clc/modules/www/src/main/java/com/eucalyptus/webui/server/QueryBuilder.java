@@ -1,4 +1,4 @@
-package com.eucalyptus.webui.client.service;
+package com.eucalyptus.webui.server;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
