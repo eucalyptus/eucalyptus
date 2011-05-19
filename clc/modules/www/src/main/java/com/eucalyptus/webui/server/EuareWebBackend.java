@@ -76,11 +76,11 @@ public class EuareWebBackend {
 
   public static final ArrayList<SearchResultFieldDesc> USER_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "10%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "30%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "35%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "25%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "15%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REGISTRATION, "Registration status", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARN, "ARN", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( linkfy( ACCOUNT ), "Owner account", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );

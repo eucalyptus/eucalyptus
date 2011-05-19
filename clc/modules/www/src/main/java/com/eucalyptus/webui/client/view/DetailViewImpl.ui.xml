@@ -63,7 +63,15 @@
             background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
-            border-color: #999999 #CCCCCC #CCCCCC #999999;                
+            border-color: #999999 #CCCCCC #CCCCCC #999999;
+        }
+        .grid textarea {
+            width:98%;
+            background-color:#DDDDDD;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;
+        }        
     </ui:style>
     
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
