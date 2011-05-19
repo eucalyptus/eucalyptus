@@ -15,7 +15,6 @@ import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.reporting.queue.mq.QueueBroker;
 import com.eucalyptus.reporting.s3.S3EventListener;
 import com.eucalyptus.reporting.storage.StorageEventListener;
-import com.eucalyptus.reporting.storage.StorageEventPoller;
 
 @Provides(Reporting.class)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
@@ -26,7 +25,6 @@ public class ReportingBootstrapper
 
 	private static long POLLER_DELAY_MS = 10000l;
 
-	private StorageEventPoller storagePoller;
 	private StorageEventListener storageListener;
 	private static InstanceEventListener instanceListener = null;
 	private S3EventListener s3Listener;
@@ -185,7 +183,6 @@ public class ReportingBootstrapper
 		try {
 			instanceListener.flush();
 			timer.cancel();
-			storagePoller.writeEvents();
 			queueFactory.shutdown();
 			queueBroker.shutdown();
 			log.info("ReportingBootstrapper stopped");
@@ -204,16 +201,6 @@ public class ReportingBootstrapper
 	}
 
 
-	/* Following methods are used by the testing framework only
-	 */
-
-	/**
-	 * This method is used by the testing framework only. 
-	 */
-	public StorageEventPoller getOverriddenStorageEventPoller()
-	{
-		return this.storagePoller;
-	}
 
 	
 }
