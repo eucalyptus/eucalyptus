@@ -84,12 +84,14 @@
 #include "blobstore.h"
 #include <sys/types.h> // gettid
 #include "diskutil.h"
+#include <regex.h>
 #include "misc.h" // ensure_...
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_DIRECTORY_PERM 0771 // the '1' is there so libvirt/KVM on Maverick do not stumble on permissions
 #define BLOBSTORE_FILE_PERM 0660
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC 1000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
@@ -1326,6 +1328,83 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
     }
 
     return purged;
+}
+
+int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results )
+{
+    blockblob_meta * head = NULL;
+    int ret = 0;
+    regex_t re;
+
+    if (regcomp (&re, regex, REG_NOSUB) != 0) {
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to parse search regular expression");
+        return -1;
+    }
+
+    if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to lock the blobstore");
+        ret = -1;
+        goto free;
+    }
+    
+    // put existing items in the blobstore into a LL
+    _blobstore_errno = BLOBSTORE_ERROR_OK;
+    blockblob * bbs = scan_blobstore (bs);
+    if (bbs==NULL) {
+        if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
+            ret = -1;
+            goto unlock;
+        }
+    }
+    
+    // run through LL, looking for matches
+    unsigned int blobs_total = 0;
+    unsigned int blobs_matched = 0;
+    blockblob_meta * prev = NULL;
+    for (blockblob * abb = bbs; abb; abb=abb->next) {
+        blobs_total++;
+        if (regexec (&re, abb->id, 0, NULL, 0) != 0)
+            continue;
+        blobs_matched++;
+
+        blockblob_meta * bm = calloc (1, sizeof (blockblob_meta));
+        if (bm==NULL) {
+            ERR (BLOBSTORE_ERROR_NOMEM, NULL);
+            goto free;
+        }
+
+        strncpy (bm->id, abb->id, sizeof (bm->id));
+        bm->size_bytes = abb->size_bytes;
+        bm->in_use = abb->in_use;
+        bm->last_accessed = abb->last_accessed;
+        bm->last_modified = abb->last_modified;
+        if (head==NULL) {
+            head = bm;
+        } else {
+            prev->next = bm;
+            bm->prev = prev;
+        }
+        prev = bm;
+    }
+
+    * results = head;
+    ret = blobs_matched;
+    goto unlock;
+
+ free:
+    regfree (&re);
+    for (blockblob_meta * bm = head; bm;) {
+        blockblob_meta * next = bm->next;
+        free (bm);
+        bm = next;
+    }
+
+ unlock:
+    if (blobstore_unlock (bs)==-1) {
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
+        ret = -1;
+    }    
+    return ret;
 }
 
 blockblob * blockblob_open ( blobstore * bs,

@@ -1276,6 +1276,17 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 
 #ifdef _UNIT_TEST
 
+#define BS_SIZE 20000000000/512
+#define KEY1 "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n"
+#define EKI1 "eki-1ABC123"
+#define ERI1 "eri-1BCD234"
+#define EMI1 "emi-1CDE345"
+#define EMI2 "emi-2DEF456"
+#define GEN_ID gen_id (id, sizeof(id), "12345678")
+#define SERIAL_ITERATIONS 5
+#define COMPETITIVE_PARTICIPANTS 3
+#define COMPETITIVE_ITERATIONS 3
+
 static blobstore * cache_bs;
 static blobstore * work_bs;
 
@@ -1330,22 +1341,26 @@ static void add_vbr (virtualMachine * vm,
         strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
 }
 
-static volatile int provisioned_instances = 0;
+static int next_instances_slot = 0;
+static int provisioned_instances = 0;
 static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
+static virtualMachine vm_slots [1+SERIAL_ITERATIONS+COMPETITIVE_ITERATIONS*COMPETITIVE_PARTICIPANTS];
 
-static int provision (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs)
+static int provision_vm (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs)
 {
-    virtualMachine vm;
-    bzero   (&vm, sizeof (vm));
+    pthread_mutex_lock (&competitors_mutex);
+    virtualMachine * vm = &(vm_slots [next_instances_slot++]);
+    pthread_mutex_unlock (&competitors_mutex);
 
-    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
-    add_vbr (&vm, MEGABYTE * 2L, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
+    bzero   (vm, sizeof (vm));
+    add_vbr (vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (vm, MEGABYTE * 2L, NC_FORMAT_NONE, "none", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
+    add_vbr (vm, MEGABYTE * 2L, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
+    add_vbr (vm, MEGABYTE * 2L, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
     instanceId = strstr (id, "/") + 1;
-    artifact * sentinel = vbr_alloc_tree (&vm, FALSE, sshkey, id);
+    artifact * sentinel = vbr_alloc_tree (vm, FALSE, sshkey, id);
     if (sentinel == NULL) {
         printf ("error: vbr_alloc_tree failed id=%s\n", id);
         return 1;
@@ -1365,21 +1380,24 @@ static int provision (const char * id, const char * sshkey, const char * eki, co
     return 0;
 }
 
+static int cleanup_vms (void) // cleans up all provisioned VMs
+{
+    pthread_mutex_lock (&competitors_mutex);
+    for (int i=0; i<provisioned_instances; i++) {
+        virtualMachine *vm = &(vm_slots [next_instances_slot-i-1]);
+        
+    }
+    provisioned_instances++;
+    pthread_mutex_unlock (&competitors_mutex);
+
+    return 0;
+}
+
 static char * gen_id (char * id, unsigned int size, const char * prefix)
 {
     snprintf (id, size, "%s/i-%08x", prefix, rand());
     return id;
 }
-
-#define BS_SIZE 20000000000/512
-#define KEY1 "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCVWU+h3gDF4sGjUB7t...\n"
-#define EKI1 "eki-1ABC123"
-#define ERI1 "eri-1BCD234"
-#define EMI1 "emi-1CDE345"
-#define EMI2 "emi-2DEF456"
-#define GEN_ID gen_id (id, sizeof(id), "12345678")
-#define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 3
 
 static void * competitor_function (void * ptr)
 {
@@ -1389,7 +1407,7 @@ static void * competitor_function (void * ptr)
     
     for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
         char id [32];
-        errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs);
+        errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs);
         usleep ((long long)(100*((double)random()/RAND_MAX)));
     }
 
@@ -1443,6 +1461,7 @@ int main (int argc, char ** argv)
     char id [32];
     int errors = 0;
     char cwd [1024];
+    
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
     blobstore_set_error_function (dummy_err_fn);    
@@ -1459,21 +1478,25 @@ int main (int argc, char ** argv)
     }
     
     int emis_in_use = 1;
-    if (errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs))
+    if (errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs))
         goto out;
 #define CHECK_BLOBS \
     if (errors += check_blob (cache_bs, "blocks", 4 + 2 * emis_in_use)) goto out;  \
     if (errors += check_blob (work_bs, "blocks", 3 * provisioned_instances)) goto out
     CHECK_BLOBS;
-    
-    for (int i=0; i<5; i++) {
-        errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs);
+    cleanup_vms();
+    CHECK_BLOBS;
+
+    for (int i=0; i<SERIAL_ITERATIONS; i++) {
+        errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs);
     }
     if (errors) {
         printf ("error: failed sequential instance provisioning test\n");
     }
     CHECK_BLOBS;
-    
+    cleanup_vms();
+    CHECK_BLOBS;
+
     printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
     emis_in_use ++; // we'll have threads creating a new EMI
     pthread_t threads [COMPETITIVE_PARTICIPANTS];
@@ -1492,7 +1515,8 @@ int main (int argc, char ** argv)
     }
     sleep (1);
     CHECK_BLOBS;
-
+    cleanup_vms();
+    CHECK_BLOBS;
 out:
     _exit(errors);
 }

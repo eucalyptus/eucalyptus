@@ -181,13 +181,25 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
-// blockstore operations
+typedef struct _blockblob_meta {
+    char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
+    unsigned long long size_bytes; // size of the blob in bytes
+    unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    time_t last_accessed; // timestamp of last access
+    time_t last_modified; // timestamp of last modification
+
+    struct _blockblob_meta * next;
+    struct _blockblob_meta * prev;
+} blockblob_meta;
+
+// blobstore operations
 
 blobstore * blobstore_open ( const char * path, 
                              unsigned long long limit_blocks, // on create: 0 is not valid; on open: 0 = any size
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy);
+int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results ); // returns a list of blockblobs matching an expression
 int blobstore_close ( blobstore * bs ); // releases a reference, allowing others to change some parameters (revocation policy) or delete the store, and frees the blobstore handle
 int blobstore_delete ( blobstore * bs ); // if no outside references to store or blobs exist, and no blobs are protected, deletes the blobs, the store metadata, and frees the blobstore handle
 int blobstore_get_error ( void ); // returns code of the last error 
