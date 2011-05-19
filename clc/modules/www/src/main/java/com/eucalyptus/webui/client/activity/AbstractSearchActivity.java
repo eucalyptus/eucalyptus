@@ -67,7 +67,7 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     container.setWidget( view );
     
     String query = URL.decodeQueryString( place.getSearch( ) );
-    LOG.log( Level.INFO, "Start new search: " + query );
+    LOG.log( Level.INFO, "Start new search: " + query + "<-: " + place.getSearch( ) );
     doSearch( query, new SearchRange( 0, pageSize ) );
   }
   
