@@ -87,12 +87,12 @@ public interface EucalyptusService extends RemoteService {
    * Search VM types.
    * 
    * @param session
-   * @param query
+   * @param search
    * @param range
    * @return
    * @throws EucalyptusServiceException
    */
-  SearchResult lookupVmType( Session session, String query, SearchRange range ) throws EucalyptusServiceException;
+  SearchResult lookupVmType( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
 
   /**
    * Set VmType values.
@@ -102,5 +102,71 @@ public interface EucalyptusService extends RemoteService {
    * @throws EucalyptusServiceException
    */
   void setVmType( Session session, SearchResultRow result ) throws EucalyptusServiceException;
+  
+  /**
+   * Search user groups.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search users.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search policies.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search access keys.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search X509 certificates.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  
+  /**
+   * Search VM images.
+   * 
+   * @param session
+   * @param search
+   * @param range
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
 }

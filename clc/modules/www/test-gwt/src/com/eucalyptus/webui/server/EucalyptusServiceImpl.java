@@ -142,4 +142,40 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     
   }
 
+  @Override
+  public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }

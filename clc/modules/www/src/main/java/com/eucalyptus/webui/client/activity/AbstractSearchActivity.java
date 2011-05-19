@@ -12,6 +12,7 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.KnowsPageSize;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.SearchRangeChangeHandler;
@@ -75,9 +76,15 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
   }
   
   protected void displayData( SearchResult result ) {
-    LOG.log( Level.INFO, "Received " + result );
-    cache.update( result );
-    showView( result );
+    if ( result != null ) {
+      LOG.log( Level.INFO, "Received " + result );
+      cache.update( result );
+      showView( result );
+    } else {
+      ErrorSinkView errorView = this.clientFactory.getErrorSinkView( );
+      errorView.setMessage( "Search '" + search + "' failed." );
+      container.setWidget( errorView );
+    }
   }
   
   @Override

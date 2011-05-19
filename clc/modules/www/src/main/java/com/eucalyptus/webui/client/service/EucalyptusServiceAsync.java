@@ -25,5 +25,17 @@ public interface EucalyptusServiceAsync {
   void lookupVmType( Session session, String query, SearchRange range, AsyncCallback<SearchResult> asyncCallback );
 
   void setVmType( Session session, SearchResultRow result, AsyncCallback<Void> asyncCallback );
+
+  void lookupGroup( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void lookupUser( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void lookupPolicy( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void lookupKey( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void lookupCertificate( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void lookupImages( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
   
 }
