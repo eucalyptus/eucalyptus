@@ -13,8 +13,8 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
@@ -76,8 +76,6 @@ public class EuareWebBackend {
 
   public static final ArrayList<SearchResultFieldDesc> USER_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    SearchResultFieldDesc desc;
-    
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "15%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "30%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
@@ -126,14 +124,6 @@ public class EuareWebBackend {
     return name + ":";
   }
   
-  private static List<String> getRegistrationStatusList( ) {
-    List<String> list = Lists.newArrayList( );
-    for ( RegistrationStatus v : RegistrationStatus.values( ) ) {
-      list.add( v.name( ) );
-    }
-    return list;
-  }
-  
   public static User getUser( String userName, String accountName ) throws EucalyptusServiceException {
     if ( userName == null || accountName == null ) {
       throw new EucalyptusServiceException( "Empty user name or account name" );
@@ -173,9 +163,9 @@ public class EuareWebBackend {
     result.addField( account.getAccountNumber( ) );
     result.addField( account.getName( ) );
     // Search links for account fields: users, groups and policies
-    result.addField( QueryBuilder.get( ).start( Categories.USER ).and( ACCOUNT, account.getName( ) ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.GROUP ).and( ACCOUNT, account.getName( ) ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.POLICY ).and( ACCOUNT, account.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, account.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.GROUP ).and( ACCOUNT, account.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.POLICY ).and( ACCOUNT, account.getName( ) ).url( ) );
     return result;
   }
 
@@ -201,9 +191,9 @@ public class EuareWebBackend {
     result.addField( group.getPath( ) );
     result.addField( accountName );
     result.addField( ( new EuareResourceName( accountName, PolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ) ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.ACCOUNT ).and( NAME, accountName ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.USER ).and( ACCOUNT, accountName ).and( GROUP, group.getName( ) ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.POLICY ).and( ACCOUNT, accountName ).and( GROUP, group.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.ACCOUNT ).and( NAME, accountName ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, accountName ).and( GROUP, group.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.POLICY ).and( ACCOUNT, accountName ).and( GROUP, group.getName( ) ).url( ) );
     return result;
   }
   
@@ -232,13 +222,13 @@ public class EuareWebBackend {
     result.addField( user.isEnabled( ).toString( ) );
     result.addField( user.getRegistrationStatus( ).name( ) );
     result.addField( ( new EuareResourceName( accountName, PolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ) ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.ACCOUNT ).and( NAME, accountName ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.GROUP ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.POLICY ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.ACCOUNT ).and( NAME, accountName ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.GROUP ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.POLICY ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
     result.addField( ACTION_CHANGE );
     result.addField( user.getPasswordExpires( ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.KEY ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.CERTIFICATE ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.KEY ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.CERTIFICATE ).and( ACCOUNT, accountName ).and( USER, user.getName( ) ).url( ) );
     // Now the info fields
     for ( Map.Entry<String, String> entry : user.getInfo( ).entrySet( ) ) {
       result.addExtraFieldDesc( new SearchResultFieldDesc( entry.getKey( ), entry.getKey( ), false, "0px", TableDisplay.NONE, Type.KEYVAL, true, false ) );
@@ -268,7 +258,7 @@ public class EuareWebBackend {
     result.addField( policy.getPolicyId( ) );
     result.addField( policy.getName( ) );
     result.addField( policy.getVersion( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
     result.addField( policy.getText( ) );
     return result;
   }
@@ -293,7 +283,7 @@ public class EuareWebBackend {
     result.addField( cert.isActive( ).toString( ) );
     result.addField( cert.isRevoked( ).toString( ) );
     result.addField( cert.getCreateDate( ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
     result.addField( cert.getPem( ) );
     return result;
   }
@@ -317,7 +307,7 @@ public class EuareWebBackend {
     result.addField( key.getAccessKey( ) );
     result.addField( key.isActive( ).toString( ) );
     result.addField( key.getCreateDate( ).toString( ) );
-    result.addField( QueryBuilder.get( ).start( Categories.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
+    result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
     return result;
   }
 

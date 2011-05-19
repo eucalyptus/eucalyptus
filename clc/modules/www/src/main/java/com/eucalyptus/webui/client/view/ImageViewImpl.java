@@ -38,11 +38,6 @@ public class ImageViewImpl extends Composite implements ImageView {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
 
-  @UiHandler( "delButton" )
-  void handleDelButtonClick( ClickEvent e ) {
-    
-  }
-  
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
