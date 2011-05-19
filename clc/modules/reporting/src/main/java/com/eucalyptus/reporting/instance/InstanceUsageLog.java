@@ -139,6 +139,9 @@ public class InstanceUsageLog
     {
     	log.info("GetUsageSummaryMap period:" + period);
 
+		final Map<InstanceSummaryKey, InstanceUsageSummary> usageMap =
+    		new HashMap<InstanceSummaryKey, InstanceUsageSummary>();
+
 		//Key is uuid
 		Map<String,InstanceDataAccumulator> dataAccumulatorMap =
 			new HashMap<String,InstanceDataAccumulator>();
@@ -189,6 +192,23 @@ public class InstanceUsageLog
 
 			}
 
+			for (String uuid: dataAccumulatorMap.keySet()) {
+				//log.info("Instance uuid:" + uuid);
+				InstanceDataAccumulator accumulator =
+					dataAccumulatorMap.get(uuid);
+				InstanceSummaryKey key =
+					new InstanceSummaryKey(accumulator.getInstanceAttributes());
+				if (! usageMap.containsKey(key)) {
+					usageMap.put(key, new InstanceUsageSummary());
+				}
+				InstanceUsageSummary ius = usageMap.get(key);
+				ius.addDiskIoMegs(accumulator.getDiskIoMegs());
+				ius.addNetworkIoMegs(accumulator.getNetIoMegs());
+				ius.sumFromPeriodType(accumulator.getDurationPeriod(),
+						accumulator.getInstanceAttributes().getInstanceType());
+				
+			}
+
 			entityWrapper.commit();
 		} catch (Exception ex) {
 			log.error(ex);
@@ -197,26 +217,6 @@ public class InstanceUsageLog
 		}
 
 		
-		final Map<InstanceSummaryKey, InstanceUsageSummary> usageMap =
-    		new HashMap<InstanceSummaryKey, InstanceUsageSummary>();
-
-		for (String uuid: dataAccumulatorMap.keySet()) {
-			//log.info("Instance uuid:" + uuid);
-			InstanceDataAccumulator accumulator =
-				dataAccumulatorMap.get(uuid);
-			InstanceSummaryKey key =
-				new InstanceSummaryKey(accumulator.getInstanceAttributes());
-			if (! usageMap.containsKey(key)) {
-				usageMap.put(key, new InstanceUsageSummary());
-			}
-			InstanceUsageSummary ius = usageMap.get(key);
-			ius.addDiskIoMegs(accumulator.getDiskIoMegs());
-			ius.addNetworkIoMegs(accumulator.getNetIoMegs());
-			ius.sumFromPeriodType(accumulator.getDurationPeriod(),
-					accumulator.getInstanceAttributes().getInstanceType());
-			
-		}
-
 //		log.info("Printing usageMap");
 //		for (InstanceSummaryKey key: usageMap.keySet()) {
 //			log.info("key:" + key + " summary:" + usageMap.get(key));
