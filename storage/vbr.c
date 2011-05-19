@@ -1285,7 +1285,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 #define GEN_ID gen_id (id, sizeof(id), "12345678")
 #define SERIAL_ITERATIONS 5
 #define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 3
+#define COMPETITIVE_ITERATIONS 10
 
 static blobstore * cache_bs;
 static blobstore * work_bs;
@@ -1344,12 +1344,16 @@ static void add_vbr (virtualMachine * vm,
 static int next_instances_slot = 0;
 static int provisioned_instances = 0;
 static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
-static virtualMachine vm_slots [1+SERIAL_ITERATIONS+COMPETITIVE_ITERATIONS*COMPETITIVE_PARTICIPANTS];
+#define TOTAL_VMS 1+SERIAL_ITERATIONS+COMPETITIVE_ITERATIONS*COMPETITIVE_PARTICIPANTS
+static virtualMachine vm_slots [TOTAL_VMS];
+static char vm_ids [TOTAL_VMS][PATH_MAX];
 
 static int provision_vm (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs)
 {
     pthread_mutex_lock (&competitors_mutex);
-    virtualMachine * vm = &(vm_slots [next_instances_slot++]);
+    virtualMachine * vm = &(vm_slots [next_instances_slot]); // we don't use vm_slots[] pointers in code
+    strncpy (vm_ids [next_instances_slot], id, PATH_MAX);
+    next_instances_slot++;
     pthread_mutex_unlock (&competitors_mutex);
 
     bzero   (vm, sizeof (vm));
@@ -1380,17 +1384,59 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     return 0;
 }
 
+static int delete_blobs (blobstore * bs, const char * regex)
+{
+    int errors = 0;
+
+    blockblob_meta * matches = NULL;
+    int left_to_close = blobstore_search (bs, regex, &matches);
+    printf ("blobs matching %s = %d\n", regex, left_to_close);
+
+    int closed;
+    do { // iterate multiple times in case there are dependencies
+        closed = 0; // in this round
+        for (blockblob_meta * bm = matches; bm; bm=bm->next) {
+            blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, FIND_BLOB_TIMEOUT_USEC);
+            if (bb!=NULL) {
+                if (bb->in_use) {
+                    blockblob_close (bb);
+                    continue; // in use now, try next one
+                }
+                if (blockblob_delete (bb, DELETE_BLOB_TIMEOUT_USEC)==-1) {
+                    blockblob_close (bb);
+                } else {
+                    closed++;
+                }
+            }
+        }
+    } while (closed && (left_to_close-=closed));
+    
+    // free the search results
+    for (blockblob_meta * bm = matches; bm;) {
+        blockblob_meta * next = bm->next;
+        free (bm);
+        bm = next;
+    }
+
+    return left_to_close;
+}
+
 static int cleanup_vms (void) // cleans up all provisioned VMs
 {
+    int errors = 0;
+
     pthread_mutex_lock (&competitors_mutex);
     for (int i=0; i<provisioned_instances; i++) {
         virtualMachine *vm = &(vm_slots [next_instances_slot-i-1]);
-        
+        char * id = vm_ids [next_instances_slot-i-1];
+        char regex [PATH_MAX];
+        snprintf (regex, sizeof (regex), "%s/.*", id);
+        errors += delete_blobs (work_bs, regex);
     }
-    provisioned_instances++;
+    provisioned_instances = 0;
     pthread_mutex_unlock (&competitors_mutex);
-
-    return 0;
+    
+    return errors;
 }
 
 static char * gen_id (char * id, unsigned int size, const char * prefix)
@@ -1446,7 +1492,7 @@ static int check_blob (blobstore * bs, const char * keyword, int expect)
 
     int found = atoi (buf);
     if (found != expect) {
-        printf ("error: unexpected disk state: [%s] = %d != %d\n", cmd, found, expect);
+        printf ("warning: unexpected disk state: [%s] = %d != %d\n", cmd, found, expect);
         return 1;
     }
     return 0;
@@ -1460,8 +1506,9 @@ int main (int argc, char ** argv)
 {
     char id [32];
     int errors = 0;
+    int warnings = 0;
     char cwd [1024];
-    
+
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
     blobstore_set_error_function (dummy_err_fn);    
@@ -1481,10 +1528,10 @@ int main (int argc, char ** argv)
     if (errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs))
         goto out;
 #define CHECK_BLOBS \
-    if (errors += check_blob (cache_bs, "blocks", 4 + 2 * emis_in_use)) goto out;  \
-    if (errors += check_blob (work_bs, "blocks", 3 * provisioned_instances)) goto out
+    warnings += check_blob (cache_bs, "blocks", 4 + 2 * emis_in_use);   \
+    warnings += check_blob (work_bs, "blocks", 3 * provisioned_instances);
     CHECK_BLOBS;
-    cleanup_vms();
+    warnings += cleanup_vms();
     CHECK_BLOBS;
 
     for (int i=0; i<SERIAL_ITERATIONS; i++) {
@@ -1494,7 +1541,7 @@ int main (int argc, char ** argv)
         printf ("error: failed sequential instance provisioning test\n");
     }
     CHECK_BLOBS;
-    cleanup_vms();
+    warnings += cleanup_vms();
     CHECK_BLOBS;
 
     printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
@@ -1513,11 +1560,19 @@ int main (int argc, char ** argv)
     if (errors += thread_par_sum) {
         printf ("error: failed parallel instance provisioning test\n");
     }
-    sleep (1);
     CHECK_BLOBS;
-    cleanup_vms();
+    warnings += cleanup_vms();
     CHECK_BLOBS;
+
 out:
+    printf ("\nok, winding down...\n");
+    printf ("final check of work blobstore\n");
+    check_blob (work_bs, "blocks", 0);
+    printf ("cleaning cache blobstore\n");
+    delete_blobs (cache_bs, ".*");
+    check_blob (cache_bs, "blocks", 0);
+
+    printf ("done with vbr.c errors=%d warnings=%d\n", errors, warnings);
     _exit(errors);
 }
 
