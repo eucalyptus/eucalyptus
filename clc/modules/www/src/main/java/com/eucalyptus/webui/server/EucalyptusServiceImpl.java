@@ -9,6 +9,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.webui.client.service.Categories;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.EucalyptusService;
@@ -206,7 +207,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+  public SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
     List<SearchResultRow> searchResult = ImageWebBackend.searchImages( search );
     SearchResult result = new SearchResult( searchResult.size( ), range );

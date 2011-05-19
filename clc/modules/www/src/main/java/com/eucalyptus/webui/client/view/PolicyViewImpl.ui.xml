@@ -5,7 +5,7 @@
     
     <ui:style>
         .toolbar {
-        	width:99%;
+            width:99%;
         }
     </ui:style>
     
@@ -16,19 +16,11 @@
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
                     <colgroup width="100px"/>
-                    <colgroup width="10px"/>
-                    <colgroup width="100px"/>
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="newButton">
-                                    <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New account
-                                </g:Anchor>                            
-                            </td>
-                            <td>&nbsp;</td>
-                            <td>
                                 <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}" ui:field="delButton">
-                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete policy
                                 </g:Anchor>
                             </td>
                         </tr>

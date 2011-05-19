@@ -167,6 +167,6 @@ public interface EucalyptusService extends RemoteService {
    * @return
    * @throws EucalyptusServiceException
    */
-  SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
+  SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
 }

@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.place;
 
+import com.eucalyptus.webui.client.service.Categories;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
@@ -9,7 +10,7 @@ public class ReportPlace extends SearchPlace {
     super( search );
   }
 
-  @Prefix( "report" )
+  @Prefix( Categories.REPORT )
   public static class Tokenizer implements PlaceTokenizer<ReportPlace> {
 
     @Override

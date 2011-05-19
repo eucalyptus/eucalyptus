@@ -4,15 +4,21 @@ import com.eucalyptus.webui.client.service.EucalyptusServiceAsync;
 import com.eucalyptus.webui.client.session.LocalSession;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
+import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
+import com.eucalyptus.webui.client.view.GroupView;
+import com.eucalyptus.webui.client.view.ImageView;
+import com.eucalyptus.webui.client.view.KeyView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.ConfigView;
+import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
+import com.eucalyptus.webui.client.view.UserView;
 import com.eucalyptus.webui.client.view.VmTypeView;
 import com.google.gwt.activity.shared.ActivityManager;
 import com.google.gwt.event.shared.EventBus;
@@ -77,54 +83,36 @@ public interface ClientFactory {
 	 */
 	EucalyptusServiceAsync getBackendService( );
 
-	/**
-	 * @return the impl. of LoginView
-	 */
 	LoginView getLoginView( );
 	
-	/**
-	 * @return the impl. of LoadingProgressingView
-	 */
 	LoadingProgressView getLoadingProgressView( );
 	
-	/**
-	 * @return the impl. of ShellView
-	 */
   ShellView getShellView( );
   
-  /**
-   * @return the impl. of StartView
-   */
   StartView getStartView( );
   
-  /**
-   * @return the impl. of ServiceView
-   */
   ConfigView getConfigView( );
 	
-  /**
-   * @return the impl. of LoadingAnimationView
-   */
   LoadingAnimationView getLoadingAnimationView( );
   
-  /**
-   * @return the impl. of ErrorSinkView
-   */
   ErrorSinkView getErrorSinkView( );
   
-  /**
-   * @return the impl. of AccountView
-   */
   AccountView getAccountView( );
   
-  /**
-   * @return the impl. of VmTypeView
-   */
   VmTypeView getVmTypeView( );
   
-  /**
-   * @return the impl. of ReportView
-   */
   ReportView getReportView( );
+  
+  GroupView getGroupView( );
+
+  UserView getUserView( );
+  
+  PolicyView getPolicyView( );
+  
+  KeyView getKeyView( );
+  
+  CertView getCertView( );
+  
+  ImageView getImageView( );
   
 }

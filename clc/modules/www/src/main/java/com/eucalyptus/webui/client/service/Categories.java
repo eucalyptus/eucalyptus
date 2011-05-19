@@ -1,8 +1,7 @@
-package com.eucalyptus.webui.server;
+package com.eucalyptus.webui.client.service;
 
 import java.util.ArrayList;
-import com.eucalyptus.webui.client.service.CategoryItem;
-import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.server.QueryBuilder;
 import com.google.common.collect.Lists;
 
 public class Categories {
