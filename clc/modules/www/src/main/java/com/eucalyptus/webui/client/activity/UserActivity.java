@@ -28,7 +28,6 @@ public class UserActivity extends AbstractSearchActivity implements UserView.Pre
 
   @Override
   protected void doSearch( String query, SearchRange range ) {
-    LOG.log( Level.INFO, "user:" + query );
     this.clientFactory.getBackendService( ).lookupUser( this.clientFactory.getLocalSession( ).getSession( ), search, range,
                                                            new AsyncCallback<SearchResult>( ) {
       
