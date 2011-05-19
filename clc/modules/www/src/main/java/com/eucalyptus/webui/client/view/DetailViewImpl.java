@@ -69,7 +69,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     public TextBoxValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
       this.textBox = new TextBox( );
-      this.textBox.setEnabled( enabled );
+      this.textBox.setReadOnly( !enabled );
       this.textBox.setValue( value == null ? "" : value );
       this.textBox.addValueChangeHandler( changeHandler );
     }
@@ -97,7 +97,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     public PasswordTextBoxValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
       this.textBox = new PasswordTextBox( );
-      this.textBox.setEnabled( enabled );
+      this.textBox.setReadOnly( !enabled );
       this.textBox.setValue( value == null ? "" : value );
       this.textBox.addValueChangeHandler( changeHandler );
     }
@@ -181,7 +181,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
     public TextAreaValue( String value, boolean enabled, ValueChangeHandler<String> changeHandler ) {
       this.textArea = new TextArea( );
-      this.textArea.setEnabled( enabled );
+      this.textArea.setReadOnly( !enabled );
       this.textArea.setVisibleLines( ARTICLE_LINES );
       this.textArea.setValue( value == null ? "" : value );
       this.textArea.addValueChangeHandler( changeHandler );

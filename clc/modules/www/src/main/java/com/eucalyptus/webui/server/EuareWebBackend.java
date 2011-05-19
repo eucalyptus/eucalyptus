@@ -76,8 +76,8 @@ public class EuareWebBackend {
 
   public static final ArrayList<SearchResultFieldDesc> USER_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "15%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "10%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "30%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "25%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
@@ -282,7 +282,7 @@ public class EuareWebBackend {
     result.addField( cert.getCertificateId( ) );
     result.addField( cert.isActive( ).toString( ) );
     result.addField( cert.isRevoked( ).toString( ) );
-    result.addField( cert.getCreateDate( ).toString( ) );
+    result.addField( cert.getCreateDate( ) == null ? "" : cert.getCreateDate( ).toString( ) );
     result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
     result.addField( cert.getPem( ) );
     return result;
@@ -306,7 +306,7 @@ public class EuareWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( key.getAccessKey( ) );
     result.addField( key.isActive( ).toString( ) );
-    result.addField( key.getCreateDate( ).toString( ) );
+    result.addField( key.getCreateDate( ) == null ? "" : key.getCreateDate( ).toString( ) );
     result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
     return result;
   }
