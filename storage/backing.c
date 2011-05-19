@@ -152,7 +152,7 @@ static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * b
 // sets id to:
 // - the blobblock ID of an instance-directory blob (if vbr!=NULL): userId/instanceId/blob-....
 // - the work prefix within work blobstore for an instance: userId/instanceId
-static void set_id (const ncInstance * instance, virtualBootRecord * vbr, char * id, unsigned int id_size)
+static void set_id (const ncInstance * instance, virtualBootRecord * vbr, char * id, unsigned int id_size) // TODO: remove this
 {
     assert (id);
     assert (instance);
@@ -169,6 +169,17 @@ static void set_id (const ncInstance * instance, virtualBootRecord * vbr, char *
                   (vbr->type==NC_RESOURCE_KERNEL||vbr->type==NC_RESOURCE_RAMDISK)?(vbr->id):(vbr->guestDeviceName));
     }
     snprintf (id, id_size, "%s/%s%s", instance->userId, instance->instanceId, suffix);
+}
+
+// sets id to:
+// - the work prefix within work blobstore for an instance: userId/instanceId(suffix)
+static void set_id2 (const ncInstance * instance, const char * suffix, char * id, unsigned int id_size)
+{
+    assert (id);
+    assert (instance);
+    assert (strlen (instance->userId));
+    assert (strlen (instance->instanceId));
+    snprintf (id, id_size, "%s/%s%s", instance->userId, instance->instanceId, (suffix)?(suffix):(""));
 }
 
 // sets path to 
@@ -472,14 +483,6 @@ static int destroy_blob (ncInstance * instance, virtualBootRecord * vbr)
         blockblob_close (bb); // at least try to close it
     }
     return ret;
-}
-
-static int destroy_artifacts (ncInstance * instance, virtualBootRecord * vbr)
-{
-    // TODO: run through all artifacts of this VBR and
-    // - destroy ones in work directory
-    // - release ones in cache (currently not needed since we have .refs or copies)
-    return ERROR;
 }
 
 // sets vbr->guestDeviceName based on other entries in the struct
@@ -921,51 +924,24 @@ int destroy_instance_backing2 (ncInstance * instance, int destroy_files)
         logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
     
-    // sort vbrs into prereqs[] and parts[] so they can be approached differently
-    virtualBootRecord * prereq [EUCA_MAX_VBRS];
-    virtualBootRecord * parts  [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];
-    bzero (parts, sizeof (parts));
+    // find and detach iSCSI targets, if any
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
-        if (vbr->type==NC_RESOURCE_KERNEL || vbr->type==NC_RESOURCE_RAMDISK) {
-            prereq [total_prereqs++] = vbr;
-        } else {
-            parts [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
-        }
-    }
-
-    // destroy disks and partitions
-    for (int i=0; i<BUS_TYPES_TOTAL; i++) { 
-        for (int j=0; j<EUCA_MAX_DISKS; j++) {
-            for (int k=0; k<EUCA_MAX_PARTITIONS; k++) {
-                virtualBootRecord * vbr = parts [i][j][k];
-                if (vbr) {  
-                    if (vbr->locationType==NC_LOCATION_IQN) {
-                        if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
-                            logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
-                        } 
-                    } else {
-                        // if k==0, we will destroy a disk blob, 
-                        // which must be destroyed before child
-                        // partition blobs, if any (k>0)
-                        if (destroy_files && destroy_artifacts (instance, vbr)) {
-                            logprintfl (EUCAWARN, "[%s] error: failed to destroy backing (bus %d, disk %d, part %d) for instance\n", instance->instanceId, i, j, k);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // destroy the prerequisites
-    for (int i=0; i<total_prereqs; i++) {
-        virtualBootRecord * vbr = prereq [i];
-        if (destroy_files && destroy_artifacts (instance, vbr)) {
-            logprintfl (EUCAWARN, "[%s] error: failed to destroy prerequisite for instance\n", instance->instanceId);
+        if (vbr->locationType==NC_LOCATION_IQN) {
+            if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+                logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
+            } 
         }
     }
 
     if (destroy_files) {
+        char work_regex [1024]; // {userId}/{instanceId}/.*
+        set_id2 (instance, "/.*", work_regex, sizeof (work_regex));
+
+        if (blobstore_delete_regex (work_bs, work_regex) == -1) {
+            logprintfl (EUCAERROR, "[%s] error: failed to remove some artifacts in %s\n", path);
+        }
+
         // remove the known leftover files
         unlink (instance->instancePath);
         unlink (instance->xmlFilePath);

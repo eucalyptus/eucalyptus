@@ -647,7 +647,7 @@ static int keyed_disk_creator (artifact * a)
     return OK;
 }
 
-static int iqn_creator (artifact * a)
+static int iqn_creator (artifact * a) // TODO!
 {
     return OK;
 }
@@ -940,6 +940,11 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
             // construct signature for the 'keyed' disk by appending the SSH key to 'raw' disk
             if (sshkey==NULL)
                 sshkey = "";
+
+            if (strlen(sshkey) > sizeof(disk->sshkey)) {
+                logprintfl (EUCAERROR, "error: received SSH key is too long\n");
+                goto free;
+            }
             
             char key_sig [ART_SIG_MAX];
             if ((snprintf (key_sig, sizeof(key_sig), "KEY /root/.ssh/authorized_keys\n%s\n\n", 
@@ -961,7 +966,8 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                 logprintfl (EUCAERROR, "error: failed to allocate an artifact for keyed disk\n");
                 goto free;
             }
-            
+            strncpy (keyed_disk->sshkey, sshkey, sizeof (keyed_disk->sshkey)-1 );
+
             if (art_add_dep (keyed_disk, disk) != OK) {
                 logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
                 art_free (keyed_disk);
@@ -1384,43 +1390,6 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     return 0;
 }
 
-static int delete_blobs (blobstore * bs, const char * regex)
-{
-    int errors = 0;
-
-    blockblob_meta * matches = NULL;
-    int left_to_close = blobstore_search (bs, regex, &matches);
-    printf ("blobs matching %s = %d\n", regex, left_to_close);
-
-    int closed;
-    do { // iterate multiple times in case there are dependencies
-        closed = 0; // in this round
-        for (blockblob_meta * bm = matches; bm; bm=bm->next) {
-            blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, FIND_BLOB_TIMEOUT_USEC);
-            if (bb!=NULL) {
-                if (bb->in_use) {
-                    blockblob_close (bb);
-                    continue; // in use now, try next one
-                }
-                if (blockblob_delete (bb, DELETE_BLOB_TIMEOUT_USEC)==-1) {
-                    blockblob_close (bb);
-                } else {
-                    closed++;
-                }
-            }
-        }
-    } while (closed && (left_to_close-=closed));
-    
-    // free the search results
-    for (blockblob_meta * bm = matches; bm;) {
-        blockblob_meta * next = bm->next;
-        free (bm);
-        bm = next;
-    }
-
-    return left_to_close;
-}
-
 static int cleanup_vms (void) // cleans up all provisioned VMs
 {
     int errors = 0;
@@ -1431,7 +1400,7 @@ static int cleanup_vms (void) // cleans up all provisioned VMs
         char * id = vm_ids [next_instances_slot-i-1];
         char regex [PATH_MAX];
         snprintf (regex, sizeof (regex), "%s/.*", id);
-        errors += delete_blobs (work_bs, regex);
+        errors += (blobstore_delete_regex (work_bs, regex)<0);
     }
     provisioned_instances = 0;
     pthread_mutex_unlock (&competitors_mutex);
@@ -1569,7 +1538,7 @@ out:
     printf ("final check of work blobstore\n");
     check_blob (work_bs, "blocks", 0);
     printf ("cleaning cache blobstore\n");
-    delete_blobs (cache_bs, ".*");
+    blobstore_delete_regex (cache_bs, ".*");
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c errors=%d warnings=%d\n", errors, warnings);

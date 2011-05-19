@@ -92,6 +92,8 @@
 #define BLOBSTORE_FILE_PERM 0660
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
 #define BLOBSTORE_LOCK_TIMEOUT_USEC 1000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC 1000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
@@ -1405,6 +1407,40 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
         ret = -1;
     }    
     return ret;
+}
+
+int blobstore_delete_regex (blobstore * bs, const char * regex)
+{
+    blockblob_meta * matches = NULL;
+    int found  = blobstore_search (bs, regex, &matches);
+    int left_to_close = found;
+    int closed;
+    do { // iterate multiple times in case there are dependencies
+        closed = 0; // closed in this round
+        for (blockblob_meta * bm = matches; bm; bm=bm->next) {
+            blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+            if (bb!=NULL) {
+                if (bb->in_use) {
+                    blockblob_close (bb);
+                    continue; // in use now, try next one
+                }
+                if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
+                    blockblob_close (bb);
+                } else {
+                    closed++;
+                }
+            }
+        }
+    } while (closed && (left_to_close-=closed));
+    
+    // free the search results
+    for (blockblob_meta * bm = matches; bm;) {
+        blockblob_meta * next = bm->next;
+        free (bm);
+        bm = next;
+    }
+
+    return (left_to_close==0)?(found):(-1);
 }
 
 blockblob * blockblob_open ( blobstore * bs,

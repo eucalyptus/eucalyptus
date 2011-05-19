@@ -66,6 +66,7 @@
 
 #define MAX_ARTIFACT_DEPS 16
 #define MAX_ARTIFACT_SIG 4096
+#define MAX_SSHKEY_SIZE 4096
 
 typedef struct _artifact {
     char id [EUCA_MAX_PATH]; // host-unique ID for the artifact (can be empty for a sentinel)
@@ -77,6 +78,7 @@ typedef struct _artifact {
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
     boolean make_bootable; // tells 'disk_creator' whether to make the disk bootable
     boolean is_partition; // this artifact is a partition for a disk to be constructed
+    char sshkey [MAX_SSHKEY_SIZE]; // the key to inject into the artifact (OPTIONAL for all except keyed_disk_creator)
     blockblob * bb; // blockblob handle for the artifact, when it is open
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
     int seq; // sequence number of the artifact
