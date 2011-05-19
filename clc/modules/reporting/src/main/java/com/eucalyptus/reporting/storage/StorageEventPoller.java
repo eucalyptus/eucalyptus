@@ -105,7 +105,7 @@ public class StorageEventPoller
 			 */
 			final long timestampMs = getTimestampMs();
 			for (UsageDataKey key : changedSnapshots) {
-				SnapshotKey snapshotKey = key.newSnapshotKey(timestampMs);
+				StorageSnapshotKey snapshotKey = key.newSnapshotKey(timestampMs);
 				StorageUsageSnapshot sus =
 					new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
 				System.out.println("Storing:" + sus);
@@ -159,7 +159,7 @@ public class StorageEventPoller
 			this.availabilityZone = availabilityZone;
 		}
 		
-		public UsageDataKey(SnapshotKey key)
+		public UsageDataKey(StorageSnapshotKey key)
 		{
 			this.ownerId = key.getOwnerId();
 			this.accountId = key.getAccountId();
@@ -187,9 +187,9 @@ public class StorageEventPoller
 			return availabilityZone;
 		}
 		
-		public SnapshotKey newSnapshotKey(long timestampMs)
+		public StorageSnapshotKey newSnapshotKey(long timestampMs)
 		{
-			return new SnapshotKey(ownerId, accountId, clusterName, availabilityZone, timestampMs);
+			return new StorageSnapshotKey(ownerId, accountId, clusterName, availabilityZone, timestampMs);
 		}
 
 		@Override

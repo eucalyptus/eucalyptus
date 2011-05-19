@@ -15,24 +15,22 @@ import org.hibernate.annotations.Entity;
 class StorageUsageSnapshot
 {
 	@EmbeddedId
-	protected SnapshotKey key;
+	protected StorageSnapshotKey key;
 	@Embedded
 	protected StorageUsageData usageData;
-	@Column(name="is_all_snapshot", nullable=false)
-	protected Boolean allSnapshot = false;
 	
 	protected StorageUsageSnapshot()
 	{
 		
 	}
 
-	public StorageUsageSnapshot(SnapshotKey key, StorageUsageData usageData)
+	public StorageUsageSnapshot(StorageSnapshotKey key, StorageUsageData usageData)
 	{
 		this.key = key;
 		this.usageData = usageData;
 	}
 
-	public SnapshotKey getSnapshotKey()
+	public StorageSnapshotKey getSnapshotKey()
 	{
 		return key;
 	}
@@ -40,16 +38,6 @@ class StorageUsageSnapshot
 	public StorageUsageData getUsageData()
 	{
 		return usageData;
-	}
-
-	public Boolean getAllSnapshot()
-	{
-		return allSnapshot;
-	}
-
-	public void setAllSnapshot(Boolean allSnapshot)
-	{
-		this.allSnapshot = allSnapshot;
 	}
 
 	public String toString()

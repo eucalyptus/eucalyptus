@@ -17,10 +17,10 @@ wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservl
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.storage.FalseDataGenerator&methodName=generateFalseData"
 
 # Generate storage report, based upon data generated above
-wget -O /tmp/storageReport.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_storage&type=csv&page=0&flush=false&start=1104566400000&end=1304566400000&criterionId=2&groupById=0"
+wget -O /tmp/storageReport.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_storage&type=csv&page=0&flush=false&start=1104580000000&end=1104590000000&criterionId=2&groupById=0"
 
 # Verify that the resulting report has the correct number of entries in it
-REPORT_USERS_CNT=`cat /tmp/s3Report.csv |  grep 'user-[0-9]\+' | wc -l`
+REPORT_USERS_CNT=`cat /tmp/storageReport.csv |  grep 'user-[0-9]\+' | wc -l`
 if [ "$REPORT_USERS_CNT" -ne "32" ]; then
 	echo "Report users count is incorrect."
 	exit -1

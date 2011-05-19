@@ -45,6 +45,48 @@ public class StorageUsageSummary
 	{
 		return snapshotsMegsSecs;
 	}
+	
+	
+
+	void setVolumesMegsMax(long volumesMegsMax)
+	{
+		this.volumesMegsMax = volumesMegsMax;
+	}
+
+	void setVolumesMegsSecs(long volumesMegsSecs)
+	{
+		this.volumesMegsSecs = volumesMegsSecs;
+	}
+
+	void setSnapshotsMegsMax(long snapshotsMegsMax)
+	{
+		this.snapshotsMegsMax = snapshotsMegsMax;
+	}
+
+	void setSnapshotsMegsSecs(long snapshotsMegsSecs)
+	{
+		this.snapshotsMegsSecs = snapshotsMegsSecs;
+	}
+	
+	public void addVolumesMegsSecs(long volumesMegsSecs)
+	{
+		this.volumesMegsSecs += volumesMegsSecs;
+	}
+
+	public void addSnapshotsMegsSecs(long snapshotsMegsSecs)
+	{
+		this.snapshotsMegsSecs += snapshotsMegsSecs;
+	}
+
+	void addUsage(StorageUsageSummary summary)
+	{
+		this.volumesMegsMax   = Math.max(this.volumesMegsMax, summary.getVolumesMegsMax());
+		this.snapshotsMegsMax   = Math.max(this.snapshotsMegsMax, summary.getSnapshotsMegsMax());
+		
+		this.volumesMegsSecs  += summary.getVolumesMegsSecs();
+		this.snapshotsMegsSecs  += summary.getSnapshotsMegsSecs();
+	}
+
 
 	public void updateValues(long volumesMegs, long snapshotsMegs,
 			long durationSecs)

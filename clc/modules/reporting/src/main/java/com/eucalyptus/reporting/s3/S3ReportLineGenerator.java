@@ -2,6 +2,8 @@ package com.eucalyptus.reporting.s3;
 
 import java.util.*;
 
+import org.mortbay.log.Log;
+
 import com.eucalyptus.reporting.GroupByCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.units.Units;
@@ -39,8 +41,9 @@ public class S3ReportLineGenerator
 		Map<S3SummaryKey, S3UsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
 		for (S3SummaryKey key: usageMap.keySet()) {
+			Log.info("Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);
-			String groupVal = getAttributeValue(groupByCrit, key);
+			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
 			S3ReportLineKey lineKey = new S3ReportLineKey(critVal, groupVal);
 			if (!reportLineMap.containsKey(lineKey)) {
 				reportLineMap.put(lineKey, new S3ReportLine(lineKey,

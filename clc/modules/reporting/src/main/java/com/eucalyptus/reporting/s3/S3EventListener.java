@@ -1,12 +1,11 @@
 package com.eucalyptus.reporting.s3;
 
-import java.util.*;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.S3Event;
 
@@ -17,7 +16,7 @@ public class S3EventListener
 	
 	private static long WRITE_INTERVAL_MS = 10800000l; //write every 3 hrs
 
-	private Map<UsageDataKey, S3UsageData> usageDataMap;
+	private Map<S3SummaryKey, S3UsageData> usageDataMap;
 	private long lastAllSnapshotMs = 0l;
 
 	public S3EventListener()
@@ -42,28 +41,16 @@ public class S3EventListener
 				/* Load usageDataMap if starting up
 				 */
 				if (usageDataMap == null) {
-					this.usageDataMap = new HashMap<UsageDataKey, S3UsageData>();
-					// TODO: optimize so we don't have to scan entire log on
-					// startup
-					Iterator<S3UsageSnapshot> iter = usageLog
-							.scanLog(new Period(0l, Long.MAX_VALUE));
-					while (iter.hasNext()) {
-						S3UsageSnapshot snapshot = iter.next();
-						UsageDataKey key = new UsageDataKey(
-								snapshot.getSnapshotKey());
-						usageDataMap.put(key, snapshot.getUsageData());
-						if (snapshot.getSnapshotKey().getAllSnapshot()) {
-							lastAllSnapshotMs = timeMillis;						
-						}
-						System.out.println("Loaded key:" + key);
-					}
-					LOG.info("Loaded usageDataMap, lastSnapshot:" + lastAllSnapshotMs);
+
+					this.usageDataMap = usageLog.findLatestUsageData();
+					LOG.info("Loaded usageDataMap");
+
 				}
 
 				
 				/* Update usageDataMap
 				 */
-				UsageDataKey key = new UsageDataKey(s3Event.getOwnerId(),
+				S3SummaryKey key = new S3SummaryKey(s3Event.getOwnerId(),
 						s3Event.getAccountId());
 				S3UsageData usageData;
 				if (usageDataMap.containsKey(key)) {
@@ -101,8 +88,10 @@ public class S3EventListener
 					/* Write all snapshots
 					 */
 					LOG.info("Starting allSnapshot...");
-					for (UsageDataKey udk: usageDataMap.keySet()) {
-						S3SnapshotKey snapshotKey = udk.newSnapshotKey(timeMillis);
+					for (S3SummaryKey summaryKey: usageDataMap.keySet()) {
+						S3SnapshotKey snapshotKey = new S3SnapshotKey(
+								summaryKey.getOwnerId(), summaryKey.getAccountId(),
+								timeMillis);
 						S3UsageSnapshot sus =
 							new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
 						sus.getSnapshotKey().setAllSnapshot(true);
@@ -114,7 +103,9 @@ public class S3EventListener
 				} else {
 					/* Write this snapshot
 					 */
-					S3SnapshotKey snapshotKey = key.newSnapshotKey(timeMillis);
+					S3SnapshotKey snapshotKey = new S3SnapshotKey(
+							key.getOwnerId(), key.getAccountId(),
+							timeMillis);
 					S3UsageSnapshot sus =
 						new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
 					LOG.info("Storing:" + sus);
@@ -151,82 +142,5 @@ public class S3EventListener
 	{
 		this.testCurrentTimeMillis = new Long(testCurrentTimeMillis);
 	}
-
-	private class UsageDataKey
-	{
-		private final String ownerId;
-		private final String accountId;
-
-		public UsageDataKey(String ownerId, String accountId)
-		{
-			this.ownerId = ownerId;
-			this.accountId = accountId;
-		}
-		
-		public UsageDataKey(S3SnapshotKey key)
-		{
-			this.ownerId = key.getOwnerId();
-			this.accountId = key.getAccountId();
-		}
-
-		public String getOwnerId()
-		{
-			return ownerId;
-		}
-
-		public String getAccountId()
-		{
-			return accountId;
-		}
-
-		public S3SnapshotKey newSnapshotKey(long timestampMs)
-		{
-			return new S3SnapshotKey(ownerId, accountId, timestampMs);
-		}
-
-		@Override
-		public int hashCode()
-		{
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result
-					+ ((accountId == null) ? 0 : accountId.hashCode());
-			result = prime * result
-					+ ((ownerId == null) ? 0 : ownerId.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj)
-		{
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			UsageDataKey other = (UsageDataKey) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (accountId == null) {
-				if (other.accountId != null)
-					return false;
-			} else if (!accountId.equals(other.accountId))
-				return false;
-			if (ownerId == null) {
-				if (other.ownerId != null)
-					return false;
-			} else if (!ownerId.equals(other.ownerId))
-				return false;
-			return true;
-		}
-
-		private S3EventListener getOuterType()
-		{
-			return S3EventListener.this;
-		}
-
-		
-	}
+	
 }

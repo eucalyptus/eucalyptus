@@ -17,7 +17,7 @@ wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservl
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=generateFalseData"
 
 # Generate storage report, based upon data generated above
-wget -O /tmp/s3Report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_s3&type=csv&page=0&flush=false&start=1104566400000&end=1304566400000&criterionId=2&groupById=0"
+wget -O /tmp/s3Report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_s3&type=csv&page=0&flush=false&start=1104580000000&end=1104590000000&criterionId=2&groupById=0"
 
 
 # Verify that the resulting report has the correct number of entries in it

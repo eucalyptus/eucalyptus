@@ -12,7 +12,7 @@ import javax.persistence.*;
  * @author tom.werges
  */
 @Embeddable
-public class SnapshotKey
+public class StorageSnapshotKey
 	implements java.io.Serializable
 {
 	@Column(name="owner_id", nullable=false)
@@ -25,9 +25,11 @@ public class SnapshotKey
 	protected final String availabilityZone;
 	@Column(name="timestamp_ms", nullable=false)
 	protected final Long timestampMs;
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot = false;
+	//TODO: update equals and hashcode??
 	
-	
-	protected SnapshotKey()
+	protected StorageSnapshotKey()
 	{
 		this.ownerId = null;
 		this.accountId = null;
@@ -36,7 +38,7 @@ public class SnapshotKey
 		this.timestampMs = null;
 	}
 
-	public SnapshotKey(String ownerId, String accountId, String clusterName,
+	public StorageSnapshotKey(String ownerId, String accountId, String clusterName,
 			String availabilityZone, Long timestampMs)
 	{
 		this.ownerId = ownerId;
@@ -71,17 +73,27 @@ public class SnapshotKey
 		return timestampMs;
 	}
 
-	public SnapshotKey newKey(long newTimestampMs)
+	public Boolean getAllSnapshot()
 	{
-		return new SnapshotKey(ownerId, accountId, clusterName, availabilityZone,
+		return allSnapshot;
+	}
+
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
+	}
+	
+	public StorageSnapshotKey newKey(long newTimestampMs)
+	{
+		return new StorageSnapshotKey(ownerId, accountId, clusterName, availabilityZone,
 				new Long(newTimestampMs));
 	}
 	
 	@Override
 	public String toString()
 	{
-		return String.format("[owner:%s,account:%s,cluster:%s,zone:%s,timestamp:%d]",
-				ownerId, accountId, clusterName, availabilityZone, timestampMs);
+		return String.format("[owner:%s,account:%s,cluster:%s,zone:%s,timestamp:%d,allSnapshot:%b]",
+				ownerId, accountId, clusterName, availabilityZone, timestampMs, allSnapshot);
 	}
 
 	@Override
@@ -111,7 +123,7 @@ public class SnapshotKey
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		SnapshotKey other = (SnapshotKey) obj;
+		StorageSnapshotKey other = (StorageSnapshotKey) obj;
 		if (accountId == null) {
 			if (other.accountId != null)
 				return false;

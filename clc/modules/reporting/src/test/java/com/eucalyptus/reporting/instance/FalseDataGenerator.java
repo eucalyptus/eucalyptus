@@ -295,7 +295,7 @@ public class FalseDataGenerator
 
 			InstanceAttributes insAttrs = result.getInstanceAttributes();
 			Period period = result.getPeriod();
-			UsageData usageData = result.getUsageData();
+			InstanceUsageData usageData = result.getUsageData();
 
 			System.out.printf("instance:%s type:%s user:%s account:%s cluster:%s"
 					+ " zone:%s period:%d-%d netIo:%d diskIo:%d\n",

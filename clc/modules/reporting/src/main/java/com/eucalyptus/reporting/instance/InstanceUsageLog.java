@@ -13,12 +13,6 @@ import com.eucalyptus.reporting.Period;
  * <p>InstanceUsageLog is the main API for accessing usage information which
  * has been stored in the usage log.
  * 
- * <p>The data in the log is not indexed, in order to minimize write time.
- * As a result, you can't search through the log for specific instances or
- * specific data; you can only get a full dump between dates. However, there
- * exist groovy scripts to transfer the data into a data warehouse for
- * subsequent searching.
- * 
  * <p>The usage data in logs is <i>sampled</i>, meaning data is collected
  * every <i>n</i> seconds and written. As a result, some small error will
  * be introduced if the boundaries of desired periods (ie months) do not
@@ -73,7 +67,7 @@ public class InstanceUsageLog
 
 		for (LogScanResult result: scanLog(period)) {
 			Period resPeriod = result.getPeriod();
-			UsageData usageData = result.getUsageData();
+			InstanceUsageData usageData = result.getUsageData();
 			String attrValue = getAttributeValue(criterion,
 					result.getInstanceAttributes());
 			InstanceUsageSummary summary;
@@ -112,7 +106,7 @@ public class InstanceUsageLog
 
 		for (LogScanResult result: scanLog(period)) {
 			Period resPeriod = result.getPeriod();
-			UsageData usageData = result.getUsageData();
+			InstanceUsageData usageData = result.getUsageData();
 			String outerAttrValue = getAttributeValue(outerCriterion,
 					result.getInstanceAttributes());
 			Map<String, InstanceUsageSummary> innerMap;
@@ -165,10 +159,10 @@ public class InstanceUsageLog
 	{
 		private final InstanceAttributes insAttrs;
 		private final Period period;
-		private final UsageData usageData;
+		private final InstanceUsageData usageData;
 		
 		public LogScanResult(InstanceAttributes insAttrs, Period period,
-				UsageData usageData)
+				InstanceUsageData usageData)
 		{
 			this.insAttrs = insAttrs;
 			this.period = period;
@@ -185,7 +179,7 @@ public class InstanceUsageLog
 			return period;
 		}
 		
-		public UsageData getUsageData()
+		public InstanceUsageData getUsageData()
 		{
 			return usageData;
 		}
@@ -222,7 +216,7 @@ public class InstanceUsageLog
 				Object[] row = (Object[]) iter.next();
 				InstanceAttributes insAttrs = (InstanceAttributes) row[0];
 				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) row[1];
-				UsageData usageData = new UsageData(
+				InstanceUsageData usageData = new InstanceUsageData(
 					snapshot.getCumulativeNetworkIoMegs(),
 					snapshot.getCumulativeDiskIoMegs());
 				String uuid = insAttrs.getUuid();
@@ -259,7 +253,7 @@ public class InstanceUsageLog
 		for (InstanceData insData: instanceDataMap.values()) {
 			//System.out.println("-> InstanceData:" + insData);
 			Period resultPeriod = new Period(insData.getBeginMs(), insData.getEndMs());
-			UsageData resultUsage =
+			InstanceUsageData resultUsage =
 				insData.getEarliestUsageData().subtractFrom(insData.getLatestUsageData());
 			LogScanResult newResult = new LogScanResult(insData.getInsAttrs(),
 					resultPeriod, resultUsage);
@@ -302,19 +296,247 @@ public class InstanceUsageLog
 			throw new RuntimeException(ex);
 		}
 	}
+	
+	
+	/**
+	 * <p>Find the latest snapshot before timestampMs, by iteratively
+	 * querying before the period beginning, moving backward in exponentially
+	 * growing intervals
+	 */
+	long findLatestAllSnapshotBefore(long timestampMs)
+	{
+		long foundTimestampMs = 0l;
+
+		EntityWrapper<InstanceUsageSnapshot> entityWrapper = null;
+		try {
+
+	    	final long oneHourMs = 60*60*1000;
+			for ( int i=2 ;
+				  (timestampMs - oneHourMs*(long)i) > 0 ;
+				  i=(int)Math.pow(i, 2))
+			{
+				entityWrapper = EntityWrapper.get(InstanceUsageSnapshot.class);
+				
+				long startingMs = timestampMs - (oneHourMs*i);
+				log.info("Searching for latest timestamp before beginning:" + startingMs);
+				@SuppressWarnings("rawtypes")
+				Iterator iter =
+					entityWrapper.createQuery(
+						"from InstanceUsageSnapshot as ius"
+						+ " WHERE ius.timestampMs > ?"
+						+ " AND ius.timestampMs < ?")
+						.setLong(0, new Long(startingMs))
+						.setLong(1, new Long(timestampMs))
+						.iterate();
+				while (iter.hasNext()) {
+					InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) iter.next();
+					foundTimestampMs = snapshot.getTimestampMs();
+				}
+				entityWrapper.commit();
+				if (foundTimestampMs != 0l) break;
+			}
+			log.info("Found latest timestamp before beginning:"
+					+ foundTimestampMs);			
+		} catch (Exception ex) {
+			log.error(ex);
+			if (entityWrapper != null) entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+		
+		return foundTimestampMs;
+	}
 
 	
+	
+	/**
+	 * <p>Gather a Map of all Instance resource usage for a period.
+	 */
+    public Map<InstanceSummaryKey, InstanceUsageSummary> getUsageSummaryMap(Period period)
+    {
+    	log.info("GetUsageSummaryMap period:" + period);
+
+		//Key is uuid
+		Map<String,InstanceDataAccumulator> dataAccumulatorMap =
+			new HashMap<String,InstanceDataAccumulator>();
+
+		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
+			EntityWrapper.get(InstanceUsageSnapshot.class);
+		try {
+			
+
+			/* Start query from last snapshot before report beginning, and
+			 * iterate through the data until after the end. We'll truncate and
+			 * extrapolate.
+			 */
+			long latestSnapshotBeforeMs =
+				findLatestAllSnapshotBefore(period.getBeginningMs());
+			long afterEnd = period.getEndingMs() 
+					+ ((period.getBeginningMs()-latestSnapshotBeforeMs)*2);
+
+			
+			@SuppressWarnings("rawtypes")
+			Iterator iter = entityWrapper.createQuery(
+					"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
+					+ " where ia.uuid = ius.uuid"
+					+ " and ius.timestampMs > ?"
+					+ " and ius.timestampMs < ?")
+					.setLong(0, latestSnapshotBeforeMs)
+					.setLong(1, afterEnd)
+					.iterate();
+			
+			while (iter.hasNext()) {
+
+				Object[] row = (Object[]) iter.next();
+				InstanceAttributes insAttrs = (InstanceAttributes) row[0];
+				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) row[1];
+
+				//log.info("Found row attrs:" + insAttrs + " snapshot:" + snapshot);
+				
+				String uuid = insAttrs.getUuid();
+				if ( !dataAccumulatorMap.containsKey( uuid ) ) {
+					InstanceDataAccumulator accumulator =
+						new InstanceDataAccumulator(insAttrs, snapshot, period);
+					dataAccumulatorMap.put(uuid, accumulator);
+				} else {
+					InstanceDataAccumulator accumulator =
+						dataAccumulatorMap.get( uuid );
+					accumulator.update( snapshot );
+				}
+
+			}
+
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			log.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+
+		
+		final Map<InstanceSummaryKey, InstanceUsageSummary> usageMap =
+    		new HashMap<InstanceSummaryKey, InstanceUsageSummary>();
+
+		for (String uuid: dataAccumulatorMap.keySet()) {
+			//log.info("Instance uuid:" + uuid);
+			InstanceDataAccumulator accumulator =
+				dataAccumulatorMap.get(uuid);
+			InstanceSummaryKey key =
+				new InstanceSummaryKey(accumulator.getInstanceAttributes());
+			if (! usageMap.containsKey(key)) {
+				usageMap.put(key, new InstanceUsageSummary());
+			}
+			InstanceUsageSummary ius = usageMap.get(key);
+			ius.addDiskIoMegs(accumulator.getDiskIoMegs());
+			ius.addNetworkIoMegs(accumulator.getNetIoMegs());
+			ius.sumFromPeriodType(accumulator.getDurationPeriod(),
+					accumulator.getInstanceAttributes().getInstanceType());
+			
+		}
+
+//		log.info("Printing usageMap");
+//		for (InstanceSummaryKey key: usageMap.keySet()) {
+//			log.info("key:" + key + " summary:" + usageMap.get(key));
+//		}
+//		
+        return usageMap;
+    }
+
+	
+    private class InstanceDataAccumulator
+    {
+    	private final InstanceAttributes insAttrs;
+    	private final InstanceUsageSnapshot firstSnapshot;
+    	private InstanceUsageSnapshot lastSnapshot;
+    	private Period period;
+    	
+    	public InstanceDataAccumulator(InstanceAttributes insAttrs,
+    			InstanceUsageSnapshot snapshot, Period period)
+		{
+			super();
+			this.insAttrs = insAttrs;
+			this.firstSnapshot = snapshot;
+			this.period = period;
+		}
+    	
+    	public void update(InstanceUsageSnapshot snapshot)
+    	{
+    		this.lastSnapshot = snapshot;
+    	}
+
+    	public InstanceAttributes getInstanceAttributes()
+    	{
+    		return this.insAttrs;
+    	}
+    	
+    	public long getDurationSecs()
+    	{
+    		long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
+    		long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
+    		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
+    	}
+    	
+    	public Period getDurationPeriod()
+    	{
+    		long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
+    		long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
+    		return new Period(truncatedBeginMs, truncatedEndMs);
+    	}
+    	
+    	public long getDiskIoMegs()
+    	{
+			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
+			double gap = 0d;
+    		double result =
+    			(double)lastSnapshot.getCumulativeDiskIoMegs() -
+    			(double)firstSnapshot.getCumulativeDiskIoMegs();
+			/* Extrapolate fractional usage for snapshots which occurred
+			 * before report beginning or after report end.
+			 */
+    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
+    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
+    			result *= 1d-(gap/duration);
+    		}
+    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
+    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
+    			result *= 1d-(gap/duration);
+    		}
+    		return (long) result;
+    	}
+    	
+    	public long getNetIoMegs()
+    	{
+			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
+			double gap = 0d;
+    		double result =
+    			(double)lastSnapshot.getCumulativeNetworkIoMegs() -
+    			(double)firstSnapshot.getCumulativeNetworkIoMegs();
+			/* Extrapolate fractional usage for snapshots which occurred
+			 * before report beginning or after report end.
+			 */
+    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
+    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
+    			result *= 1d-(gap/duration);
+    		}
+    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
+    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
+    			result *= 1d-(gap/duration);
+    		}
+    		return (long) result;
+    	}
+
+    }
+
 	private class InstanceData
 	{
 		private InstanceAttributes insAttrs;
 		private long beginMs;
 		private long endMs;
-		private UsageData earliestUsageData;
-		private UsageData latestUsageData;
+		private InstanceUsageData earliestUsageData;
+		private InstanceUsageData latestUsageData;
 		
 		public InstanceData(InstanceAttributes insAttrs, long beginMs,
-				long endMs, UsageData earliestUsageData,
-				UsageData latestUsageData)
+				long endMs, InstanceUsageData earliestUsageData,
+				InstanceUsageData latestUsageData)
 		{
 			this.insAttrs = insAttrs;
 			this.beginMs = beginMs;
@@ -348,22 +570,22 @@ public class InstanceUsageLog
 			this.endMs = endMs;
 		}
 		
-		public UsageData getEarliestUsageData()
+		public InstanceUsageData getEarliestUsageData()
 		{
 			return earliestUsageData;
 		}
 		
-		public void setEarliestUsageData(UsageData earliestUsageData)
+		public void setEarliestUsageData(InstanceUsageData earliestUsageData)
 		{
 			this.earliestUsageData = earliestUsageData;
 		}
 		
-		public UsageData getLatestUsageData()
+		public InstanceUsageData getLatestUsageData()
 		{
 			return latestUsageData;
 		}
 		
-		public void setLatestUsageData(UsageData latestUsageData)
+		public void setLatestUsageData(InstanceUsageData latestUsageData)
 		{
 			this.latestUsageData = latestUsageData;
 		}

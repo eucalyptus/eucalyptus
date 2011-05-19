@@ -4,7 +4,7 @@
 # Runs an exposed command through the CommandServlet
 # 
 # Usage: runCmd.sh className methodName arg1,arg2,arg3
-# Example: ./runCmd.sh com.eucalyptus.reporting.s3.FalseDataGenerator printUsageSummaryMap 0001,0002
+# Example: ./runCmd.sh com.eucalyptus.reporting.s3.FalseDataGenerator printUsageSummaryMap 1104580000000,1104590000000
 #
 # Author: Tom Werges
 #

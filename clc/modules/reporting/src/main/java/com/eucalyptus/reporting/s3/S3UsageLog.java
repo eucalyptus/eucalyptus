@@ -315,7 +315,45 @@ public class S3UsageLog
 		return foundTimestampMs;
 	}
 
+	Map<S3SummaryKey, S3UsageData> findLatestUsageData()
+	{
+    	log.info("LoadLastUsageData");
+    	final Map<S3SummaryKey, S3UsageData> usageMap =
+    		new HashMap<S3SummaryKey, S3UsageData>();
+    	
+    	EntityWrapper<S3UsageSnapshot> entityWrapper =
+			EntityWrapper.get(S3UsageSnapshot.class);
 
+    	try {
+			long latestSnapshotBeforeMs =
+				findLatestAllSnapshotBefore(System.currentTimeMillis());
+			@SuppressWarnings("rawtypes")
+
+			Iterator iter = entityWrapper.createQuery(
+					"from S3UsageSnapshot as sus"
+					+ " WHERE sus.key.timestampMs > ?")
+					.setLong(0, new Long(latestSnapshotBeforeMs))
+					.iterate();
+			
+			while (iter.hasNext()) {
+				
+				S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+				S3SnapshotKey snapshotKey = snapshot.getSnapshotKey();
+				S3SummaryKey summaryKey = new S3SummaryKey(snapshotKey);
+
+				usageMap.put(summaryKey, snapshot.getUsageData());
+			}
+    		
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			log.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+		return usageMap;
+	}
+
+	
 	/**
 	 * <p>Gather a Map of all S3 resource usage for a period.
 	 */
@@ -355,7 +393,6 @@ public class S3UsageLog
 				
 				S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
 				S3SnapshotKey snapshotKey = snapshot.getSnapshotKey();
-				//TODO: we'll need SummaryKey internally still
 				S3SummaryKey summaryKey = new S3SummaryKey(snapshotKey);
 
 				if ( snapshotKey.getTimestampMs() < period.getBeginningMs()
@@ -386,8 +423,8 @@ public class S3UsageLog
 					accumulator.accumulateUsage( durationSecs );		
 					accumulator.setLastTimestamp(snapshotKey.getTimestampMs());
 					accumulator.setLastUsageData(snapshot.getUsageData());
-					log.info("Accumulate usage, begin:" + beginningMs
-							+ " end:" + endingMs);
+					log.info(String.format("Accumulate usage, %d-%d, key:%s",
+							beginningMs, endingMs, summaryKey));
 
 				}
 
@@ -403,8 +440,8 @@ public class S3UsageLog
 				long endingMs = period.getEndingMs() - 1;
 				long durationSecs = ( endingMs-beginningMs ) / 1000;
 				accumulator.accumulateUsage( durationSecs );
-				log.info("Accumulate end usage, begin:" + beginningMs
-						+ " end:" + endingMs);
+				log.info(String.format("Accumulate endUsage, %d-%d, key:%s",
+						beginningMs, endingMs, key));
 
 				//add to results
 				usageMap.put( key, accumulator.getCurrentSummary() );
