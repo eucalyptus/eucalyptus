@@ -54,7 +54,7 @@ public class SearchResultCache {
       LOG.log( Level.INFO, "Not the same sort: " + this.sort + " vs. " + range );
       return null;
     }
-    if ( range.getStart( ) + range.getLength( ) > this.rows.size( ) ) {
+    if ( Math.min( range.getStart( ) + range.getLength( ), this.totalSize ) > this.rows.size( ) ) {
       LOG.log( Level.INFO, "Outside of range: cache size=" + this.rows.size( ) );
       return null;
     }
