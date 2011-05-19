@@ -76,6 +76,7 @@ typedef struct _artifact {
     long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
     boolean make_bootable; // tells 'disk_creator' whether to make the disk bootable
+    boolean is_partition; // this artifact is a partition for a disk to be constructed
     blockblob * bb; // blockblob handle for the artifact, when it is open
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
     int seq; // sequence number of the artifact

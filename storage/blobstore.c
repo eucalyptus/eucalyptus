@@ -683,11 +683,12 @@ static int blobstore_init (void)
             ret = verify_helpers (helpers, helpers_path, LASTHELPER);
             if (ret) {
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize blobstore library");
+            } else {
+                initialized = 1;
             }
         }
-        initialized = 1;
     }
-
+    
     return ret;
 }
 

@@ -128,7 +128,7 @@ permission notice:
 #define EUCA_MAX_VOLUMES 256
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
-#define EUCA_MAX_PARTITIONS 99 // partitions per disk
+#define EUCA_MAX_PARTITIONS 32 // partitions per disk
 #define EUCA_MAX_DISKS 26 // disks per bus: sd[a-z]
 #define DEFAULT_NC_CACHE_SIZE 999999 // in MB
 #define DEFAULT_NC_WORK_SIZE  999999 // in MB

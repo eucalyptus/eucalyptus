@@ -441,13 +441,17 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
 
 static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * bb, boolean must_be_file)
 {
+    assert (bb);
+    assert (vbr);
     if (! must_be_file && strlen (blockblob_get_dev (bb))) {
         strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
+        assert (blockblob_get_file (bb));
         strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
+    vbr->size = bb->size_bytes;
 }
 
 // These *_creator funcitons produce an artifact in blobstore, either from
@@ -513,15 +517,129 @@ static int partition_creator (artifact * a) // creates a new partition from scra
     return OK;
 }
 
+// sets vbr->guestDeviceName based on other entries in the struct
+// (guestDevice{Type|Bus}, {disk|partition}Number}
+static void set_disk_dev (virtualBootRecord * vbr)
+{
+    char type [3] = "\0\0\0";
+    if (vbr->guestDeviceType==DEV_TYPE_FLOPPY) {
+        type [0] = 'f';
+    } else { // a disk 
+        switch (vbr->guestDeviceBus) {
+        case BUS_TYPE_IDE:    type [0] = 'h'; break;
+        case BUS_TYPE_SCSI:   type [0] = 's'; break;
+        case BUS_TYPE_VIRTIO: type [0] = 'v'; break;
+        case BUS_TYPE_XEN:    type [0] = 'x'; type [1] = 'v'; break;
+        case BUS_TYPES_TOTAL:
+        default:
+            type [0] = '?'; // error
+        }
+    }
+    
+    char disk;
+    if (vbr->guestDeviceType==DEV_TYPE_FLOPPY) {
+        assert (vbr->diskNumber >=0 && vbr->diskNumber <= 9);
+        disk = '0' + vbr->diskNumber;
+    } else { // a disk 
+        assert (vbr->diskNumber >=0 && vbr->diskNumber <= 26);
+        disk = 'a' + vbr->diskNumber;
+    }
+    
+    char part [3] = "\0";
+    if (vbr->partitionNumber) {
+        snprintf (part, sizeof(part), "%d", vbr->partitionNumber);
+    }
+    
+    snprintf (vbr->guestDeviceName, sizeof (vbr->guestDeviceName), "%sd%c%s", type, disk, part);
+}
+
 static int disk_creator (artifact * a) // creates a 'raw' disk based on partitions
 {
+    int ret = ERROR;
     assert (a->bb);
     const char * dest_dev = blockblob_get_dev (a->bb);
     
     assert (dest_dev);
-    logprintfl (EUCAINFO, "[%s] constructing disk of size %lld bytes in %s\n", a->instanceId, a->size_bytes, a->id);
+    logprintfl (EUCAINFO, "[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev (a->bb));
 
-    return OK;
+    blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
+
+    // run through partitions, add their sizes, populate the map
+    virtualBootRecord * p1 = NULL;
+    virtualBootRecord * disk = a->vbr;
+    int map_entries = 1; // first map entry is for the MBR
+    long long offset_bytes = 512 * MBR_BLOCKS; // first partition begins after MBR
+    assert (disk);
+    for (int i=0; i<EUCA_MAX_PARTITIONS && a->deps[i]; i++) {
+        if (! a->deps[i]->is_partition)
+            continue;
+        virtualBootRecord * p = a->deps[i]->vbr;
+        assert (p);
+        if (p1==NULL)
+            p1 = p;
+
+        int relation;
+        if (p->locationType==NC_LOCATION_NONE) {
+            relation = BLOBSTORE_MAP; // these partitions won't be modified
+        } else {
+            relation = BLOBSTORE_SNAPSHOT; // these (e.g., sda1) will be (by tune2fs, and possibly grub)
+        }
+        map [map_entries].relation_type = relation;
+        map [map_entries].source_type = BLOBSTORE_BLOCKBLOB;
+        map [map_entries].source.blob = a->deps[i]->bb;
+        map [map_entries].first_block_src = 0;
+        map [map_entries].first_block_dst = (offset_bytes / 512);
+        map [map_entries].len_blocks = (p->size / 512);
+        logprintfl (EUCADEBUG, "[%s] mapping partition %d from %s [%lld-%lld]\n", 
+                    a->instanceId, map_entries, blockblob_get_dev (a->deps[i]->bb), map [map_entries].first_block_dst, map [map_entries].first_block_dst + map [map_entries].len_blocks);
+
+        offset_bytes+=p->size;
+        map_entries++;
+    }
+    assert (p1);
+    
+    // set fields in vbr that are needed for
+    // xml.c:gen_instance_xml() to generate correct disk entries
+    disk->guestDeviceType = p1->guestDeviceType;
+    disk->guestDeviceBus = p1->guestDeviceBus;
+    disk->diskNumber = p1->diskNumber;
+    set_disk_dev (disk);
+
+    // map the partitions to the disk
+    if (blockblob_clone (a->bb, map, map_entries)==-1) {
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk\n", a->instanceId);
+        goto cleanup;
+    }
+    update_vbr_with_backing_info (disk, a->bb, FALSE);
+
+    // create MBR
+    logprintfl (EUCAINFO, "[%s] creating MBR\n", a->instanceId);
+    if (diskutil_mbr (blockblob_get_dev (a->bb), "msdos") == ERROR) { // issues `parted mklabel`
+        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk\n", a->instanceId);
+        goto cleanup;
+    }
+
+    // add partition information to MBR
+    for (int i=1; i<map_entries; i++) { // map [0] is for the MBR
+        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", a->instanceId, i);
+        if (diskutil_part (blockblob_get_dev (a->bb),  // issues `parted mkpart`
+                           "primary", // TODO: make this work with more than 4 partitions
+                           NULL, // do not create file system
+                           map [i].first_block_dst, // first sector
+                           map [i].first_block_dst + map [i].len_blocks - 1) == ERROR) {
+            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk\n", a->instanceId, i);
+            goto cleanup;
+        }
+    }
+
+    //  make disk bootable if necessary
+    if (a->make_bootable) {
+        logprintfl (EUCAERROR, "error: making disk bootable is NOT IMPLEMENTED!\n"); // TODO!
+    }
+
+    ret = OK;
+ cleanup:
+    return ret;
 }
 
 static int keyed_disk_creator (artifact * a)
@@ -583,7 +701,7 @@ static int art_gen_id (char * buf, unsigned int buf_size, const char * first, co
 }
 
 #define IGNORED 0 // special value to indicate boolean params that will be ignored
-__thread char * instanceId = "";
+__thread char * instanceId = ""; // instance ID that is being serviced, for logging only
 
 static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
 {
@@ -684,7 +802,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
 
     // allocate another artifact struct if a work copy is requested
     if (a && make_work_copy) {
-        artifact * a2 = art_alloc (a->id, a->sig, a->size_bytes, FALSE, !allow_block_dev, copy_creator, vbr);
+        artifact * a2 = art_alloc (a->id, a->sig, a->size_bytes, FALSE, !allow_block_dev, copy_creator, NULL);
         if (a2) {
             if (art_add_dep (a2, a) == OK) {
                 a = a2;
@@ -702,6 +820,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
 
 static artifact * // pointer to 'keyed' disk artifact or NULL on error
 art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlying 'raw' disk 
+                virtualBootRecord * vbr, // VBR of the newly created
                 artifact * prereqs [], int num_prereqs, // prerequisites (kernel and ramdisk), if any
                 artifact * parts [], int num_parts, // OPTION A: partitions for constructing a 'raw' disk
                 artifact * emi_disk, // OPTION B: the artifact of the EMI that serves as a full disk
@@ -780,7 +899,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         }
         strncat (art_sig, emi_disk->sig, sizeof (art_sig) - strlen (art_sig) - 1);
 
-        if ((disk = art_alloc (emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, copy_creator, emi_disk->vbr)) == NULL ||
+        if ((disk = art_alloc (emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, copy_creator, NULL)) == NULL ||
             art_add_dep (disk, emi_disk) != OK) {
             goto free;
         }
@@ -790,14 +909,24 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             return NULL;
         
-        disk = art_alloc (art_id, art_sig, disk_size_bytes, TRUE, FALSE, disk_creator, NULL);
+        disk = art_alloc (art_id, art_sig, disk_size_bytes, TRUE, FALSE, disk_creator, vbr);
         if (disk==NULL) {
             logprintfl (EUCAERROR, "error: failed to allocate an artifact for raw disk\n");
             return NULL;
         }
         disk->make_bootable = make_bootable;
-        
-        // attach prereqs and partitions as dependencies of the raw disk
+
+        // attach partitions as dependencies of the raw disk        
+        for (int i = 0; i<num_parts; i++) {
+            artifact * p = parts [i];
+            if (art_add_dep (disk, p) != OK) {
+                logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
+                goto free;
+            }
+            p->is_partition = TRUE;
+        }
+    
+        // attach prereqs as dependencies of the raw disk
         for (int i = 0; i<num_prereqs; i++) {
             artifact * p = prereqs [i];
             if (art_add_dep (disk, p) != OK) {
@@ -805,14 +934,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                 goto free;
             }
         }
-        for (int i = 0; i<num_parts; i++) {
-            artifact * p = parts [i];
-            if (art_add_dep (disk, p) != OK) {
-                logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
-                goto free;
-            }
-        }
-    
+
         { // allocate the 'keyed' disk artifact
             
             // construct signature for the 'keyed' disk by appending the SSH key to 'raw' disk
@@ -910,23 +1032,33 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
-                    if (k==0)  { // if this is a disk artifact, insert a 'keyed' disk in front of it
-                        disk_arts [k] = art_alloc_disk (prereq_arts, total_prereqs, NULL, 0, disk_arts [k], make_bootable, sshkey);
+                    if (k==0)  { // if this is a disk artifact, insert a work copy in front of it
+                        if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
+                            logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
+                            goto out;
+                        }
+                        disk_arts [k] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), prereq_arts, total_prereqs, NULL, 0, disk_arts [k], make_bootable, sshkey);
                         if (disk_arts [k] == NULL) {
                             arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                             goto free;
                         }   
+                        vm->virtualBootRecordLen++;
                     } else { // k>0
                         partitions++; 
                     }
                     
                 } else if (partitions) { // there were partitions and we saw them all
                     assert (disk_arts [0] == NULL);
-                    disk_arts [0] = art_alloc_disk (prereq_arts, total_prereqs, disk_arts + 1, partitions, NULL, make_bootable, sshkey);
+                    if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
+                        logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
+                        goto out;
+                    }
+                    disk_arts [0] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), prereq_arts, total_prereqs, disk_arts + 1, partitions, NULL, make_bootable, sshkey);
                     if (disk_arts [0] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
+                    vm->virtualBootRecordLen++;
                     break; // out of the inner loop
                 }
             }
@@ -953,7 +1085,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define FIND_BLOB_TIMEOUT_USEC 0
+#define FIND_BLOB_TIMEOUT_USEC 100
+#define DELETE_BLOB_TIMEOUT_USEC 100
 
 static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_blob ( // either opens a blockblob or creates it
@@ -1037,7 +1170,6 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     }
     return find_or_create_blob (do_create, work_bs, id_work, a->size_bytes, a->sig, bbp);
 }
-
 
 int // returns OK or BLOBSTORE_ERROR_ error codes
 art_implement_tree ( // traverse artifact tree and create/download/combine artifacts
@@ -1124,6 +1256,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             ret = root->creator (root);
             if (ret != OK) {
                 logprintfl (EUCAERROR, "error: failed to create artifact %s\n", root->id);
+                // delete the partially created artifact
+                blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
             }
         }
 
@@ -1245,7 +1379,7 @@ static char * gen_id (char * id, unsigned int size, const char * prefix)
 #define EMI2 "emi-2DEF456"
 #define GEN_ID gen_id (id, sizeof(id), "12345678")
 #define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 20
+#define COMPETITIVE_ITERATIONS 3
 
 static void * competitor_function (void * ptr)
 {
@@ -1300,7 +1434,9 @@ static int check_blob (blobstore * bs, const char * keyword, int expect)
     return 0;
 }
 
-static void dummy_err_fn (const char * msg) { }
+static void dummy_err_fn (const char * msg) { 
+    //    logprintfl (EUCADEBUG, "BLOBSTORE: %s\n", msg);
+}
 
 int main (int argc, char ** argv)
 {
@@ -1315,6 +1451,12 @@ int main (int argc, char ** argv)
 
     cache_bs = create_teststore (BS_SIZE, cwd, "cache", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
     work_bs  = create_teststore (BS_SIZE, cwd, "work", BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+
+    if (cache_bs==NULL || work_bs==NULL) {
+        printf ("error: failed to create blobstores\n");
+        errors++;
+        goto out;
+    }
     
     int emis_in_use = 1;
     if (errors += provision (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs))
