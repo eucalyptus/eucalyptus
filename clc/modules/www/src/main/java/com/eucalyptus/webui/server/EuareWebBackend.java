@@ -14,6 +14,7 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
@@ -284,7 +285,7 @@ public class EuareWebBackend {
     result.addField( cert.isRevoked( ).toString( ) );
     result.addField( cert.getCreateDate( ) == null ? "" : cert.getCreateDate( ).toString( ) );
     result.addField( QueryBuilder.get( ).start( CategoryConstants.USER ).and( ACCOUNT, user.getAccount( ).getName( ) ).and( NAME, user.getName( ) ).url( ) );
-    result.addField( cert.getPem( ) );
+    result.addField( B64.url.decString( cert.getPem( ) ) );
     return result;
   }
 
