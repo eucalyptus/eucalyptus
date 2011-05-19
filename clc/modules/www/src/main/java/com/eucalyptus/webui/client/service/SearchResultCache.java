@@ -67,7 +67,7 @@ public class SearchResultCache {
     }
     SearchResult result = new SearchResult( this.totalSize, range );
     result.setDescs( this.descs );
-    result.addRows( this.rows.subList( range.getStart( ), range.getStart( ) + range.getLength( ) ) );
+    result.addRows( this.rows.subList( range.getStart( ), range.getStart( ) + realSize ) );
     return result;
   }
 
