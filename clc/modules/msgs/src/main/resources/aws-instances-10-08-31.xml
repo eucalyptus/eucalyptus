@@ -68,8 +68,8 @@
 
   <mapping class="edu.ucsb.eucalyptus.msgs.EbsDeviceMapping" abstract="true">
     <value name="virtualName" field="virtualName" usage="optional" />
-    <value name="snapshotId" field="snapshotId" />
-    <value name="volumeSize" field="volumeSize" />
+    <value name="snapshotId" field="snapshotId" usage="optional" />
+    <value name="volumeSize" field="volumeSize" usage="optional" />
     <value name="deleteOnTermination" field="deleteOnTermination" usage="optional" />
   </mapping>
 
