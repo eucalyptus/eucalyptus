@@ -1,0 +1,19 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        @def radius 6px;
+        .boundingBox {
+        	background-color:#DDDDDD;
+            border-top:1px solid #D1D1D1;
+        }
+    </ui:style>
+
+    <g:ScrollPanel styleName="{style.boundingBox}">
+        <g:HTMLPanel>
+            Hello
+        </g:HTMLPanel>
+    </g:ScrollPanel>
+    
+</ui:UiBinder> 

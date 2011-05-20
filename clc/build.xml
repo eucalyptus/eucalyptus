@@ -284,6 +284,7 @@
 				<exclude name="**/gwt-dev-*.jar" />
 				<exclude name="**/gwt-soyc-vis-*.jar" />
 				<exclude name="**/gwt-user-*.jar" />
+				<exclude name="**/gwt-servlet-deps-*.jar" />
 			</fileset>
 		</copy>
 		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
