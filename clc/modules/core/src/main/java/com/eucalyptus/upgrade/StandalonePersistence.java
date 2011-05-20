@@ -27,7 +27,7 @@ import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
-  private static Logger                     LOG = Logger.getLogger( StandalonePersistence.class );
+  private static Logger                     LOG;
   private static ConcurrentMap<String, Sql> sqlConnections = new ConcurrentHashMap<String, Sql>( );
   private static List<UpgradeScript> upgradeScripts = Lists.newArrayList( );
   static {
@@ -167,6 +167,7 @@ public class StandalonePersistence {
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
     Logs.DEBUG = doDebug;
     Logs.TRACE = doDebug;
+    StandalonePersistence.LOG = Logger.getLogger( StandalonePersistence.class );
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
