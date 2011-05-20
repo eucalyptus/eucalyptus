@@ -15,12 +15,12 @@ public class ImagePlace extends SearchPlace {
 
     @Override
     public ImagePlace getPlace( String search ) {
-      return new ImagePlace( search );
+      return new ImagePlace( decode( search ) );
     }
 
     @Override
     public String getToken( ImagePlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

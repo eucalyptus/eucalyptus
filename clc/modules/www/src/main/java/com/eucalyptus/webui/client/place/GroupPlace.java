@@ -15,12 +15,12 @@ public class GroupPlace extends SearchPlace {
 
     @Override
     public GroupPlace getPlace( String search ) {
-      return new GroupPlace( search );
+      return new GroupPlace( decode( search ) );
     }
 
     @Override
     public String getToken( GroupPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

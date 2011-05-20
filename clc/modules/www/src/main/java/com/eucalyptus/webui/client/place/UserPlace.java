@@ -15,12 +15,12 @@ public class UserPlace extends SearchPlace {
 
     @Override
     public UserPlace getPlace( String search ) {
-      return new UserPlace( search );
+      return new UserPlace( decode( search ) );
     }
 
     @Override
     public String getToken( UserPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

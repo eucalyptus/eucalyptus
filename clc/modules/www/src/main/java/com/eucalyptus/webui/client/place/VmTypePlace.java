@@ -15,12 +15,12 @@ public class VmTypePlace extends SearchPlace {
 
     @Override
     public VmTypePlace getPlace( String search ) {
-      return new VmTypePlace( search );
+      return new VmTypePlace( decode( search ) );
     }
 
     @Override
     public String getToken( VmTypePlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

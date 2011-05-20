@@ -15,12 +15,12 @@ public class CertPlace extends SearchPlace {
 
     @Override
     public CertPlace getPlace( String search ) {
-      return new CertPlace( search );
+      return new CertPlace( decode( search ) );
     }
 
     @Override
     public String getToken( CertPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

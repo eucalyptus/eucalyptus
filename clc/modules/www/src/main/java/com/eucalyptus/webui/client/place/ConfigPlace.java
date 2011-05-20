@@ -15,12 +15,12 @@ public class ConfigPlace extends SearchPlace {
 
     @Override
     public ConfigPlace getPlace( String token ) {
-      return new ConfigPlace( token );
+      return new ConfigPlace( decode( token ) );
     }
 
     @Override
     public String getToken( ConfigPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) ); 
     }
     
   }

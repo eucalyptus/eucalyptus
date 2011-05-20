@@ -15,12 +15,12 @@ public class PolicyPlace extends SearchPlace {
 
     @Override
     public PolicyPlace getPlace( String search ) {
-      return new PolicyPlace( search );
+      return new PolicyPlace( decode( search ) );
     }
 
     @Override
     public String getToken( PolicyPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

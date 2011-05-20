@@ -66,9 +66,8 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     LoadingAnimationView view = this.clientFactory.getLoadingAnimationView( );
     container.setWidget( view );
     
-    String query = URL.decodePathSegment( place.getSearch( ) );
-    LOG.log( Level.INFO, "Start new search: " + query + "<-: " + place.getSearch( ) );
-    doSearch( query, new SearchRange( 0, pageSize ) );
+    LOG.log( Level.INFO, "Search " + getTitle( ) + ": " + place.getSearch( ) );
+    doSearch( place.getSearch( ), new SearchRange( 0, pageSize ) );
   }
   
   @Override

@@ -15,12 +15,12 @@ public class KeyPlace extends SearchPlace {
 
     @Override
     public KeyPlace getPlace( String search ) {
-      return new KeyPlace( search );
+      return new KeyPlace( decode( search ) );
     }
 
     @Override
     public String getToken( KeyPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }

@@ -11,6 +11,7 @@ import com.eucalyptus.webui.client.MainActivityMapper;
 import com.eucalyptus.webui.client.MainPlaceHistoryMapper;
 import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.LogoutPlace;
+import com.eucalyptus.webui.client.place.SearchPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.place.StartPlace;
 import com.eucalyptus.webui.client.service.CategoryTag;
@@ -210,7 +211,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   public void search( String search ) {
     if ( search != null ) {
       LOG.log( Level.INFO, "New search: " + search );
-      this.clientFactory.getMainHistorian( ).newItem( search, true/*issueEvent*/ );
+      this.clientFactory.getMainHistorian( ).newItem( SearchPlace.encode( search ), true/*issueEvent*/ );
     } else {
       LOG.log( Level.INFO, "Empty search!" );
     }

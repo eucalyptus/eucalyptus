@@ -15,12 +15,12 @@ public class ReportPlace extends SearchPlace {
 
     @Override
     public ReportPlace getPlace( String search ) {
-      return new ReportPlace( search );
+      return new ReportPlace( decode( search ) );
     }
 
     @Override
     public String getToken( ReportPlace place ) {
-      return place.getSearch( );
+      return encode( place.getSearch( ) );
     }
     
   }
