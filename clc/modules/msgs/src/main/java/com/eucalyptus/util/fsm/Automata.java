@@ -64,8 +64,7 @@
 package com.eucalyptus.util.fsm;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;

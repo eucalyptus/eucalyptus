@@ -97,7 +97,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
 import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
@@ -199,15 +198,6 @@ public class ImageManager {
     return reply;
   }
   
-  public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {
-    return new Predicate<BlockDeviceMappingItemType>( ) {
-      @Override
-      public boolean apply( BlockDeviceMappingItemType input ) {
-        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
-      }
-    };
-  }
-  
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
     User requestUser = Contexts.lookup( ).getUser( );
@@ -227,11 +217,11 @@ public class ImageManager {
     if ( request.getImageLocation( ) != null ) {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), null )
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), manifest,  );
-    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), findEbsRoot( rootDevName ) ) ) {
-      BlockDeviceMappingItemType rootBlockDevice = Iterables.find( request.getBlockDeviceMappings( ), findEbsRoot( rootDevName ) );
-      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootBlockDevice );
+      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
+      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), manifest );
+      imageInfo.getDeviceMappings( ).addAll( vbr );
+    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
+      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootDevName, request.getBlockDeviceMappings( ) );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="

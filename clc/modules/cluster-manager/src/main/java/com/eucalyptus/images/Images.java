@@ -1,11 +1,14 @@
 package com.eucalyptus.images;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
@@ -16,12 +19,14 @@ import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionFireException;
 import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
@@ -163,6 +168,37 @@ public class Images {
     }
   }
   
+  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent ) {
+    return new Function<BlockDeviceMappingItemType, DeviceMapping>( ) {
+      @Override
+      public DeviceMapping apply( BlockDeviceMappingItemType input ) {
+        assertThat( input, notNullValue( ) );
+        assertThat( input.getDeviceName( ), notNullValue( ) );
+        if ( input.getEbs( ) != null ) {
+          EbsDeviceMapping ebsInfo = input.getEbs( );
+          Snapshot snap;
+          Integer size;
+          try {
+            snap = Snapshots.lookup( ebsInfo.getSnapshotId( ) );
+            size = snap.getVolumeSize( );
+            if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
+              size = ebsInfo.getVolumeSize( );
+            }
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+            size = input.getEbs( ).getVolumeSize( );
+          }
+          return new BlockStorageDeviceMapping( parent, input.getDeviceName( ), input.getEbs( ).getVirtualName( ), ebsInfo.getSnapshotId( ), size,
+                                                ebsInfo.getDeleteOnTermination( ) );
+        } else if ( input.getVirtualName( ) != null && input.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
+          return new EphemeralDeviceMapping( parent, input.getDeviceName( ), input.getVirtualName( ) );
+        } else {
+          return new SuppressDeviceMappping( parent, input.getDeviceName( ) );
+        }
+      }
+    };
+  }
+  
   public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
                                                                      
                                                                      @Override
@@ -271,24 +307,38 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, BlockDeviceMappingItemType rootBlockDevice ) throws EucalyptusCloudException {
+  public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {
+    return new Predicate<BlockDeviceMappingItemType>( ) {
+      @Override
+      public boolean apply( BlockDeviceMappingItemType input ) {
+        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
+      }
+    };
+  }
+  
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
+    BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
-      Snapshot snap = Transactions.one( Snapshot.named( userFullName, snapshotId ), new Tx<Snapshot>( ) {
-        @Override
-        public void fire( Snapshot t ) throws Throwable {}
-      } );
+      Snapshot snap = Snapshots.lookup( userFullName, snapshotId );
       if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must the owner of the source snapshot." );
       }
-      BlockStorageImageInfo ret = Transactions.save( new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
-                                                                                snap.getDisplayName( ),
-                                                                                ( snap.getVolumeSize( ) >= rootBlockDevice.getSize( ) )
-                                                                                  ? snap.getVolumeSize( )
-                                                                                  : rootBlockDevice.getEbs( ).getVolumeSize( ),
-                                                                                Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) ) ) );
+      BlockStorageImageInfo ret = new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
+                                                             snap.getDisplayName( ),
+                                                             ( snap.getVolumeSize( ) >= rootBlockDevice.getSize( ) )
+                                                               ? snap.getVolumeSize( )
+                                                               : rootBlockDevice.getEbs( ).getVolumeSize( ),
+                                                             Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) ) );
+      ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
+        
+        @Override
+        public void fire( BlockStorageImageInfo t ) {
+          t.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( t ) ) );
+        }
+      } );
       return ret;
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );

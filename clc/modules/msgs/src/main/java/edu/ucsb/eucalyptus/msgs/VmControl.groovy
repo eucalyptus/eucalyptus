@@ -63,10 +63,10 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.binding.HttpEmbedded;
-import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.auth.policy.PolicyAction
+import com.eucalyptus.auth.policy.PolicySpec
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
 
 public class VmControlMessage extends EucalyptusMessage {}
 public class ResourceTagMessage extends EucalyptusMessage {}
@@ -274,15 +274,15 @@ public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
 public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
-  Integer volumeSize = -1;
-  Boolean deleteOnTermination = true;
+  Integer volumeSize = null;
+  Boolean deleteOnTermination = Boolean.FALSE;
 }
 
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/
   String virtualName; // ephemeralN, root, ami, swap
   String deviceName;
-  Integer size; // in megabytes
-  String format; // optional, defaults to none (none, ext3, ntfs, swap)
+  Integer size; // in megabytes //TODO:GRZE: maybe remove
+  String format; // optional, defaults to none (none, ext3, ntfs, swap) //TODO:GRZE: maybe remove
   EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;

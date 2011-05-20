@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.blockstorage;
 
-import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -110,20 +109,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.volumeSc = volumeSc;
     this.volumePartition = volumePartition;
     super.setState( State.NIHIL );
-    super.setCreationTime( new Date( ) );
   }
   
   public Snapshot( final String accountId, final String displayName ) {
     this.setOwnerAccountId( accountId );
     this.setDisplayName( displayName );
-  }
-  
-  public static Snapshot named( final String snapshotId ) {
-    return new Snapshot( ) {
-      {
-        setDisplayName( snapshotId );
-      }
-    };
   }
   
   public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
@@ -172,7 +162,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
     snap.setSnapshotId( this.getDisplayName( ) );
     snap.setStatus( this.mapState( ) );
-    snap.setStartTime( this.getCreationTime( ) );
+    snap.setStartTime( this.getCreationTimestamp( ) );
     snap.setVolumeId( this.getParentVolume( ) );
     snap.setProgress( this.getState( ).equals( State.EXTANT )
       ? "100%"

@@ -89,8 +89,11 @@ public class BlockStorageDeviceMapping extends DeviceMapping {
     this.setDeviceMappingType( DeviceMappingType.blockstorage );
   }
   
-  public BlockStorageDeviceMapping( ImageInfo parent, String deviceName, String virtualName ) {
+  public BlockStorageDeviceMapping( ImageInfo parent, String deviceName, String virtualName, String snapshotId, Integer size, Boolean deleteOnTermiante ) {
     super( parent, DeviceMappingType.blockstorage, deviceName, virtualName );
+    this.snapshotId = snapshotId;
+    this.size = size;
+    this.delete = deleteOnTermiante;
   }
 
   public String getSnapshotId( ) {

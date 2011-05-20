@@ -84,29 +84,30 @@ import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
+  
   static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) throws EucalyptusCloudException {
     String newId = null;
     Snapshot snap = null;
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-      try {
-        while ( true ) {
-          newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
-          try {
-            db.getUnique( Snapshot.named( newId ) );
-          } catch ( EucalyptusCloudException e ) {
-            snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
-            snap.setVolumeSize( vol.getSize( ) );
-            db.add( snap );
-            db.commit( );
-            return snap;
-          }
+    try {
+      while ( true ) {
+        newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
+        try {
+          db.getUnique( Snapshots.named( newId ) );
+        } catch ( EucalyptusCloudException e ) {
+          snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
+          snap.setVolumeSize( vol.getSize( ) );
+          db.add( snap );
+          db.commit( );
+          return snap;
         }
-      } catch ( Exception ex ) {
-        db.rollback( );
-        throw new EucalyptusCloudException( "Failed to initialize snapshot state because of: " + ex.getMessage( ), ex );
       }
+    } catch ( Exception ex ) {
+      db.rollback( );
+      throw new EucalyptusCloudException( "Failed to initialize snapshot state because of: " + ex.getMessage( ), ex );
+    }
   }
-
+  
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
     final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     try {
@@ -135,5 +136,26 @@ public class Snapshots {
     }
     return snap;
   }
-
+  
+  /**
+   * @param snapshotId
+   * @return
+   * @throws ExecutionException
+   */
+  public static Snapshot lookup( String snapshotId ) throws ExecutionException {
+    return Transactions.find( Snapshots.named( snapshotId ) );
+  }
+  
+  public static Snapshot named( final String snapshotId ) {
+    return new Snapshot( ) {
+      {
+        setDisplayName( snapshotId );
+      }
+    };
+  }
+  
+  public static Snapshot lookup( UserFullName userFullName, String snapshotId ) throws ExecutionException {
+    return Transactions.find( Snapshot.named( userFullName, snapshotId ) );
+  }
+  
 }
