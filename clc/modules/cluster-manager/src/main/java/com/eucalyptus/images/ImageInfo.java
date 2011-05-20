@@ -79,7 +79,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -394,7 +393,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.fullName == null
       ? this.fullName = FullName.create.vendor( "euca" )
                                        .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( ( ( UserFullName ) this.getOwner( ) ).getAccountNumber( ) )
+                                       .namespace( this.getOwnerAccountId( ) )
                                        .relativeId( "image", this.getDisplayName( ) )
       : this.fullName;
   }
