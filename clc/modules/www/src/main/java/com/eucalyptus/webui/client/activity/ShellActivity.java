@@ -211,7 +211,7 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   public void search( String search ) {
     if ( search != null ) {
       LOG.log( Level.INFO, "New search: " + search );
-      this.clientFactory.getMainHistorian( ).newItem( SearchPlace.encode( search ), true/*issueEvent*/ );
+      this.clientFactory.getMainHistorian( ).newItem( search, true/*issueEvent*/ );
     } else {
       LOG.log( Level.INFO, "Empty search!" );
     }
