@@ -166,7 +166,7 @@ public class ImageManager {
           LOG.trace( "Rejecting image " + t.getFullName( ) + " because user is not allowed." );
           return false;
         }
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
+        if ( !ctx.hasAdministrativePrivileges( ) && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
           LOG.error( "Accessing image " + t.getDisplayName( ) + " is denied by permission of " + ctx.getUser( ).getName( ) );
           return false;
         }
