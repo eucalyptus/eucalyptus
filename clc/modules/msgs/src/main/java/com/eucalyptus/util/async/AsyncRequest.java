@@ -94,8 +94,16 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceConfig ) {
-    serviceConfig.lookupService( ).enqueue( this );
-    return this.getResponse( );
+//    serviceConfig.lookupService( ).enqueue( this );
+    CheckedListenableFuture<R> ret = this.execute( serviceConfig ).getResponse( );
+    try {
+      ret.get( );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    } catch ( InterruptedException ex ) {
+      LOG.error( ex , ex );
+    }
+    return ret;//this.getResponse( );
   }
   
   /**

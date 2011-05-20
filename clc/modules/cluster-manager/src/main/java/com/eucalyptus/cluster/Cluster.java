@@ -567,7 +567,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     } catch ( Exception ex1 ) {
       LOG.error( ex1, ex1 );
     }
-    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
+//    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
       final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
                                                                                                   State.STARTING,
@@ -646,7 +646,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
     ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
     ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
+//    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     Clusters.getInstance( ).deregister( this.getName( ) );
   }
   
