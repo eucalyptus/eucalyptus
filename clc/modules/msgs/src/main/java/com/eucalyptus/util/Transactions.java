@@ -30,16 +30,16 @@ public class Transactions {
    */
   private static <T> EntityWrapper<T> joinOrCreate( T search ) {
     EntityWrapper<T> db;
-    if ( dbtl.get( ) != null ) {
-      try {
-        db = ( EntityWrapper<T> ) dbtl.get( );
-      } catch ( Exception ex ) {
-        db = dbtl.get( ).recast( ( Class<T> ) search.getClass( ) );
-      }
-    } else {
+//    if ( dbtl.get( ) != null ) {
+//      try {
+//        db = ( EntityWrapper<T> ) dbtl.get( );
+//      } catch ( Exception ex ) {
+//        db = dbtl.get( ).recast( ( Class<T> ) search.getClass( ) );
+//      }
+//    } else {
       db = EntityWrapper.get( search );
       dbtl.set( db );
-    }
+//    }
     return db;
   }
   
