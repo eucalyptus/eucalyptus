@@ -179,7 +179,7 @@ public class ImageManager {
         } else if ( !executable.isEmpty( ) ) {
           for ( String accountId : executable ) {
             try {
-              if ( ctx.hasAdministrativePrivileges( ) || t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
+              if ( "self".equals( accountId ) || ctx.hasAdministrativePrivileges( ) || t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
                 return true;
               }
             } catch ( AuthException ex ) {
