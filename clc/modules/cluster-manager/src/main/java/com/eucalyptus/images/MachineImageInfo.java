@@ -97,11 +97,6 @@ public class MachineImageInfo extends PutGetImageInfo {
     this.setImageType( Image.Type.machine );
   }
 
-  public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Long imageSize, Long imageBundleSize, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageName, imageDescription, imageLocation, imageSize, imageBundleSize, arch, platform );
-    this.setImageType( Image.Type.machine );
-  }
-
   public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Long imageSize, Long imageBundleSize, Architecture arch, Platform platform, String kernelId, String ramdiskId ) {
     super( userFullName, imageId, imageName, imageDescription, imageLocation, imageSize, imageBundleSize, arch, platform );
     this.kernelId = kernelId;

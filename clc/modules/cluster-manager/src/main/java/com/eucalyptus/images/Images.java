@@ -348,11 +348,15 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
       : manifest.getName( );
+    eki = ( eki != null ) ? eki : manifest.getKernelId( );
+    eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
+    eri = ( eri != null ) ? eri : manifest.getRamdiskId( );
+    eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
@@ -367,7 +371,7 @@ public class Images {
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                    manifest.getArchitecture( ), manifest.getPlatform( ), eki, eri );
         break;
     }
     if ( ret == null ) {
