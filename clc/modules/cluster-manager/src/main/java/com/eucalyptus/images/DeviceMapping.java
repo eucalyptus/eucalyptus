@@ -88,8 +88,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "metadata_device_mappings" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
-@DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
-@DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
+@DiscriminatorColumn( name = "metadata_device_mapping_discriminator", discriminatorType = DiscriminatorType.STRING )
+@DiscriminatorValue( value = "basic" )
 public class DeviceMapping extends AbstractPersistent {
   
   @Column( name = "metadata_device_mapping_type" )
