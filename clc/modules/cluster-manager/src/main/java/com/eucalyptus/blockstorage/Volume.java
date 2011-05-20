@@ -65,14 +65,13 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.AccountFullName;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -113,7 +112,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     this.partition = partitionName;
     this.parentSnapshot = parentSnapshot;
     super.setState( State.NIHIL );
-    super.setCreationTime( new Date( ) );
+    super.setCreationTimestamp( new Date( ) );
   }
   
   public Volume( final UserFullName userFullName, String displayName ) {
@@ -182,7 +181,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   
   public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
     vol.setAvailabilityZone( this.getPartition( ) );
-    vol.setCreateTime( this.getCreationTime( ) );
+    vol.setCreateTime( this.getCreationTimestamp( ) );
     vol.setVolumeId( this.getDisplayName( ) );
     vol.setSnapshotId( this.getParentSnapshot( ) );
     vol.setStatus( this.mapState( ) );
