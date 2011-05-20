@@ -2792,13 +2792,13 @@ int ccCheckState() {
 }
 
 /* 
-   As of 1.6.2, the CC will start a background thread to poll its
-   collection of nodes.  This thread populates an in-memory cache of
-   instance and resource information that can be accessed via the
-   regular describeInstances and describeResources calls to the CC.
-   The purpose of this separation is to allow for a more scalable
+   The CC will start a background thread to poll its collection of
+   nodes.  This thread populates an in-memory cache of instance and
+   resource information that can be accessed via the regular
+   describeInstances and describeResources calls to the CC.  The
+   purpose of this separation is to allow for a more scalable
    framework where describe operations do not block on access to node
-   controllers.
+   controllers.  
 */
 void *monitor_thread(void *in) {
   int rc, ncTimer, clcTimer, ncRefresh, clcRefresh;
@@ -4272,7 +4272,6 @@ void print_ccInstance(char *tag, ccInstance *in) {
     }
   }
   
-  //  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s emiId=%s kernelId=%s ramdiskId=%s emiURL=%s kernelURL=%s ramdiskURL=%s state=%s ts=%d accountId=%s keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->state, in->ts, in->accountId, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
   logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s state=%s accountId=%s ts=%d keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
 
   free(volbuf);
