@@ -83,9 +83,10 @@ typedef struct _artifact {
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
     int seq; // sequence number of the artifact
     char instanceId [32]; // here purely for annotating logs
+    int refs; // reference counter (1 or more if contained in deps[] of others)
 } artifact;
 
-artifact * art_free (artifact * a);
+void art_free (artifact * a);
 int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, const char * sshkey, const char * instanceId);

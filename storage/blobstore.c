@@ -97,6 +97,7 @@
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
+#define BLOBSTORE_SIG_MAX 32768
 #define DM_PATH "/dev/mapper/"
 #define DM_FORMAT DM_PATH "%s" // TODO: do not hardcode?
 #define MIN_BLOCKS_SNAPSHOT 32 // otherwise dmsetup fails with 
@@ -1576,7 +1577,7 @@ blockblob * blockblob_open ( blobstore * bs,
 
         } else { // blob existed
 
-            char buf [1024];
+            char buf [BLOBSTORE_SIG_MAX];
 
             if (bb->size_bytes==0) { // find out the size from the file size
                 bb->size_bytes = sb.st_size;

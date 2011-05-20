@@ -631,7 +631,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     return ret;
 }
 
-int create_instance_backing (ncInstance * instance)
+int create_instance_backing1 (ncInstance * instance)
 {
     int ret = ERROR;
     int total_prereqs = 0;
@@ -707,7 +707,7 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing (ncInstance * instance, int destroy_files)
+int destroy_instance_backing1 (ncInstance * instance, int destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -869,7 +869,7 @@ ncInstance * load_instance_struct (const char * instanceId)
     return NULL;
 }
 
-int create_instance_backing2 (ncInstance * instance)
+int create_instance_backing (ncInstance * instance)
 {
     int ret = ERROR;
     virtualMachine * vm = &(instance->params);
@@ -909,7 +909,7 @@ int create_instance_backing2 (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing2 (ncInstance * instance, int destroy_files)
+int destroy_instance_backing (ncInstance * instance, int destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
