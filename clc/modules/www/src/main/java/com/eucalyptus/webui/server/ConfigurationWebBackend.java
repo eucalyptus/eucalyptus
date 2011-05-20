@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -15,6 +16,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -22,9 +24,9 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
-import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
+import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -117,16 +119,16 @@ public class ConfigurationWebBackend {
     result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) ); // id
     result.addField( CLOUD_NAME );                            // name  
     result.addField( CLOUD_TYPE );                            // type
-    result.addField( sysConf.getCloudHost( ) );               // host
+    result.addField( Internets.localHostAddress( ) );               // host
     result.addField( "" );                                    // port
     // Then fill in the specific fields
-    result.addField( sysConf.getDefaultKernel( ) );           // default kernel
-    result.addField( sysConf.getDefaultRamdisk( ) );          // default ramdisk
+    result.addField( ImageConfiguration.getInstance( ).getDefaultKernelId( ) );           // default kernel
+    result.addField( ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) );          // default ramdisk
     result.addField( sysConf.getDnsDomain( ) );               // dns domain
     result.addField( sysConf.getNameserver( ) );              // dns nameserver
     result.addField( sysConf.getNameserverAddress( ) );       // dns IP
-    result.addField( sysConf.isDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
-    result.addField( sysConf.getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user    
+    result.addField( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
+    result.addField( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user    
   }
   
   /**
@@ -144,15 +146,15 @@ public class ConfigurationWebBackend {
   
   private static void deserializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow input ) {
     int i = COMMON_CONFIG_FIELD_DESCS.size( );
-    sysConf.setDefaultKernel( input.getField( i++ ) );
-    sysConf.setDefaultRamdisk( input.getField( i++ ) );
+    ImageConfiguration.getInstance( ).setDefaultKernelId( input.getField( i++ ) );
+    ImageConfiguration.getInstance( ).setDefaultRamdiskId( input.getField( i++ ) );
     sysConf.setDnsDomain( input.getField( i++ ) );
     sysConf.setNameserver( input.getField( i++ ) );
     sysConf.setNameserverAddress( input.getField( i++ ) );
-    sysConf.setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( i++ ) ) );
+    AddressingConfiguration.getInstance( ).setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( i++ ) ) );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      sysConf.setMaxUserPublicAddresses( val );
+      AddressingConfiguration.getInstance( ).setMaxUserPublicAddresses( val );
     } catch ( Exception e ) { }
   }
   
