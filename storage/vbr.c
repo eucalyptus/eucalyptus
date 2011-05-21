@@ -472,7 +472,7 @@ static int walrus_creator (artifact * a) // creates an artifact by downloading i
     assert (vbr->preparedResourceLocation);
     logprintfl (EUCAINFO, 
                 "[%s] downloading from Walrus %s\n"
-                "[%s]             to %s\n", 
+                "[%s]                      to %s\n", 
                 a->instanceId, vbr->preparedResourceLocation, 
                 a->instanceId, dest_path);
     if (walrus_image_by_manifest_url (vbr->preparedResourceLocation, dest_path, TRUE) != OK) {
@@ -606,7 +606,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     // map the partitions to the disk
     if (blockblob_clone (a->bb, map, map_entries)==-1) {
-        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk\n", a->instanceId);
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
     update_vbr_with_backing_info (disk, a->bb, FALSE);
@@ -614,7 +614,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     // create MBR
     logprintfl (EUCAINFO, "[%s] creating MBR\n", a->instanceId);
     if (diskutil_mbr (blockblob_get_dev (a->bb), "msdos") == ERROR) { // issues `parted mklabel`
-        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk\n", a->instanceId);
+        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
 
@@ -626,7 +626,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
                            NULL, // do not create file system
                            map [i].first_block_dst, // first sector
                            map [i].first_block_dst + map [i].len_blocks - 1) == ERROR) {
-            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk\n", a->instanceId, i);
+            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
             goto cleanup;
         }
     }
@@ -782,6 +782,17 @@ void arts_free (artifact * array [], unsigned int array_len)
             art_free (array [i]);
 }
 
+static void art_print_tree (const char * prefix, artifact * a)
+{
+    logprintfl (EUCADEBUG, "artifacts tree: %s%03d %s cache=%d file=%d creator=%0ul\n", prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator);
+
+    char new_prefix [512];
+    snprintf (new_prefix, sizeof (new_prefix), "%s\t", prefix);
+    for (int i=0; i< MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
+        art_print_tree (new_prefix, a->deps[i]);
+    }
+}
+
 static int art_gen_id (char * buf, unsigned int buf_size, const char * first, const char * sig)
 {
     char hash [48];
@@ -796,7 +807,7 @@ static int art_gen_id (char * buf, unsigned int buf_size, const char * first, co
 }
 
 #define IGNORED 0 // special value to indicate boolean params that will be ignored
-__thread char * instanceId = ""; // instance ID that is being serviced, for logging only
+static __thread char current_instanceId [512] = ""; // instance ID that is being serviced, for logging only
 
 static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
 {
@@ -818,7 +829,7 @@ static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolea
     a->creator = creator;
     a->vbr = vbr;
 
-    strncpy (a->instanceId, instanceId, sizeof (a->instanceId)); // for logging
+    strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
     return a;
 }
 
@@ -1091,6 +1102,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 const char * sshkey,
                 const char * instanceId)
 {
+    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord * prereq [EUCA_MAX_VBRS];
     int total_prereqs = 0;
@@ -1188,6 +1201,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
             }
         }
     }
+    art_print_tree ("", root);
     goto out;
     
  free:
@@ -1482,7 +1496,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
-    instanceId = strstr (id, "/") + 1;
+    strncpy (current_instanceId, strstr (id, "/") + 1, sizeof (current_instanceId));
     artifact * sentinel = vbr_alloc_tree (vm, FALSE, sshkey, id);
     if (sentinel == NULL) {
         printf ("error: vbr_alloc_tree failed id=%s\n", id);

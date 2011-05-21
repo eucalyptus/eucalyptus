@@ -70,9 +70,9 @@
 
 #define BLOBSTORE_MAX_PATH 1024
 #define MAX_BLOCKMAP_SIZE 32
-#define MAX_DM_NAME 46
-#define MAX_DM_PATH (MAX_DM_NAME+12)
-#define MAX_DM_LINE (MAX_DM_PATH*2+40)
+#define MAX_DM_NAME 64                 // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
+#define MAX_DM_PATH (MAX_DM_NAME+12)   // e.g. /dev/mapper/euca-819312998196-i-4336096F-prt-00512swap-ac8d5670 
+#define MAX_DM_LINE (MAX_DM_PATH*2+40) // e.g. 0 1048576 snapshot $DM1 $DM2 p 16
 
 // flags for *_open() calls
 #define BLOBSTORE_FLAG_RDWR     00001

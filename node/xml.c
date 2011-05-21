@@ -115,6 +115,16 @@ static void init (void)
     pthread_mutex_unlock (&xml_mutex);
 }
 
+// verify that the path for kernel/ramdisk is reasonable
+static int path_check (const char * path, const char * name) // TODO: further checking?
+{
+    if (strstr (path, "/dev/") == path) {
+        logprintfl (EUCAERROR, "internal error: path to %s points to a device %s\n", name, path);
+        return 1;
+    }
+    return 0;
+}
+
 // Encodes instance metadata (contained in ncInstance struct) in XML
 // and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
 // That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
@@ -123,6 +133,7 @@ int gen_instance_xml (const ncInstance * instance)
 {
     INIT();
 
+    int ret = 1;
     pthread_mutex_lock (&xml_mutex);
     xmlDocPtr doc = xmlNewDoc (BAD_CAST "1.0");
     xmlNodePtr instanceNode = xmlNewNode (NULL, BAD_CAST "instance");
@@ -135,10 +146,14 @@ int gen_instance_xml (const ncInstance * instance)
     }
     _ELEMENT(instanceNode, "name", instance->instanceId);
     if (instance->params.kernel) {
-        _ELEMENT(instanceNode, "kernel", instance->params.kernel->backingPath);
+        char * path = instance->params.kernel->backingPath;
+        if (path_check (path, "kernel")) goto free; // sanity check 
+        _ELEMENT(instanceNode, "kernel", path);
     }
     if (instance->params.ramdisk) {
-        _ELEMENT(instanceNode, "ramdisk", instance->params.ramdisk->backingPath);
+        char * path = instance->params.ramdisk->backingPath;
+        if (path_check (path, "ramdisk")) goto free; // sanity check
+        _ELEMENT(instanceNode, "ramdisk", path);
     }
     _ELEMENT(instanceNode, "consoleLogPath", instance->consoleFilePath);
     char cores_s  [10]; snprintf (cores_s,  sizeof (cores_s),  "%d", instance->params.cores);  _ELEMENT(instanceNode, "cores", cores_s);
@@ -191,10 +206,12 @@ int gen_instance_xml (const ncInstance * instance)
     umask (old_umask);
 
     logprintfl (EUCAINFO, "wrote instanceNode XML to %s\n", instance->xmlFilePath);
+    ret = 0;
+ free:
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
 
-    return 0;
+    return ret;
 }
 
 static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath);
