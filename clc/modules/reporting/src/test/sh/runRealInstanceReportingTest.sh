@@ -7,9 +7,10 @@ SLEEP_TIME_SECS=$(((WRITE_INTERVAL_MS*2)/1000))
 
 
 # Set image paths
-EKI=foo
-ERI=bar
-EKI=baz
+EKI=`euca-describe-images|awk '{ print $2 }'|grep 'eki-'`
+ERI=`euca-describe-images|awk '{ print $2 }'|grep 'eri-'`
+EMI=`euca-describe-images|awk '{ print $2 }'|grep 'emi-'`
+
 
 # Login, and get session id
 wget -O /tmp/sessionId --no-check-certificate 'https://localhost:8443/loginservlet?adminPw=admin'
