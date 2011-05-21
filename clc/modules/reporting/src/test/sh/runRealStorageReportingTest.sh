@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # Gather CLC IP
-#CLC_IP=`cat ../input/2b_tested.lst |grep '\[.*CLC.*\]'|awk '{ print $1 }'`
-CLC_IP="localhost"
+CLC_IP=`cat ../input/2b_tested.lst |grep '\[.*CLC.*\]'|awk '{ print $1 }'`
 
 
 # Login, and get session id

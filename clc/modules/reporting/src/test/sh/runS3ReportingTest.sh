@@ -7,20 +7,23 @@
 #
 
 
+# Gather CLC IP
+CLC_IP=`cat ../input/2b_tested.lst |grep '\[.*CLC.*\]'|awk '{ print $1 }'`
+
 # Login, and get session id
-wget -O /tmp/sessionId --no-check-certificate 'https://localhost:8443/loginservlet?adminPw=admin'
+wget -O /tmp/sessionId --no-check-certificate "https://$CLC_IP:8443/loginservlet?adminPw=admin"
 if [ "$?" -ne "0" ]; then echo "Login failed"; exit 1; fi
 export SESSIONID=`cat /tmp/sessionId`
 echo "session id:" $SESSIONID
 
 # Clear and generate false data for storages
-wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeFalseData"
+wget --no-check-certificate -O /tmp/nothing "https://$CLC_IP:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeFalseData"
 if [ "$?" -ne "0" ]; then echo "Data removal failed"; exit 1; fi
-wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=generateFalseData"
+wget --no-check-certificate -O /tmp/nothing "https://$CLC_IP:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=generateFalseData"
 if [ "$?" -ne "0" ]; then echo "Data generation failed"; exit 1; fi
 
 # Generate storage report, based upon data generated above
-wget -O /tmp/s3Report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_s3&type=csv&page=0&flush=false&start=1104580000000&end=1104590000000&criterionId=2&groupById=0"
+wget -O /tmp/s3Report.csv --no-check-certificate "https://$CLC_IP:8443/reports?session=$SESSIONID&name=user_s3&type=csv&page=0&flush=false&start=1104580000000&end=1104590000000&criterionId=2&groupById=0"
 if [ "$?" -ne "0" ]; then echo "Report generation failed"; exit 1; fi
 
 
