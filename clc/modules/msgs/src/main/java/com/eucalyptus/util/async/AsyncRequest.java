@@ -83,8 +83,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupServiceConfiguration( cluster ).lookupService( ).enqueue( this );
-    return this.getResponse( );
+    ServiceConfiguration serviceConfig = Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupServiceConfiguration( cluster );
+    return this.dispatch( serviceConfig );
   }
   
   /**

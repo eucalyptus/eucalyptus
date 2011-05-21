@@ -164,7 +164,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public final Service lookupService( ) {
-    return Components.lookup( this.getComponentId( ) ).lookupService( this );
+    return Components.lookup( this.lookupComponentId( ) ).lookupService( this );
   }
   
   @Override
