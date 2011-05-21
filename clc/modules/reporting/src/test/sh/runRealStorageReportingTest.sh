@@ -1,72 +1,36 @@
 #!/bin/sh
 
+# Gather CLC IP
+#CLC_IP=`cat ../input/2b_tested.lst |grep '\[.*CLC.*\]'|awk '{ print $1 }'`
+CLC_IP="localhost"
+
 
 # Login, and get session id
-wget -O /tmp/sessionId --no-check-certificate 'https://localhost:8443/loginservlet?adminPw=admin'
+wget -O /tmp/sessionId --no-check-certificate "https://$CLC_IP:8443/loginservlet?adminPw=admin"
+if [ "$?" -ne "0" ]; then echo "Login failed"; exit 1; fi
 export SESSIONID=`cat /tmp/sessionId`
 echo "session id:" $SESSIONID
 
 
-if [ -n $EUCALYPTUS ]; then
-        export EUCALYPTUS="/opt/eucalyptus"
-fi
-
-# Get mysql password
-password=`./dbPass.sh`
-
-
 # Clear all prior data 
-wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.storage.FalseDataGenerator&methodName=removeAllData"
+wget --no-check-certificate -O /tmp/nothing "https://$CLC_IP:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.storage.FalseDataGenerator&methodName=removeAllData"
+if [ "$?" -ne "0" ]; then echo "Clearing failed"; exit 1; fi
 
-if [ "$?" -ne "0" ]
-then
-	echo "Wget failed to clear all prior data."
-	exit -1
-fi
 
-# Check that the data is cleared
-LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from storage_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
-if [ "$LINE_CNT" -ne "0" ]
-then
-	echo "Data not cleared"
-	exit -1
-else
-	echo "Data cleared"
-fi
+# Check that prior data is cleared
+wget --no-check-certificate -O /tmp/nothing "https://$CLC_IP:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.storage.FalseDataGenerator&methodName=containsRecentRows&methodArgs=false"
+if [ "$?" -ne "0" ]; then echo "Data did not clear"; exit 1; fi
 
 
 # Generate data
-timestamp=`date +%s`
-timestamp=$(($timestamp*1000))
 echo "Creating volumes"
 euca-create-volume --size 1 --zone myPartition
 euca-create-volume --size 1 --zone myPartition
+if [ "$?" -ne "0" ]; then echo "Data generation failed"; exit 1; fi
 
 
-# Check that the data exists and has been inserted 
-LINE_CNT=`mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select count(*) from storage_usage_snapshot"|awk '/[0-9]+/ {print $1}'`
-if [ "$LINE_CNT" -ne "0" ]
-then
-	echo "Data generated"
-else
-	echo "Data not generated"
-	exit -1
-fi
+# Check that data arrived in DB and has recent timestamp
+wget --no-check-certificate -O /tmp/nothing "https://$CLC_IP:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.storage.FalseDataGenerator&methodName=containsRecentRows&methodArgs=true"
+if [ "$?" -ne "0" ]; then echo "Data didnt arrive or timestamps incorrect"; exit 1; fi
 
-
-# Check that the inserted data has correct timestamps
-error_margin=$((60*60*1000)) # 1 hr
-
-mysql -u eucalyptus --password=$password -P 8777 --protocol=TCP --database=eucalyptus_reporting --execute="select timestamp_ms from storage_usage_snapshot"|awk '/[0-9]+/ {print $1}'| while read line; do
-	is_within=`echo "within($line,$timestamp,$error_margin)"|bc within_error.bc`
-	if [ "$is_within" -eq "1" ]
-	then
-		echo "line:$line correct:$timestamp within:true"
-	else
-		echo "line:$line correct:$timestamp within:false"
-		exit -1
-	fi
-done
-
-exit 0
 

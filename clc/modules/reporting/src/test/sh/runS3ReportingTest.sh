@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #
-# Tests report generation for storage data. Returns 0 for success, 1 for failure.
+# Tests report generation for s3 data. Returns 0 for success, 1 for failure.
 #
 # Author: Tom Werges
 #
@@ -9,15 +9,19 @@
 
 # Login, and get session id
 wget -O /tmp/sessionId --no-check-certificate 'https://localhost:8443/loginservlet?adminPw=admin'
+if [ "$?" -ne "0" ]; then echo "Login failed"; exit 1; fi
 export SESSIONID=`cat /tmp/sessionId`
 echo "session id:" $SESSIONID
 
 # Clear and generate false data for storages
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=removeFalseData"
+if [ "$?" -ne "0" ]; then echo "Data removal failed"; exit 1; fi
 wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$SESSIONID&className=com.eucalyptus.reporting.s3.FalseDataGenerator&methodName=generateFalseData"
+if [ "$?" -ne "0" ]; then echo "Data generation failed"; exit 1; fi
 
 # Generate storage report, based upon data generated above
 wget -O /tmp/s3Report.csv --no-check-certificate "https://localhost:8443/reports?session=$SESSIONID&name=user_s3&type=csv&page=0&flush=false&start=1104580000000&end=1104590000000&criterionId=2&groupById=0"
+if [ "$?" -ne "0" ]; then echo "Report generation failed"; exit 1; fi
 
 
 # Verify that the resulting report has the correct number of entries in it
@@ -29,4 +33,5 @@ fi
 
 # Verify that the data in the report is correct, using the CsvChecker tool.
 java -jar CsvChecker.jar 0.2 s3Reference.csv /tmp/s3Report.csv
+if [ "$?" -ne "0" ]; then echo "Report failed values check"; exit 1; fi
 
