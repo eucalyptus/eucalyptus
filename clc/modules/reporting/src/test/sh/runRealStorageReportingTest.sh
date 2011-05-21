@@ -7,6 +7,10 @@ export SESSIONID=`cat /tmp/sessionId`
 echo "session id:" $SESSIONID
 
 
+if [ -n $EUCALYPTUS ]; then
+        export EUCALYPTUS="/opt/eucalyptus"
+fi
+
 # Get mysql password
 password=`./dbPass.sh`
 
