@@ -381,7 +381,7 @@ refresh_instance_info(	struct nc_state_t *nc,
                 rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
                 if (!rc) {
                     if(ip) {
-                        logprintfl (EUCAINFO, "[%s] discovered public IP %s for instance %s\n", instance->instanceId, ip);
+                        logprintfl (EUCAINFO, "[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
                         strncpy(instance->ncnet.publicIp, ip, 24);
                         free(ip);
                     }
@@ -985,7 +985,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	if (init())
 		return 1;
     
-	logprintfl (EUCADEBUG2, "doDescribeInstances invoked\n");
+	logprintfl (EUCADEBUG2, "doDescribeInstances: invoked\n");
     
 	if (nc_state.H->doDescribeInstances)
 		ret = nc_state.H->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
@@ -1074,36 +1074,37 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	return ret;
 }
 
-int doAssignAddress(ncMetadata *meta, char *instanceId, char *publicIp) {
-  int ret=0;
-  
-  if (init()) {    
-    return(1);
-  }
-  
-  logprintfl(EUCADEBUG, "doAssignAddress() invoked\n");
-
-  if (nc_state.H->doAssignAddress) 
-    ret = nc_state.H->doAssignAddress(&nc_state, meta, instanceId, publicIp);
-  else 
-    ret = nc_state.D->doAssignAddress(&nc_state, meta, instanceId, publicIp);
-  
-  return ret;
+int doAssignAddress(ncMetadata *meta, char *instanceId, char *publicIp) 
+{
+    int ret=0;
+    
+    if (init()) {    
+        return(1);
+    }
+    
+    logprintfl(EUCADEBUG, "[%s] doAssignAddress: invoked (publicIp=%s)\n", instanceId, publicIp);
+    
+    if (nc_state.H->doAssignAddress) 
+        ret = nc_state.H->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+    else 
+        ret = nc_state.D->doAssignAddress(&nc_state, meta, instanceId, publicIp);
+    
+    return ret;
 }
 
 int doPowerDown(ncMetadata *meta) {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl(EUCADEBUG, "doPowerDown() invoked\n");
-
+    
+	logprintfl(EUCADEBUG, "doPowerDown: invoked\n");
+    
 	if (nc_state.H->doPowerDown) 
 		ret = nc_state.H->doPowerDown(&nc_state, meta);
 	else 
 		ret = nc_state.D->doPowerDown(&nc_state, meta);
-
+    
 	return ret;
 }
 
@@ -1114,8 +1115,8 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
     if (init())
         return 1;
     
-    logprintfl (EUCAINFO, "doRunInstance() invoked (id=%s cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
-    logprintfl (EUCAINFO, "                         vlan=%d priMAC=%s privIp=%s\n", netparams->vlan, netparams->privateMac, netparams->privateIp);
+    logprintfl (EUCAINFO, "[%s] doRunInstance: invoked (cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
+    logprintfl (EUCAINFO, "[%s]                         vlan=%d priMAC=%s privIp=%s\n", instanceId, netparams->vlan, netparams->privateMac, netparams->privateIp);
     
     if (vbr_legacy (params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
         return ERROR;
@@ -1134,87 +1135,85 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState,
 
 	if (init())
 		return 1;
-
-	logprintfl (EUCAINFO, "doTerminateInstance() invoked (id=%s)\n", instanceId);
-
+    
+	logprintfl (EUCAINFO, "[%s] doTerminateInstance: invoked\n", instanceId);
+    
 	if (nc_state.H->doTerminateInstance) 
 		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
 	else 
 		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
-
+    
 	return ret;
 }
 
 int doRebootInstance (ncMetadata *meta, char *instanceId) 
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-		
-	logprintfl(EUCAINFO, "doRebootInstance() invoked  (id=%s)\n", instanceId);
-
+    
+	logprintfl(EUCAINFO, "[%s] doRebootInstance: invoked\n", instanceId);
+    
 	if (nc_state.H->doRebootInstance)
 		ret = nc_state.H->doRebootInstance (&nc_state, meta, instanceId);
 	else
 		ret = nc_state.D->doRebootInstance (&nc_state, meta, instanceId);
-
+    
 	return ret;
 }
 
 int doGetConsoleOutput (ncMetadata *meta, char *instanceId, char **consoleOutput) 
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl (EUCAINFO, "doGetConsoleOutput() invoked (id=%s)\n", instanceId);
-
+    
+	logprintfl (EUCAINFO, "[%s] doGetConsoleOutput: invoked\n", instanceId);
+    
 	if (nc_state.H->doGetConsoleOutput) 
 		ret = nc_state.H->doGetConsoleOutput (&nc_state, meta, instanceId, consoleOutput);
 	else
 		ret = nc_state.D->doGetConsoleOutput (&nc_state, meta, instanceId, consoleOutput);
-
+    
 	return ret;
 }
 
 int doDescribeResource (ncMetadata *meta, char *resourceType, ncResource **outRes)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl(EUCADEBUG, "doDescribeResource() invoked\n");
-
+        
 	if (nc_state.H->doDescribeResource)
 		ret = nc_state.H->doDescribeResource (&nc_state, meta, resourceType, outRes);
 	else 
 		ret = nc_state.D->doDescribeResource (&nc_state, meta, resourceType, outRes);
-
+    
 	return ret;
 }
 
 int
-doStartNetwork (	ncMetadata *ccMeta,
-			char *uuid,
-			char **remoteHosts,
-			int remoteHostsLen,
-			int port,
-			int vlan)
+doStartNetwork (ncMetadata *ccMeta,
+                char *uuid,
+                char **remoteHosts,
+                int remoteHostsLen,
+                int port,
+                int vlan)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl(EUCADEBUG, "doStartNetwork() invoked\n");
-
+    
+	logprintfl(EUCADEBUG, "doStartNetwork: invoked (remoteHostsLen=%d port=%d vlan=%d)\n", remoteHostsLen, port, vlan);
+    
 	if (nc_state.H->doStartNetwork) 
-	        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
+        ret = nc_state.H->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	else 
-	        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
+        ret = nc_state.D->doStartNetwork (&nc_state, ccMeta, uuid, remoteHosts, remoteHostsLen, port, vlan);
 	
 	return ret;
 }
@@ -1226,7 +1225,7 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doAttachVolume() invoked (id=%s vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
+	logprintfl (EUCAINFO, "[%s] doAttachVolume: invoked (vol=%s remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
 	if (nc_state.H->doAttachVolume)
 		ret = nc_state.H->doAttachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev);
@@ -1239,11 +1238,11 @@ int doAttachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *re
 int doDetachVolume (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doDetachVolume() invoked (id=%s vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
+	logprintfl (EUCAINFO, "[%s] doDetachVolume: invoked (vol=%s remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
 
 	if (nc_state.H->doDetachVolume)
 		ret = nc_state.H->doDetachVolume (&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
@@ -1260,64 +1259,65 @@ int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char
 	if (init())
 		return 1;
 
-	logprintfl (EUCAINFO, "doBundleInstance() invoked (id=%s bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s)\n", instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
-
+	logprintfl (EUCAINFO, "[%s] doBundleInstance: invoked (bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s)\n", 
+                instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+    
 	if (nc_state.H->doBundleInstance)
-	  ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.H->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
 	else 
-	  ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
-
+        ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+    
 	return ret;
 }
 
 int doCancelBundleTask (ncMetadata *meta, char *instanceId)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl (EUCAINFO, "doCancelBundleTask() invoked (id=%s)\n", instanceId);
-
+    
+	logprintfl (EUCAINFO, "[%s] doCancelBundleTask: invoked\n", instanceId);
+    
 	if (nc_state.H->doCancelBundleTask)
-	  ret = nc_state.H->doCancelBundleTask (&nc_state, meta, instanceId);
+        ret = nc_state.H->doCancelBundleTask (&nc_state, meta, instanceId);
 	else 
-	  ret = nc_state.D->doCancelBundleTask (&nc_state, meta, instanceId);
-
+        ret = nc_state.D->doCancelBundleTask (&nc_state, meta, instanceId);
+    
 	return ret;
 }
 
 int doDescribeBundleTasks (ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
 	
-	logprintfl (EUCAINFO, "doDescribeBundleTasks() invoked (for %d instances)\n", instIdsLen);
-
+	logprintfl (EUCAINFO, "doDescribeBundleTasks: invoked (for %d instances)\n", instIdsLen);
+    
 	if (nc_state.H->doDescribeBundleTasks)
-	  ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
+        ret = nc_state.H->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
 	else 
-	  ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
-
+        ret = nc_state.D->doDescribeBundleTasks (&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
+    
 	return ret;
 }
 
 int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
 {
 	int ret;
-
+    
 	if (init())
 		return 1;
-
-	logprintfl (EUCAINFO, "doCreateImage() invoked (id=%s vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
-
+    
+	logprintfl (EUCAINFO, "[%s] doCreateImage: invoked (vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+    
 	if (nc_state.H->doCreateImage)
 		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
 	else 
 		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
-
+    
 	return ret;
 }
 

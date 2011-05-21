@@ -86,8 +86,8 @@ typedef struct _artifact {
     int refs; // reference counter (1 or more if contained in deps[] of others)
 } artifact;
 
-void art_free (artifact * a);
 int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, const char * sshkey, const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
+void art_free (artifact * a);

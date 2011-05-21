@@ -177,11 +177,12 @@ int diskutil_dd (const char * in, const char * out, const int bs, const long lon
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "copying infile data to intermediate disk file...\n");
+    logprintfl (EUCAINFO, "{%u} copying data from '%s'\n", (unsigned int)pthread_self(), in);
+    logprintfl (EUCAINFO, "{%u}                to '%s' (blocks=%lld)\n", (unsigned int)pthread_self(), out, count);
     output = pruntf (TRUE, "%s %s if=%s of=%s bs=%d count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot copy '%s' to '%s'\n", in, out);
-        ret = ERROR;
+        logprintfl (EUCAERROR, "{%u} error: cannot copy '%s'\n", (unsigned int)pthread_self(), in);
+        logprintfl (EUCAERROR, "{%u}                 to '%s'\n", (unsigned int)pthread_self(), out);
     } else {
         free (output);
     }
@@ -194,10 +195,13 @@ int diskutil_dd2 (const char * in, const char * out, const int bs, const long lo
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "copying data from %s to %s of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", in, out, count, bs, seek, skip);
+    logprintfl (EUCAINFO, "{%u} copying data from '%s'\n", (unsigned int)pthread_self(), in);
+    logprintfl (EUCAINFO, "{%u}                to '%s'\n", (unsigned int)pthread_self(), out);
+    logprintfl (EUCAINFO, "{%u}                of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", (unsigned int)pthread_self(), count, bs, seek, skip);
     output = pruntf (TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot copy '%s' to '%s'\n", in, out);
+        logprintfl (EUCAERROR, "{%u} error: cannot copy '%s'\n", (unsigned int)pthread_self(), in);
+        logprintfl (EUCAERROR, "{%u}                 to '%s'\n", (unsigned int)pthread_self(), out);
         ret = ERROR;
     } else {
         free (output);
@@ -275,27 +279,28 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
 
         if (found) {
             boolean do_log = ((i+1)==LOOP_RETRIES); // log error on last try only
-            logprintfl (EUCADEBUG, "{%u} attaching to loop device '%s' at offset '%lld' file %s\n", (unsigned int)pthread_self(), lodev, offset, path);
+            logprintfl (EUCADEBUG, "{%u} attaching file %s\n", (unsigned int)pthread_self(), path);
+            logprintfl (EUCADEBUG, "{%u}             to %s at offset %lld\n", (unsigned int)pthread_self(), lodev, offset);
             sem_p (loop_sem);
             output = pruntf (do_log, "%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
             sem_v (loop_sem);
             if (output==NULL) {
-                logprintfl (EUCADEBUG, "cannot attach %s to loop device %s (will retry)\n", path, lodev);
+                logprintfl (EUCADEBUG, "{%u} cannot attach to loop device %s (will retry)\n", (unsigned int)pthread_self(), lodev);
             } else {
                 free (output);
                 done = 1;
                 break;
             }
         }
-
+        
         sleep (1);
         found = 0;
     }
     if (!done) {
-        logprintfl (EUCAINFO, "ERROR: cannot find free loop device or attach to one\n");
+        logprintfl (EUCAINFO, "{%u} error: cannot find free loop device or attach to one\n", (unsigned int)pthread_self());
         ret = ERROR;
     }
-
+    
     return ret;
 }
 
@@ -305,7 +310,7 @@ int diskutil_unloop (const char * lodev)
     char * output;
     int retried = 0;
 
-    logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
+    logprintfl (EUCAINFO, "{%u} detaching from loop device %s\n", (unsigned int)pthread_self(), lodev);
 
     // we retry because we have seen spurious errors from 'losetup -d' on Xen:
     //     ioctl: LOOP_CLR_FD: Device or resource bus
@@ -321,14 +326,14 @@ int diskutil_unloop (const char * lodev)
             free (output);
             break;
         }
-        logprintfl (EUCADEBUG, "cannot detach loop device %s (will retry)\n", lodev);
+        logprintfl (EUCADEBUG, "{%u} cannot detach loop device %s (will retry)\n", (unsigned int)pthread_self(), lodev);
         retried++;
         sleep (1);
     }
     if (ret == ERROR) {
-      logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
+        logprintfl (EUCAINFO, "{%u} error: cannot detach loop device\n", (unsigned int)pthread_self());
     } else if (retried) {
-        logprintfl (EUCAINFO, "succeeded to detach %s after %d retries\n", lodev, retried);
+        logprintfl (EUCAINFO, "{%u} succeeded to detach %s after %d retries\n", (unsigned int)pthread_self(), lodev, retried);
     }
 
     return ret;
@@ -341,7 +346,7 @@ int diskutil_mkswap (const char * lodev, const long long size_bytes)
 
     output = pruntf (TRUE, "%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes/1024);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as swap\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot format partition on '%s' as swap\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -358,7 +363,7 @@ int diskutil_mkfs (const char * lodev, const long long size_bytes)
 
     output = pruntf (TRUE, "%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes/block_size);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as ext3\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot format partition on '%s' as ext3\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -376,7 +381,7 @@ int diskutil_tune (const char * lodev)
     output = pruntf (TRUE, "%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
     sem_v (loop_sem);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot tune file system on '%s'\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot tune file system on '%s'\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);

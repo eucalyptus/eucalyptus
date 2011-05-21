@@ -137,7 +137,6 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         return ERROR;
     }
 
-    logprintfl (EUCADEBUG, "initialized backing store\n");
     return OK;
 }
 

@@ -8,6 +8,7 @@ STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -lpthread -pthread
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_download.o cmd_create.o cmd_inject.o cmd_convert.o cmd_upload.o cmd_bundle.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o
 VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
+TESTS=test_vbr test_blobstore test
 IMAGER=_euca_imager
 #EFENCE=-lefence
 
@@ -56,7 +57,7 @@ test_url: http.c
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient $(IMAGER) test test_url
+	rm -rf *~ *.o Wclient $(IMAGER) $(TESTS)
 
 distclean:
 

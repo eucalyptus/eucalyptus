@@ -583,7 +583,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
         assert (dep->bb);
         assert (dep->size_bytes>0);
-        map [map_entries].relation_type = BLOBSTORE_SNAPSHOT;
+        map [map_entries].relation_type = BLOBSTORE_MAP;
         map [map_entries].source_type = BLOBSTORE_BLOCKBLOB;
         map [map_entries].source.blob = dep->bb;
         map [map_entries].first_block_src = 0;
@@ -1666,8 +1666,7 @@ int main (int argc, char ** argv)
     CHECK_BLOBS;
 
 out:
-    printf ("\nok, winding down...\n");
-    printf ("final check of work blobstore\n");
+    printf ("\nfinal check of work blobstore\n");
     check_blob (work_bs, "blocks", 0);
     printf ("cleaning cache blobstore\n");
     blobstore_delete_regex (cache_bs, ".*");
