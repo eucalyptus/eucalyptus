@@ -1,9 +1,8 @@
 package com.eucalyptus.reporting.instance;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.ReportingBootstrapper;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.*;
@@ -95,31 +94,16 @@ public class FalseDataGenerator
 
 	}
 
-	private static final long CORRECT_DISK_USAGE = 1010000l;
-	private static final long CORRECT_NET_USAGE  = 506000l;
-	private static final long CORRECT_INSTANCE_USAGE = 4150l;
-	private static final double ERROR_FACTOR = 0.2;
-	private static final double INSTANCE_ERROR_FACTOR = 0.2;
-	
-	private static final long RANGE = MAX_MS - START_TIME;
-	private static final long DISTANCE =  RANGE / 5;
+	private static final long ERROR_MARGIN_MS = 60*60*1000;
 
-	private static final int NUM_TESTS = 16;
 
+	private static boolean isWithinError(long val, long correctVal, long error)
+	{
+		return ((correctVal - error) < val) && (val < (correctVal + error));
+	}
 	
 
 
-
-	private static boolean isWithinError(long val, long correctVal, double errorPercent)
-	{
-		return isWithinError((double)val, (double)correctVal, errorPercent);
-	}
-
-	private static boolean isWithinError(double val, double correctVal, double errorPercent)
-	{
-		return correctVal * (1-errorPercent) < val
-				&& val < correctVal * (1+errorPercent);
-	}
 
 	@ExposedCommand
 	public static void removeFalseData()
@@ -148,6 +132,61 @@ public class FalseDataGenerator
 	}
 	
 
+	/**
+	 * <p>containsRecentRows checks if there are recent rows in 
+	 * InstanceUsageSnapshot. This is used for testing: we delete
+	 * all data, then set up volumes, then determine if rows made
+	 * it to the DB.
+	 * 
+	 * @param hasRows Indicates whether there should be any
+	 * rows in InstanceUsageSnapshot. If true, and there are no rows,
+	 * and Exception is thrown; if false, and there are rows, an
+	 * Exception is thrown. If true, rows are checked to verify they
+	 * are relatively recent (within 1 hr). 
+	 */
+	@ExposedCommand
+	public static void containsRecentRows(String hasRows)
+	{
+		boolean containsRows =
+			(hasRows!=null && hasRows.equalsIgnoreCase("true"));
+		System.out.println(" ----> CONTAINS RECENT ROWS:" + containsRows);
+		
+		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
+			EntityWrapper.get(InstanceUsageSnapshot.class);
+		
+		try {
+			int rowCnt = 0;
+			@SuppressWarnings("rawtypes")
+			Iterator iter =
+				entityWrapper.createQuery(
+					"from InstanceUsageSnapshot as sus")
+					.iterate();
+			while (iter.hasNext()) {
+				if (!containsRows) {
+					throw new RuntimeException("Found >0 rows where 0 expected");
+				}
+				rowCnt++;
+				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) iter.next();
+				long foundTimestampMs = snapshot.getTimestampMs();
+				long nowMs = System.currentTimeMillis();
+				if (!isWithinError(nowMs, foundTimestampMs, ERROR_MARGIN_MS)) {
+					throw new RuntimeException(String.format(
+							"Row outside error margin, expected:%d found:%d",
+							nowMs, foundTimestampMs));
+				}
+			}
+			if (rowCnt==0 && containsRows) {
+				throw new RuntimeException("Found 0 rows where >0 expected");
+			}
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}
+
+	}
+
+	
 	public static void printFalseData()
 	{
 //		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
@@ -168,13 +207,6 @@ public class FalseDataGenerator
 //		}
 	}
 
-	private static GroupByCriterion getCriterion(String name)
-	{
-		/* throws an IllegalArgument which we allow to percolate up
-		 */
-		return GroupByCriterion.valueOf(name.toUpperCase());
-	}	
-	
 	/**
 	 * TestEventListener provides fake times which you can modify.
 	 * 
