@@ -1470,7 +1470,7 @@ blockblob * blockblob_open ( blobstore * bs,
         return NULL;
     }
 
-    logprintfl (EUCADEBUG, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
+    logprintfl (EUCADEBUG2, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
 
     blockblob * bbs = NULL; // a temp LL of blockblobs, used for computing free space and for purging
     blockblob * bb = calloc (1, sizeof (blockblob));
@@ -1665,8 +1665,11 @@ blockblob * blockblob_open ( blobstore * bs,
 
     }
  out:
-    logprintfl (EUCADEBUG, "{%u} blockblob_open: done with blob id=%s ret=%012lx errno=%d %s\n", 
-                (unsigned int)pthread_self(), id, bb, _blobstore_errno, (bb)?("OK"):blobstore_get_last_msg());
+    logprintfl (EUCADEBUG2, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
+    if (bb==NULL) {
+        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", _blobstore_errno, (bb)?("OK"):blobstore_get_last_msg());
+    }
+    
     free_bbs (bbs);
     return bb;
 }
@@ -1701,7 +1704,7 @@ int blockblob_close ( blockblob * bb )
         return -1;
     }
     int ret = 0;
-    logprintfl (EUCADEBUG, "{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
+    logprintfl (EUCADEBUG2, "{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
 
     // do not remove /dev/loop* if it is used by device mapper 
     // (mapped to other blobs or as backing for this one)

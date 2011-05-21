@@ -441,19 +441,22 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     return OK;
 }
 
-static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * bb, boolean must_be_file)
+static void update_vbr_with_backing_info (artifact * a)
 {
-    assert (bb);
-    assert (vbr);
-    if (! must_be_file && strlen (blockblob_get_dev (bb))) {
-        strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
+    assert (a);
+    assert (a->bb);
+    if (a->vbr==NULL) return;
+    virtualBootRecord * vbr = a->vbr;
+
+    if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
+        strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
-        assert (blockblob_get_file (bb));
-        strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
+        assert (blockblob_get_file (a->bb));
+        strncpy (vbr->backingPath, blockblob_get_file (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
-    vbr->size = bb->size_bytes;
+    vbr->size = a->bb->size_bytes;
 }
 
 // These *_creator funcitons produce an artifact in blobstore, either from
@@ -479,7 +482,6 @@ static int walrus_creator (artifact * a) // creates an artifact by downloading i
         logprintfl (EUCAERROR, "[%s] error: failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
         return ERROR;
     }
-    update_vbr_with_backing_info (vbr, a->bb, a->must_be_file);
 
     return OK;
 }
@@ -509,9 +511,7 @@ static int partition_creator (artifact * a) // creates a new partition from scra
         logprintfl (EUCAERROR, "[%s] error: format of type %s is NOT IMPLEMENTED\n", a->instanceId, vbr->formatName);
     }
     
-    if (format == OK) {
-        update_vbr_with_backing_info (vbr, a->bb, a->must_be_file);
-    } else {
+    if (format != OK) {
         logprintfl (EUCAERROR, "[%s] failed to create partition in blob %s\n", a->instanceId, a->id);
         return ERROR;
     }
@@ -609,7 +609,6 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
-    update_vbr_with_backing_info (disk, a->bb, FALSE);
 
     // create MBR
     logprintfl (EUCAINFO, "[%s] creating MBR\n", a->instanceId);
@@ -652,7 +651,7 @@ static int copy_creator (artifact * a)
     assert (a->deps[0]->bb);
     assert (a->deps[1]==NULL);
     artifact * dep = a->deps[0];
-    virtualBootRecord * vbr = dep->vbr;
+    virtualBootRecord * vbr = a->vbr;
     assert (vbr);
 
     logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
@@ -670,8 +669,6 @@ static int copy_creator (artifact * a)
             return ERROR;
         }
     }
-    a->vbr = dep->vbr;
-    assert (a->vbr);
     
     if (strlen (a->sshkey)) {
         const char * dev = blockblob_get_dev (a->bb);
@@ -738,8 +735,6 @@ static int copy_creator (artifact * a)
             return ERROR;
     }        
 
-    update_vbr_with_backing_info (vbr, a->bb, a->must_be_file);
-
     return OK;
 }
 
@@ -753,7 +748,8 @@ static int art_add_dep (artifact * a, artifact * dep)
 {
     for (int i = 0; i < MAX_ARTIFACT_DEPS; i++) {
         if (a->deps[i] == NULL) {
-            logprintfl (EUCADEBUG, "added to artifact %03d/%s artifact %03d/%s\n", a->seq, a->id, dep->seq, dep->id);
+            logprintfl (EUCADEBUG, "[%s] added to artifact %03d/%s artifact %03d/%s\n", 
+                        a->instanceId, a->seq, a->id, dep->seq, dep->id);
             a->deps[i] = dep;
             dep->refs++;
             return OK;
@@ -771,7 +767,8 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
             art_free (a->deps[i]);
         }
         free (a);
-        logprintfl (EUCADEBUG, "freeing artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
+        logprintfl (EUCADEBUG, "[%s] freeing artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", 
+                    a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
     }
 }
 
@@ -784,7 +781,8 @@ void arts_free (artifact * array [], unsigned int array_len)
 
 static void art_print_tree (const char * prefix, artifact * a)
 {
-    logprintfl (EUCADEBUG, "artifacts tree: %s%03d %s cache=%d file=%d creator=%0ul\n", prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator);
+    logprintfl (EUCADEBUG, "[%s] artifacts tree: %s%03d %s cache=%d file=%d creator=%0x vbr=%0x\n", 
+                a->instanceId, prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix [512];
     snprintf (new_prefix, sizeof (new_prefix), "%s\t", prefix);
@@ -817,7 +815,8 @@ static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolea
 
     static int seq = 0;
     a->seq = ++seq; // not thread safe, but seq's are just for debugging
-    logprintfl (EUCADEBUG, "allocated artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", seq, id, size_bytes, vbr, may_be_cached, must_be_file);
+    strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
+    logprintfl (EUCADEBUG, "[%s] allocated artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId,  seq, id, size_bytes, vbr, may_be_cached, must_be_file);
 
     if (id)
         strncpy (a->id, id, sizeof (a->id));
@@ -829,7 +828,6 @@ static artifact * art_alloc (char * id, char * sig, long long size_bytes, boolea
     a->creator = creator;
     a->vbr = vbr;
 
-    strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
     return a;
 }
 
@@ -857,7 +855,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
     case NC_LOCATION_AOE:
-        logprintfl (EUCAERROR, "error: backing of type %s is NOT IMPLEMENTED\n", vbr->typeName);
+        logprintfl (EUCAERROR, "[%s] error: backing of type %s is NOT IMPLEMENTED\n", current_instanceId, vbr->typeName);
         return NULL;
 
     case NC_LOCATION_WALRUS: {
@@ -920,7 +918,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         break;
     }
     default:
-        logprintfl (EUCAERROR, "error: unrecognized locationType %d\n", vbr->locationType);
+        logprintfl (EUCAERROR, "[%s] error: unrecognized locationType %d\n", current_instanceId, vbr->locationType);
     }
 
     // allocate another artifact struct if a work copy is requested
@@ -935,7 +933,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
 
         if (sshkey) { // if SSH key is included, recalculate sig and ID
             if (strlen(sshkey) > sizeof(a->sshkey)) {
-                logprintfl (EUCAERROR, "error: received SSH key is too long\n");
+                logprintfl (EUCAERROR, "[%s] error: received SSH key is too long\n", a->instanceId);
                 goto free;
             }
             
@@ -944,7 +942,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
                            sshkey) >= sizeof (key_sig)) // output truncated
                 ||
                 ((strlen (art_sig) + strlen (key_sig)) >= sizeof (art_sig))) { // overflow
-                logprintfl (EUCAERROR, "error: internal buffers (ART_SIG_MAX) too small for signature\n");
+                logprintfl (EUCAERROR, "[%s] error: internal buffers (ART_SIG_MAX) too small for signature\n", a->instanceId);
                 goto free;
             }
             strncat (art_sig, key_sig, sizeof (art_sig) - strlen (key_sig) - 1);
@@ -956,7 +954,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
             }
         }
          
-        a2 = art_alloc (art_id, art_sig, a->size_bytes, !make_work_copy, !allow_block_dev, copy_creator, NULL);
+        a2 = art_alloc (art_id, art_sig, a->size_bytes, !make_work_copy, !allow_block_dev, copy_creator, vbr);
         if (a2) {
             if (sshkey)
                 strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
@@ -1007,18 +1005,18 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                        i, p->id, p->sig) >= sizeof (part_sig)) // output truncated
             ||
             ((strlen (art_sig) + strlen (part_sig)) >= sizeof (art_sig))) { // overflow
-            logprintfl (EUCAERROR, "error: internal buffers (ART_SIG_MAX) too small for signature\n");
+            logprintfl (EUCAERROR, "[%s] error: internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
             return NULL;
         }
         strncat (art_sig, part_sig, sizeof (art_sig) - strlen (art_sig) - 1);
 
         // verify and add up the sizes of partitions
         if (p->size_bytes < 1) {
-            logprintfl (EUCAERROR, "error: unknown size for partition %d\n", i);
+            logprintfl (EUCAERROR, "[%s] error: unknown size for partition %d\n", current_instanceId, i);
             return NULL;
         }
         if (p->size_bytes % 512) {
-            logprintfl (EUCAERROR, "error: size for partition %d is not a multiple of 512\n", i);
+            logprintfl (EUCAERROR, "[%s] error: size for partition %d is not a multiple of 512\n", current_instanceId, i);
             return NULL;
         }
         disk_size_bytes += p->size_bytes;
@@ -1036,7 +1034,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                        p->id, p->sig) >= sizeof (part_sig)) // output truncated
             ||
             ((strlen (art_sig) + strlen (part_sig)) >= sizeof (art_sig))) { // overflow
-            logprintfl (EUCAERROR, "error: internal buffers (ART_SIG_MAX) too small for signature\n");
+            logprintfl (EUCAERROR, "[%s] error: internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
             return NULL;
         }
         strncat (art_sig, part_sig, sizeof (art_sig) - strlen (art_sig) - 1);
@@ -1047,7 +1045,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
     if (emi_disk) { // we have a full disk, so allocate a work copy of it
         disk_size_bytes = emi_disk->size_bytes;
         if ((strlen (art_sig) + strlen (emi_disk->sig)) >= sizeof (art_sig)) { // overflow
-            logprintfl (EUCAERROR, "error: internal buffers (ART_SIG_MAX) too small for signature\n");
+            logprintfl (EUCAERROR, "[%s] error: internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
             return NULL;
         }
         strncat (art_sig, emi_disk->sig, sizeof (art_sig) - strlen (art_sig) - 1);
@@ -1064,7 +1062,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         
         disk = art_alloc (art_id, art_sig, disk_size_bytes, FALSE, FALSE, disk_creator, vbr);
         if (disk==NULL) {
-            logprintfl (EUCAERROR, "error: failed to allocate an artifact for raw disk\n");
+            logprintfl (EUCAERROR, "[%s] error: failed to allocate an artifact for raw disk\n", disk->instanceId);
             return NULL;
         }
         disk->make_bootable = make_bootable;
@@ -1073,7 +1071,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         for (int i = 0; i<num_parts; i++) {
             artifact * p = parts [i];
             if (art_add_dep (disk, p) != OK) {
-                logprintfl (EUCAERROR, "error: failed to add dependency to an artifact\n");
+                logprintfl (EUCAERROR, "[%s] error: failed to add dependency to an artifact\n", disk->instanceId);
                 goto free;
             }
             p->is_partition = TRUE;
@@ -1083,7 +1081,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         for (int i = 0; i<num_prereqs; i++) {
             artifact * p = prereqs [i];
             if (art_add_dep (disk, p) != OK) {
-                logprintfl (EUCAERROR, "error: failed to add a prerequisite to an artifact\n");
+                logprintfl (EUCAERROR, "[%s] error: failed to add a prerequisite to an artifact\n", disk->instanceId);
                 goto free;
             }
         }
@@ -1119,7 +1117,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
             total_parts++;
         }
     }
-    logprintfl (EUCADEBUG, "found %d prereqs and %d partitions in the VBR\n", total_prereqs, total_parts);
+    logprintfl (EUCADEBUG, "[%s] found %d prereqs and %d partitions in the VBR\n", instanceId, total_prereqs, total_parts);
 
     artifact * root = art_alloc (NULL, NULL, -1, IGNORED, IGNORED, NULL, NULL); // allocate a sentinel artifact
     if (root == NULL)
@@ -1273,14 +1271,14 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         // for some error conditions from cache we try work blobstore
         if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
             (!do_create && ret==BLOBSTORE_ERROR_NOENT) ||
-            (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE) ||
+            (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE)
 
             //
             //
             // TODO: remove these to easier trigger ND bug in blobstore
-            ret==BLOBSTORE_ERROR_NOENT ||
-            ret==BLOBSTORE_ERROR_AGAIN ||
-            ret==BLOBSTORE_ERROR_EXIST
+            //|| ret==BLOBSTORE_ERROR_NOENT 
+            //|| ret==BLOBSTORE_ERROR_AGAIN
+            //|| ret==BLOBSTORE_ERROR_EXIST
             //
             //
             
@@ -1292,7 +1290,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     }
  try_work:
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
-        logprintfl (EUCAWARN, "warning: signature mismatch on cached blob %s\n", id_cache); // TODO: maybe invalidate?
+        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
     }
     return find_or_create_blob (do_create, work_bs, id_work, a->size_bytes, a->sig, bbp);
 }
@@ -1311,7 +1309,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
     assert (root);
     assert (work_bs);
 
-    logprintfl (EUCADEBUG, "implementing %s\n", root->id);
+    logprintfl (EUCADEBUG, "[%s] implementing artifact %s\n", root->instanceId, root->id);
 
     int ret = OK;
     int tries = 0;
@@ -1332,7 +1330,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "found existing artifact %03d/%s\n", root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d/%s\n", root->instanceId, root->seq, root->id);
+                update_vbr_with_backing_info (root);
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
@@ -1342,7 +1341,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "error: failed to provision artifact %s\n", root->id);
+                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %s\n", root->instanceId, root->id);
                 goto retry;
             }
         }
@@ -1361,7 +1360,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 case BLOBSTORE_ERROR_AGAIN: // timed out
                     goto retry;
                 default: // all other errors
-                    logprintfl (EUCAERROR, "error: failed to provision dependency %s for artifact %s (error=%d)\n", root->deps[i]->id, root->id, ret);
+                    logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
                     goto retry;
                 }
             }
@@ -1371,7 +1370,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "created a blob for an artifact %03d/%s\n", root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d/%s\n", root->instanceId,  root->seq, root->id);
                 break;
             case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
                 ret = BLOBSTORE_ERROR_AGAIN;
@@ -1380,15 +1379,17 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "error: failed to create artifact %s (error=%d)\n", root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 goto retry;
             }
 
             ret = root->creator (root);
             if (ret != OK) {
-                logprintfl (EUCAERROR, "error: failed to create artifact %s\n", root->id);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s\n", root->instanceId, root->id);
                 // delete the partially created artifact
                 blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
+            } else {
+                update_vbr_with_backing_info (root);
             }
         }
 

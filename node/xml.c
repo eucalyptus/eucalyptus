@@ -205,7 +205,7 @@ int gen_instance_xml (const ncInstance * instance)
     xmlSaveFormatFileEnc (instance->xmlFilePath, doc, "UTF-8", 1);
     umask (old_umask);
 
-    logprintfl (EUCAINFO, "wrote instanceNode XML to %s\n", instance->xmlFilePath);
+    logprintfl (EUCAINFO, "[%s] wrote instance XML to %s\n", instance->instanceId, instance->xmlFilePath);
     ret = 0;
  free:
     xmlFreeDoc(doc);

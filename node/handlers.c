@@ -241,13 +241,13 @@ void change_state(	ncInstance *instance,
         instance->stateCode = TEARDOWN;
         break;
     default:
-        logprintfl (EUCAERROR, "error: change_sate(): unexpected state (%d) for instance %s\n", instance->state, instance->instanceId);        
+        logprintfl (EUCAERROR, "[%s] error: change_sate(): unexpected state (%d)\n", instance->instanceId, instance->state);        
         return;
     }
 
     strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
-        logprintfl (EUCADEBUG, "state change for instance %s: %s -> %s (%s)\n", 
+        logprintfl (EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n",
                     instance->instanceId, 
                     instance_state_names [old_state],
                     instance_state_names [instance->state],
@@ -276,13 +276,13 @@ wait_state_transition (ncInstance * instance,
 
 static void
 refresh_instance_info(	struct nc_state_t *nc,
-			ncInstance *instance)
+                        ncInstance *instance)
 {
     int now = instance->state;
     
     if (! check_hypervisor_conn ())
 	    return;
-
+    
     /* no need to bug for domains without state on Hypervisor */
     if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
         return;
@@ -291,55 +291,55 @@ refresh_instance_info(	struct nc_state_t *nc,
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) { /* hypervisor doesn't know about it */
-      if (now==BUNDLING_SHUTDOWN) {
-	logprintfl (EUCAINFO, "detected disappearance of bundled domain %s\n", instance->instanceId);
-        change_state (instance, BUNDLING_SHUTOFF);
-      } else if (now==CREATEIMAGE_SHUTDOWN) {
-	logprintfl (EUCAINFO, "detected disappearance of createImage domain %s\n", instance->instanceId);
-        change_state (instance, CREATEIMAGE_SHUTOFF);
-      } else if (now==RUNNING ||
-            now==BLOCKED ||
-            now==PAUSED ||
-            now==SHUTDOWN) {
-            /* Most likely the user has shut it down from the inside */
+        if (now==BUNDLING_SHUTDOWN) {
+            logprintfl (EUCAINFO, "[%s] detected disappearance of bundled domain\n", instance->instanceId);
+            change_state (instance, BUNDLING_SHUTOFF);
+        } else if (now==CREATEIMAGE_SHUTDOWN) {
+            logprintfl (EUCAINFO, "[%s] detected disappearance of createImage domain\n", instance->instanceId);
+            change_state (instance, CREATEIMAGE_SHUTOFF);
+        } else if (now==RUNNING ||
+                   now==BLOCKED ||
+                   now==PAUSED ||
+                   now==SHUTDOWN) {
+            // Most likely the user has shut it down from the inside
             if (instance->retries) {
-		instance->retries--;
-		logprintfl (EUCAWARN, "warning: hypervisor failed to find domain %s, will retry %d more times\n", instance->instanceId, instance->retries);	
+                instance->retries--;
+                logprintfl (EUCAWARN, "[%s] warning: hypervisor failed to find domain, will retry %d more times\n", instance->instanceId, instance->retries);
             } else {
-            	logprintfl (EUCAWARN, "warning: hypervisor failed to find domain %s, assuming it was shut off\n", instance->instanceId);
+            	logprintfl (EUCAWARN, "[%s] warning: hypervisor failed to find domain, assuming it was shut off\n", instance->instanceId);
             	change_state (instance, SHUTOFF);
             }
         }
-        /* else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED */
+        // else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
         return;
     }
-
+    
     int rc;
-    rc = get_instance_stats(dom, instance);
+    rc = get_instance_stats (dom, instance);
     if (rc) {
-      logprintfl(EUCAWARN, "refresh_instances(): cannot get instance stats (block, network)\n");
+        logprintfl (EUCAWARN, "[%s] refresh_instances(): cannot get instance stats (block, network)\n", instance->instanceId);
     }
-
+    
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
     sem_v(hyp_sem);
     if (error < 0 || info.state == VIR_DOMAIN_NOSTATE) {
-        logprintfl (EUCAWARN, "warning: failed to get information for domain %s\n", instance->instanceId);
-        /* what to do? hopefully we'll find out more later */
-	sem_p(hyp_sem);
+        logprintfl (EUCAWARN, "[%s] warning: failed to get information for domain\n", instance->instanceId);
+        // what to do? hopefully we'll find out more later
+        sem_p(hyp_sem);
         virDomainFree (dom);
-	sem_v(hyp_sem);
+        sem_v(hyp_sem);
         return;
     } 
     int xen = info.state;
-
+    
     switch (now) {
     case BOOTING:
     case RUNNING:
     case BLOCKED:
     case PAUSED:
-        /* change to state, whatever it happens to be */
+        // change to state, whatever it happens to be
         change_state (instance, xen);
         break;
     case SHUTDOWN:
@@ -348,8 +348,8 @@ refresh_instance_info(	struct nc_state_t *nc,
         if (xen==RUNNING ||
             xen==BLOCKED ||
             xen==PAUSED) {
-            /* cannot go back! */
-            logprintfl (EUCAWARN, "warning: detected prodigal domain %s, terminating it\n", instance->instanceId);
+            // cannot go back!
+            logprintfl (EUCAWARN, "[%s] warning: detected prodigal domain, terminating it\n", instance->instanceId);
             sem_p (hyp_sem);
             virDomainDestroy (dom);
             sem_v (hyp_sem);
@@ -359,43 +359,43 @@ refresh_instance_info(	struct nc_state_t *nc,
         break;
     case BUNDLING_SHUTDOWN:
     case CREATEIMAGE_SHUTDOWN:
-      logprintfl (EUCADEBUG, "hypervisor state for bundle/createImage domain %s is %s\n", instance->instanceId, instance_state_names [xen]);
-      break;
+        logprintfl (EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names [xen]);
+        break;
     default:
-        logprintfl (EUCAERROR, "error: refresh...(): unexpected state (%d) for instance %s\n", now, instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] error: refresh...(): unexpected state (%d)\n", instance->instanceId, now);
         return;
     }
     sem_p(hyp_sem);
     virDomainFree(dom);
     sem_v(hyp_sem);
-
+    
     /* if instance is running, try to find out its IP address */
     if (instance->state==RUNNING ||
         instance->state==BLOCKED ||
         instance->state==PAUSED) {
         char *ip=NULL;
         int rc;
-
+        
         if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
-	  if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
-            rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
-            if (!rc) {
-	      if(ip) {
-	        logprintfl (EUCAINFO, "discovered public IP %s for instance %s\n", ip, instance->instanceId);
-	        strncpy(instance->ncnet.publicIp, ip, 24);
-	        free(ip);
-	      }
+            if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
+                rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
+                if (!rc) {
+                    if(ip) {
+                        logprintfl (EUCAINFO, "[%s] discovered public IP %s for instance %s\n", instance->instanceId, ip);
+                        strncpy(instance->ncnet.publicIp, ip, 24);
+                        free(ip);
+                    }
+                }
             }
-	  }
         }
         if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc) {
-		if(ip) {
-                  logprintfl (EUCAINFO, "discovered private IP %s for instance %s\n", ip, instance->instanceId);
-                  strncpy(instance->ncnet.privateIp, ip, 24);
-	          free(ip);
-		}
+                if(ip) {
+                    logprintfl (EUCAINFO, "[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
+                    strncpy(instance->ncnet.privateIp, ip, 24);
+                    free(ip);
+                }
             }
         }
     }
@@ -413,53 +413,60 @@ monitoring_thread (void *arg)
 	}
 	nc = (struct nc_state_t*)arg;
 
-	logprintfl (EUCADEBUG, "Starting monitoring thread\n!\n");
-
+	logprintfl (EUCADEBUG, "starting monitoring thread\n");
+    
     for (;;) {
         bunchOfInstances *head;
         time_t now = time(NULL);
-	FILE *FP=NULL;
-	char nfile[MAX_PATH], nfilefinal[MAX_PATH];
-
+        FILE *FP=NULL;
+        char nfile[MAX_PATH], nfilefinal[MAX_PATH];
+        
         sem_p (inst_sem);
-
-	snprintf(nfile, MAX_PATH, "%s/var/log/eucalyptus/local-net.stage", nc_state.home);
-	snprintf(nfilefinal, MAX_PATH, "%s/var/log/eucalyptus/local-net", nc_state.home);
-	FP=fopen(nfile, "w");
-	if (!FP) {
-	  logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
-	}
-	
+        
+        snprintf(nfile, MAX_PATH, "%s/var/log/eucalyptus/local-net.stage", nc_state.home);
+        snprintf(nfilefinal, MAX_PATH, "%s/var/log/eucalyptus/local-net", nc_state.home);
+        FP=fopen(nfile, "w");
+        if (!FP) {
+            logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
+        }
+        
         for ( head = global_instances; head; head = head->next ) {
             ncInstance * instance = head->instance;
-
-            /* query for current state, if any */
-	    refresh_instance_info (nc, instance);
-
-            /* don't touch running or canceled threads */
+            
+            // query for current state, if any
+            refresh_instance_info (nc, instance);
+            
+            // don't touch running or canceled threads
             if (instance->state!=STAGING && instance->state!=BOOTING && 
                 instance->state!=SHUTOFF &&
                 instance->state!=SHUTDOWN &&
-		instance->state!=BUNDLING_SHUTDOWN &&
-		instance->state!=BUNDLING_SHUTOFF &&
+                instance->state!=BUNDLING_SHUTDOWN &&
+                instance->state!=BUNDLING_SHUTOFF &&
                 instance->state!=CREATEIMAGE_SHUTDOWN &&
                 instance->state!=CREATEIMAGE_SHUTOFF &&
                 instance->state!=TEARDOWN) {
-	      
-	      if (FP && !strcmp(instance->stateName, "Extant")) {
-		// have a running instance, write its information to local state file
-		fprintf(FP, "%s %s %s %d %s %s %s\n", instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac, instance->ncnet.publicIp, instance->ncnet.privateIp);
-	      }
-	      continue;
-	    }
-
+                
+                if (FP && !strcmp(instance->stateName, "Extant")) { // TODO: is this still being used?
+                    // have a running instance, write its information to local state file
+                    fprintf(FP, "%s %s %s %d %s %s %s\n", 
+                            instance->instanceId, 
+                            nc_state.vnetconfig->pubInterface, 
+                            "NA", 
+                            instance->ncnet.vlan, 
+                            instance->ncnet.privateMac, 
+                            instance->ncnet.publicIp, 
+                            instance->ncnet.privateIp);
+                }
+                continue;
+            }
+            
             if (instance->state==TEARDOWN) {
-                /* it's been long enough, we can forget the instance */
+                // it's been long enough, we can forget the instance
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
-                    logprintfl (EUCAINFO, "forgetting about instance %s\n", instance->instanceId);
+                    logprintfl (EUCAINFO, "[%] forgetting about instance\n", instance->instanceId);
                     free_instance (&instance);
-		    break;	/* need to get out since the list changed */
+                    break;	// need to get out since the list changed
                 }
                 continue;
             }
@@ -476,9 +483,9 @@ monitoring_thread (void *arg)
             
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
-            logprintfl (EUCAINFO, "cleaning up state for instance %s%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
+            logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
             if (destroy_instance_backing (instance, destroy_files)) {
-                logprintfl (EUCAWARN, "warning: failed to cleanup instance image %s\n", instance->instanceId);
+                logprintfl (EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
             }
             
             // check to see if this is the last instance running on vlan, handle local networking information drop
@@ -492,23 +499,22 @@ monitoring_thread (void *arg)
                 }
             }
             if (left==0) {
-                logprintfl (EUCAINFO, "stopping the network (vlan=%d)\n", (instance->ncnet).vlan);
+                logprintfl (EUCAINFO, "[%s] stopping the network (vlan=%d)\n", instance->instanceId, (instance->ncnet).vlan);
                 vnetStopNetwork (nc_state.vnetconfig, (instance->ncnet).vlan, NULL, NULL);
             }
-            change_state (instance, TEARDOWN); /* TEARDOWN = no more resources */
+            change_state (instance, TEARDOWN); // TEARDOWN = no more resources
             instance->terminationTime = time (NULL);
         }
-	if (FP) {
-	  fclose(FP);
-	  rename (nfile, nfilefinal);
-	}
+        if (FP) {
+            fclose(FP);
+            rename (nfile, nfilefinal);
+        }
         sem_v (inst_sem);
-
-	if (head) {
-		/* we got out because of modified list, no need to sleep
-		 * now */
-		continue;
-	}
+        
+        if (head) {
+            // we got out because of modified list, no need to sleep now
+            continue;
+        }
         
         sleep (MONITORING_PERIOD);
     }
@@ -525,7 +531,7 @@ void *startup_thread (void * arg)
     int error, i;
     
     if (! check_hypervisor_conn ()) {
-        logprintfl (EUCAFATAL, "could not start instance %s, abandoning it\n", instance->instanceId);
+        logprintfl (EUCAFATAL, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -533,13 +539,13 @@ void *startup_thread (void * arg)
     // set up networking
     error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if (error) {
-        logprintfl (EUCAFATAL, "start network failed for instance %s, terminating it\n", instance->instanceId);
+        logprintfl (EUCAFATAL, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
     error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
     if (error) {
-        logprintfl(EUCAFATAL, "start instance network failed for instance %s, terminating it\n", instance->instanceId);
+        logprintfl(EUCAFATAL, "[%s] start instance network failed for instance, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -553,7 +559,7 @@ void *startup_thread (void * arg)
             instance->params.nicType = NIC_TYPE_LINUX;
         }
     }
-    logprintfl (EUCAINFO, "network started for instance %s\n", instance->instanceId);
+    logprintfl (EUCAINFO, "[%s] started network\n", instance->instanceId);
 
     strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
@@ -565,17 +571,17 @@ void *startup_thread (void * arg)
         || (error = gen_instance_xml (instance))
         || (error = gen_libvirt_xml (instance, xslt_path))) {
         
-        logprintfl (EUCAFATAL, "Failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
+        logprintfl (EUCAFATAL, "[%s] error: failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
         goto free;
     }
     xml = file2str (instance->libvirtFilePath);
-
+    
     if (instance->state==TEARDOWN) { // timed out in STAGING
         goto free;
     }
     if (instance->state==CANCELED) {
-        logprintfl (EUCAFATAL, "Startup of instance %s was cancelled\n", instance->instanceId);
+        logprintfl (EUCAFATAL, "[%s] startup of instance was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -584,8 +590,7 @@ void *startup_thread (void * arg)
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
-    logprintfl (EUCADEBUG2, "about to start domain %s\n", instance->instanceId);
-    print_running_domains ();
+    logprintfl (EUCADEBUG2, "[%s] instance about to boot\n", instance->instanceId);
 
     for (i=0; i<5 && dom == NULL; i++) {
       sem_p (hyp_sem);
@@ -596,7 +601,7 @@ void *startup_thread (void * arg)
     }
 
     if (dom == NULL) {
-        logprintfl (EUCAFATAL, "hypervisor failed to start domain\n");
+        logprintfl (EUCAFATAL, "[%s] hypervisor failed to start instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -609,18 +614,18 @@ void *startup_thread (void * arg)
     sem_p (inst_sem);
     // check one more time for cancellation
     if (instance->state==TEARDOWN) { 
-      // timed out in BOOTING
+        // timed out in BOOTING
     } else if (instance->state==CANCELED || instance->state==SHUTOFF) {
-      logprintfl (EUCAFATAL, "startup of instance %s was cancelled\n", instance->instanceId);
-      change_state (instance, SHUTOFF);
+        logprintfl (EUCAFATAL, "[%s] startup of instance was cancelled\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
     } else {
-      logprintfl (EUCAINFO, "booting VM instance %s\n", instance->instanceId);
-      instance->bootTime = time (NULL);
-      change_state (instance, BOOTING);
+        logprintfl (EUCAINFO, "[%s] booting\n", instance->instanceId);
+        instance->bootTime = time (NULL);
+        change_state (instance, BOOTING);
     }
     sem_v (inst_sem);
  free:
-
+    
     if (xml) free (xml);
     if (brname) free (brname);
     return NULL;
@@ -971,32 +976,40 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-        int ret, len, i;
+    int ret, len, i;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
 #define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stats"
-
+    
 	if (init())
 		return 1;
-
-	logprintfl(EUCADEBUG, "doDescribeInstances() invoked\n");
-
+    
+	logprintfl (EUCADEBUG2, "doDescribeInstances invoked\n");
+    
 	if (nc_state.H->doDescribeInstances)
 		ret = nc_state.H->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
 	else 
 		ret = nc_state.D->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
-
+    
 	if (ret)
 		return ret;
-
-
+    
+    
 	for (i=0; i < (*outInstsLen); i++) {
-	  ncInstance *instance = (*outInsts)[i];
-	  logprintfl(EUCADEBUG, "doDescribeInstances(): instanceId=%s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", instance->instanceId, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex, instance->platform);
+        ncInstance *instance = (*outInsts)[i];
+        logprintfl(EUCADEBUG, "[%s] %s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", 
+                   instance->instanceId,
+                   instance->stateName,
+                   instance->ncnet.publicIp, 
+                   instance->ncnet.privateIp, 
+                   instance->ncnet.privateMac, 
+                   instance->ncnet.vlan, 
+                   instance->ncnet.networkIndex, 
+                   instance->platform);
 	}
-
-	/* allocate enough memory */
+    
+	// allocate enough memory
 	len = (strlen(EUCALYPTUS_CONF_LOCATION) > strlen(NC_MONIT_FILENAME)) ? strlen(EUCALYPTUS_CONF_LOCATION) : strlen(NC_MONIT_FILENAME);
 	len += 2 + strlen(nc_state.home);
 	file_name = malloc(sizeof(char) * len);
@@ -1004,7 +1017,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 		logprintfl(EUCAERROR, "Out of memory!\n");
 		return ret;
 	}
-
+    
 	sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
 	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
 		f = fopen(file_name, "w");
@@ -1022,14 +1035,14 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 			int i;
 			ncInstance * instance;
 			char myName[CHAR_BUFFER_SIZE];
-
+            
 			fprintf(f, "version: %s\n", EUCA_VERSION);
 			fprintf(f, "timestamp: %ld\n", time(NULL));
 			if (gethostname(myName, CHAR_BUFFER_SIZE) == 0)
 				fprintf(f, "node: %s\n", myName);
 			fprintf(f, "hypervisor: %s\n", nc_state.H->name);
 			fprintf(f, "network: %s\n", nc_state.vnetconfig->mode);
-
+            
 			used_disk = used_mem = used_cores = 0;
 			for (i=0; i < (*outInstsLen); i++) {
 				instance = (*outInsts)[i];
@@ -1037,11 +1050,11 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 				used_mem += instance->params.mem;
 				used_cores += instance->params.cores;
 			}
-
+            
 			fprintf(f, "memory (max/avail/used) MB: %lld/%lld/%lld\n", nc_state.mem_max, nc_state.mem_max - used_mem, used_mem);
 			fprintf(f, "disk (max/avail/used) GB: %lld/%lld/%lld\n", nc_state.disk_max, nc_state.disk_max - used_disk, used_disk);
 			fprintf(f, "cores (max/avail/used): %lld/%lld/%lld\n", nc_state.cores_max, nc_state.cores_max - used_cores, used_cores);
-
+            
 			for (i=0; i < (*outInstsLen); i++) {
 				instance = (*outInsts)[i];
 				fprintf(f, "id: %s", instance->instanceId);
@@ -1057,7 +1070,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 		}
 	}
 	free(file_name);
-
+    
 	return ret;
 }
 
@@ -1468,68 +1481,70 @@ char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance)
 {
-  char *xml;
-  int ret=0, n;
-  long long b=0, i=0;
-  char bstr[512], istr[512];
-
-  // get the block device string from VBR
-  bzero(bstr, 512);
-  for (n=0; n<instance->params.virtualBootRecordLen; n++) {
-    if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
-      if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
-	strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
-	strcat(bstr, ",");
-      }
+    char *xml;
+    int ret=0, n;
+    long long b=0, i=0;
+    char bstr[512], istr[512];
+    
+    // get the block device string from VBR
+    bzero(bstr, 512);
+    for (n=0; n<instance->params.virtualBootRecordLen; n++) {
+        if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
+            if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
+                strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
+                strcat(bstr, ",");
+            }
+        }
     }
-  }
-  
-  // get the name of the network interface from libvirt
-  sem_p(hyp_sem);
-  xml = virDomainGetXMLDesc(dom, 0);
-  sem_v(hyp_sem);
-
-  if (xml) {
-    char *el;
-    el = xpath_content(xml, "domain/devices/interface");
-    if (el) {
-      char *start, *end;
-      start = strstr(el, "target dev='");
-      if (start) {
-	start += strlen("target dev='");
-	end = strstr(start, "'");
-	if (end) {
-	  *end = '\0';
-	  snprintf(istr, 512, "%s", start);
-	}
-      }
-      free(el);
+    
+    // get the name of the network interface from libvirt
+    sem_p(hyp_sem);
+    xml = virDomainGetXMLDesc(dom, 0);
+    sem_v(hyp_sem);
+    
+    if (xml) {
+        char *el;
+        el = xpath_content(xml, "domain/devices/interface");
+        if (el) {
+            char *start, *end;
+            start = strstr(el, "target dev='");
+            if (start) {
+                start += strlen("target dev='");
+                end = strstr(start, "'");
+                if (end) {
+                    *end = '\0';
+                    snprintf(istr, 512, "%s", start);
+                }
+            }
+            free(el);
+        }
+        free(xml);
     }
-    free(xml);
-  }
-
-  char cmd[MAX_PATH], *output;
-  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
-  output = system_output(cmd);
-  if (output) {
-    sscanf(output, "OUTPUT %lld %lld", &b, &i);
-    free(output);
-  } else {
-    logprintfl(EUCAWARN, "get_instance_stat(): empty output from getstats command\n");
-    ret = 1;
-  }
-  
-  if (b > 0) {
-    instance->blkbytes = b;
-  } else {
-    instance->blkbytes = 0;
-  }
-  if (i > 0) {
-    instance->netbytes = i;
-  } else {
-    instance->netbytes = 0;
-  }
-  logprintfl(EUCADEBUG, "get_instance_stats(): instanceId=%s, blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
-
+    
+    char cmd[MAX_PATH], *output;
+    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", 
+             nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
+    output = system_output (cmd);
+    if (output) {
+        sscanf(output, "OUTPUT %lld %lld", &b, &i);
+        free(output);
+    } else {
+        logprintfl(EUCAWARN, "[%s] warning: get_instance_stats: empty output from getstats command\n", instance->instanceId);
+        ret = 1;
+    }
+    
+    if (b > 0) {
+        instance->blkbytes = b;
+    } else {
+        instance->blkbytes = 0;
+    }
+    if (i > 0) {
+        instance->netbytes = i;
+    } else {
+        instance->netbytes = 0;
+    }
+    logprintfl(EUCADEBUG, "[%s] get_instance_stats: blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", 
+               instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
+    
   return(ret);
 }

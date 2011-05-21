@@ -538,7 +538,7 @@ char * system_output (char * shell_command )
   FILE * fp;
 
   /* forks off command (this doesn't fail if command doesn't exist */
-  logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
+  logprintfl (EUCADEBUG2, "system_output(): [%s]\n", shell_command);
   if ( (fp=popen(shell_command, "r")) == NULL) 
     return NULL; /* caller can check errno */
   buf = fp2str (fp);

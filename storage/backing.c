@@ -94,7 +94,7 @@ static blobstore * work_bs;
 extern struct nc_state_t nc_state; // TODO: remove this extern
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    logprintfl (EUCADEBUG, "blobstore: %s", msg);
+    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
 
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)
