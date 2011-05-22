@@ -492,13 +492,12 @@ doStartNetwork(	struct nc_state_t *nc,
 	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
-		logprintfl (EUCAERROR, "StartNetwork: ERROR return from vnetStartNetwork %d\n", rc);
+		logprintfl (EUCAERROR, "StartNetwork: ERROR return from vnetStartNetwork return=%d\n", rc);
 	} else {
 		ret = 0;
-		logprintfl (EUCAINFO, "StartNetwork: SUCCESS return from vnetStartNetwork %d\n", rc);
+		logprintfl (EUCAINFO, "StartNetwork: SUCCESS return from vnetStartNetwork\n");
 		if (brname) free(brname);
 	}
-	logprintfl (EUCAINFO, "StartNetwork: done\n");
     
 	return (ret);
 }

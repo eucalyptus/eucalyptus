@@ -1949,7 +1949,7 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
 
         if ( try_dir ) {
             if ( stat (path_copy, &buf) == -1 ) {
-                logprintfl (EUCAINFO, "creating path %s\n", path_copy);
+                logprintfl (EUCAINFO, "{%u} creating path %s\n", (unsigned int)pthread_self(), path_copy);
 
                 if ( mkdir (path_copy, mode) == -1) {
                     logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));

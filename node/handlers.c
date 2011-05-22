@@ -571,7 +571,7 @@ void *startup_thread (void * arg)
         || (error = gen_instance_xml (instance))
         || (error = gen_libvirt_xml (instance, xslt_path))) {
         
-        logprintfl (EUCAFATAL, "[%s] error: failed to prepare images for instance %s (error=%d)\n", instance->instanceId, error);
+        logprintfl (EUCAFATAL, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -1115,10 +1115,10 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
     if (init())
         return 1;
     
-    logprintfl (EUCAINFO, "[%s] doRunInstance: invoked (cores=%d disk=%d memory=%d)\n", instanceId, params->cores, params->disk, params->mem);
-    logprintfl (EUCAINFO, "[%s]                         vlan=%d priMAC=%s privIp=%s\n", instanceId, netparams->vlan, netparams->privateMac, netparams->privateIp);
+    logprintfl (EUCAINFO, "[%s] doRunInstance: cores=%d disk=%d memory=%d\n", instanceId, params->cores, params->disk, params->mem);
+    logprintfl (EUCAINFO, "[%s]                vlan=%d priMAC=%s privIp=%s\n", instanceId, netparams->vlan, netparams->privateMac, netparams->privateIp);
     
-    if (vbr_legacy (params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
+    if (vbr_legacy (instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
         return ERROR;
     
     if (nc_state.H->doRunInstance)

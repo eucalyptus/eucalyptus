@@ -152,7 +152,7 @@ static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * b
 }
 
 // sets id to:
-// - the blobblock ID of an instance-directory blob (if vbr!=NULL): userId/instanceId/blob-....
+// - the blockblob ID of an instance-directory blob (if vbr!=NULL): userId/instanceId/blob-....
 // - the work prefix within work blobstore for an instance: userId/instanceId
 static void set_id (const ncInstance * instance, virtualBootRecord * vbr, char * id, unsigned int id_size) // TODO: remove this
 {
@@ -888,6 +888,7 @@ int create_instance_backing (ncInstance * instance)
     // compute tree of dependencies
     artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
                                           FALSE, // for Xen and KVM we do not need to make disk bootable
+                                          TRUE, // make working copy of runtime-modified files
                                           instance->keyName, // the SSH key
                                           instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
@@ -917,14 +918,6 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     int total_prereqs = 0;
     char path [MAX_PATH];
     virtualMachine * vm = &(instance->params);
-
-    // to ensure that we are able to delete all blobs, we chown files back to 'eucalyptus'
-    // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
-    // VM is running and then chowns them to root after termination)
-    set_path (path, sizeof (path), instance, "*");
-    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
-        logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
-    }
     
     // find and detach iSCSI targets, if any
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
@@ -934,6 +927,19 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
                 logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
             } 
         }
+    }
+
+    // see if instance directory is there (sometimes startup fails before it is created)
+    set_path (path, sizeof (path), instance, NULL);
+    if (check_path (path))
+        return ret;
+
+    // to ensure that we are able to delete all blobs, we chown files back to 'eucalyptus'
+    // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
+    // VM is running and then chowns them to root after termination)
+    set_path (path, sizeof (path), instance, "*");
+    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
+        logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
 
     if (destroy_files) {

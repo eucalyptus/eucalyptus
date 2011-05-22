@@ -69,7 +69,7 @@
 #define MAX_SSHKEY_SIZE 4096
 
 typedef struct _artifact {
-    char id [EUCA_MAX_PATH]; // host-unique ID for the artifact (can be empty for a sentinel)
+    char id [EUCA_MAX_PATH]; // host-unique ID for the artifact
     char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (can be empty for a sentinel)
     boolean may_be_cached; // the underlying blob may reside in cache (it will not be modified by an instance)
     boolean must_be_file; // the bits for this artifact must reside in a regular file (rather than just on a block device)
@@ -86,8 +86,8 @@ typedef struct _artifact {
     int refs; // reference counter (1 or more if contained in deps[] of others)
 } artifact;
 
-int vbr_legacy (virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
+int vbr_legacy (const char * instanceId, virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
-artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, const char * sshkey, const char * instanceId);
+artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, boolean make_work_copy, const char * sshkey, const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
 void art_free (artifact * a);
