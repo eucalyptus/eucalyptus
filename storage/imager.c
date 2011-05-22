@@ -125,6 +125,7 @@ static imager_command * validate_cmd (int index, char *this_cmd, imager_param *p
     imager_request * req = & reqs [index];
     req->cmd = cmd_struct;
     req->params = params;
+    req->index = index;
     req->internal = NULL;
     if (cmd_struct->validate (req))
         err ("incorrect parameters for command '%s'", cmd_struct->name);
@@ -161,10 +162,10 @@ int main (int argc, char * argv[])
     artifacts_map = map_create (10);
 
     // use $EUCALYPTUS env var if available
-    char root [] = "";
+    char euca_root [] = "";
     euca_home = getenv (EUCALYPTUS_ENV_VAR_NAME);
     if (!euca_home) {
-        euca_home = root;
+        euca_home = euca_root;
     }
 
     // save the command line into a buffer so it's easier to rerun it by hand
@@ -223,7 +224,7 @@ int main (int argc, char * argv[])
             nparams++;
         }
     }
-    if (validate_cmd (ncmds, cmd_name, cmd_params, *argv)!=NULL)
+    if (validate_cmd (ncmds, cmd_name, cmd_params, *argv)!=NULL) // validate last command
         ncmds++;
 
     logprintfl (EUCAINFO, "verified all parameters for %d command(s)\n", ncmds);
@@ -232,18 +233,18 @@ int main (int argc, char * argv[])
     }
 
     // invoke the requirements checkers in the same order as on command line
+    artifact * root = NULL;
     for (int i=0; i<ncmds; i++)
         if (reqs[i].cmd->requirements!=NULL)
-            if (reqs[i].cmd->requirements (&reqs[i])!=OK)
+            if ((root = reqs[i].cmd->requirements (&reqs[i], root))==NULL) // pass results of earlier checkers to later checkers
                 err ("failed while verifying requirements");
-
-    // invoke the last command, which will trigger the commands it depends on
-    int ret;
-    for (int i=ncmds-1; i>=0; i--) {
-        if (reqs[ncmds-1].cmd->execute!=NULL) {
-            ret = reqs[ncmds-1].cmd->execute(&reqs[ncmds-1]);
-            break;
-        }
+    
+    // implements the artifact tree
+    int ret = OK;
+    if (root) {
+        blobstore * work_bs = NULL; // TODO: open blobstore
+        blobstore * cache_bs = NULL; // TODO: open blobstore
+        ret = art_implement_tree (root, work_bs, cache_bs, NULL, INSTANCE_PREP_TIMEOUT_USEC); // do all the work!
     }
 
     // invoke the cleaners for each command to tidy up disk space and memory allocations

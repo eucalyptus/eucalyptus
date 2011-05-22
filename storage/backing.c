@@ -83,7 +83,7 @@
 #include "handlers.h" // connect_iscsi*
 #include "vbr.h"
 
-#define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 // TODO: change the timeout?
+#define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 
 #define STORE_TIMEOUT_USEC 1000000LL*60*2
 #define DELETE_TIMEOUT_USEC 1000000LL*10
 
@@ -888,11 +888,11 @@ int create_instance_backing (ncInstance * instance)
     // compute tree of dependencies
     artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
                                           FALSE, // for Xen and KVM we do not need to make disk bootable
-                                          TRUE, // make working copy of runtime-modified files
+                                          TRUE, // make working copy of runtime-modifiable files
                                           instance->keyName, // the SSH key
                                           instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
-        art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, 1000000L * 60) != OK) { // download/create/combine the dependencies
+        art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }

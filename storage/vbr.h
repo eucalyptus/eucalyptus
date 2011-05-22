@@ -64,16 +64,21 @@
 #include "data.h"
 #include "blobstore.h"
 
+#define INSTANCE_PREP_TIMEOUT_USEC 1000000L*60*60*2 // TODO: change the timeout?
+
 #define MAX_ARTIFACT_DEPS 16
 #define MAX_ARTIFACT_SIG 4096
 #define MAX_SSHKEY_SIZE 4096
 
 typedef struct _artifact {
-    char id [EUCA_MAX_PATH]; // host-unique ID for the artifact
-    char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (can be empty for a sentinel)
+    // artifact can be located either in a blobstore or on a file system:
+    char id [EUCA_MAX_PATH]; // either ID or PATH to the artifact
+    boolean id_is_path; // if set, id is a PATH
+
+    char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (IGNORED for a sentinel)
     boolean may_be_cached; // the underlying blob may reside in cache (it will not be modified by an instance)
     boolean must_be_file; // the bits for this artifact must reside in a regular file (rather than just on a block device)
-    int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (can be NULL for a sentinel)
+    int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (must be NULL for a sentinel)
     long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
     boolean make_bootable; // tells 'disk_creator' whether to make the disk bootable
@@ -82,12 +87,14 @@ typedef struct _artifact {
     blockblob * bb; // blockblob handle for the artifact, when it is open
     struct _artifact * deps [MAX_ARTIFACT_DEPS]; // array of pointers to artifacts that this artifact depends on
     int seq; // sequence number of the artifact
-    char instanceId [32]; // here purely for annotating logs
     int refs; // reference counter (1 or more if contained in deps[] of others)
+    char instanceId [32]; // here purely for annotating logs
+    void * internal; // OPTIONAL pointer to any other artifact-specific data 'creator' may need
 } artifact;
 
 int vbr_legacy (const char * instanceId, virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, boolean make_work_copy, const char * sshkey, const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
+artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr);
 void art_free (artifact * a);

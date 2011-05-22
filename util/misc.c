@@ -85,6 +85,7 @@ permission notice:
 #include <euca_auth.h>
 #include <openssl/md5.h>
 #include <sys/mman.h> // mmap
+#include <pthread.h>
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -386,35 +387,37 @@ int check_file_newer_than(char *file, time_t mtime) {
 }
 
 // returns 0 if file is a readable regular file, 1 otherwise
-int check_file(char *file) {
-  int rc;
-  struct stat mystat;
-  
-  if (!file) {
-    return(1);
-  }
-  
-  rc = lstat(file, &mystat);
-  if (rc < 0 || !S_ISREG(mystat.st_mode)) {
-    return(1);
-  }
-  return(0);
+int check_file (const char *file) 
+{
+    int rc;
+    struct stat mystat;
+    
+    if (!file) {
+        return(1);
+    }
+    
+    rc = lstat(file, &mystat);
+    if (rc < 0 || !S_ISREG(mystat.st_mode)) {
+        return(1);
+    }
+    return(0);
 }
 
 // return 0 if path exists
-int check_path(char *path) {
-  int rc;
-  struct stat mystat;
-  
-  if (!path) {
-    return(1);
-  }
-  
-  rc = lstat(path, &mystat);
-  if (rc < 0) {
-    return(1);
-  }
-  return(0);
+int check_path (const char *path) 
+{
+    int rc;
+    struct stat mystat;
+    
+    if (!path) {
+        return(1);
+    }
+    
+    rc = lstat(path, &mystat);
+    if (rc < 0) {
+        return(1);
+    }
+    return(0);
 }
 
 /* given string *stringp, replace occurences of <source> with <destination>

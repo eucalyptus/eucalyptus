@@ -803,7 +803,7 @@ static int art_gen_id (char * buf, unsigned int buf_size, const char * first, co
 
 static __thread char current_instanceId [512] = ""; // instance ID that is being serviced, for logging only
 
-static artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
+artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
 {
     artifact * a = calloc (1, sizeof (artifact));
     if (a==NULL)
@@ -1270,7 +1270,16 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     else 
         strncpy (id_work, a->id, sizeof (id_work));
     
-    // first, try cache as long as we're allowed to and have one
+    // see if a file and if it exists
+    if (a->id_is_path) {
+        if (check_path (a->id)) {
+            return BLOBSTORE_ERROR_NOENT;
+        } else {
+            return OK;
+        }
+    }
+
+    // for a blob first try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
         ret = find_or_create_blob (do_create, cache_bs, id_cache, a->size_bytes, a->sig, bbp);
 

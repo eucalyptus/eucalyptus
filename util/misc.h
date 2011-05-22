@@ -150,8 +150,8 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 int logfile(char *file, int in_loglevel);
 int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
-int check_file(char *file);
-int check_path(char *path);
+int check_file (const char *file);
+int check_path (const char *path);
 int check_file_newer_than(char *file, time_t mtime);
 
 // argument checker
