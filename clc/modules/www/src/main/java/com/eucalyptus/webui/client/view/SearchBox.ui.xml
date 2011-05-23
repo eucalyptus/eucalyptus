@@ -1,0 +1,44 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="magnifier" src="image/magnifier_16x16_gray.png"></ui:image>
+    
+    <ui:style>
+        .searchBox {
+            width:28em;
+            padding:4px;
+            border:1px solid #AAAAAA;
+            -moz-border-radius:4px;
+            -webkit-border-radius:4px;
+            -khtml-border-radius:4px;
+            border-radius:4px;          
+        }
+        .searchInput {
+            width:100%;
+            border:0px solid #FFFFFF;
+            outline:#FFFFFF solid 0px;
+            background-color:transparent;
+        }
+        @sprite .magnifier {
+            height:16px;
+            width:16px;
+            gwt-image:'magnifier';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;           
+        }        
+    </ui:style>
+    
+    <g:HTMLPanel styleName="{style.searchBox}">
+        <table style="width:100%"><tbody><tr>
+            <td style="vertical-align:middle;width:24px;">
+                <span class="{style.magnifier}"></span>
+            </td>
+            <td>
+                <g:TextBox styleName="{style.searchInput}" ui:field="textInput"></g:TextBox>
+            </td>
+        </tr></tbody></table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

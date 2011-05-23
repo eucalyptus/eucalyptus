@@ -1,0 +1,30 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
+    
+    <ui:style>
+        .toolbar {
+        	width:99%;
+        }
+    </ui:style>
+    
+    <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
+    
+    <g:DockLayoutPanel unit="PX">
+        <g:north size="36">
+            <g:HTMLPanel addStyleNames="{style.toolbar}">
+                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}">
+                    <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>Click
+                </g:Anchor>
+                <g:Anchor styleName="{global.buttonCss.positive} {global.buttonCss.button}">
+                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Click
+                </g:Anchor>
+            </g:HTMLPanel>
+        </g:north>
+        <g:center>
+            <g:LayoutPanel ui:field="tablePanel"/>
+        </g:center>
+    </g:DockLayoutPanel>
+    
+</ui:UiBinder> 

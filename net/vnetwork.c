@@ -1361,7 +1361,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
 
 int vnetKickDHCP(vnetConfig *vnetconfig) {
   struct stat statbuf;  
-  char dstring [512] = "";
+  char dstring [MAX_PATH] = "";
   char buf [MAX_PATH];
   char file[MAX_PATH];
   int rc, i, numHosts;
@@ -1383,7 +1383,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
 
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
-      strncat (dstring, " ", 512);
+      strncat (dstring, " ", MAX_PATH);
       strncat (dstring, vnetconfig->etherdevs[i], 16);
     }
   }
@@ -1405,9 +1405,6 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   
   snprintf (buf, MAX_PATH, "%s/euca-dhcp.trace", vnetconfig->path);
   unlink(buf);
-  //  snprintf (buf, 512, "rm -f %s/euca-dhcp.trace", vnetconfig->path);
-  //  logprintfl(EUCADEBUG, "executing: %s\n", buf);
-  //  rc = system (buf);
   
   snprintf (buf, MAX_PATH, "%s/euca-dhcp.leases", vnetconfig->path);
   rc = open(buf, O_WRONLY | O_CREAT, 0644);
@@ -1416,9 +1413,6 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   } else {
     logprintfl(EUCAWARN, "vnetKickDHCP(): failed to create/open euca-dhcp.leases\n");
   }
-  //  snprintf (buf, 512, "touch %s/euca-dhcp.leases", vnetconfig->path);
-  //  logprintfl(EUCADEBUG, "executing: %s\n", buf);
-  //  rc = system (buf);
   
   if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", MAX_PATH) && strstr(vnetconfig->path, "eucalyptus/net")) {
     snprintf(buf, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);

@@ -76,50 +76,42 @@
 #include "eucalyptus.h"
 #include "pthread.h"
 
-enum { 
-    MKSWAP=0, 
+enum {
+    CHMOD=0,
+    CHOWN,
+    CP,
+    DD,
+    FILECMD,
+    GRUB,
+    LOSETUP,
+    MKDIR,
     MKEXT3,
+    MKSWAP,
+    MOUNT,
+    PARTED,
     TUNE2FS,
-    FILECMD, 
-    LOSETUP, 
-    MOUNT, 
-    GRUB, 
-    PARTED, 
-    MV, 
-    DD, 
-    SYNC, 
-    MKDIR, 
-    CP, 
-    RSYNC, 
-    UMOUNT, 
-    CAT, 
-    CHOWN, 
-    CHMOD, 
-    ROOTWRAP, 
-    MOUNTWRAP, 
+    UMOUNT,
+    ROOTWRAP,
+    MOUNTWRAP,
     LASTHELPER
 };
 
 static char * helpers [LASTHELPER] = {
-    "mkswap", 
-    "mkfs.ext3", 
+    "chmod",
+    "chown",
+    "cp",
+    "dd",
+    "file",
+    "grub",
+    "losetup",
+    "mkdir",
+    "mkfs.ext3",
+    "mkswap",
+    "mount",
+    "parted",
     "tune2fs",
-    "file", 
-    "losetup", 
-    "mount", 
-    "grub", 
-    "parted", 
-    "mv", 
-    "dd", 
-    "sync", 
-    "mkdir", 
-    "cp", 
-    "rsync", 
-    "umount", 
-    "cat", 
-    "chown", 
-    "chmod", 
-    "euca_rootwrap", 
+    "umount",
+    "euca_rootwrap",
     "euca_mountwrap"
 };
 
@@ -555,19 +547,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         }
         free (output);
     }
-
-    /*
-      if (modules) {
-      while(strlen(modules) && modules[strlen(modules)-1] == '/') {
-      modules[strlen(modules)-1] = '\0';
-      }
-      output = pruntf (TRUE, "%s %s -az %s %s/lib/modules/", helpers_path[ROOTWRAP], helpers_path[RSYNC], modules, tmpdir);
-      if (!output) {
-      logprintfl (EUCAINFO, "ERROR: failed to rsync the modules\n");
-      return ERROR;
-      }
-      }
-    */
 
     char buf [1024];
     snprintf (buf, sizeof (buf), "default=0\ntimeout=5\n\ntitle TheOS\nroot (hd0,%d)\nkernel /boot/%s root=/dev/sda1 ro\n", part, kfile);
