@@ -13,7 +13,10 @@ import org.hibernate.annotations.Entity;
 @Table(name="s3_usage_snapshot")
 class S3UsageSnapshot
 {
-	@EmbeddedId
+	@Id
+	@Column(name="id")
+	private Long id;
+	@Embedded
 	protected S3SnapshotKey key;
 	@Embedded
 	protected S3UsageData usageData;

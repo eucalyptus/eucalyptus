@@ -1,6 +1,7 @@
 package com.eucalyptus.reporting.storage;
 
 import javax.persistence.*;
+
 import org.hibernate.annotations.Entity;
 
 /**
@@ -14,7 +15,10 @@ import org.hibernate.annotations.Entity;
 @Table(name="storage_usage_snapshot")
 class StorageUsageSnapshot
 {
-	@EmbeddedId
+	@Id
+	@Column(name="id")
+	private Long id;
+	@Embedded
 	protected StorageSnapshotKey key;
 	@Embedded
 	protected StorageUsageData usageData;

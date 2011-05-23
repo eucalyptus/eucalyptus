@@ -12,9 +12,12 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
-public class InstanceAttributes extends AbstractPersistent
+public class InstanceAttributes
 	implements Serializable
 {
+	@Id
+	@Column(name="id")
+	private Long id;
 	@Column(name="uuid")
 	private String uuid;
 	@Column(name="instance_id", nullable=false)
