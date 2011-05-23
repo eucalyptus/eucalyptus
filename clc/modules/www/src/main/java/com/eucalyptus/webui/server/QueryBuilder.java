@@ -39,7 +39,7 @@ public class QueryBuilder {
   }
   
   public String query( ) {
-    return this.query( ).toString( );
+    return this.query.toString( );
   }
   
   public String url( ) {
