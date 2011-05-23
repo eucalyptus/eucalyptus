@@ -95,6 +95,7 @@ typedef struct _artifact {
 int vbr_legacy (const char * instanceId, virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, boolean make_work_copy, const char * sshkey, const char * instanceId);
+void art_set_instanceId (const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
 artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr);
 void art_free (artifact * a);

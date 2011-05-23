@@ -445,10 +445,10 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
 static void update_vbr_with_backing_info (artifact * a)
 {
     assert (a);
-    assert (a->bb);
     if (a->vbr==NULL) return;
     virtualBootRecord * vbr = a->vbr;
 
+    assert (a->bb);
     if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
         strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
@@ -1094,6 +1094,13 @@ free:
     return NULL;
 }
 
+// sets instance ID in thread-local variable, for logging
+// (same effect as passing it into vbr_alloc_tree)
+void art_set_instanceId (const char * instanceId) 
+{
+    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+}
+
 artifact * // returns pointer to the root of artifact tree or NULL on error
 vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must free the tree)
                 virtualMachine * vm, // virtual machine containing the VBR
@@ -1260,7 +1267,6 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 {
     int ret = ERROR;
     assert (a);
-    assert (work_bs);
 
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
@@ -1273,11 +1279,17 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     // see if a file and if it exists
     if (a->id_is_path) {
         if (check_path (a->id)) {
-            return BLOBSTORE_ERROR_NOENT;
+            if (do_create) {
+                return OK; // creating only matters for blobs, which get locked, not for files
+            } else {
+                return BLOBSTORE_ERROR_NOENT;
+            }
         } else {
             return OK;
         }
     }
+
+    assert (work_bs);
 
     // for a blob first try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
@@ -1318,7 +1330,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 {
     long long started = time_usec();
     assert (root);
-    assert (work_bs);
 
     logprintfl (EUCADEBUG, "[%s] implementing artifact %s\n", root->instanceId, root->id);
 

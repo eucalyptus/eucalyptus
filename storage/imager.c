@@ -232,25 +232,38 @@ int main (int argc, char * argv[])
         logprintfl (EUCADEBUG, "argv[]: %s\n", argv_str);
     }
 
-    // invoke the requirements checkers in the same order as on command line
+    // invoke the requirements checkers in the same order as on command line,
+    // constructing the artifact tree originating at 'root'
     artifact * root = NULL;
-    for (int i=0; i<ncmds; i++)
-        if (reqs[i].cmd->requirements!=NULL)
+    for (int i=0; i<ncmds; i++) {
+        if (reqs[i].cmd->requirements!=NULL) {
+            art_set_instanceId (reqs[i].cmd->name); // for logging
             if ((root = reqs[i].cmd->requirements (&reqs[i], root))==NULL) // pass results of earlier checkers to later checkers
                 err ("failed while verifying requirements");
+        }
+    }
     
-    // implements the artifact tree
+    // implement the artifact tree
     int ret = OK;
     if (root) {
         blobstore * work_bs = NULL; // TODO: open blobstore
         blobstore * cache_bs = NULL; // TODO: open blobstore
+        art_set_instanceId ("imager"); // for logging
         ret = art_implement_tree (root, work_bs, cache_bs, NULL, INSTANCE_PREP_TIMEOUT_USEC); // do all the work!
     }
 
     // invoke the cleaners for each command to tidy up disk space and memory allocations
-    for (int i=0; i<ncmds; i++)
-        if (reqs[i].cmd->cleanup!=NULL)
+    for (int i=0; i<ncmds; i++) {
+        if (reqs[i].cmd->cleanup!=NULL) {
+            art_set_instanceId (reqs[i].cmd->name); // for logging
             reqs[i].cmd->cleanup (&reqs[i], (i==(ncmds-1))?(TRUE):(FALSE));
+        }
+    }
+
+    // free the artifact tree
+    if (root) {
+        art_free (root);
+    }
 
     // if work dir was created and is now empty, it will be deleted
     clean_work_dir();
