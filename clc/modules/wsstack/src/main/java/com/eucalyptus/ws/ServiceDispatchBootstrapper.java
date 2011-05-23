@@ -73,17 +73,19 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DummyServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
@@ -116,19 +118,25 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       if ( Bootstrap.isCloudController( ) && !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
         for ( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
           LOG.info( "loadService(): " + config );
-          comp.loadService( config );
+          try {
+            comp.loadService( config ).get( );
+          } catch ( ServiceRegistrationException ex ) {
+            config.error( ex );
+          } catch ( Throwable ex ) {
+            config.error( ex );
+          }
         }
       } else if ( comp.hasLocalService( ) ) {
         LOG.info( "load(): " + comp );
-        for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-          if ( s.isLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
-            try {
-              comp.loadService( s ).get( );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex, ex );//TODO:GRZE: report error
-            } catch ( Throwable ex ) {
-              Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
-            }
+        final ServiceConfiguration s = comp.getLocalServiceConfiguration( );
+        if ( s.isVmLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
+          try {
+            comp.loadService( s ).get( );
+          } catch ( ServiceRegistrationException ex ) {
+            s.error( ex );
+          } catch ( Throwable ex ) {
+            Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
+            s.error( ex );
           }
         }
       }
@@ -143,14 +151,25 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
       LOG.info( "start(): " + comp );
       EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-        if( !comp.getComponentId( ).hasDispatcher( ) ) {
+        if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
         } else if ( Bootstrap.isCloudController( ) ) {
           try {
-            comp.enableTransition( s ).get( );
-            break;
-          } catch ( Throwable ex ) {
-            Exceptions.trace( "start()/enable(): Starting service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );//TODO:GRZE: report error
+            final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
+            Runnable followRunner = new Runnable( ) {
+              public void run( ) {
+                try {
+                  future.get( );
+                  comp.enableTransition( s );
+                } catch ( Exception ex ) {
+                  LOG.error( ex,
+                             ex );
+                }
+              }
+            };
+            Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, s.getFullName( ).toString( ) ).submit( followRunner );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
           }
         }
       }

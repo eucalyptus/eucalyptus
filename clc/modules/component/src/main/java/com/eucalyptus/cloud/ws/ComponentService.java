@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -52,13 +53,13 @@ public class ComponentService {
 		String host = request.getHost();
 		
 		LOG.info("Component: " + component + "@" + host);
-    Service service = lookupService( component, host );
-		if(service.isLocal()) {
+    ServiceConfiguration service = lookupService( component, host );
+		if(service.isVmLocal()) {
 			return request;
  		} else {
  			BaseMessage reply;
 			try {
-				reply = service.getDispatcher( ).send(request);
+				reply = service.lookupService( ).getDispatcher( ).send(request);
 			} catch (Exception e) {
 				LOG.error(e);
 				throw new EucalyptusCloudException("Unable to dispatch message to: " + service.getName());
@@ -67,11 +68,11 @@ public class ComponentService {
  		}
 	}
 
-  private Service lookupService( String component, String host ) throws EucalyptusCloudException {
+  private ServiceConfiguration lookupService( String component, String host ) throws EucalyptusCloudException {
     Component destinationComponent = Components.lookup( component );
     String canonicalHostName = Internets.toAddress( host ).getCanonicalHostName( );
-    for( Service s : destinationComponent.getServices( ) ) {
-		  if( Internets.toAddress( s.getServiceConfiguration( ).getHostName( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
+    for( ServiceConfiguration s : destinationComponent.lookupServiceConfigurations( ) ) {
+		  if( Internets.toAddress( s.getHostName( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
 		    return s;
 		  }
 		}

@@ -15,7 +15,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   private static Logger LOG = Logger.getLogger( VmStateCallback.class );
   
   public VmStateCallback( ) {
-    this.setRequest( new VmDescribeType( ) {
+    super( new VmDescribeType( ) {
       {
         regarding( );
       }

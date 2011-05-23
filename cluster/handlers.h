@@ -124,46 +124,6 @@ static configEntry configKeysNoRestart[] = {
   {NULL, NULL}
 };
 
-/*
-static char *configKeysRestart[] = {
-  "DISABLE_TUNNELING",
-  "ENABLE_WS_SECURITY",
-  "EUCALYPTUS",
-  "NC_FANOUT",
-  "NC_PORT",
-  "NC_SERVICE",
-  "SCHEDPOLICY",
-  "VNET_ADDRSPERNET",
-  "VNET_BRIDGE",
-  "VNET_BROADCAST",
-  "VNET_CLOUDIP",
-  "VNET_DHCPDAEMON",
-  "VNET_DHCPUSER",
-  "VNET_DNS",
-  "VNET_LOCALIP",
-  "VNET_MACMAP",
-  "VNET_MODE",
-  "VNET_NETMASK",
-  "VNET_PRIVINTERFACE",
-  "VNET_PUBINTERFACE",
-  "VNET_PUBLICIPS",
-  "VNET_ROUTER",
-  "VNET_SUBNET",
-  "POWER_IDLETHRESH",
-  "POWER_WAKETHRESH",
-  "CC_IMAGE_PROXY",
-  "CC_IMAGE_PROXY_CACHE_SIZE",
-  "CC_IMAGE_PROXY_PATH",
-  "LOGLEVEL",
-  NULL
-};
-static char *configKeysNoRestart[] = {
-  "NODES",
-  "NC_POLLING_FREQUENCY",
-  "CLC_POLLING_FREQUENCY",
-  NULL
-};
-*/
 static char *configValuesRestart[256], *configValuesNoRestart[256];
 static int configRestartLen=0, configNoRestartLen=0;
 

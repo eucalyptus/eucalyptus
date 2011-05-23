@@ -71,7 +71,7 @@
   <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
     <value name="type" field="type" usage="required" />
     <value name="name" field="name" usage="required" />
-    <value name="uri" field="uri" usage="optional" />
+    <value name="uris" field="uri" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.empyrean.ServiceInfoType" abstract="true">
     <value name="type" field="type" usage="required" />

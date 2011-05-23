@@ -90,6 +90,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.Architecture;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
@@ -196,7 +197,7 @@ public class ImageUtil {
     return size;
   }
   
-  public static void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
+  public static void checkStoredImage( final Image.StaticDiskImage imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null ) try {
       Document inputSource = null;
       try {
@@ -211,11 +212,12 @@ public class ImageUtil {
       try {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
-      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
-                                                                                                                                 "Manifest signature has changed since registration." );
+      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
       try {
-        WalrusUtil.triggerCaching( imgInfo );
+        if( imgInfo instanceof Image.StaticDiskImage ) {
+          WalrusUtil.triggerCaching( ( StaticDiskImage ) imgInfo );
+        }
       } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
       LOG.error( e );
@@ -319,13 +321,6 @@ public class ImageUtil {
     }
     if ( !isSet( kernelId ) ) kernelId = null;
     return kernelId;
-  }
-  
-  public static String[] getImagePathParts( String imageLocation ) throws EucalyptusCloudException {
-    String[] imagePathParts = imageLocation.split( "/" );
-    if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException(
-                                                                          "Image registration failed:  Invalid image location." );
-    return imagePathParts;
   }
   
   public static void checkBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {

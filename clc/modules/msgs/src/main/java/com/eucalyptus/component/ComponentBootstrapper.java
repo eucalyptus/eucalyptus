@@ -74,6 +74,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -119,10 +120,10 @@ public class ComponentBootstrapper {
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            throw Exceptions.error( new ServiceTransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
+            throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
           }
         } catch ( Throwable e ) {
-          throw Exceptions.error( new ServiceTransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
+          throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
         }
       }      
     }

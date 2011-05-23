@@ -37,28 +37,28 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
   @SuppressWarnings( { "deprecation", "unchecked" } )
-  private static void processFile( File f ) throws IOException {
-    JarFile jar = new JarFile( f );
-    Properties props = new Properties( );
-    List<JarEntry> jarList = Collections.list( jar.entries( ) );
+  private static void processFile( final File f ) throws IOException {
+    final JarFile jar = new JarFile( f );
+    final Properties props = new Properties( );
+    final List<JarEntry> jarList = Collections.list( jar.entries( ) );
     LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
-    for ( JarEntry j : jarList ) {
+    for ( final JarEntry j : jarList ) {
       if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
-        String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+        final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
         try {
-          Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
+          final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
           classList.put( candidate, f.getAbsolutePath( ) );
           if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) ) {
             try {
-              ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
+              final ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
-            } catch ( Exception e ) {
+            } catch ( final Exception e ) {
               LOG.fatal( e, e );
               jar.close( );
               throw new RuntimeException( e );
             }
           }
-        } catch ( ClassNotFoundException e ) {
+        } catch ( final ClassNotFoundException e ) {
           LOG.debug( e, e );
         }
       }
@@ -67,14 +67,14 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   private static void doDiscovery( ) {
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
+    final File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( final File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
           ServiceJarDiscovery.processFile( f );
-        } catch ( Throwable e ) {
+        } catch ( final Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
         }
@@ -83,15 +83,15 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     ServiceJarDiscovery.runDiscovery( );
   }
   
-  public static void doSingleDiscovery( ServiceJarDiscovery s ) {
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
+  public static void doSingleDiscovery( final ServiceJarDiscovery s ) {
+    final File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( final File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
              && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
           ServiceJarDiscovery.processFile( f );
-        } catch ( Throwable e ) {
+        } catch ( final Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
         }
@@ -100,11 +100,11 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     ServiceJarDiscovery.runDiscovery( s );
   }
   
-  public static void checkUniqueness( Class c ) {
+  public static void checkUniqueness( final Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
       
       LOG.fatal( "Duplicate bootstrap class registration: " + c.getName( ) );
-      for ( String fileName : classList.get( c ) ) {
+      for ( final String fileName : classList.get( c ) ) {
         LOG.fatal( "\n==> Defined in: " + fileName );
       }
       System.exit( 1 );
@@ -112,32 +112,32 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   public static void runDiscovery( ) {
-    for ( ServiceJarDiscovery s : discovery ) {
+    for ( final ServiceJarDiscovery s : discovery ) {
       EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).info( );
     }
-    for ( ServiceJarDiscovery s : discovery ) {
+    for ( final ServiceJarDiscovery s : discovery ) {
       runDiscovery( s );
     }
   }
   
-  public static void runDiscovery( ServiceJarDiscovery s ) {
+  public static void runDiscovery( final ServiceJarDiscovery s ) {
     LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
-    for ( Class c : classList.keySet( ) ) {
+    for ( final Class c : classList.keySet( ) ) {
       try {
         s.checkClass( c );
-      } catch ( Throwable t ) {
+      } catch ( final Throwable t ) {
         LOG.debug( t, t );
       }
     }
   }
   
-  private void checkClass( Class candidate ) {
+  private void checkClass( final Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {
         ServiceJarDiscovery.checkUniqueness( candidate );
-        EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).info( );
+        EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).trace( );
       }
-    } catch ( Throwable e ) {
+    } catch ( final Throwable e ) {
       if ( e instanceof InstantiationException ) {} else {
         LOG.trace( e, e );
       }
@@ -162,19 +162,19 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   public abstract Double getPriority( );
   
   @Override
-  public int compareTo( ServiceJarDiscovery that ) {
+  public int compareTo( final ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
   
   public static void processLibraries( ) {
-    File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( File f : libDir.listFiles( ) ) {
+    final File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( final File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        Bootstrap.LOG.info( "Found eucalyptus component jar: " + f.getName( ) );
+        EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
         try {
           processFile( f );
-        } catch ( Throwable e ) {
+        } catch ( final Throwable e ) {
           Bootstrap.LOG.error( e.getMessage( ) );
           continue;
         }
@@ -182,13 +182,13 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
   }
   
-  public static URLClassLoader makeClassLoader( File libDir ) {
-    URLClassLoader loader = new URLClassLoader( Lists.transform( Arrays.asList( libDir.listFiles( ) ), new Function<File, URL>( ) {
+  public static URLClassLoader makeClassLoader( final File libDir ) {
+    final URLClassLoader loader = new URLClassLoader( Lists.transform( Arrays.asList( libDir.listFiles( ) ), new Function<File, URL>( ) {
       @Override
-      public URL apply( File arg0 ) {
+      public URL apply( final File arg0 ) {
         try {
           return URI.create( "file://" + arg0.getAbsolutePath( ) ).toURL( );
-        } catch ( MalformedURLException e ) {
+        } catch ( final MalformedURLException e ) {
           LOG.debug( e, e );
           return null;
         }
@@ -197,12 +197,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     return loader;
   }
   
-  public static List<String> contextsInDir( File libDir ) {
-    ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
+  public static List<String> contextsInDir( final File libDir ) {
+    final ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
     try {
       Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
-      Set<String> ctxs = Sets.newHashSet( );
-      for ( Class candidate : getClassList( libDir ) ) {
+      final Set<String> ctxs = Sets.newHashSet( );
+      for ( final Class candidate : getClassList( libDir ) ) {
         if ( PersistenceContexts.isEntityClass( candidate ) ) {
           if ( Ats.from( candidate ).has( PersistenceContext.class ) ) {
             ctxs.add( Ats.from( candidate ).get( PersistenceContext.class ).name( ) );
@@ -215,8 +215,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
   }
   
-  public static List<Class> classesInDir( File libDir ) {
-    ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
+  public static List<Class> classesInDir( final File libDir ) {
+    final ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
     try {
       Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
       return getClassList( libDir );
@@ -225,26 +225,26 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
   }
   
-  private static List<Class> getClassList( File libDir ) {
-    List<Class> classList = Lists.newArrayList( );
-    for ( File f : libDir.listFiles( ) ) {
+  private static List<Class> getClassList( final File libDir ) {
+    final List<Class> classList = Lists.newArrayList( );
+    for ( final File f : libDir.listFiles( ) ) {
       if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
 //        LOG.trace( "Found eucalyptus component jar: " + f.getName( ) );
         try {
-          JarFile jar = new JarFile( f );
-          for( JarEntry j : Collections.list( jar.entries( ) ) ) {
+          final JarFile jar = new JarFile( f );
+          for ( final JarEntry j : Collections.list( jar.entries( ) ) ) {
             if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
-              String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+              final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
               try {
-                Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
+                final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
                 classList.add( candidate );
-              } catch ( ClassNotFoundException e ) {
+              } catch ( final ClassNotFoundException e ) {
 //                LOG.trace( e, e );
               }
             }
           }
           jar.close( );
-        } catch ( Throwable e ) {
+        } catch ( final Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
         }

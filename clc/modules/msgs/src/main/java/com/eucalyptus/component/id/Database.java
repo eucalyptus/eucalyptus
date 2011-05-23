@@ -82,7 +82,7 @@ public class Database extends ComponentId.Unpartioned {
   
   @Override
   public String getLocalEndpointName( ) {
-    return "mysql://" + Internets.localhost( ) + ":8777/eucalyptus";
+    return "mysql://" + Internets.localHostAddress( ) + ":8777/eucalyptus";
   }
   
   @Override

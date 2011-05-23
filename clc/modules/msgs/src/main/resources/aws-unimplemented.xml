@@ -63,51 +63,56 @@
   -->
 <binding force-classes="true" add-constructors="true">
 
-    <mapping name="DescribeReservedInstancesOfferingsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DescribeReservedInstancesOfferingsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <!--<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>-->
-        <structure name="reservedInstancesOfferingsSet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingsSet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="reservedInstancesId"/>
-                </structure>
-            </collection>
+    <structure name="reservedInstancesOfferingsSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingsSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
         </structure>
-    </mapping>
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DescribeReservedInstancesOfferings" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure name="reservedInstancesOfferingsSet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="reservedInstancesOfferingId"/>
-                </structure>
-            </collection>
+  <mapping name="DescribeReservedInstancesOfferings" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="reservedInstancesOfferingsSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesOfferingId" />
         </structure>
-        <value name="instanceType" field="instanceType" usage="optional"/>
-        <value name="availabilityZone" field="availabilityZone" usage="optional"/>
-        <value name="productDescription" field="productDescription" usage="optional"/>
-    </mapping>
+      </collection>
+    </structure>
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="optional" />
+    <value name="productDescription" field="productDescription" usage="optional" />
+  </mapping>
 
-    <mapping name="DescribeReservedInstancesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DescribeReservedInstancesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <!--<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>-->
-        <structure name="reservedInstancesSet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesSet" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="reservedInstancesId"/>
-                </structure>
-            </collection>
+    <structure name="reservedInstancesSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesSet" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
         </structure>
-    </mapping>
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DescribeReservedInstances" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure name="reservedInstancesSet">
-            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="reservedInstancesId"/>
-                </structure>
-            </collection>
+  <mapping name="DescribeReservedInstances" class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="reservedInstancesSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
         </structure>
-    </mapping>
+      </collection>
+    </structure>
+  </mapping>
 
 </binding>

@@ -100,23 +100,4 @@ public abstract class AbstractTransitionAction<P extends HasName<P>> implements 
    * @param parent
    */
   public void after( P parent ) {}
-  
-  public static final AbstractTransitionAction NOOP      = new AbstractTransitionAction( ) {
-                                                           public void leave( HasName parent, Completion transitionCallback ) {
-                                                             transitionCallback.fire( );
-                                                           }
-                                                           
-                                                           public String toString( ) {
-                                                             return "TransitionAction.noop";
-                                                           }
-                                                         };
-  public static final AbstractTransitionAction OUTOFBAND = new AbstractTransitionAction( ) {
-                                                           @Override
-                                                           public void leave( HasName parent, Completion transitionCallback ) {}
-                                                           
-                                                           public String toString( ) {
-                                                             return "TransitionAction.OUTOFBAND";
-                                                           }
-                                                           
-                                                         };
 }

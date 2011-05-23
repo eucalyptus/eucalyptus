@@ -8,7 +8,7 @@ import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -34,7 +34,7 @@ public class DatabaseCertificateProxy implements Certificate {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
@@ -58,7 +58,7 @@ public class DatabaseCertificateProxy implements Certificate {
           t.setActive( active );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
       throw new AuthException( e );
     }
@@ -77,7 +77,7 @@ public class DatabaseCertificateProxy implements Certificate {
           t.setRevoked( revoked );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setRevoked for " + this.delegate );
       throw new AuthException( e );
     }
@@ -96,7 +96,7 @@ public class DatabaseCertificateProxy implements Certificate {
           t.setCreateDate( createDate );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setCreateDate for " + this.delegate );
       throw new AuthException( e );
     }
@@ -111,7 +111,7 @@ public class DatabaseCertificateProxy implements Certificate {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
       throw new AuthException( e );
     }
@@ -131,7 +131,7 @@ public class DatabaseCertificateProxy implements Certificate {
           t.setPem( X509CertHelper.fromCertificate( x509 ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setX509Certificate for " + this.delegate );
       throw new AuthException( e );
     }

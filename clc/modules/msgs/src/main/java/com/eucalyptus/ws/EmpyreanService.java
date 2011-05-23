@@ -63,130 +63,334 @@
 
 package com.eucalyptus.ws;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
+import com.eucalyptus.component.ServiceCheckRecord;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Services;
+import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ModifyServiceResponseType;
+import com.eucalyptus.empyrean.ModifyServiceType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
+  
+  private enum TransitionName {
+    START, STOP, ENABLE, DISABLE, RESTART
+  }
+  
+  public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
+    ModifyServiceResponseType reply = request.getReply( );
+    TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
+    for ( Component comp : Components.list( ) ) {
+      ServiceConfiguration a;
+      try {
+        a = comp.lookupServiceConfiguration( request.getName( ) );
+      } catch ( Exception ex1 ) {
+        continue;
+      }
+      Component.State serviceState = a.lookupState( );
+      reply.set_return( true );
+      try {
+        switch ( transition ) {
+          case DISABLE:
+            if ( !Component.State.DISABLED.equals( a.lookupState( ) ) && !Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.disableTransition( a ).get( );
+            }
+            break;
+          case ENABLE:
+            if ( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.enableTransition( a ).get( );
+            }
+            break;
+          case STOP:
+            if ( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
+              return reply;
+            } else {
+              comp.stopTransition( a ).get( );
+            }
+            break;
+          case START:
+            if ( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
+              return reply;
+            } else {
+              comp.startTransition( a ).get( );
+            }
+            break;
+          case RESTART:
+            comp.stopTransition( a ).get( );
+            comp.enableTransition( a ).get( );
+            break;
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return reply.markFailed( );
+      }
+    }
+    return reply;
+  }
+  
   public StartServiceResponseType startService( StartServiceType request ) {
     StartServiceResponseType reply = request.getReply( );
-    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
-        if( service.isLocal( ) ) {
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        if ( service.isVmLocal( ) ) {
           try {
-            comp.startTransition( service.getServiceConfiguration( ) );
+            comp.startTransition( service );
           } catch ( IllegalStateException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-      }      
+        LOG.error( ex, ex );
+      }
     }
     return reply;
   }
+  
   public StopServiceResponseType stopService( StopServiceType request ) {
     StopServiceResponseType reply = request.getReply( );
-    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
-        if( service.isLocal( ) ) {
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        if ( service.isVmLocal( ) ) {
           try {
-            LOG.info( "Should be stopping the service instance here: " + service.getServiceConfiguration( ) );
-            //TODO:GRZE:FIXME
-            //            comp.stopService( service.getServiceConfiguration( ) );
+            comp.stopTransition( service ).get( );
           } catch ( IllegalStateException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
+            return reply.markFailed( );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+            return reply.markFailed( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+            return reply.markFailed( );
           }
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-      }      
+        LOG.error( ex, ex );
+        return reply.markFailed( );
+      }
     }
     return reply;
   }
+  
   public EnableServiceResponseType enableService( EnableServiceType request ) {
     EnableServiceResponseType reply = request.getReply( );
-    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        Service service = comp.lookupService( serviceInfo.getName( ) );
-        if( service.isLocal( ) ) {
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        if ( service.isVmLocal( ) ) {
           try {
-            comp.enableTransition( service.getServiceConfiguration( ) );
+            comp.enableTransition( service );
           } catch ( IllegalStateException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
+            return reply.markFailed( );
           }
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-      }      
+        LOG.error( ex, ex );
+        return reply.markFailed( );
+      }
     }
     return reply;
   }
+  
   public DisableServiceResponseType disableService( DisableServiceType request ) {
     DisableServiceResponseType reply = request.getReply( );
-    for( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component c = Components.lookup( serviceInfo.getType( ) );
-        for( Service service : c.lookupServices( ) ) {
-          String partition = service.getServiceConfiguration( ).getPartition( );
-          String name = service.getServiceConfiguration( ).getName( );
-          if( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
-            if( Component.State.ENABLED.equals( service.getState( ) ) ) {
+        for ( ServiceConfiguration config : c.lookupServiceConfigurations( ) ) {
+          String partition = config.getPartition( );
+          String name = config.getName( );
+          if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
+            if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
               try {
-                c.disableService( service.getServiceConfiguration( ) );
+                c.disableTransition( config ).get( );
                 reply.getServices( ).add( serviceInfo );
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( "DISABLE'ing service failed: " + ex.getMessage( ), ex );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex, ex );
+                return reply.markFailed( );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex, ex );
+                return reply.markFailed( );
               }
             } else {
-              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + service.toString( ) );
+              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + config.toString( ) );
+              return reply.markFailed( );
             }
           }
         }
       } catch ( NoSuchElementException ex ) {
         Exceptions.trace( "Failed to lookup component of type: " + serviceInfo.getType( ), ex );
+        return reply.markFailed( );
       }
     }
     return reply;
   }
-  public DescribeServicesResponseType describeService( DescribeServicesType request ) {
-    final DescribeServicesResponseType reply = request.getReply( );
-    for( Component comp : Components.list( ) ) {
-      if( comp.isEnabledLocally( ) ) {
-        final Service localService = comp.getLocalService( );
-        reply.getServiceStatuses( ).add( new ServiceStatusType( ) {{
-          setServiceId( localService.getServiceId( ) );
-          setLocalEpoch( reply.getBaseEpoch( ) );
-          setLocalState( localService.getState( ).toString( ) );
-          if ( localService.getDetails( ) != null ) {
-            getDetails( ).addAll( localService.getDetails( ) );
+  
+  static class Filters {
+    static Predicate<ServiceConfiguration> partition( final String partition ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return input.getPartition( ).equals( partition );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> host( final String host ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return host == null || input.getHostName( ).equals( host );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> state( final Component.State state ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          return input.lookupState( ).equals( state );
+        }
+      };
+    }
+    
+    static Predicate<Component> componentType( final ComponentId compId ) {
+      return new Predicate<Component>( ) {
+        @Override
+        public boolean apply( Component input ) {
+          return Any.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
+        }
+      };
+    }
+    
+    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listInternalArg ) {
+      final boolean listAll = Boolean.TRUE.equals( listAllArg );
+      final boolean listInternal = Boolean.TRUE.equals( listInternalArg );
+      return new Predicate<ServiceConfiguration>( ) {
+        @Override
+        public boolean apply( ServiceConfiguration input ) {
+          if ( listAll ) {
+            return true;
+          } else if ( !input.getComponentId( ).hasDispatcher( ) && listInternal && input.isHostLocal( ) ) {
+            return true;
+          } else if ( input.getComponentId( ).hasDispatcher( ) ) {
+            return true;
+          } else {
+            return false;
           }
-        }} );
+        }
+      };
+    }
+  }
+  
+  public DescribeServicesResponseType describeService( final DescribeServicesType request ) {
+    final DescribeServicesResponseType reply = request.getReply( );
+    
+    ComponentId compId = ( request.getByServiceType( ) != null )
+      ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
+      : Any.INSTANCE;
+    final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
+    final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
+    
+    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = new Function<ServiceConfiguration, ServiceStatusType>( ) {
+      
+      @Override
+      public ServiceStatusType apply( final ServiceConfiguration config ) {
+        return new ServiceStatusType( ) {
+          {
+            this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+            this.setLocalEpoch( reply.getBaseEpoch( ) );
+            try {
+              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+            } catch ( Exception ex ) {
+              this.setLocalState( "n/a: " + ex.getMessage( ) );
+            }
+            if ( showEvents ) {
+              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+              if ( !showEventStacks ) {
+                for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                  a.setStackTrace( "" );
+                }
+              }
+            }
+          }
+        };
+      }
+    };
+    
+    List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
+      {
+        if ( request.getByPartition( ) != null ) {
+          Partitions.exists( request.getByPartition( ) );
+          this.add( Filters.host( request.getByPartition( ) ) );
+        }
+        if ( request.getByState( ) != null ) {
+          Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
+          this.add( Filters.state( stateFilter ) );
+        }
+        this.add( Filters.host( request.getByHost( ) ) );
+        this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListInternal( ) ) );
+      }
+    };    
+    Predicate<Component> componentFilter = Filters.componentType( compId );
+    Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
+    
+    for ( Component comp : Components.list( ) ) {
+      if ( componentFilter.apply( comp ) ) {
+        for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+          if( configPredicate.apply( config ) ) {
+            reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
+          }
+        }
       }
     }
     return reply;
   }
-
 }

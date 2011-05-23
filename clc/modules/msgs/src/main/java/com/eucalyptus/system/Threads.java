@@ -109,25 +109,25 @@ public class Threads {
   private final static AtomicInteger                     threadIndex  = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices = new ConcurrentHashMap<String, ThreadPool>( );
   
-  public static ThreadPool lookup( Class<? extends ComponentId> group, Class owningClass ) {
+  public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
     return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) );
   }
-
-  public static ThreadPool lookup( Class<? extends ComponentId> group, Class owningClass, String name ) {
+  
+  public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass, final String name ) {
     return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) + "." + name );
   }
-
-  public static ThreadPool lookup( Class<? extends ComponentId> group ) {
+  
+  public static ThreadPool lookup( final Class<? extends ComponentId> group ) {
     return lookup( ComponentIds.lookup( group ).name( ) );
   }
   
-  private static ThreadPool lookup( String threadGroupName ) {
-    String groupName = PREFIX + threadGroupName;
+  private static ThreadPool lookup( final String threadGroupName ) {
+    final String groupName = PREFIX + threadGroupName;
     if ( execServices.containsKey( groupName ) ) {
       return execServices.get( groupName );
     } else {
       LOG.debug( "CREATE thread threadpool named: " + groupName );
-      ThreadPool f = new ThreadPool( groupName );
+      final ThreadPool f = new ThreadPool( groupName );
       if ( execServices.putIfAbsent( f.getName( ), f ) != null ) {
         LOG.warn( "SHUTDOWN:" + f.getName( ) + " Freeing duplicate thread pool..." );
         f.free( );
@@ -138,12 +138,12 @@ public class Threads {
   
   private static final ThreadPool SYSTEM = lookup( "SYSTEM" );
   
-  public static Thread newThread( Runnable r, String name ) {
+  public static Thread newThread( final Runnable r, final String name ) {
     LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
   }
   
-  public static Thread newThread( Runnable r ) {
+  public static Thread newThread( final Runnable r ) {
     LOG.debug( "CREATE new thread using: " + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r );
   }
@@ -156,12 +156,12 @@ public class Threads {
     private ExecutorService   pool;
     private Integer           numThreads  = -1;
     
-    private ThreadPool( String groupPrefix, Integer threadCount ) {
+    private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
       this.numThreads = threadCount;
     }
     
-    private ThreadPool( String groupPrefix ) {
+    private ThreadPool( final String groupPrefix ) {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( );
@@ -177,7 +177,7 @@ public class Threads {
       
     }
     
-    public ThreadPool limitTo( Integer numThreads ) {
+    public ThreadPool limitTo( final Integer numThreads ) {
       if ( this.numThreads.equals( numThreads ) ) {
         return this;
       } else {
@@ -186,7 +186,7 @@ public class Threads {
             return this;
           } else {
             this.numThreads = numThreads;
-            ExecutorService oldExec = this.pool;
+            final ExecutorService oldExec = this.pool;
             this.pool = null;
             if ( oldExec != null ) {
               oldExec.shutdown( );
@@ -215,7 +215,7 @@ public class Threads {
         return this.pool;
       } else {
         synchronized ( this ) {
-          if ( this.pool == null && this.numThreads == -1 ) {
+          if ( ( this.pool == null ) && ( this.numThreads == -1 ) ) {
             this.pool = Executors.newCachedThreadPool( this );
           } else {
             this.pool = Executors.newFixedThreadPool( this.numThreads );
@@ -228,22 +228,21 @@ public class Threads {
     private static final Runnable[] EMPTY = new Runnable[] {};
     
     public List<Runnable> free( ) {
-      execServices.remove( this.getName( ) );
       List<Runnable> ret = Lists.newArrayList( );
-      for ( Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
+      for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
         while ( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
           if ( this.pool instanceof ThreadPoolExecutor ) {
-            ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
-            for ( Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
+            final ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
+            for ( final Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
               LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
             }
           }
         }
-      } catch ( InterruptedException e ) {
+      } catch ( final InterruptedException e ) {
         Thread.currentThread( ).interrupt( );
         LOG.error( e, e );
       }
@@ -251,83 +250,95 @@ public class Threads {
     }
     
     @Override
-    public Thread newThread( Runnable r ) {
+    public Thread newThread( final Runnable r ) {
       return new Thread( this.group, r, this.group.getName( ) + "." + r.getClass( ) + "#" + Threads.threadIndex.incrementAndGet( ) );
     }
     
-    public void execute( Runnable command ) {
+    @Override
+    public void execute( final Runnable command ) {
       this.pool.execute( command );
     }
     
+    @Override
     public void shutdown( ) {
       this.pool.shutdown( );
+      execServices.remove( this.getName( ) );
     }
     
+    @Override
     public List<Runnable> shutdownNow( ) {
+      execServices.remove( this.getName( ) );
       return this.free( );
     }
     
+    @Override
     public boolean isShutdown( ) {
       return this.pool.isShutdown( );
     }
     
+    @Override
     public boolean isTerminated( ) {
       return this.pool.isTerminated( );
     }
     
-    public boolean awaitTermination( long timeout, TimeUnit unit ) throws InterruptedException {
+    @Override
+    public boolean awaitTermination( final long timeout, final TimeUnit unit ) throws InterruptedException {
       return this.pool.awaitTermination( timeout, unit );
     }
     
-    public <T> Future<T> submit( Callable<T> task ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
+    @Override
+    public <T> Future<T> submit( final Callable<T> task ) {
       return this.pool.submit( task );
     }
     
-    public <T> Future<T> submit( Runnable task, T result ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
+    @Override
+    public <T> Future<T> submit( final Runnable task, final T result ) {
       return this.pool.submit( task, result );
     }
     
-    public Future<?> submit( Runnable task ) {
-      LOG.debug( "SUBMIT new runnable at: " + Threads.currentStack( 3 ) );
+    @Override
+    public Future<?> submit( final Runnable task ) {
       return this.pool.submit( task );
     }
     
-    public <T> List<Future<T>> invokeAll( Collection<? extends Callable<T>> tasks ) throws InterruptedException {
+    @Override
+    public <T> List<Future<T>> invokeAll( final Collection<? extends Callable<T>> tasks ) throws InterruptedException {
       return this.pool.invokeAll( tasks );
     }
     
-    public <T> List<Future<T>> invokeAll( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException {
+    @Override
+    public <T> List<Future<T>> invokeAll( final Collection<? extends Callable<T>> tasks, final long timeout, final TimeUnit unit ) throws InterruptedException {
       return this.pool.invokeAll( tasks, timeout, unit );
     }
     
-    public <T> T invokeAny( Collection<? extends Callable<T>> tasks ) throws InterruptedException, ExecutionException {
+    @Override
+    public <T> T invokeAny( final Collection<? extends Callable<T>> tasks ) throws InterruptedException, ExecutionException {
       return this.pool.invokeAny( tasks );
     }
     
-    public <T> T invokeAny( Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
+    @Override
+    public <T> T invokeAny( final Collection<? extends Callable<T>> tasks, final long timeout, final TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
       return this.pool.invokeAny( tasks, timeout, unit );
     }
     
     @Override
-    public Thread newThread( Runnable r, String name ) {
+    public Thread newThread( final Runnable r, final String name ) {
       return this.newThread( this.group, r, name );
     }
     
     @Override
-    public Thread newThread( ThreadGroup group, Runnable r, String name ) {
+    public Thread newThread( final ThreadGroup group, final Runnable r, final String name ) {
       return new Thread( group, r, this.group.getName( ) + "." + r.getClass( ).getName( ) + "#" + Threads.threadIndex.incrementAndGet( ) + "#" + name );
     }
     
     @Override
-    public void setPattern( String pattern ) {}
+    public void setPattern( final String pattern ) {}
     
     @Override
-    public void setIncludeClusterName( boolean includeClusterName ) {}
+    public void setIncludeClusterName( final boolean includeClusterName ) {}
     
     @Override
-    public void setClusterName( String channelName ) {}
+    public void setClusterName( final String channelName ) {}
     
     /**
      * TODO: DOCUMENT
@@ -336,7 +347,7 @@ public class Threads {
      * @param address
      */
     @Override
-    public void setAddress( String address ) {}
+    public void setAddress( final String address ) {}
     
     /**
      * TODO: DOCUMENT
@@ -346,7 +357,7 @@ public class Threads {
      * @param thread
      */
     @Override
-    public void renameThread( String base_name, Thread thread ) {}
+    public void renameThread( final String base_name, final Thread thread ) {}
   }
   
   public static ExecutorService currentThreadExecutor( ) {
@@ -356,16 +367,18 @@ public class Threads {
       private int             runningTasks = 0;
       private boolean         shutdown     = false;
       
-      public void execute( Runnable command ) {
-        startTask( );
+      @Override
+      public void execute( final Runnable command ) {
+        this.startTask( );
         try {
           command.run( );
         } finally {
-          endTask( );
+          this.endTask( );
         }
       }
       
       /*@Override*/
+      @Override
       public boolean isShutdown( ) {
         this.lock.lock( );
         try {
@@ -376,6 +389,7 @@ public class Threads {
       }
       
       /*@Override*/
+      @Override
       public void shutdown( ) {
         this.lock.lock( );
         try {
@@ -387,28 +401,31 @@ public class Threads {
       
       // See sameThreadExecutor javadoc for unusual behavior of this method.
       /*@Override*/
+      @Override
       public List<Runnable> shutdownNow( ) {
-        shutdown( );
+        this.shutdown( );
         return Collections.emptyList( );
       }
       
       /*@Override*/
+      @Override
       public boolean isTerminated( ) {
         this.lock.lock( );
         try {
-          return this.shutdown && this.runningTasks == 0;
+          return this.shutdown && ( this.runningTasks == 0 );
         } finally {
           this.lock.unlock( );
         }
       }
       
       /*@Override*/
-      public boolean awaitTermination( long timeout, TimeUnit unit ) throws InterruptedException {
+      @Override
+      public boolean awaitTermination( final long timeout, final TimeUnit unit ) throws InterruptedException {
         long nanos = unit.toNanos( timeout );
         this.lock.lock( );
         try {
           for ( ;; ) {
-            if ( isTerminated( ) ) {
+            if ( this.isTerminated( ) ) {
               return true;
             } else if ( nanos <= 0 ) {
               return false;
@@ -430,7 +447,7 @@ public class Threads {
       private void startTask( ) {
         this.lock.lock( );
         try {
-          if ( isShutdown( ) ) {
+          if ( this.isShutdown( ) ) {
             throw new RejectedExecutionException( "Executor already shutdown" );
           }
           this.runningTasks++;
@@ -446,7 +463,7 @@ public class Threads {
         this.lock.lock( );
         try {
           this.runningTasks--;
-          if ( isTerminated( ) ) {
+          if ( this.isTerminated( ) ) {
             this.termination.signalAll( );
           }
         } finally {
@@ -455,8 +472,10 @@ public class Threads {
       }
     };
   }
-
-  public static StackTraceElement currentStack( int frameOffset ) {
-    return Thread.currentThread( ).getStackTrace( ).length <= frameOffset ? Thread.currentThread( ).getStackTrace( )[ 1 ] : Thread.currentThread( ).getStackTrace( )[ frameOffset ];
+  
+  public static StackTraceElement currentStack( final int frameOffset ) {
+    return Thread.currentThread( ).getStackTrace( ).length <= frameOffset
+      ? Thread.currentThread( ).getStackTrace( )[1]
+      : Thread.currentThread( ).getStackTrace( )[frameOffset];
   }
 }

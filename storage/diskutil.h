@@ -67,6 +67,7 @@
 #include "misc.h" // bolean
 #include "ipc.h" // sem
 
+#define MBR_BLOCKS (62 + 4)
 #define SECTOR_SIZE 512
 
 int diskutil_init (void);

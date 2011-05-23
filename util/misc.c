@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -82,6 +85,7 @@ permission notice:
 #include <euca_auth.h>
 #include <openssl/md5.h>
 #include <sys/mman.h> // mmap
+#include <pthread.h>
 
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
   int i, done, rc, j;
@@ -383,35 +387,37 @@ int check_file_newer_than(char *file, time_t mtime) {
 }
 
 // returns 0 if file is a readable regular file, 1 otherwise
-int check_file(char *file) {
-  int rc;
-  struct stat mystat;
-  
-  if (!file) {
-    return(1);
-  }
-  
-  rc = lstat(file, &mystat);
-  if (rc < 0 || !S_ISREG(mystat.st_mode)) {
-    return(1);
-  }
-  return(0);
+int check_file (const char *file) 
+{
+    int rc;
+    struct stat mystat;
+    
+    if (!file) {
+        return(1);
+    }
+    
+    rc = lstat(file, &mystat);
+    if (rc < 0 || !S_ISREG(mystat.st_mode)) {
+        return(1);
+    }
+    return(0);
 }
 
 // return 0 if path exists
-int check_path(char *path) {
-  int rc;
-  struct stat mystat;
-  
-  if (!path) {
-    return(1);
-  }
-  
-  rc = lstat(path, &mystat);
-  if (rc < 0) {
-    return(1);
-  }
-  return(0);
+int check_path (const char *path) 
+{
+    int rc;
+    struct stat mystat;
+    
+    if (!path) {
+        return(1);
+    }
+    
+    rc = lstat(path, &mystat);
+    if (rc < 0) {
+        return(1);
+    }
+    return(0);
 }
 
 /* given string *stringp, replace occurences of <source> with <destination>
@@ -535,7 +541,7 @@ char * system_output (char * shell_command )
   FILE * fp;
 
   /* forks off command (this doesn't fail if command doesn't exist */
-  logprintfl (EUCADEBUG, "system_output(): [%s]\n", shell_command);
+  logprintfl (EUCADEBUG2, "system_output(): [%s]\n", shell_command);
   if ( (fp=popen(shell_command, "r")) == NULL) 
     return NULL; /* caller can check errno */
   buf = fp2str (fp);
@@ -1840,6 +1846,25 @@ char * strdupcat (char * original, char * new)
     return ret;
 }
 
+// calculates an md5 hash of 'str' and places it into 'buf' in hex
+int str2md5str (char * buf, unsigned int buf_size, const char * str)
+{
+        if (buf_size < (MD5_DIGEST_LENGTH * 2 + 1)) 
+                return ERROR;
+
+        unsigned char md5digest [MD5_DIGEST_LENGTH];
+        if (MD5 ((const unsigned char *)str, strlen (str), md5digest)==NULL)
+                return ERROR;
+        
+        char * p = buf;
+        for (int i=0; i<MD5_DIGEST_LENGTH; i++) {
+                sprintf (p, "%02x", md5digest [i]);
+                p += 2;
+        }
+
+        return OK;
+}
+
 // returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
 // or NULL if there was an error; the string must be freed by the caller
 char * file2md5str (const char * path)
@@ -1873,6 +1898,29 @@ char * file2md5str (const char * path)
     return md5string;
 }
 
+// Jenkins hash function (from http://en.wikipedia.org/wiki/Jenkins_hash_function)
+uint32_t jenkins (const char * key, size_t len)
+{
+        uint32_t hash, i;
+        for (hash = i = 0; i < len; ++i) {
+                hash += key[i];
+                hash += (hash << 10);
+                hash ^= (hash >> 6);
+        }
+        hash += (hash << 3);
+        hash ^= (hash >> 11);
+        hash += (hash << 15);
+        
+        return hash;
+}
+
+// calculates a Jenkins hash of 'str' and places it into 'buf' in hex
+int hexjenkins (char * buf, unsigned int buf_size, const char * str)
+{
+        snprintf (buf, buf_size, "%08x", jenkins (str, strlen (str)));
+        return OK;
+}
+
 // given path=A/B/C and only A existing, create A/B and, unless
 // is_file_path==1, also create A/B/C directory
 // returns: 0 = path already existed, 1 = created OK, -1 = error
@@ -1904,7 +1952,7 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
 
         if ( try_dir ) {
             if ( stat (path_copy, &buf) == -1 ) {
-                logprintfl (EUCAINFO, "creating path %s\n", path_copy);
+                logprintfl (EUCAINFO, "{%u} creating path %s\n", (unsigned int)pthread_self(), path_copy);
 
                 if ( mkdir (path_copy, mode) == -1) {
                     logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
@@ -1921,4 +1969,12 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
 
     free (path_copy);
     return ret;
+}
+
+// time since 1970 in microseconds
+long long time_usec (void)
+{
+    struct timeval tv;
+    gettimeofday (&tv, NULL);
+    return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }

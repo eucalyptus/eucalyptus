@@ -65,38 +65,53 @@ package com.eucalyptus.component;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.config.ConfigurationService;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.util.concurrent.GenericFuture;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
-
+  
   public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     final ServiceBuilder builder = component.getBuilder( );
     String partition = part;
-    if( !component.getComponentId( ).isPartitioned( ) ) {
+    
+    if ( !component.getComponentId( ).isPartitioned( ) ) {
       partition = name;
-    } else if( component.getComponentId( ).isCloudLocal( ) ) {
+    } else if ( component.getComponentId( ).isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
-    } else if( partition == null ) {
+    } else if ( partition == null ) {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
+    
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
     }
+    
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        component.enableTransition( newComponent ); 
+        final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
+        Runnable followRunner = new Runnable( ) {
+          public void run( ) {
+            try {
+              future.get( );
+              component.enableTransition( newComponent );
+            } catch ( Exception ex ) {
+              LOG.error( ex,
+                         ex );
+            }
+          }
+        };
+        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner );
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
-        throw Exceptions.filterStackTrace( ex );
       }
       return true;
     } catch ( Throwable e ) {
@@ -106,8 +121,8 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
     }
   }
-
-  public static boolean deregister( Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
+  
+  public static boolean deregister( final Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
     final ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     try {
@@ -121,7 +136,7 @@ public class ComponentRegistrationHandler {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
     }
-    ServiceConfiguration conf;
+    final ServiceConfiguration conf;
     try {
       conf = builder.lookupByName( name );
     } catch ( ServiceRegistrationException e ) {
@@ -130,13 +145,27 @@ public class ComponentRegistrationHandler {
       throw e;
     }
     try {
-      try {
-        builder.getComponent( ).disableService( conf ).get( );
-        builder.getComponent( ).stopService( conf ).get( );
-        builder.getComponent( ).destroyService( conf ).get( );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-      }
+      final CheckedListenableFuture<ServiceConfiguration> future = component.stopTransition( conf );
+      Runnable followRunner = new Runnable( ) {
+        public void run( ) {
+          try {
+            future.get( );
+            for ( int i = 0; i < 3; i++ ) {
+              try {
+                component.destroyTransition( conf );
+                break;
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex, Exceptions.filterStackTrace( ex, 10 ) );
+                continue;
+              }
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex,
+                       ex );
+          }
+        }
+      };
+      Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, conf.getFullName( ).toString( ) ).submit( followRunner );
       builder.remove( conf );
       return true;
     } catch ( Throwable e ) {
@@ -146,5 +175,5 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": remove failed with message: " + e.getMessage( ), e );
     }
   }
-
+  
 }

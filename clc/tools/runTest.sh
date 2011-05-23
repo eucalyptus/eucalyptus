@@ -29,6 +29,16 @@ FILES=$(\ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/*.jar)
 for FILE in $FILES; do
   export CLASSPATH=${FILE}:${CLASSPATH}
 done
+
+# we assume that anything starting with '-D' is a JVM argument
+for arg in "$@" ; do
+    if [ "${arg:0:2}" = "-D" ] ; then
+        JVM_PARAMS="$JVM_PARAMS $arg"
+    else
+        HARNESS_PARAMS="$HARNESS_PARAMS $arg"
+    fi
+done
+
 CLuSSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
 echo -e "${CLASSPATH//:/\n}"
 java -Xms1g -Xmx3g -XX:MaxPermSize=768m -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} \
@@ -39,4 +49,5 @@ java -Xms1g -Xmx3g -XX:MaxPermSize=768m -Xbootclasspath/p:${EUCALYPTUS}/usr/shar
 	-Deuca.log.level=TRACE  \
 	-Deuca.log.appender=console \
 	-Djava.security.egd=file:/dev/./urandom \
-	com.eucalyptus.upgrade.TestHarness ${@}
+        ${JVM_PARAMS} \
+	com.eucalyptus.upgrade.TestHarness ${HARNESS_PARAMS}

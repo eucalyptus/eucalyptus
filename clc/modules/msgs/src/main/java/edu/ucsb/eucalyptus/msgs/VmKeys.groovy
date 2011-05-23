@@ -93,6 +93,8 @@ public class DescribeKeyPairsResponseType extends VmKeyPairMessage {
 public class DescribeKeyPairsType extends VmKeyPairMessage {
   @HttpParameterMapping (parameter = "KeyName")
   ArrayList<String> keySet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeKeyPairsResponseItemType extends EucalyptusData {
   String keyName;
