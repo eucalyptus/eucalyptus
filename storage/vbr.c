@@ -104,6 +104,46 @@ prep_location ( // picks a service URI and prepends it to resourceLocation in VB
     return ERROR;
 }
 
+// parse spec_str as a VBR record and add it to 
+// vm_type->virtualBootRecord[virtualBootRecordLen]
+// return 0 if OK, return 1 on error
+int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type)
+{
+    if (vm_type->virtualBootRecordLen==EUCA_MAX_VBRS) {
+        logprintfl (EUCAERROR, "too many entries in VBR already\n");
+        return 1;
+    }
+    virtualBootRecord * vbr = &(vm_type->virtualBootRecord[vm_type->virtualBootRecordLen++]);
+    
+    char * spec_copy = strdup (spec_str);
+    char * type_spec = strtok (spec_copy, ":");
+    char * id_spec = strtok (NULL, ":");
+    char * size_spec = strtok (NULL, ":");
+    char * format_spec = strtok (NULL, ":");
+    char * dev_spec = strtok (NULL, ":");
+    char * loc_spec = strtok (NULL, ":");
+    if (type_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'type' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+    if (id_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'id' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->id, id_spec, sizeof (vbr->id));
+    if (size_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'size' specification in VBR '%s'\n", spec_str); goto out_error; }
+    vbr->size = atoi (size_spec);
+    if (format_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'format' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+    if (dev_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+    if (loc_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
+    
+    free (spec_copy);
+    return 0;
+    
+ out_error:
+    vm_type->virtualBootRecordLen--;
+    free (spec_copy);
+    return 1;
+}
+
 static int // returns OK or ERROR
 parse_rec ( // parses the VBR as supplied by a client or user, checks values, and fills out almost the rest of the struct with typed values
            virtualBootRecord * vbr, // a VBR record to parse and verify
@@ -445,10 +485,10 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
 static void update_vbr_with_backing_info (artifact * a)
 {
     assert (a);
-    assert (a->bb);
     if (a->vbr==NULL) return;
     virtualBootRecord * vbr = a->vbr;
 
+    assert (a->bb);
     if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
         strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
@@ -745,7 +785,7 @@ static int art_add_dep (artifact * a, artifact * dep)
 {
     for (int i = 0; i < MAX_ARTIFACT_DEPS; i++) {
         if (a->deps[i] == NULL) {
-            logprintfl (EUCADEBUG, "[%s] added to artifact %03d/%s artifact %03d/%s\n", 
+            logprintfl (EUCADEBUG, "[%s] added to artifact %03d|%s artifact %03d|%s\n", 
                         a->instanceId, a->seq, a->id, dep->seq, dep->id);
             a->deps[i] = dep;
             dep->refs++;
@@ -764,7 +804,7 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
             art_free (a->deps[i]);
         }
         free (a);
-        logprintfl (EUCADEBUG, "[%s] freeing artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", 
+        logprintfl (EUCADEBUG, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
                     a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
     }
 }
@@ -778,7 +818,7 @@ void arts_free (artifact * array [], unsigned int array_len)
 
 static void art_print_tree (const char * prefix, artifact * a)
 {
-    logprintfl (EUCADEBUG, "[%s] artifacts tree: %s%03d %s cache=%d file=%d creator=%0x vbr=%0x\n", 
+    logprintfl (EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%0x vbr=%0x\n", 
                 a->instanceId, prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix [512];
@@ -786,6 +826,28 @@ static void art_print_tree (const char * prefix, artifact * a)
     for (int i=0; i< MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         art_print_tree (new_prefix, a->deps[i]);
     }
+}
+
+boolean tree_uses_blobstore (artifact * a)
+{
+    if (!a->id_is_path)
+        return TRUE;
+    for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
+        if (tree_uses_blobstore (a->deps[i]))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+boolean tree_uses_cache (artifact * a)
+{
+    if (a->may_be_cached)
+        return TRUE;
+    for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
+        if (tree_uses_cache (a->deps[i]))
+            return TRUE;
+    }
+    return FALSE;
 }
 
 static int art_gen_id (char * buf, unsigned int buf_size, const char * first, const char * sig)
@@ -812,7 +874,7 @@ artifact * art_alloc (const char * id, const char * sig, long long size_bytes, b
     static int seq = 0;
     a->seq = ++seq; // not thread safe, but seq's are just for debugging
     strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
-    logprintfl (EUCADEBUG, "[%s] allocated artifact %03d id=%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId,  seq, id, size_bytes, vbr, may_be_cached, must_be_file);
+    logprintfl (EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId,  seq, id, size_bytes, vbr, may_be_cached, must_be_file);
 
     if (id)
         strncpy (a->id, id, sizeof (a->id));
@@ -1094,6 +1156,13 @@ free:
     return NULL;
 }
 
+// sets instance ID in thread-local variable, for logging
+// (same effect as passing it into vbr_alloc_tree)
+void art_set_instanceId (const char * instanceId) 
+{
+    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+}
+
 artifact * // returns pointer to the root of artifact tree or NULL on error
 vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must free the tree)
                 virtualMachine * vm, // virtual machine containing the VBR
@@ -1260,7 +1329,6 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 {
     int ret = ERROR;
     assert (a);
-    assert (work_bs);
 
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
@@ -1273,15 +1341,30 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     // see if a file and if it exists
     if (a->id_is_path) {
         if (check_path (a->id)) {
-            return BLOBSTORE_ERROR_NOENT;
+            if (do_create) {
+                return OK; // creating only matters for blobs, which get locked, not for files
+            } else {
+                return BLOBSTORE_ERROR_NOENT;
+            }
         } else {
             return OK;
         }
     }
 
+    assert (work_bs);
+    long long size_bytes;
+    if (do_create) {
+        size_bytes = a->size_bytes;
+    } else {
+        // do not verify size when opening blobs because some 
+        // conversions may change them, instead just rely on
+        // signature comparison to validate the blobs
+        size_bytes = 0; 
+    }
+
     // for a blob first try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
-        ret = find_or_create_blob (do_create, cache_bs, id_cache, a->size_bytes, a->sig, bbp);
+        ret = find_or_create_blob (do_create, cache_bs, id_cache, size_bytes, a->sig, bbp);
 
         // for some error conditions from cache we try work blobstore
         if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
@@ -1303,7 +1386,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
         logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
     }
-    return find_or_create_blob (do_create, work_bs, id_work, a->size_bytes, a->sig, bbp);
+    return find_or_create_blob (do_create, work_bs, id_work, size_bytes, a->sig, bbp);
 }
 
 #define ARTIFACT_RETRY_SLEEP_USEC 100LL
@@ -1318,7 +1401,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 {
     long long started = time_usec();
     assert (root);
-    assert (work_bs);
 
     logprintfl (EUCADEBUG, "[%s] implementing artifact %s\n", root->instanceId, root->id);
 
@@ -1339,7 +1421,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d/%s\n", root->instanceId, root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d|%s\n", root->instanceId, root->seq, root->id);
                 update_vbr_with_backing_info (root);
                 do_deps = FALSE;
                 do_create = FALSE;
@@ -1350,7 +1432,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d/%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
                 goto retry;
             }
         }
@@ -1379,7 +1461,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d/%s\n", root->instanceId,  root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s\n", root->instanceId,  root->seq, root->id);
                 break;
             case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
                 ret = BLOBSTORE_ERROR_AGAIN;
@@ -1388,13 +1470,13 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 goto retry;
             }
 
             ret = root->creator (root);
             if (ret != OK) {
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s\n", root->instanceId, root->id);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact
                 blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
             } else {

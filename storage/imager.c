@@ -30,6 +30,11 @@ static map * artifacts_map;
 static boolean print_debug = FALSE;
 static boolean print_argv = FALSE;
 
+static void bs_errors (const char * msg) { 
+    // we normally do not care to print all messages from blobstore as many are errors that we can handle
+    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+} 
+
 static void set_debug (boolean yes)
 {
     // so euca libs will log to stdout
@@ -232,25 +237,65 @@ int main (int argc, char * argv[])
         logprintfl (EUCADEBUG, "argv[]: %s\n", argv_str);
     }
 
-    // invoke the requirements checkers in the same order as on command line
+    // invoke the requirements checkers in the same order as on command line,
+    // constructing the artifact tree originating at 'root'
     artifact * root = NULL;
-    for (int i=0; i<ncmds; i++)
-        if (reqs[i].cmd->requirements!=NULL)
+    for (int i=0; i<ncmds; i++) {
+        if (reqs[i].cmd->requirements!=NULL) {
+            art_set_instanceId (reqs[i].cmd->name); // for logging
             if ((root = reqs[i].cmd->requirements (&reqs[i], root))==NULL) // pass results of earlier checkers to later checkers
                 err ("failed while verifying requirements");
+        }
+    }
     
-    // implements the artifact tree
+    // see if work blobstore will be needed at any stage
+    // and open or create the work blobstore
+    blobstore * work_bs = NULL;
+    if (tree_uses_blobstore (root)) {
+        // set the function that will catch blobstore errors
+        blobstore_set_error_function ( &bs_errors ); 
+
+        if (ensure_directories_exist (get_work_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+            err ("failed to open or create work directory");
+        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+        if (work_bs==NULL) {
+            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            err ("failed to open work blobstore");
+        }
+    }
+
+    // see if cache blobstore will be needed at any stage
+    blobstore * cache_bs = NULL;
+    if (tree_uses_cache (root)) {
+        if (ensure_directories_exist (get_cache_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+            err ("failed to open or create cache directory");
+        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        if (cache_bs==NULL) {
+            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            blobstore_close (work_bs);            
+            err ("failed to open cache blobstore");
+        }
+    }
+
+    // implement the artifact tree
     int ret = OK;
     if (root) {
-        blobstore * work_bs = NULL; // TODO: open blobstore
-        blobstore * cache_bs = NULL; // TODO: open blobstore
+        art_set_instanceId ("imager"); // for logging
         ret = art_implement_tree (root, work_bs, cache_bs, NULL, INSTANCE_PREP_TIMEOUT_USEC); // do all the work!
     }
 
     // invoke the cleaners for each command to tidy up disk space and memory allocations
-    for (int i=0; i<ncmds; i++)
-        if (reqs[i].cmd->cleanup!=NULL)
+    for (int i=0; i<ncmds; i++) {
+        if (reqs[i].cmd->cleanup!=NULL) {
+            art_set_instanceId (reqs[i].cmd->name); // for logging
             reqs[i].cmd->cleanup (&reqs[i], (i==(ncmds-1))?(TRUE):(FALSE));
+        }
+    }
+
+    // free the artifact tree
+    if (root) {
+        art_free (root);
+    }
 
     // if work dir was created and is now empty, it will be deleted
     clean_work_dir();

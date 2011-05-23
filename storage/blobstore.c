@@ -88,8 +88,6 @@
 #include "misc.h" // ensure_...
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
-#define BLOBSTORE_DIRECTORY_PERM 0771 // the '1' is there so libvirt/KVM on Maverick do not stumble on permissions
-#define BLOBSTORE_FILE_PERM 0660
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
 #define BLOBSTORE_LOCK_TIMEOUT_USEC 1000LL
 #define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL

@@ -74,6 +74,10 @@
 #define MAX_DM_PATH (MAX_DM_NAME+12)   // e.g. /dev/mapper/euca-819312998196-i-4336096F-prt-00512swap-ac8d5670 
 #define MAX_DM_LINE (MAX_DM_PATH*2+40) // e.g. 0 1048576 snapshot $DM1 $DM2 p 16
 
+// default permissions for blosbstore content
+#define BLOBSTORE_DIRECTORY_PERM 0771 // the '1' is there so libvirt/KVM on Maverick do not stumble on permissions
+#define BLOBSTORE_FILE_PERM 0660
+
 // flags for *_open() calls
 #define BLOBSTORE_FLAG_RDWR     00001
 #define BLOBSTORE_FLAG_RDONLY   00002
