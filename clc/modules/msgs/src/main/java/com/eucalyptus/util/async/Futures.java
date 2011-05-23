@@ -65,8 +65,10 @@ public class Futures {
           Exceptions.eat( "Callback marked as done has null valued response: " + reply );
         }
         try {
-          this.LOG.trace( EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).toString( ) );
-          this.callback.fire( reply );
+	  if( reply != null ) {
+            this.LOG.trace( EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).toString( ) );
+	  }          
+	  this.callback.fire( reply );
         } catch ( Throwable ex ) {
           this.LOG.error( EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).toString( ) );
           this.doFail( ex );
