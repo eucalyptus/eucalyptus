@@ -16,6 +16,7 @@ import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.Session;
 import com.eucalyptus.webui.shared.query.QueryParser;
 import com.eucalyptus.webui.shared.query.QueryParsingException;
+import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
@@ -33,10 +34,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
   }
   
-  private static SearchQuery parseQuery( String query ) throws EucalyptusServiceException {
+  private static SearchQuery parseQuery( QueryType type, String query ) throws EucalyptusServiceException {
     SearchQuery sq = null;
     try {
-      sq = QueryParser.get( ).parse( query );
+      sq = QueryParser.get( ).parse( type.name( ), query );
     } catch ( QueryParsingException e ) {
       throw new EucalyptusServiceException( "Invalid query: " + e );
     }
@@ -155,7 +156,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.account, search );
     List<SearchResultRow> rows = EuareWebBackend.searchAccounts( searchQuery );
     SearchResult result = new SearchResult( rows.size( ), range );
     result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
@@ -166,7 +167,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.group, search );
     List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.GROUP_COMMON_FIELD_DESCS );
@@ -177,7 +178,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.user, search );
     List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.USER_COMMON_FIELD_DESCS );
@@ -188,7 +189,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.policy, search );
     List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.POLICY_COMMON_FIELD_DESCS );
@@ -199,7 +200,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.key, search );
     List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.KEY_COMMON_FIELD_DESCS );
@@ -210,7 +211,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     verifySession( session );
-    SearchQuery searchQuery = parseQuery( search );
+    SearchQuery searchQuery = parseQuery( QueryType.cert, search );
     List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.CERT_COMMON_FIELD_DESCS );
