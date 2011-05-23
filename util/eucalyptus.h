@@ -128,7 +128,7 @@ permission notice:
 #define EUCA_MAX_VOLUMES 256
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
-#define EUCA_MAX_PARTITIONS 99 // partitions per disk
+#define EUCA_MAX_PARTITIONS 32 // partitions per disk
 #define EUCA_MAX_DISKS 26 // disks per bus: sd[a-z]
 #define DEFAULT_NC_CACHE_SIZE 999999 // in MB
 #define DEFAULT_NC_WORK_SIZE  999999 // in MB
@@ -136,10 +136,14 @@ permission notice:
 #define MAX_PATH_SIZE 4096 // TODO: remove
 
 #define MEGABYTE 1048576
+
+// return codes
 #define OK 0
 #define ERROR 1
 #define ERROR_FATAL 1
 #define ERROR_RETRY -1
+#define READER 2
+#define WRITER 3
 
 typedef enum instance_states_t { // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */

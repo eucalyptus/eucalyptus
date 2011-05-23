@@ -11,6 +11,7 @@
 #include <sys/stat.h> // mode_t
 #include "misc.h"
 #include "map.h"
+#include "vbr.h"
 
 struct _imager_command;
 
@@ -22,6 +23,7 @@ typedef struct _imager_param {
 typedef struct _imager_request {
     struct _imager_command * cmd;
     imager_param * params;
+    int index; // of this command in a sequence
     void * internal;
 } imager_request;
 
@@ -29,8 +31,7 @@ typedef struct _imager_command {
     char * name;
     char ** (* parameters) (); // returns valid parameter names and info for each
     int (* validate) (imager_request *); // verifies parameters, returning 0 if all is well
-    int (* requirements) (imager_request *); // checks on inputs, records outputs
-    int (* execute) (imager_request *); // executes the request
+    artifact * (* requirements) (imager_request *, artifact * prev_art); // checks on inputs, records outputs
     int (* cleanup) (imager_request *, boolean);
 } imager_command;
 
