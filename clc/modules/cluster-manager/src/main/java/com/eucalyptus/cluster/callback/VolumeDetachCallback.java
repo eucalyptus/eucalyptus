@@ -79,7 +79,7 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
   public VolumeDetachCallback( DetachVolumeType request ) {
-    this.setRequest( request );
+    super( request );
   }
   
   /**

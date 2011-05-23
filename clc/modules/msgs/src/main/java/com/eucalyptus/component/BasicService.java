@@ -66,53 +66,65 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.google.common.collect.Lists;
+import com.eucalyptus.util.fsm.StateMachine;
 
-public class BasicService implements Service, EventListener {
-  private static Logger              LOG  = Logger.getLogger( BasicService.class );
-  private final ServiceConfiguration serviceConfiguration;
-  private final ServiceState         stateMachine;
-  private final Runnable             checker;
-  private State                      goal = Component.State.ENABLED;               //TODO:GRZE:URGENT change!!!
-                                                                                    
-  BasicService( ServiceConfiguration serviceConfiguration ) {
+public class BasicService extends AbstractService implements Service {
+  private static Logger                                                                   LOG  = Logger.getLogger( BasicService.class );
+  private final ServiceConfiguration                                                      serviceConfiguration;
+  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
+  private State                                                                           goal = Component.State.ENABLED;
+  
+  BasicService( ServiceConfiguration serviceConfiguration ) throws ServiceRegistrationException {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    this.checker = new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          if ( BasicService.this.getState( ).ordinal( ) > State.STOPPED.ordinal( ) ) {
-            BasicService.this.stateMachine.transitionSelf( );
-          }
-        } catch ( Throwable ex ) {
-          LOG.debug( "CheckRunner caught an exception: " + ex );
-        }
-      }
-    };
+    try {
+      this.stateMachine.transition( State.INITIALIZED );
+    } catch ( IllegalStateException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    } catch ( ExistingTransitionException ex ) {
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
+    }
+    
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
+  
+  static class Broken extends BasicService {
+    
+    Broken( ServiceConfiguration serviceConfiguration ) throws ServiceRegistrationException {
+      super( serviceConfiguration );
+      super.setGoal( Component.State.BROKEN );
+      try {
+        super.stateMachine.transition( Component.State.BROKEN );
+      } catch ( IllegalStateException ex ) {
+        LOG.error( ex, ex );
+      } catch ( ExistingTransitionException ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    
   }
   
   @Override
@@ -121,27 +133,8 @@ public class BasicService implements Service, EventListener {
   }
   
   @Override
-  public State getState( ) {
-    return this.stateMachine.getState( );
-  }
-  
-  /** TODO:GRZE: clean this up **/
-  @Override
-  public final ServiceId getServiceId( ) {
-    return new ServiceId( ) {
-      {
-        this.setUuid( BasicService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( BasicService.this.serviceConfiguration.getPartition( ) );
-        this.setName( BasicService.this.serviceConfiguration.getName( ) );
-        this.setType( BasicService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( BasicService.this.serviceConfiguration.getUri( ).toString( ) );
-      }
-    };
-  }
-  
-  @Override
   public Boolean isLocal( ) {
-    return this.serviceConfiguration.isLocal( );
+    return this.serviceConfiguration.isVmLocal( );
   }
   
   @Override
@@ -152,24 +145,6 @@ public class BasicService implements Service, EventListener {
   @Override
   public X509Certificate getCertificate( ) {
     return SystemCredentialProvider.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
-  }
-  
-  /**
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   * @param that
-   * @return
-   */
-  @Override
-  public int compareTo( Service that ) {
-    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
-        return this.getName( ).compareTo( that.getName( ) );
-      } else {
-        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
-      }
-    } else {
-      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
-    }
   }
   
   /**
@@ -191,34 +166,14 @@ public class BasicService implements Service, EventListener {
   }
   
   @Override
-  public FullName getFullName( ) {
-    return this.serviceConfiguration.getFullName( );
-  }
-  
-  @Override
   public String toString( ) {
     return String.format( "Service %s name=%s serviceConfiguration=%s\n",
                           this.getComponentId( ), this.getName( ), this.getServiceConfiguration( ) );
   }
   
   @Override
-  public String getPartition( ) {
-    return this.serviceConfiguration.getPartition( );
-  }
-  
-  @Override
-  public Component getParent( ) {
-    return this.getComponent( );
-  }
-  
-  @Override
   public Dispatcher getDispatcher( ) {
     throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
-  }
-  
-  @Override
-  public List<String> getDetails( ) {
-    return Lists.newArrayList( );
   }
   
   @Override
@@ -233,7 +188,7 @@ public class BasicService implements Service, EventListener {
   
   @Override
   public boolean checkTransition( Transition transition ) {
-    return this.stateMachine.checkTransition( transition );
+    return this.stateMachine.isLegalTransition( transition );
   }
   
   @Override
@@ -242,29 +197,46 @@ public class BasicService implements Service, EventListener {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( transition );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.stateMachine.transition( state );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return this.stateMachine.transitionSelf( );
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz ) {
-      Component c = this.getComponent( );
-      if ( c.hasLocalService( ) && Component.State.STOPPED.ordinal( ) < c.getState( ).ordinal( ) ) {
-        if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.NOTREADY.equals( c.getState( ) ) ) {
-          Threads.lookup( Empyrean.class ).submit( BasicService.this.checker );
-        } else if ( Component.State.ENABLED.equals( c.getLocalService( ).getGoal( ) ) && Component.State.DISABLED.equals( c.getState( ) ) ) {
-          c.enableTransition( c.getLocalService( ).getServiceConfiguration( ) );//TODO:GRZE:URGENT state change happening here
+  public final void fireEvent( Event event ) {
+    if ( event instanceof LifecycleEvent ) {
+      super.fireLifecycleEvent( event );
+    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) && ( ( Hertz ) event ).isAsserted( 10l ) ) {
+      final ServiceConfiguration config = this.getServiceConfiguration( );
+      if ( config.lookupComponent( ).hasService( config ) ) {
+        if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
+          try {
+            Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+              @Override
+              public void run( ) {
+                if ( !Bootstrap.isFinished( ) ) {
+                  return;
+                } else {
+                  try {
+                    if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
+                      config.lookupComponent( ).enableTransition( config ).get( );
+                    } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
+                      config.lookupComponent( ).disableTransition( config ).get( );
+                    } else if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
+                      BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
+                    } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
+                      config.lookupComponent( ).disableTransition( config ).get( );
+                    }
+                  } catch ( Throwable ex ) {
+                    LOG.debug( "CheckRunner caught an exception: " + ex );
+                    BasicService.this.getServiceConfiguration( ).info( ex );
+                  }
+                }
+              }
+            } ).get( );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+          } catch ( ExecutionException ex ) {
+            config.error( ex.getCause( ) );
+            //          config.lookupService( ).setGoal( Component.State.DISABLED );
+          }
+        } else {
+          ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+          ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
         }
       }
     }
@@ -312,4 +284,31 @@ public class BasicService implements Service, EventListener {
     return true;
   }
   
+  public boolean isBusy( ) {
+    return this.stateMachine.isBusy( );
+  }
+  
+  public String getPartition( ) {
+    return this.serviceConfiguration.getPartition( );
+  }
+  
+  public FullName getFullName( ) {
+    return this.serviceConfiguration.getFullName( );
+  }
+  
+  @Override
+  public int compareTo( ServiceConfiguration that ) {
+    return this.serviceConfiguration.compareTo( that );
+  }
+  
+  @Override
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return this.stateMachine;
+  }
+  
+  @Override
+  public void cleanUp( ) {
+    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
 }

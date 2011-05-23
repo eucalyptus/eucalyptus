@@ -66,6 +66,7 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.component.ComponentId;
 
 public class Any extends ComponentId {
+  public static final Any INSTANCE = new Any( ); 
   @Override
   public Boolean hasDispatcher( ) {
     return false;

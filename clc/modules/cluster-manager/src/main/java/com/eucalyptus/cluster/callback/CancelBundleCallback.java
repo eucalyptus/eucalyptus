@@ -4,18 +4,18 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.vm.CancelBundleTaskResponseType;
+import com.eucalyptus.vm.CancelBundleTaskType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.CancelBundleTaskResponseType;
-import edu.ucsb.eucalyptus.msgs.CancelBundleTaskType;
 
 public class CancelBundleCallback extends MessageCallback<CancelBundleTaskType,CancelBundleTaskResponseType> {
 
   private static Logger LOG = Logger.getLogger( CancelBundleCallback.class );
   public CancelBundleCallback( CancelBundleTaskType request ) {
-    this.setRequest( request );
+    super( request );
   }
   
 

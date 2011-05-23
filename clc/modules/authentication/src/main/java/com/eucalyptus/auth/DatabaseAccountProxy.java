@@ -19,7 +19,7 @@ import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -59,7 +59,7 @@ public class DatabaseAccountProxy implements Account {
           t.setName( name );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
       throw new AuthException( e );
     }    

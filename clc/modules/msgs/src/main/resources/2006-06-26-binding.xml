@@ -63,11 +63,12 @@
   -->
 
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2006-06-26/" name="ec2_amazonaws_com_doc_2006_06_26">
-    <namespace uri="http://ec2.amazonaws.com/doc/2006-06-26/" default="elements"/>
-    <include path="aws-null-base.xml"/>
-    <include path="aws-instances.xml"/>
-    <include path="aws-images.xml"/>
-    <include path="aws-image-attr.xml"/>
-    <include path="aws-keypairs.xml"/>
-    <include path="aws-security.xml"/>
+  <namespace uri="http://ec2.amazonaws.com/doc/2006-06-26/" default="elements" />
+  <include path="aws-null-base.xml" />
+  <include path="aws-instances.xml" />
+  <include path="aws-bundling.xml" />
+  <include path="aws-images.xml" />
+  <include path="aws-image-attr.xml" />
+  <include path="aws-keypairs.xml" />
+  <include path="aws-security.xml" />
 </binding>

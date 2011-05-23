@@ -64,9 +64,11 @@ package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.google.common.base.Predicate;
@@ -105,6 +107,14 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     for ( Cluster c : this.listValues( ) )
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
+  }
+  
+  public static Cluster lookup( ServiceConfiguration clusterConfig ) {
+    try {
+      return Clusters.getInstance( ).lookup( clusterConfig.getName( ) );
+    } catch ( NoSuchElementException ex ) {
+      return Clusters.getInstance( ).lookupDisabled( clusterConfig.getName( ) );
+    }
   }
   
   
