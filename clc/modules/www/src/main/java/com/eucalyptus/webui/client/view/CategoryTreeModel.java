@@ -2,6 +2,7 @@ package com.eucalyptus.webui.client.view;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.google.gwt.cell.client.AbstractCell;
@@ -83,14 +84,14 @@ public class CategoryTreeModel implements TreeViewModel {
     }
   }
   
-  private ArrayList<CategoryTag> tags;
+  private List<CategoryTag> tags;
   
   private SelectionModel<CategoryItem> selectionModel;
   
   private static Images images;
   private static HashMap<String, String> imageMap = new HashMap<String, String>( );
   
-  public CategoryTreeModel( ArrayList<CategoryTag> tags, SelectionModel<CategoryItem> selectionModel ) {
+  public CategoryTreeModel( List<CategoryTag> tags, SelectionModel<CategoryItem> selectionModel ) {
     this.tags = tags;
     this.selectionModel = selectionModel;
     

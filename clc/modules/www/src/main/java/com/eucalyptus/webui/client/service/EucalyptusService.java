@@ -2,6 +2,7 @@ package com.eucalyptus.webui.client.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 
@@ -50,7 +51,7 @@ public interface EucalyptusService extends RemoteService {
    * @return
    * @throws EucalyptusServiceException
    */
-  ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
+  List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
  
   /**
    * Search system configurations.

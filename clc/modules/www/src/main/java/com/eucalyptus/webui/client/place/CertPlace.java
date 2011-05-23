@@ -1,6 +1,5 @@
 package com.eucalyptus.webui.client.place;
 
-import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
@@ -10,17 +9,17 @@ public class CertPlace extends SearchPlace {
     super( search );
   }
 
-  @Prefix( CategoryConstants.CERTIFICATE )
+  @Prefix( "cert" )
   public static class Tokenizer implements PlaceTokenizer<CertPlace> {
 
     @Override
     public CertPlace getPlace( String search ) {
-      return new CertPlace( decode( search ) );
+      return new CertPlace( search );
     }
 
     @Override
     public String getToken( CertPlace place ) {
-      return encode( place.getSearch( ) );
+      return place.getSearch( );
     }
     
   }

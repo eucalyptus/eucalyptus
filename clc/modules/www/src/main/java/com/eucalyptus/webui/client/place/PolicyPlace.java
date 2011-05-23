@@ -1,6 +1,5 @@
 package com.eucalyptus.webui.client.place;
 
-import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
@@ -10,17 +9,17 @@ public class PolicyPlace extends SearchPlace {
     super( search );
   }
 
-  @Prefix( CategoryConstants.POLICY )
+  @Prefix( "policy" )
   public static class Tokenizer implements PlaceTokenizer<PolicyPlace> {
 
     @Override
     public PolicyPlace getPlace( String search ) {
-      return new PolicyPlace( decode( search ) );
+      return new PolicyPlace( search );
     }
 
     @Override
     public String getToken( PolicyPlace place ) {
-      return encode( place.getSearch( ) );
+      return place.getSearch( );
     }
     
   }

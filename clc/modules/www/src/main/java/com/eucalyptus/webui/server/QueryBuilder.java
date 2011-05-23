@@ -1,7 +1,10 @@
 package com.eucalyptus.webui.server;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
+import com.eucalyptus.webui.shared.query.QueryConstants;
+import com.eucalyptus.webui.shared.query.QueryType;
+import com.eucalyptus.webui.shared.query.SearchQuery;
+import com.eucalyptus.webui.shared.query.StringValue;
 
 /**
  * Building query string given query components.
@@ -16,13 +19,8 @@ import java.net.URLEncoder;
 public class QueryBuilder {
 
   public static final String BASE = "EucalyptusWebInterface.html#";
-  public static final String PLACE_SEPARATOR = ":";
-  public static final String EQUAL = "=";
-  public static final String OR = "+";
-  public static final String NOT = "-";
-  
-  private StringBuilder sb = new StringBuilder( );
-  private String type;
+
+  private SearchQuery query;
   
   private QueryBuilder( ) { }
   
@@ -30,53 +28,25 @@ public class QueryBuilder {
     return new QueryBuilder( );
   }
   
-  public QueryBuilder start( String type ) {
-    this.type = type;
+  public QueryBuilder start( QueryType type ) {
+    this.query = new SearchQuery( type );
+    return this;
+  }  
+  
+  public QueryBuilder add( String field, String value ) {
+    this.query.getTermMap( ).put( field, new StringValue( value ) );
     return this;
   }
   
-  private QueryBuilder component( String field, String pattern ) {
-    if ( field != null && !"".equals( field ) ) {
-      sb.append( field ).append( EQUAL );
-    }
-    sb.append( pattern );
-    return this;    
-  }
-  
-  public QueryBuilder and( String field, String pattern ) {
-    if ( sb.length( ) > 0 ) {
-      sb.append( " " );
-    }
-    return component( field, pattern );
-  }
-  
-  public QueryBuilder or( String field, String pattern ) {
-    if ( sb.length( ) > 0 ) {
-      sb.append( " " );
-    }
-    sb.append( OR );
-    return component( field, pattern );
-  }
-  
-  public QueryBuilder not( String field, String pattern ) {
-    if ( sb.length( ) > 0 ) {
-      sb.append( " " );
-    }
-    sb.append( NOT );
-    return component( field, pattern );
-  }
-  
   public String query( ) {
-    return this.type + PLACE_SEPARATOR + sb.toString( );
-  }
-  
-  public String subquery( ) {
-    return sb.toString( );
+    return this.query( ).toString( );
   }
   
   public String url( ) {
     try {
-      return BASE + this.type + PLACE_SEPARATOR + UriUtils.encodePathSegment( sb.toString( ), "UTF-8" );
+      StringBuilder sb = new StringBuilder( );
+      sb.append( BASE ).append( UriUtils.encodeFragment( this.query.toString( ), "UTF-8" ) );
+      return sb.toString( );
     } catch ( UnsupportedEncodingException e ) {
       throw new RuntimeException( "Failed to use UTF-8 in URL encoding" );
     }

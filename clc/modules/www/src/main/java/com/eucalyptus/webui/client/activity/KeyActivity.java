@@ -39,7 +39,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
       
       @Override
       public void onSuccess( SearchResult result ) {
-        LOG.log( Level.INFO, "Search success:" + result.length( ) );
+        LOG.log( Level.INFO, "Search success:" + result );
         displayData( result );
       }
       

@@ -56,10 +56,16 @@ public class SearchResultRow implements Serializable {
   }
   
   public void setField( int i, String val ) {
+    if ( val == null ) {
+      val = "";
+    }    
     row.set( i, val );
   }
 
   public void addField( String val ) {
+    if ( val == null ) {
+      val = "";
+    }
     row.add( val );
   }
   

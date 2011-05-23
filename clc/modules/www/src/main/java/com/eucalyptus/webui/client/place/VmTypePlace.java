@@ -1,6 +1,5 @@
 package com.eucalyptus.webui.client.place;
 
-import com.eucalyptus.webui.client.service.CategoryConstants;
 import com.google.gwt.place.shared.PlaceTokenizer;
 import com.google.gwt.place.shared.Prefix;
 
@@ -10,17 +9,17 @@ public class VmTypePlace extends SearchPlace {
     super( search );
   }
   
-  @Prefix( CategoryConstants.VMTYPE )
+  @Prefix( "vmtype" )
   public static class Tokenizer implements PlaceTokenizer<VmTypePlace> {
 
     @Override
     public VmTypePlace getPlace( String search ) {
-      return new VmTypePlace( decode( search ) );
+      return new VmTypePlace( search );
     }
 
     @Override
     public String getToken( VmTypePlace place ) {
-      return encode( place.getSearch( ) );
+      return place.getSearch( );
     }
     
   }

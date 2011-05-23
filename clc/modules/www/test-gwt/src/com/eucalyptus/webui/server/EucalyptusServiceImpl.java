@@ -43,26 +43,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
-    ArrayList<CategoryTag> tags = Lists.newArrayList( );
-    ArrayList<CategoryItem> list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Start", "Start guide", "home", "start:" ) );
-    list.add( new CategoryItem( "Configuration", "System configurations", "config", "config:" ) );
-    tags.add( new CategoryTag( "System", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Account", "Accounts", "group", "account:" ) );
-    list.add( new CategoryItem( "Group", "User groups", "group", "group:" ) );
-    list.add( new CategoryItem( "User", "Users", "user", "user:" ) );
-    tags.add( new CategoryTag( "Identity", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Image", "Virtual machine images (EMIs)", "image", "image:" ) );
-    list.add( new CategoryItem( "VmType", "Virtual machine types", "type", "vmtype:" ) );
-    list.add( new CategoryItem( "Report", "Resource usage report", "report", "report:" ) );
-    tags.add( new CategoryTag( "Resource", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Extra", "Extra downloads", "down", "extra:" ) );
-    tags.add( new CategoryTag( "Miscs", list ) );    
-    return tags;
+  public List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {    
+    return Categories.getTags( );
   }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
@@ -173,7 +155,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public SearchResult lookupImages( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+  public SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     // TODO Auto-generated method stub
     return null;
   }

@@ -77,6 +77,10 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
   }
   
   protected void displayData( SearchResult result ) {
+    if ( this.place != this.clientFactory.getMainPlaceController( ).getWhere( ) ) {
+      LOG.log( Level.INFO, "Place was changed prematurely" );
+      return;
+    }
     if ( result != null ) {
       LOG.log( Level.INFO, "Received " + result );
       cache.update( result );

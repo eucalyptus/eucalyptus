@@ -1,39 +1,57 @@
 package com.eucalyptus.webui.server;
 
-import java.util.ArrayList;
-import com.eucalyptus.webui.client.service.CategoryConstants;
+import java.util.Arrays;
+import java.util.List;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
+import com.eucalyptus.webui.shared.query.QueryType;
 
 public class Categories {
   
-  private static final ArrayList<CategoryTag> TAGS = new ArrayList<CategoryTag>( );
-  static {
-    ArrayList<CategoryItem> list = new ArrayList<CategoryItem>( );
-    list.add( new CategoryItem( "Start", "Start guide", "home", QueryBuilder.get( ).start( CategoryConstants.START ).query( ) ) );
-    list.add( new CategoryItem( "Configuration", "System configurations", "config", QueryBuilder.get( ).start( CategoryConstants.CONFIGURATION ).query( ) ) );
-    TAGS.add( new CategoryTag( "System", list ) );
-    list = new ArrayList<CategoryItem>( );
-    list.add( new CategoryItem( "Account", "Accounts", "dollar", QueryBuilder.get( ).start( CategoryConstants.ACCOUNT ).query( ) ) );
-    list.add( new CategoryItem( "Group", "User groups", "group", QueryBuilder.get( ).start( CategoryConstants.GROUP ).query( ) ) );
-    list.add( new CategoryItem( "User", "Users", "user", QueryBuilder.get( ).start( CategoryConstants.USER ).query( ) ) );
-    list.add( new CategoryItem( "Policy", "Policies", "lock", QueryBuilder.get( ).start( CategoryConstants.POLICY ).query( ) ) );
-    list.add( new CategoryItem( "Key", "Access keys", "key", QueryBuilder.get( ).start( CategoryConstants.KEY ).query( ) ) );
-    list.add( new CategoryItem( "Certificate", "X509 certificates", "sun", QueryBuilder.get( ).start( CategoryConstants.CERTIFICATE ).query( ) ) );
-    TAGS.add( new CategoryTag( "Identity", list ) );
-    list = new ArrayList<CategoryItem>( );
-    list.add( new CategoryItem( "Image", "Virtual machine images (EMIs)", "image", QueryBuilder.get( ).start( CategoryConstants.IMAGE ).query( ) ) );
-    list.add( new CategoryItem( "VmType", "Virtual machine types", "type", QueryBuilder.get( ).start( CategoryConstants.VMTYPE ).query( ) ) );
-    list.add( new CategoryItem( "Report", "Resource usage report", "report", QueryBuilder.get( ).start( CategoryConstants.REPORT ).query( ) ) );
-    TAGS.add( new CategoryTag( "Resource", list ) );
-    list = new ArrayList<CategoryItem>( );
-    list.add( new CategoryItem( "Downloads", "Extra downloads", "down", QueryBuilder.get( ).start( CategoryConstants.DOWNLOADS ).query( ) ) );
-    list.add( new CategoryItem( "RightScale", "Register RightScale", "rightscale", QueryBuilder.get( ).start( CategoryConstants.RIGHTSCALE ).query( ) ) );
-    TAGS.add( new CategoryTag( "Miscs", list ) );    
-  }
+  private static final Logger LOG = Logger.getLogger( Categories.class );
   
-  public static ArrayList<CategoryTag> getTags( ) {
-    return TAGS;
+  public static List<CategoryTag> getTags( User login ) throws EucalyptusServiceException {
+    try {
+      String accountId = login.getAccount( ).getAccountNumber( );
+      String userId = login.getUserId( );
+      return Arrays.asList( new CategoryTag( "System", 
+                                             Arrays.asList( new CategoryItem( "Start", "Start guide", "home",
+                                                                              QueryBuilder.get( ).start( QueryType.start ).query( ) ),
+                                                            new CategoryItem( "Service Components", "Configuration of service components", "config",
+                                                            		              QueryBuilder.get( ).start( QueryType.config ).query( ) ) ) ),
+                            new CategoryTag( "Identity",
+                                             Arrays.asList( new CategoryItem( "Account", "Accounts", "dollar", 
+                                                                              QueryBuilder.get( ).start( QueryType.account ).query( ) ),
+                                                            new CategoryItem( "Group", "User groups", "group",
+                                                                              QueryBuilder.get( ).start( QueryType.group ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                                            new CategoryItem( "User", "Users", "user",
+                                                                              QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                                            new CategoryItem( "Policy", "Policies", "lock",
+                                                                              QueryBuilder.get( ).start( QueryType.policy ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                                            new CategoryItem( "Key", "Access keys", "key",
+                                                                              QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                                            new CategoryItem( "Certificate", "X509 certificates", "sun",
+                                                                              QueryBuilder.get( ).start( QueryType.cert ).add( EuareWebBackend.USERID, userId ).query( ) ) ) ),
+                            new CategoryTag( "Resource",
+                                             Arrays.asList( new CategoryItem( "Image", "Virtual machine images (EMIs)", "image",
+                                                                              QueryBuilder.get( ).start( QueryType.image ).query( ) ),
+                                                            new CategoryItem( "VmType", "Virtual machine types", "type",
+                                                                              QueryBuilder.get( ).start( QueryType.vmtype ).query( ) ),
+                                                            new CategoryItem( "Report", "Resource usage report", "report",
+                                                                              QueryBuilder.get( ).start( QueryType.report ).query( ) ) ) ),
+                            new CategoryTag( "Extras",
+                                             Arrays.asList( new CategoryItem( "Downloads", "Extra downloads", "down",
+                                                                              QueryBuilder.get( ).start( QueryType.downloads ).query( ) ),
+                                                            new CategoryItem( "RightScale", "Register RightScale", "rightscale",
+                                                                              QueryBuilder.get( ).start( QueryType.rightscale ).query( ) ) ) ) );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to load user information", e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to load user information for " + login );
+    }
   }
   
 }

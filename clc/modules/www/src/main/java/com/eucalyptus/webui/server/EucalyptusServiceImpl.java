@@ -1,25 +1,22 @@
 package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
-import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.Session;
-import com.google.common.collect.Lists;
+import com.eucalyptus.webui.shared.query.QueryParser;
+import com.eucalyptus.webui.shared.query.QueryParsingException;
+import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
@@ -36,6 +33,16 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
   }
   
+  private static SearchQuery parseQuery( String query ) throws EucalyptusServiceException {
+    SearchQuery sq = null;
+    try {
+      sq = QueryParser.get( ).parse( query );
+    } catch ( QueryParsingException e ) {
+      throw new EucalyptusServiceException( "Invalid query: " + e );
+    }
+    return sq;
+  }
+
   @Override
   public Session login( String fullname, String password ) throws EucalyptusServiceException {
     if ( fullname == null || password == null ) {
@@ -78,9 +85,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
-    verifySession( session );
-    return Categories.getTags( );
+  public List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
+    User user = verifySession( session );
+    return Categories.getTags( user );
   }
   
   @Override
@@ -147,61 +154,67 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );    
-    List<SearchResultRow> searchResult = EuareWebBackend.searchAccounts( search );
-    SearchResult result = new SearchResult( searchResult.size( ), range );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> rows = EuareWebBackend.searchAccounts( searchQuery );
+    SearchResult result = new SearchResult( rows.size( ), range );
     result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( rows, range ) );
     return result;
   }
 
   @Override
   public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    User user = verifySession( session );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( user, search );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.GROUP_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
 
   @Override
   public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    User user = verifySession( session );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( user, search );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.USER_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
 
   @Override
   public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    User user = verifySession( session );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( user, search );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.POLICY_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
 
   @Override
   public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    User user = verifySession( session );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( user, search );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.KEY_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
 
   @Override
   public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    User user = verifySession( session );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( user, search );
+    verifySession( session );
+    SearchQuery searchQuery = parseQuery( search );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.CERT_COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
 
@@ -211,7 +224,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     List<SearchResultRow> searchResult = ImageWebBackend.searchImages( search );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( ImageWebBackend.COMMON_FIELD_DESCS );
-    result.setRows( SearchRangeUtil.getRange( searchResult, range ) );
+    result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
   
