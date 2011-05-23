@@ -30,6 +30,11 @@ static map * artifacts_map;
 static boolean print_debug = FALSE;
 static boolean print_argv = FALSE;
 
+static void bs_errors (const char * msg) { 
+    // we normally do not care to print all messages from blobstore as many are errors that we can handle
+    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+} 
+
 static void set_debug (boolean yes)
 {
     // so euca libs will log to stdout
@@ -243,11 +248,38 @@ int main (int argc, char * argv[])
         }
     }
     
+    // see if work blobstore will be needed at any stage
+    // and open or create the work blobstore
+    blobstore * work_bs = NULL;
+    if (tree_uses_blobstore (root)) {
+        // set the function that will catch blobstore errors
+        blobstore_set_error_function ( &bs_errors ); 
+
+        if (ensure_directories_exist (get_work_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+            err ("failed to open or create work directory");
+        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+        if (work_bs==NULL) {
+            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            err ("failed to open work blobstore");
+        }
+    }
+
+    // see if cache blobstore will be needed at any stage
+    blobstore * cache_bs = NULL;
+    if (tree_uses_cache (root)) {
+        if (ensure_directories_exist (get_cache_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+            err ("failed to open or create cache directory");
+        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        if (cache_bs==NULL) {
+            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            blobstore_close (work_bs);            
+            err ("failed to open cache blobstore");
+        }
+    }
+
     // implement the artifact tree
     int ret = OK;
     if (root) {
-        blobstore * work_bs = NULL; // TODO: open blobstore
-        blobstore * cache_bs = NULL; // TODO: open blobstore
         art_set_instanceId ("imager"); // for logging
         ret = art_implement_tree (root, work_bs, cache_bs, NULL, INSTANCE_PREP_TIMEOUT_USEC); // do all the work!
     }
