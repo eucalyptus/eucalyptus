@@ -29,5 +29,5 @@
 import eucadmin.deregistervmwarebroker
 
 if __name__ == "__main__":
-    r = eucadmin.deregistervmwarebroker.DeregisterVMwareBrokers()
+    r = eucadmin.deregistervmwarebroker.DeregisterVMwareBroker()
     r.main_cli()
