@@ -104,6 +104,46 @@ prep_location ( // picks a service URI and prepends it to resourceLocation in VB
     return ERROR;
 }
 
+// parse spec_str as a VBR record and add it to 
+// vm_type->virtualBootRecord[virtualBootRecordLen]
+// return 0 if OK, return 1 on error
+int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type)
+{
+    if (vm_type->virtualBootRecordLen==EUCA_MAX_VBRS) {
+        logprintfl (EUCAERROR, "too many entries in VBR already\n");
+        return 1;
+    }
+    virtualBootRecord * vbr = &(vm_type->virtualBootRecord[vm_type->virtualBootRecordLen++]);
+    
+    char * spec_copy = strdup (spec_str);
+    char * type_spec = strtok (spec_copy, ":");
+    char * id_spec = strtok (NULL, ":");
+    char * size_spec = strtok (NULL, ":");
+    char * format_spec = strtok (NULL, ":");
+    char * dev_spec = strtok (NULL, ":");
+    char * loc_spec = strtok (NULL, ":");
+    if (type_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'type' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+    if (id_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'id' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->id, id_spec, sizeof (vbr->id));
+    if (size_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'size' specification in VBR '%s'\n", spec_str); goto out_error; }
+    vbr->size = atoi (size_spec);
+    if (format_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'format' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+    if (dev_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+    if (loc_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str); goto out_error; }
+    strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
+    
+    free (spec_copy);
+    return 0;
+    
+ out_error:
+    vm_type->virtualBootRecordLen--;
+    free (spec_copy);
+    return 1;
+}
+
 static int // returns OK or ERROR
 parse_rec ( // parses the VBR as supplied by a client or user, checks values, and fills out almost the rest of the struct with typed values
            virtualBootRecord * vbr, // a VBR record to parse and verify

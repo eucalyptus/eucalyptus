@@ -92,6 +92,7 @@ typedef struct _artifact {
     void * internal; // OPTIONAL pointer to any other artifact-specific data 'creator' may need
 } artifact;
 
+int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type);
 int vbr_legacy (const char * instanceId, virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, boolean make_work_copy, const char * sshkey, const char * instanceId);
