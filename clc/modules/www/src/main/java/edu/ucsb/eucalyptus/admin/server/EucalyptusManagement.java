@@ -74,23 +74,27 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.NoSuchImageException;
@@ -99,7 +103,13 @@ import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.Callback;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -311,55 +321,82 @@ public class EucalyptusManagement {
       throw EucalyptusManagement.makeFault ("Specified image was not found, sorry.");
     }
 	}
-
+	
+  @TypeMapper
+  public enum SystemConfigToWebMapper implements Function<SystemConfiguration, SystemConfigWeb> {
+    INSTANCE;
+    
+    @Override
+    public SystemConfigWeb apply( final SystemConfiguration input ) {
+      return new SystemConfigWeb( ) {
+        {
+          setDefaultKernelId( ImageConfiguration.getInstance().getDefaultRamdiskId( ) );//TODO:GRZE: facade for images config to remove direct reference to impl. class for config
+          setDefaultRamdiskId( ImageConfiguration.getInstance().getDefaultRamdiskId( ) );
+          setMaxUserPublicAddresses( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ) );//TODO:GRZE: facade for address config to remove direct reference to impl. class for config
+          setDoDynamicPublicAddresses( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) );
+          setSystemReservedPublicAddresses( AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( ) );
+          setDnsDomain( input.getDnsDomain( ) );
+          setNameserver( input.getNameserver( ) );
+          setNameserverAddress( input.getNameserverAddress( ) );
+          setCloudHost( Internets.localHostInetAddress( ).getCanonicalHostName( ) );
+        }
+      };
+    }
+    
+  }
+	
 	public static SystemConfigWeb getSystemConfig() throws SerializableException
 	{
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration();
-		LOG.debug( "Sending cloud host: " + sysConf.getCloudHost( ) );
-		return new SystemConfigWeb( 
-				sysConf.getDefaultKernel(),
-				sysConf.getDefaultRamdisk(),
-				sysConf.getMaxUserPublicAddresses(),
-				sysConf.isDoDynamicPublicAddresses(),
-				sysConf.getSystemReservedPublicAddresses(),
-				sysConf.getDnsDomain(),
-				sysConf.getNameserver(),
-				sysConf.getNameserverAddress(),
-				sysConf.getCloudHost( ));
+		LOG.debug( "Sending cloud host: " + Internets.localHostInetAddress( ) );
+		return TypeMappers.lookup( SystemConfiguration.class, SystemConfigWeb.class ).apply( sysConf );
 	}
 
 	public static void setSystemConfig( final SystemConfigWeb systemConfig )
 	{
+    try {
+      Transactions.one( AddressingConfiguration.getInstance( ), new Callback<AddressingConfiguration>( ) {
+        
+        @Override
+        public void fire( AddressingConfiguration t ) {
+          t.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
+          t.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
+          t.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
+        }
+      } );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    }
+    try {
+      Transactions.one( ImageConfiguration.getInstance( ), new Callback<ImageConfiguration>( ) {
+        
+        @Override
+        public void fire( ImageConfiguration t ) {
+          t.setDefaultKernelId( systemConfig.getDefaultKernelId() );
+          t.setDefaultRamdiskId( systemConfig.getDefaultRamdiskId() );
+        }
+      } );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    }
+	  
 		EntityWrapper<SystemConfiguration> db = EntityWrapper.get( SystemConfiguration.class );
 		SystemConfiguration sysConf = null;
 		try
 		{
 			sysConf = db.getUnique( new SystemConfiguration() );
-			sysConf.setCloudHost( systemConfig.getCloudHost() );
-			sysConf.setDefaultKernel( systemConfig.getDefaultKernelId() );
-			sysConf.setDefaultRamdisk( systemConfig.getDefaultRamdiskId() );
-
 			sysConf.setDnsDomain(systemConfig.getDnsDomain());
 			sysConf.setNameserver(systemConfig.getNameserver());
 			sysConf.setNameserverAddress(systemConfig.getNameserverAddress());
-			sysConf.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
-			sysConf.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
-			sysConf.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
 			db.commit();
 			DNSProperties.update();
 		}
 		catch ( EucalyptusCloudException e )
 		{
 			sysConf = new SystemConfiguration(
-					systemConfig.getDefaultKernelId(),
-					systemConfig.getDefaultRamdiskId(),
-					systemConfig.getMaxUserPublicAddresses(),
-					systemConfig.isDoDynamicPublicAddresses(),
-					systemConfig.getSystemReservedPublicAddresses(),
 					systemConfig.getDnsDomain(),
 					systemConfig.getNameserver(),
-					systemConfig.getNameserverAddress(),
-					systemConfig.getCloudHost( ));
+					systemConfig.getNameserverAddress());
 			db.add(sysConf);
 			db.commit();
 			DNSProperties.update();
@@ -424,7 +461,7 @@ public class EucalyptusManagement {
 		String cloudRegisterId = null;
 	    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId();
 		CloudInfoWeb cloudInfo = new CloudInfoWeb();
-		cloudInfo.setInternalHostPort (SystemConfiguration.getInternalIpAddress() + ":8443");
+		cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":8443");
 		if (setExternalHostPort) {
 			String ipAddr = getExternalIpAddress();
 			if (ipAddr!=null) {

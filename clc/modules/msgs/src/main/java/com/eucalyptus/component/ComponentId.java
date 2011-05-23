@@ -2,8 +2,6 @@ package com.eucalyptus.component;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Reader;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,6 +22,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -124,7 +123,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   private final String tryForPartionName( ) {
     return ( this.isPartitioned( ) )
-      ? Any.class.getSimpleName( ).toLowerCase( )
+      ? ComponentIds.lookup( Empyrean.class ).name( )
       : ( ( Unpartioned ) this ).getPartition( );
   }
   
@@ -133,25 +132,19 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
-    if ( this.isPartitioned( ) ) {
-      return new ComponentFullName( this, config.getPartition( ) != null
-        ? config.getPartition( )
-        : config.getName( ), config.getName( ), parts );
-    } else {
-      return new ComponentFullName( this, this.getName( ), config.getName( ), parts );
-    }
+    return new ComponentFullName( config, parts );
   }
   
-  public FullName makeFullName( String partition, String name, String... parts ) {
-    if ( this.isPartitioned( ) ) {
-      return new ComponentFullName( this, partition, name, parts );
-    } else if ( this.isCloudLocal( ) ) {
-      return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
-    } else {
-      return new ComponentFullName( this, this.getName( ), name, parts );
-    }
-  }
-  
+//  public FullName makeFullName( String partition, String name, String... parts ) {
+//    if ( this.isPartitioned( ) ) {
+//      return new ComponentFullName( this, partition, name, parts );
+//    } else if ( this.isCloudLocal( ) ) {
+//      return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
+//    } else {
+//      return new ComponentFullName( this, this.getName( ), name, parts );
+//    }
+//  }
+//  
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }
@@ -263,7 +256,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   /**
    * Get the HTTP service path
    */
-  public final URI makeRemoteUri( String hostName, Integer port ) {
+  public final URI makeInternalRemoteUri( String hostName, Integer port ) {
     String uri;
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
@@ -281,19 +274,31 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
     String uri;
+    URI u = null;
+    port = ( port == -1 ) ? this.getPort( ) : port;
+    hostName = ( port == -1 ) ? Internets.localHostAddress( ) : hostName;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      u = new URI( uri );
+      u.parseServerAuthority( );
+    } catch ( URISyntaxException e ) {
+      uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
+      try {
+        u = new URI( uri );
+        u.parseServerAuthority( );
+      } catch ( URISyntaxException ex ) {
+        u = URI.create( uri );
+      }
     } catch ( MissingFormatArgumentException e ) {
       uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      try {
+        u = new URI( uri );
+        u.parseServerAuthority( );
+      } catch ( URISyntaxException ex ) {
+        u = URI.create( uri );        
+      }
     }
-    try {
-      URI u = new URI( uri );
-      u.parseServerAuthority( );
-      return u;
-    } catch ( URISyntaxException e ) {
-      LOG.error( e, e );
-      return URI.create( uri );
-    }
+    return u;
   }
   
   @Override
@@ -329,9 +334,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public String toString( ) {
-    return String.format( "ComponentId:%s:partitioned=%s:serviceDependencies=%s:isCloudLocal=%s:hasDispatcher=%s:isAlwaysLocal=%s:hasCredentials=%s:clientPipeline=%s:baseMessageType=%s",
-                          this.name( ), this.isPartitioned( ), this.serviceDependencies( ), this.isCloudLocal( ), this.hasDispatcher( ), this.isAlwaysLocal( ),
-                          this.hasCredentials( ), defaultClientPipelineClass, this.lookupBaseMessageType( ) );
+    return String.format( "ComponentId:%s:partitioned=%s:msg=%s:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
+                          this.name( ), this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
+                          this.isPartitioned( ), this.hasCredentials( ) );
   }
   
   public static abstract class Unpartioned extends ComponentId {
@@ -346,7 +351,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     
     @Override
     public String getPartition( ) {
-      return this.isCloudLocal( ) ? Eucalyptus.INCOGNITO.name( ) : ( this.isAlwaysLocal( ) ? Empyrean.INCOGNITO.name() : this.name( ) );
+      return this.isCloudLocal( )
+        ? Eucalyptus.INSTANCE.name( )
+        : ( this.isAlwaysLocal( )
+          ? Empyrean.INSTANCE.name( )
+          : this.name( ) );
     }
     
   }

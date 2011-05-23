@@ -54,14 +54,4 @@ public interface RemoteCallback<Q extends BaseMessage, R extends BaseMessage> ex
    */
   public abstract void fireException( Throwable t );
   
-  /**
-   * Modify the request correlationId to indicate it is related to <tt>msg</tt>
-   */
-  public abstract <S extends RemoteCallback<Q, R>> S regarding( BaseMessage msg );
-  
-  /**
-   * Modify the request correlationId and userId to indicate it is related to <tt>msg</tt>
-   */
-  public abstract <S extends RemoteCallback<Q, R>> S regardingUserRequest( BaseMessage msg );
-  
 }

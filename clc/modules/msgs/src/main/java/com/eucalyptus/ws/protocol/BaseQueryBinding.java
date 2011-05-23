@@ -80,6 +80,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
+import edu.ucsb.eucalyptus.msgs.BaseData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -329,7 +330,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   
   private Map<String, String> buildFieldMap( Class<?> targetType ) {
     Map<String, String> fieldMap = new HashMap<String, String>( );
-    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
+    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) && !BaseData.class.equals( targetType ) ) {
       Field[] fields = targetType.getDeclaredFields( );
       for ( Field f : fields ) {
         if ( Modifier.isStatic( f.getModifiers( ) ) )

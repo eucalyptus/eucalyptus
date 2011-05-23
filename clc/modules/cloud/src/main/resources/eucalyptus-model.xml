@@ -99,7 +99,7 @@
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="VmControlWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmBundleMessage" />
+          <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="ClusterEndpointWS" />

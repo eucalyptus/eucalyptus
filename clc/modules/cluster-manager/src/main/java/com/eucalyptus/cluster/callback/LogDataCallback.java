@@ -5,25 +5,23 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.GetLogsResponseType;
 import edu.ucsb.eucalyptus.msgs.GetLogsType;
 
-public class LogDataCallback extends MessageCallback<GetLogsType, GetLogsResponseType> {
+public class LogDataCallback extends SubjectMessageCallback<Cluster, GetLogsType, GetLogsResponseType> {
   private static Logger  LOG  = Logger.getLogger( LogDataCallback.class );
   private final NodeInfo node;
-  private final Cluster  cluster;
   private boolean        self = false;
+  public LogDataCallback( Cluster cluster ) {
+    super( cluster, new GetLogsType( "self" ) );
+    this.node = null;
+  }
   
   public LogDataCallback( Cluster cluster, NodeInfo node ) {
+    super( cluster, new GetLogsType( node.getServiceTag( ) ) ); 
     this.node = node;
-    this.cluster = cluster;
-    this.self = ( null == node );
-    if ( self ) {
-      this.setRequest( new GetLogsType( "self" ) );
-    } else {
-      this.setRequest( new GetLogsType( node.getServiceTag( ) ) );
-    }
   }
   
   @Override
@@ -41,7 +39,7 @@ public class LogDataCallback extends MessageCallback<GetLogsType, GetLogsRespons
     } else {
       String log = "";
       if ( self ) {
-        cluster.setLastLog( msg.getLogs( ) );
+        this.getSubject( ).setLastLog( msg.getLogs( ) );
         try {
           log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst( ".*\b", "" ).substring( 0, 1000 );
         } catch ( Throwable e ) {

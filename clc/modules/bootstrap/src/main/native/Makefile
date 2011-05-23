@@ -39,10 +39,10 @@ build: eucalyptus-cloud
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-eucalyptus-cloud: $(OBJS)
+eucalyptus-cloud: eucalyptus-opts.h $(OBJS)
 	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)
 
-ggo:
+eucalyptus-opts.h:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
 
 install: eucalyptus-cloud
@@ -53,6 +53,7 @@ clean:
 	@$(RM) -f $(OBJS) eucalyptus-cloud
 
 distclean: clean
+	@$(RM) -f $(OBJS) eucalyptus-cloud eucalyptus-opts.h eucalyptus-opts.c
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud
