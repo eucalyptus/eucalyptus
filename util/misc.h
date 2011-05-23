@@ -65,6 +65,7 @@ permission notice:
 #include <unistd.h> // ssize_t
 #include <sys/types.h> // mode_t
 #include <linux/limits.h>
+#include <stdint.h> // uint32_t
 
 typedef unsigned char boolean;
 #define TRUE 1
@@ -149,8 +150,8 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 int logfile(char *file, int in_loglevel);
 int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
-int check_file(char *file);
-int check_path(char *path);
+int check_file (const char *file);
+int check_path (const char *path);
 int check_file_newer_than(char *file, time_t mtime);
 
 // argument checker
@@ -209,7 +210,11 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int hash_b64enc_string(const char *in, char **out);
 char * strdupcat (char * original, char * new);
+int str2md5str (char * buf, unsigned int buf_size, const char * str);
+uint32_t jenkins (const char * key, size_t len);
+int hexjenkins (char * buf, unsigned int buf_size, const char * str);
 char * file2md5str (const char *path);
 int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
+long long time_usec (void);
 
 #endif

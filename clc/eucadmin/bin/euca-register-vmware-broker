@@ -29,5 +29,5 @@
 import eucadmin.registervmwarebroker
 
 if __name__ == "__main__":
-    r = eucadmin.registervmwarebroker.RegisterVMwareBrokers()
+    r = eucadmin.registervmwarebroker.RegisterVMwareBroker()
     r.main_cli()
