@@ -1,6 +1,6 @@
 package com.eucalyptus.webui.shared.query;
 
-import com.google.gwt.thirdparty.guava.common.base.Strings;
+import com.google.common.base.Strings;
 
 /**
  * Parsing a search query.

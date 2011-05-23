@@ -1,8 +1,8 @@
 package com.eucalyptus.webui.shared.query;
 
 import java.util.Set;
-import com.google.gwt.thirdparty.guava.common.base.Joiner;
-import com.google.gwt.thirdparty.guava.common.collect.HashMultimap;
+import com.google.common.base.Joiner;
+import com.google.common.collect.HashMultimap;
 
 /**
  * Internal representation of a search query
