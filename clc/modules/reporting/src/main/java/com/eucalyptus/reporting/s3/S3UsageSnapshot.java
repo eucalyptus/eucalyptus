@@ -1,6 +1,7 @@
 package com.eucalyptus.reporting.s3;
 
 import javax.persistence.*;
+
 import org.hibernate.annotations.Entity;
 
 /**
@@ -14,6 +15,7 @@ import org.hibernate.annotations.Entity;
 class S3UsageSnapshot
 {
 	@Id
+	@GeneratedValue(strategy=GenerationType.AUTO)
 	@Column(name="id")
 	private Long id;
 	@Embedded

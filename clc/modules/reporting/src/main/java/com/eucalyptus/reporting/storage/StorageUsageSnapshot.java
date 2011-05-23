@@ -16,6 +16,7 @@ import org.hibernate.annotations.Entity;
 class StorageUsageSnapshot
 {
 	@Id
+	@GeneratedValue(strategy=GenerationType.AUTO)
 	@Column(name="id")
 	private Long id;
 	@Embedded
