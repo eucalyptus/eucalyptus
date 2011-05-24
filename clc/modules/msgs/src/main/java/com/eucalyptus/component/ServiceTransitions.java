@@ -299,6 +299,9 @@ public class ServiceTransitions {
           }
         } else {
           try {
+            if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
+              parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+            }
             parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
             transitionCallback.fire( );//TODO:GRZE: this is not complete.
           } catch ( Throwable ex ) {
