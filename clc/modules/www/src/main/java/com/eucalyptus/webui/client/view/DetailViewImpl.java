@@ -43,6 +43,12 @@ public class DetailViewImpl extends Composite implements DetailView {
   public static final String ANCHOR = ">>";
   public static final int ARTICLE_LINES = 8;
   
+  public static final String PASSWORD_ACTION = "password";
+  
+  static interface ActionHandler {
+    void act( );  
+  }
+  
   static class HiddenValue implements HasValueWidget {
     
     private String value; 
@@ -235,6 +241,36 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
+  static class ActionValue implements HasValueWidget {
+
+    private Anchor anchor;
+    
+    public ActionValue( String value, final ActionHandler action ) {
+      this.anchor.setText( value );
+      this.anchor.addClickHandler( new ClickHandler( ) {
+        @Override
+        public void onClick( ClickEvent event ) {
+          action.act( );
+        }
+      } );
+    }
+    
+    @Override
+    public Widget getWidget( ) {
+      return this.anchor;
+    }
+
+    @Override
+    public String getValue( ) {
+      return this.anchor.getText( );
+    }
+    
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+  }
+  
   static class LabelKey implements HasValueWidget {
     
     private Label label;
@@ -255,10 +291,6 @@ public class DetailViewImpl extends Composite implements DetailView {
       return this.label;
     }
     
-  }
-
-  static interface ActionHandler {
-    void act( );  
   }
   
   static class RemovableLabelKey implements HasValueWidget {
@@ -425,9 +457,11 @@ public class DetailViewImpl extends Composite implements DetailView {
     }
   }
   
-  private HasValueWidget getContentWidget( SearchResultFieldDesc desc, String val ) {
+  private HasValueWidget getContentWidget( final SearchResultFieldDesc desc, String val ) {
     switch ( desc.getType( ) ) {
       case TEXT:
+      case KEYVAL:
+      case NEWKEYVAL:
         return new TextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
           @Override
           public void onValueChange( ValueChangeEvent<String> event ) {
@@ -464,8 +498,21 @@ public class DetailViewImpl extends Composite implements DetailView {
         } );
       case LINK:
         return new HyperLinkValue( val );
+      case ACTION:
+        return new ActionValue( val, new ActionHandler( ) {
+          @Override
+          public void act( ) {
+            popupAction( desc.getName( ) );
+          }
+        } );
     }
     return null;
+  }
+
+  protected void popupAction( String key ) {
+    if ( PASSWORD_ACTION.equals( key ) ) {
+      // TODO: popup the password change dialog
+    }
   }
 
   private void showSaveButton( ) {
