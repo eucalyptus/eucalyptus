@@ -288,11 +288,6 @@ doTerminateInstance( struct nc_state_t *nc,
 		return err;
 	}
     
-	err = vnetStopInstanceNetwork(nc->vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
-	if (err) {
-        logprintfl(EUCAFATAL, "[%s] failed to stop instance network, terminating instance\n", instance->instanceId);
-	}
-	
 	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
         if (instance->state==STAGING) {
