@@ -637,7 +637,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  opFail=1;
 	} else {
 	  *outRes = malloc(sizeof(ncResource));
-	  if (!outRes) {
+	  if (*outRes == NULL) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }
@@ -3939,9 +3939,14 @@ int reconfigureNetworkFromCLC() {
   } else {
     for (i=0; i<usernetlen; i++) {
       fprintf(FH, "%s %s\n", users[i], nets[i]);
+      free(users[i]);
+      free(nets[i]);
     }
   }
   fclose(FH);
+  
+  if(users) free(users);
+  if(nets) free(nets);
 
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
   rc = system(cmd);
