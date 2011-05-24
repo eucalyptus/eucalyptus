@@ -18,8 +18,9 @@ import com.eucalyptus.webui.shared.query.StringValue;
  */
 public class QueryBuilder {
 
-  public static final String BASE = "EucalyptusWebInterface.html#";
-
+  //public static final String BASE = "EucalyptusWebInterface.html#";
+  public static final String BASE = "#";
+  
   private SearchQuery query;
   
   private QueryBuilder( ) { }
