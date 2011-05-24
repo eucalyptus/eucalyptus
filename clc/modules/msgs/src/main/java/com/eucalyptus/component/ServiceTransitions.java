@@ -331,7 +331,16 @@ public class ServiceTransitions {
             }
           }
         } else {
-          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+          try {
+            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+          } catch ( Throwable ex ) {
+            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
+              transitionCallback.fireException( ex );
+            } else {
+              transitionCallback.fire( );
+            }
+          }
         }
       }
     },
