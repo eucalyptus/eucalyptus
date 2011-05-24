@@ -14,12 +14,26 @@
     <g:DockLayoutPanel unit="PX">
         <g:north size="36">
             <g:HTMLPanel addStyleNames="{style.toolbar}">
-                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}">
-                    <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>Click
-                </g:Anchor>
-                <g:Anchor styleName="{global.buttonCss.positive} {global.buttonCss.button}">
-                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Click
-                </g:Anchor>
+                <table>
+                    <colgroup width="100px"/>
+                    <colgroup width="10px"/>
+                    <colgroup width="100px"/>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="newButton">
+                                    <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New account
+                                </g:Anchor>                            
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}" ui:field="delButton">
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
+                                </g:Anchor>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </g:HTMLPanel>
         </g:north>
         <g:center>

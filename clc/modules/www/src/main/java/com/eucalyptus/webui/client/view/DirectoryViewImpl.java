@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.view;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.service.CategoryItem;
@@ -44,7 +45,7 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
   }
 
   @Override
-  public void buildTree( ArrayList<CategoryTag> data ) {
+  public void buildTree( List<CategoryTag> data ) {
     if ( data == null || data.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Can not build category tree: data is empty." );
       return;

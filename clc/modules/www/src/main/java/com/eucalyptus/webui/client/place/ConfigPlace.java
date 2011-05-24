@@ -19,7 +19,7 @@ public class ConfigPlace extends SearchPlace {
 
     @Override
     public String getToken( ConfigPlace place ) {
-      return place.getSearch( );
+      return place.getSearch( ); 
     }
     
   }
