@@ -32,75 +32,85 @@ public class InstanceEventListener
 	{
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
-		  log.info("Received instance event");
 		  InstanceEvent event = (InstanceEvent) e;
+		  log.info("--: Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
-	
-		  EntityWrapper<InstanceAttributes> entityWrapper =
+		  if (uuid == null) {
+			  log.warn("--: Received null uuid");
+			  return;
+		  }
+
+		  /* Convert InstanceEvents to internal types. Internal types are not
+		   * exposed because the reporting.instance package won't be present
+		   * in the open src version
+		   */
+		  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
+				  event.getInstanceId(), event.getInstanceType(),
+				  event.getUserId(), event.getAccountId(),
+				  event.getClusterName(), event.getAvailabilityZone());
+		  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(
+				  uuid, receivedEventMs, event.getCumulativeNetworkIoMegs(),
+				  event.getCumulativeDiskIoMegs());
+
+		  
+		  /* Write the instance attributes, but only if we don't have it
+		   * already.
+		   */
+		  EntityWrapper<InstanceAttributes> attrEntityWrapper =
 			  EntityWrapper.get(InstanceAttributes.class);
 		  try {
-
-			  /* Convert InstanceEvents to internal types. Internal types are
-			   * not exposed because the reporting.instance package won't be
-			   * present in the open src version
-			   */
-			  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
-					  event.getInstanceId(), event.getInstanceType(), event.getUserId(),
-					  event.getAccountId(), event.getClusterName(),
-					  event.getAvailabilityZone());
-			  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(uuid,
-					  receivedEventMs, event.getCumulativeNetworkIoMegs(),
-					  event.getCumulativeDiskIoMegs());
-
-			  /* Only write the instance attributes if we don't have them
-			   * already.
-			   */
 			  if (! recentlySeenUuids.contains(uuid)) {
 				try {
-					entityWrapper.getUnique(new InstanceAttributes()
+					attrEntityWrapper.getUnique(new InstanceAttributes()
 					{
 						{
 							setUuid(uuid);
 						}
 					});
 				} catch (Exception ex) {
-					entityWrapper.add(insAttrs);
-					log.info("Wrote Reporting Instance:" + uuid);
+					attrEntityWrapper.add(insAttrs);
+					log.info("--: Wrote Reporting Instance:" + uuid);
 				}
 				recentlySeenUuids.add(uuid);
 			  }
+		  } catch (Exception ex) {
+			  attrEntityWrapper.rollback();
+			  log.error(ex);
+		  }
 
-			  
-			  /* Gather the latest usage snapshots (they're cumulative, so
-			   * intermediate ones don't matter except for granularity), and
-			   * write them all to the database at once every n secs.
-			   */
-			  if (! recentUsageSnapshots.containsKey(uuid)) {
+ 
+		  /* Gather the latest usage snapshots (they're cumulative, so
+		   * intermediate ones don't matter except for granularity), and
+		   * write them all to the database at once every n secs.
+		   */
+		  if (! recentUsageSnapshots.containsKey(uuid)) {
+			  recentUsageSnapshots.put(uuid, insUsageSnapshot);
+		  } else {
+			  InstanceUsageSnapshot oldSnapshot =
+				  recentUsageSnapshots.get(uuid);
+			  if (oldSnapshot.getTimestampMs() < insUsageSnapshot.getTimestampMs()) {
 				  recentUsageSnapshots.put(uuid, insUsageSnapshot);
 			  } else {
-				  InstanceUsageSnapshot oldSnapshot =
-					  recentUsageSnapshots.get(uuid);
-				  if (oldSnapshot.getTimestampMs() < insUsageSnapshot.getTimestampMs()) {
-					  recentUsageSnapshots.put(uuid, insUsageSnapshot);
-				  } else {
-					  //log, then just continue
-					  log.error("Events are arriving out of order");
-				  }
+				  //log, then just continue
+				  log.error("Events are arriving out of order");
 			  }
+		  }
 
-			  log.info("Determining if events should be written");
+		  EntityWrapper<InstanceUsageSnapshot> entityWrapper =
+			  EntityWrapper.get(InstanceUsageSnapshot.class);
+		  try {
+			  log.info("--: Determining if events should be written, interval:" + getWriteIntervalMs());
 			  if (receivedEventMs > (lastWriteMs + getWriteIntervalMs())) {
 				  for (String key: recentUsageSnapshots.keySet()) {
-					  log.info("beginning event writing for:" + uuid);
 					  InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
-					  entityWrapper.recast(InstanceUsageSnapshot.class).add(ius);
-					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
+					  log.info("--: beginning event writing for:" + ius.getUuid() + ":" + ius.getEntityId());
+					  entityWrapper.add(ius);
+					  log.info("--: Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
 				  }
 				  recentUsageSnapshots.clear();
 				  lastWriteMs = receivedEventMs;
 			  }
-
 			  entityWrapper.commit();
 		  } catch (Exception ex) {
 			  entityWrapper.rollback();
