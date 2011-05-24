@@ -246,7 +246,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     private Anchor anchor;
     
     public ActionValue( String value, final ActionHandler action ) {
-      this.anchor.setText( value );
+      this.anchor = new Anchor( value );
       this.anchor.addClickHandler( new ClickHandler( ) {
         @Override
         public void onClick( ClickEvent event ) {

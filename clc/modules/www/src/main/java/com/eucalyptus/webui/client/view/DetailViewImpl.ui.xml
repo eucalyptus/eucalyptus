@@ -61,6 +61,11 @@
         .grid input[type='text'][readonly=''], .grid input[type='password'][readonly=''], .grid textarea[readonly=''] {
         	background-color:#EEEEEE;
         }
+        .grid a:not([href]) {
+        	border:1px solid #DDDDDD;
+        	cursor:pointer;
+        	cursor:hand;
+        }
     </ui:style>
     
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
