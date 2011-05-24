@@ -117,9 +117,9 @@ public class EuareWebBackend {
   public static final ArrayList<SearchResultFieldDesc> KEY_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "5%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "60%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
   }
@@ -127,10 +127,10 @@ public class EuareWebBackend {
   public static final ArrayList<SearchResultFieldDesc> CERT_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "5%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REVOKED, "Revoked", false, "5%", TableDisplay.MANDATORY, Type.BOOLEAN, false, false ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REVOKED, "Revoked", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "45%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PEM, "PEM", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
@@ -305,18 +305,22 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( Group group : user.getGroups( ) ) {
-          results.add( serializeGroup( account, group ) );
+          if ( !group.isUserGroup( ) ) {
+            results.add( serializeGroup( account, group ) );
+          }
         }        
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
         // Optimization for groups of an account
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( Group group : account.getGroups( ) ) {
-          results.add( serializeGroup( account, group ) );
+          if ( !group.isUserGroup( ) ) {
+            results.add( serializeGroup( account, group ) );
+          }
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
           for ( Group group : account.getGroups( ) ) {
-            if ( groupMatchQuery( group, query ) ) {
+            if ( !group.isUserGroup( ) && groupMatchQuery( group, query ) ) {
               results.add( serializeGroup( account, group ) );
             }
           }

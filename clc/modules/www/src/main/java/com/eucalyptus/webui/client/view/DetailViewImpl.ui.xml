@@ -51,27 +51,26 @@
         	padding-bottom:4px;
             vertical-align:middle;
         }
-        .grid input[type='text'] {
+        .grid input {
             width:98%;
-            background-color:#DDDDDD;
+            background-color:#EEEEEE;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
-        .grid input[type='password'] {
+        .grid textarea {
             width:98%;
-            background-color:#DDDDDD;
+            background-color:#EEEEEE;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;
         }
-        .grid textarea {
-            width:98%;
-            background-color:#DDDDDD;
-            border-style: solid;
-            border-width: 1px;
-            border-color: #999999 #CCCCCC #CCCCCC #999999;
-        }        
+        .grid input[readonly=''] {
+        	background-color:#CCCCCC;
+        }
+        .grid textarea[readonly=''] {
+        	background-color:#CCCCCC;
+        }
     </ui:style>
     
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>

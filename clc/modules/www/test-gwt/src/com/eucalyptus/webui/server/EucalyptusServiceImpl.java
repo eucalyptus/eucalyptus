@@ -10,12 +10,14 @@ import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.Session;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -60,7 +62,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
                                                                    new SearchResultRow( Arrays.asList( "testA", "A" ) )
                                                                  );
   private static final List<SearchResultFieldDesc> FIELDS = Arrays.asList( new SearchResultFieldDesc( "Name", true, "40%" ),
-                                                                           new SearchResultFieldDesc( "Id", true, "60%" )
+                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, false )
                                                                          );
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
