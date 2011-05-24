@@ -2329,9 +2329,6 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
     free (dev_names);
     free (dm_tables);
 
-    if(main_dm_table)
-        free(main_dm_table);
-
     return ret;
 }
 
