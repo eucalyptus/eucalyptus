@@ -919,10 +919,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return this.partition;
   }
 
-  public String getUuid( ) {
-    return this.uuid;
-  }
-
   public String getInstanceUuid( ) {
     return this.instanceUuid;
   }
