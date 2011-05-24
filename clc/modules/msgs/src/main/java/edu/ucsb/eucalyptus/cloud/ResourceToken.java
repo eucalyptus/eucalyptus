@@ -70,16 +70,17 @@ import java.util.List;
 import com.eucalyptus.auth.principal.UserFullName;
 
 public class ResourceToken implements Comparable {
-  private final String             cluster;
-  private final String             correlationId;
-  private final UserFullName       userFullName;
+  private final String       cluster;
+  private final String       correlationId;
+  private final UserFullName userFullName;
   private List<String>       instanceIds   = new ArrayList<String>( );
+  private List<String>       instanceUuids = new ArrayList<String>( );
   private List<String>       addresses     = new ArrayList<String>( );
   private List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
-  private final Integer            amount;
-  private final String             vmType;
-  private final Date               creationTime;
-  private final Integer            sequenceNumber;
+  private final Integer      amount;
+  private final String       vmType;
+  private final Date         creationTime;
+  private final Integer      sequenceNumber;
   
   public ResourceToken( final UserFullName userFullName, final String correlationId, final String cluster, final int amount, final int sequenceNumber,
                         final String vmType ) {
@@ -166,6 +167,10 @@ public class ResourceToken implements Comparable {
   public int compareTo( final Object o ) {
     ResourceToken that = ( ResourceToken ) o;
     return this.sequenceNumber - that.sequenceNumber;
+  }
+  
+  public List<String> getInstanceUuids( ) {
+    return this.instanceUuids;
   }
   
 }

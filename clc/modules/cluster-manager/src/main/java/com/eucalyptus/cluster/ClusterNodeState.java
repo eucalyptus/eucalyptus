@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -134,6 +135,9 @@ public class ClusterNodeState {
     LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( userFullName, requestId, this.clusterName, quantity, this.virtualTimer++, vmTypeName );
+    for( int i = 0 ; i < quantity; i++ ) {  
+      token.getInstanceUuids( ).add( UUID.randomUUID( ).toString( ) );
+    }
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
     this.pendingTokens.add( token );
     return token;
@@ -153,6 +157,9 @@ public class ClusterNodeState {
       }
       if( token.getInstanceIds( ).size( ) > index ) {
         childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
+      }
+      if( token.getInstanceUuids( ).size( ) > index ) {
+        childToken.getInstanceUuids( ).add( token.getInstanceUuids( ).get( index ) );
       }
       if( primaryNet != null ) {
         NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getAccountId( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
