@@ -16,14 +16,14 @@ public class InstanceEventListener
 	private static final long DEFAULT_WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
 
 	private final Set<String> recentlySeenUuids;
-	private final List<InstanceUsageSnapshot> recentUsageSnapshots;
+	private final Map<String, InstanceUsageSnapshot> recentUsageSnapshots;
 	private long lastWriteMs;
 	private long writeIntervalMs;
 	
 	public InstanceEventListener()
 	{
 		this.recentlySeenUuids = new HashSet<String>();
-		this.recentUsageSnapshots = new ArrayList<InstanceUsageSnapshot>();
+		this.recentUsageSnapshots = new HashMap<String, InstanceUsageSnapshot>();
 		this.lastWriteMs = 0l;
 		this.writeIntervalMs = DEFAULT_WRITE_INTERVAL_SECS * 1000;
 	}
@@ -71,13 +71,29 @@ public class InstanceEventListener
 				recentlySeenUuids.add(uuid);
 			  }
 
-			  /* Gather all usage snapshots, and write them all to the database
-			   * at once every n secs.
+			  
+			  /* Gather the latest usage snapshots (they're cumulative, so
+			   * intermediate ones don't matter except for granularity), and
+			   * write them all to the database at once every n secs.
 			   */
-			  recentUsageSnapshots.add(insUsageSnapshot);
+			  if (! recentUsageSnapshots.containsKey(uuid)) {
+				  recentUsageSnapshots.put(uuid, insUsageSnapshot);
+			  } else {
+				  InstanceUsageSnapshot oldSnapshot =
+					  recentUsageSnapshots.get(uuid);
+				  if (oldSnapshot.getTimestampMs() < insUsageSnapshot.getTimestampMs()) {
+					  recentUsageSnapshots.put(uuid, insUsageSnapshot);
+				  } else {
+					  //log, then just continue
+					  log.error("Events are arriving out of order");
+				  }
+			  }
 
+			  log.info("Determining if events should be written");
 			  if (receivedEventMs > (lastWriteMs + getWriteIntervalMs())) {
-				  for (InstanceUsageSnapshot ius: recentUsageSnapshots) {
+				  for (String key: recentUsageSnapshots.keySet()) {
+					  log.info("beginning event writing for:" + uuid);
+					  InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
 					  entityWrapper.recast(InstanceUsageSnapshot.class).add(ius);
 					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
 				  }
@@ -99,7 +115,8 @@ public class InstanceEventListener
 		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
 			EntityWrapper.get(InstanceUsageSnapshot.class);
 		try {
-			for (InstanceUsageSnapshot ius : recentUsageSnapshots) {
+			for (String key : recentUsageSnapshots.keySet()) {
+				InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
 				entityWrapper.add(ius);
 				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
 						+ ius.getEntityId());

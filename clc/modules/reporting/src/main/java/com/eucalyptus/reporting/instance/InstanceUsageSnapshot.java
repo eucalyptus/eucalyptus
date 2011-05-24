@@ -21,13 +21,13 @@ class InstanceUsageSnapshot
 	extends AbstractPersistent 
 {
 	@Column(name="uuid", nullable=false)
-	protected final String uuid;
+	protected String uuid;
 	@Column(name="timestamp_ms", nullable=false)
-	protected final Long timestampMs;
+	protected Long timestampMs;
 	@Column(name="total_network_io_megs", nullable=true)
-	protected final Long networkIoMegs;
+	protected Long networkIoMegs;
 	@Column(name="total_disk_io_megs", nullable=true)
-	protected final Long diskIoMegs;
+	protected Long diskIoMegs;
 
 
 	protected InstanceUsageSnapshot()
