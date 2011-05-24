@@ -535,7 +535,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to copy the kernel to boot directory\n");
-        return ERROR;
+        ret = ERROR;
+        goto cleanup;
     }
     free (output);
 
@@ -543,7 +544,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
         if (!output) {
             logprintfl (EUCAINFO, "ERROR: failed to copy the ramdisk to boot directory\n");
-            return ERROR;
+            ret = ERROR;
+            goto cleanup;
         }
         free (output);
     }
@@ -560,12 +562,20 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     char grub_conf_path [EUCA_MAX_PATH];
     snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
 
-    if (diskutil_write2file (menu_lst_path, buf)!=OK)
-        return ERROR;
-    if (diskutil_write2file (grub_conf_path, buf)!=OK)
-        return ERROR;
+    if (diskutil_write2file (menu_lst_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
+    if (diskutil_write2file (grub_conf_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
 
-    return OK;
+ cleanup:        
+    if(kfile) free(kfile);
+    if(rfile) free(rfile);
+
+    return ret;
 }
 
 int diskutil_grub_mbr (const char * path, const int part)

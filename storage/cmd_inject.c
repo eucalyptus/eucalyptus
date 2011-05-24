@@ -193,6 +193,7 @@ int inject_execute (imager_request * req)
     char * id = state->out;
     boolean success = TRUE;
     int ret = OK;
+    diskfile * df;
 
     // look up the artifacts from the preceding requirements() invocation
     artifacts_spec * spec = map_get (get_artifacts_map(), id);
@@ -233,7 +234,7 @@ int inject_execute (imager_request * req)
             }
         }
 
-        diskfile * df = df_open (o->path);
+        df = df_open (o->path);
         if (df==NULL) {
             logprintfl (EUCAERROR, "failed to open '%s'\n", o->path);
             ret = ERROR;
@@ -345,6 +346,11 @@ int inject_execute (imager_request * req)
         success = FALSE;
     }
     postprocess_output_path (o, success);
+
+    if(df) {
+        df_close(df);
+    }
+
     // TODO: free spec
 
     return ret;

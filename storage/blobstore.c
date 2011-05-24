@@ -1242,8 +1242,10 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         // recurse if this is a directory
         if (S_ISDIR (sb.st_mode)) {
             tail_bb = walk_bs (bs, entry_path, tail_bb);
-            if (tail_bb == NULL)
+            if (tail_bb == NULL) {
+                closedir(dir);
                 return NULL;
+            }
             continue;
         }
         
@@ -1499,6 +1501,7 @@ blockblob * blockblob_open ( blobstore * bs,
         goto clean;
     }    
 
+    int saved_errno = 0;
     int created_blob = 0;
     bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // blobs are always opened with exclusive write access
     if (bb->fd != -1) { 
@@ -1633,7 +1636,7 @@ blockblob * blockblob_open ( blobstore * bs,
     }
     goto out;
 
-    int saved_errno = 0;
+
  clean:
 
     saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
@@ -2171,6 +2174,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
     char ** dm_tables = calloc (map_size*4+1, sizeof(char *)); // for device mapper tables 
     if (dm_tables==NULL) {
         ERR (BLOBSTORE_ERROR_NOMEM, NULL);
+        free(dev_names);
         return -1;
     }
 
@@ -2230,7 +2234,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 snprintf (buf, sizeof(buf), "%s-p%d-real", dm_base, i);
                 dev_names [devices] = strdup (buf);
                 snapshotted_dev = dev_names [devices];
-                snprintf (buf, sizeof(buf), "0 %lld linear %s %lld\n", m->len_blocks, dev, m->first_block_src);
+                snprintf (buf, sizeof(buf), "0 %lld linear %s %lld\n", m->len_blocks, ((dev) ? dev : 0), m->first_block_src);
                 dm_tables [devices] = strdup (buf);
                 devices++;
             }
@@ -2324,6 +2328,9 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
     }
     free (dev_names);
     free (dm_tables);
+
+    if(main_dm_table)
+        free(main_dm_table);
 
     return ret;
 }
@@ -2485,8 +2492,10 @@ static void _fill_blob (blockblob * bb, char c, int use_file)
     if (failed_bytes) {
         printf ("WARNING: failed to fill %d byte(s) to path %s\n", failed_bytes, path);
     }
-    fsync (fd);
-    close (fd);
+    if(fd >= 0) {
+        fsync (fd);
+        close (fd);
+    }
 }
 
 static blobstore * create_teststore (int size_blocks, const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
@@ -2571,7 +2580,10 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
     blobstore * bs1 = create_teststore (STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE,  BLOBSTORE_SNAPSHOT_DM);
     if (bs1==NULL) { errors++; goto done; }
     blobstore * bs2 = create_teststore (STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
-    if (bs2==NULL) { errors++; goto done; }
+    if (bs2==NULL) { 
+        errors++; 
+        goto done; 
+    }
 
     blockblob * bbs1 [STRESS_BLOBS];
     long long bbs1_sizes [STRESS_BLOBS];
@@ -2711,11 +2723,13 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
         _DELWARN(bbs2[i+STRESS_BLOBS]);
     }
 
-    blobstore_close (bs1);
-    blobstore_close (bs2);
+    //    blobstore_close (bs1);
+    //  blobstore_close (bs2);
 
     printf ("completed cloning stress-test\n");
  done:
+    if(bs1 != NULL) blobstore_close (bs1);
+    if(bs2 != NULL) blobstore_close (bs2);
     return errors;
 }
 
@@ -2930,7 +2944,10 @@ static int do_metadata_test (const char * base, const char * name)
     _CHKMETA("foo/dm/dm.dm.dm/refs",BLOCKBLOB_PATH_REFS);
     _CHKMETA(".dm/dm",BLOCKBLOB_PATH_DM);
     _CHKMETA(".foo/dm",BLOCKBLOB_PATH_DM);
-    if (errors) return errors;
+    if (errors) {
+        blobstore_close (bs);
+        return errors;
+    }
 
     printf ("\ntesting metadata manipulation\n");
 
@@ -3032,9 +3049,6 @@ static int do_blobstore_test (const char * base, const char * name, blobstore_fo
     _DELEBB(bb3,B1,0); // delete it
     _OPENBB(bb3,B1,0,B1,0,0,-1); // open non-existining one
 
-    blobstore_lock (bs, 3000);
-    // TODO: test locking?
-    blobstore_unlock (bs);
     blobstore_close (bs);
 
     printf ("completed blobstore test (name=%s)\n", name);

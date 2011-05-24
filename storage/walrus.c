@@ -364,6 +364,9 @@ char * walrus_get_digest (const char * url)
         }
         unlink (digest_path);
     }
+    if(digest_path) {
+        free(digest_path);
+    }
     return digest_str;
 }
 
