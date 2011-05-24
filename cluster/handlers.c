@@ -637,7 +637,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  opFail=1;
 	} else {
 	  *outRes = malloc(sizeof(ncResource));
-	  if (!outRes) {
+	  if (*outRes == NULL) {
 	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
 	    unlock_exit(1);
 	  }
@@ -1218,13 +1218,14 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   sem_mypost(RESCACHE);
   {
     *outNodes = malloc(sizeof(ccResource) * resourceCacheLocal.numResources);
-    bzero(*outNodes, sizeof(ccResource) * resourceCacheLocal.numResources);
+
     if (*outNodes == NULL) {
       logprintfl(EUCAFATAL,"DescribeResources(): out of memory!\n");
       unlock_exit(1);
     } else {
-      memcpy(*outNodes, resourceCacheLocal.resources, sizeof(ccResource) * resourceCacheLocal.numResources);
-      *outNodesLen = resourceCacheLocal.numResources;
+       bzero(*outNodes, sizeof(ccResource) * resourceCacheLocal.numResources);
+       memcpy(*outNodes, resourceCacheLocal.resources, sizeof(ccResource) * resourceCacheLocal.numResources);
+       *outNodesLen = resourceCacheLocal.numResources;
     }
 
     for (i=0; i<resourceCacheLocal.numResources; i++) {
@@ -2421,7 +2422,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     rc = find_instanceCacheId(instId, &myInstance);
     if (!rc) {
       // found the instance in the cache
-      if (!strcmp(myInstance->state, "Pending") || !strcmp(myInstance->state, "Extant") || !strcmp(myInstance->state, "Unknown")) {
+       if (myInstance != NULL && (!strcmp(myInstance->state, "Pending") || !strcmp(myInstance->state, "Extant") || !strcmp(myInstance->state, "Unknown"))) {
 	start = myInstance->ncHostIdx;
 	stop = start+1;
       } else {
@@ -2801,7 +2802,7 @@ int ccCheckState() {
    controllers.  
 */
 void *monitor_thread(void *in) {
-  int rc, ncTimer, clcTimer, ncRefresh, clcRefresh;
+  int rc, ncTimer, clcTimer, ncRefresh = 0, clcRefresh = 0;
   ncMetadata ccMeta;
   char pidfile[MAX_PATH], *pidstr=NULL;
 
@@ -3313,6 +3314,7 @@ int init_config(void) {
       unsigned int a=0, b=0;
       if (sscanf(macPrefix, "%02X:%02X", &a,&b) != 2 || (a > 0xFF || b > 0xFF)) {
 	logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+	if(macPrefix) free(macPrefix);
 	macPrefix = strdup("d0:0d");
       }
     }
@@ -3483,9 +3485,10 @@ int init_config(void) {
 	if (ips) free(ips);
 	if (nms) free(nms);
       }
-      free(pubips);
+      //free(pubips);
     }
     
+    if(pubips) free(pubips);
     sem_mypost(VNET);
   }
   
@@ -3634,6 +3637,7 @@ int init_config(void) {
   tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
   if (tmpstr) {
     snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
+    free(tmpstr);
   } else {
     snprintf(proxyPath, MAX_PATH, "%s/var/lib/eucalyptus/dynserv", eucahome);
   }
@@ -3649,6 +3653,8 @@ int init_config(void) {
   if (use_proxy) {
     snprintf(config->proxyIp, 32, "%s", proxyIp);
   }
+  if(proxyIp) free(proxyIp);
+
   config->use_wssec = use_wssec;
   config->use_tunnels = use_tunnels;
   config->schedPolicy = schedPolicy;
@@ -3733,7 +3739,12 @@ int maintainNetworkState() {
     sem_mywait(VNET);
     
     // check to see if cloudIp has changed
-    logprintfl(EUCADEBUG, "maintainNetworkState(): CCcloudIp=%s VNETcloudIp=%s\n", hex2dot(config->cloudIp), hex2dot(vnetconfig->cloudIp));
+    char *cloudIp1 = hex2dot(config->cloudIp);
+    char *cloudIp2 = hex2dot(vnetconfig->cloudIp);
+    logprintfl(EUCADEBUG, "maintainNetworkState(): CCcloudIp=%s VNETcloudIp=%s\n", cloudIp1, cloudIp2);
+    free(cloudIp1);
+    free(cloudIp2);
+
     if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
       vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
@@ -3784,7 +3795,10 @@ int maintainNetworkState() {
     }
   }
   sem_mypost(CONFIG);
-  
+
+  if(pidstr) 
+     free(pidstr);
+
   return(ret);
 }
 
@@ -3885,6 +3899,8 @@ int reconfigureNetworkFromCLC() {
   fd = mkstemp(clcnetfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open clcnetfile '%s'\n", clcnetfile);
+    if(cloudIp)
+       free(cloudIp);
     return(1);
   }
   chmod(clcnetfile, 0644);
@@ -3923,9 +3939,14 @@ int reconfigureNetworkFromCLC() {
   } else {
     for (i=0; i<usernetlen; i++) {
       fprintf(FH, "%s %s\n", users[i], nets[i]);
+      free(users[i]);
+      free(nets[i]);
     }
   }
   fclose(FH);
+  
+  if(users) free(users);
+  if(nets) free(nets);
 
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
   rc = system(cmd);

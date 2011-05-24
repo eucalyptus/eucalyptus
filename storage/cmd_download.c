@@ -105,6 +105,7 @@ int download_interactive (void ** _state)
     boolean done = FALSE;
     boolean quit = FALSE;
     do {
+        done = TRUE;
         // TODO: finish interactive 
     } while (!done && !quit);
     
@@ -240,8 +241,8 @@ static char * download_walrus_digest (char * url)
 int download_requirements (imager_request * req)
 {
     download_params * state = (download_params *) req->internal;
-    long long size;
-    char * digest;
+    long long size = 0;
+    char * digest = NULL;
 
     switch (state->type) {
     case WALRUS: {
@@ -292,7 +293,9 @@ int download_requirements (imager_request * req)
     };
 
     artifacts_spec * output_spec = alloc_artifacts_spec (req, attrs);
-    free (digest);
+    if(digest)
+        free (digest);
+
     if (output_spec==NULL) {
         logprintfl (EUCAERROR, "error: out of memory for artifacts\n");
         return ERROR;

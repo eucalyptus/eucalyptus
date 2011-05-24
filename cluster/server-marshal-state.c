@@ -48,7 +48,7 @@ permission notice:
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
   THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ÃÂ  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
@@ -79,7 +79,6 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
   char statusMessage[256];
   ncMetadata ccMeta;
 
-  char **uris=NULL;
   serviceStatusType *outStatuses=NULL;
   serviceInfoType *serviceIds=NULL;
   int serviceIdsLen=0, outStatusesLen=0, i;
@@ -101,7 +100,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
   status = AXIS2_TRUE;
   rc = doDescribeServices(&ccMeta, serviceIds, serviceIdsLen, &outStatuses, &outStatusesLen);
-  if (uris) free(uris);
+
   if (rc) {
     logprintf("ERROR: doDescribeServices() returned FAIL\n");
     status = AXIS2_FALSE;
@@ -122,6 +121,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
     adb_describeServicesResponseType_add_serviceStatuses(adbresp, env, stt);
   }
+  if(outStatuses) free(outStatuses);
   
   adb_describeServicesResponseType_set_return(adbresp, env, status);
   if (status == AXIS2_FALSE) {

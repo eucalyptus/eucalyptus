@@ -535,7 +535,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to copy the kernel to boot directory\n");
-        return ERROR;
+        ret = ERROR;
+        goto cleanup;
     }
     free (output);
 
@@ -543,7 +544,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
         if (!output) {
             logprintfl (EUCAINFO, "ERROR: failed to copy the ramdisk to boot directory\n");
-            return ERROR;
+            ret = ERROR;
+            goto cleanup;
         }
         free (output);
     }
@@ -560,12 +562,20 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     char grub_conf_path [EUCA_MAX_PATH];
     snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
 
-    if (diskutil_write2file (menu_lst_path, buf)!=OK)
-        return ERROR;
-    if (diskutil_write2file (grub_conf_path, buf)!=OK)
-        return ERROR;
+    if (diskutil_write2file (menu_lst_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
+    if (diskutil_write2file (grub_conf_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
 
-    return OK;
+ cleanup:        
+    if(kfile) free(kfile);
+    if(rfile) free(rfile);
+
+    return ret;
 }
 
 int diskutil_grub_mbr (const char * path, const int part)
@@ -659,10 +669,17 @@ static char * pruntf (boolean log_error, char *format, ...)
     IF=popen(cmd, "r");
     if (!IF) {
         logprintfl (EUCAERROR, "error: cannot popen() cmd '%s' for read\n", cmd);
+        va_end(ap);
         return(NULL);
     }
 
     output = malloc(sizeof(char) * outsize);
+    if (output == NULL) {
+        logprintfl (EUCAERROR, "error: failed to allocate mem for output\n");
+        va_end(ap);
+        return(NULL);
+    }
+
     while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
         output[(outsize-1025)+bytes] = '\0';
         outsize += 1024;
@@ -677,6 +694,7 @@ static char * pruntf (boolean log_error, char *format, ...)
         if (output) free (output);
         output = NULL;
     }
+    va_end(ap);
     return (output);
 }
 
