@@ -94,7 +94,7 @@ public class S3EventListener
 								timeMillis);
 						S3UsageSnapshot sus =
 							new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
-						sus.getSnapshotKey().setAllSnapshot(true);
+						sus.setAllSnapshot(true);
 						LOG.info("Storing part of allSnapshot:" + sus);
 						entityWrapper.add(sus);
 						lastAllSnapshotMs = timeMillis;

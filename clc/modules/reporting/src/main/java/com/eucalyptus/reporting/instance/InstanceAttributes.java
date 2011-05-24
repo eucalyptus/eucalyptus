@@ -60,6 +60,11 @@ public class InstanceAttributes
 	{
 		return this.uuid;
 	}
+	
+	void setUuid(String uuid)
+	{
+		this.uuid = uuid;
+	}
 
 	public String getInstanceId()
 	{

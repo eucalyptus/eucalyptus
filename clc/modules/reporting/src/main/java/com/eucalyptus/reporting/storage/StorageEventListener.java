@@ -99,7 +99,7 @@ public class StorageEventListener
 								summaryKey.getAvailabilityZone(), timeMillis);
 						StorageUsageSnapshot sus =
 							new StorageUsageSnapshot(snapshotKey, usageDataMap.get(key));
-						snapshotKey.setAllSnapshot(true);
+						sus.setAllSnapshot(true);
 						LOG.info("Storing as part of allSnapshot:" + sus);
 						entityWrapper.add(sus);
 						lastAllSnapshotMs = timeMillis;

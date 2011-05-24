@@ -75,7 +75,7 @@ public class S3UsageLog
 				long startingMs = timestampMs - (oneHourMs*i);
 				log.info("Searching for latest timestamp before beginning:" + startingMs);
 				@SuppressWarnings("rawtypes")
-				Iterator iter =
+				List list =
 					entityWrapper.createQuery(
 						"from S3UsageSnapshot as sus"
 						+ " WHERE sus.key.timestampMs > ?"
@@ -83,9 +83,9 @@ public class S3UsageLog
 						+ " AND sus.allSnapshot = true")
 						.setLong(0, new Long(startingMs))
 						.setLong(1, new Long(timestampMs))
-						.iterate();
-				while (iter.hasNext()) {
-					S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+						.list();
+				for (Object obj: list) {
+					S3UsageSnapshot snapshot = (S3UsageSnapshot) obj;
 					foundTimestampMs = snapshot.getSnapshotKey().getTimestampMs();
 				}
 				if (foundTimestampMs != 0l) break;
@@ -116,15 +116,15 @@ public class S3UsageLog
 				findLatestAllSnapshotBefore(System.currentTimeMillis());
 			@SuppressWarnings("rawtypes")
 
-			Iterator iter = entityWrapper.createQuery(
+			List list = entityWrapper.createQuery(
 					"from S3UsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?")
 					.setLong(0, new Long(latestSnapshotBeforeMs))
-					.iterate();
+					.list();
 			
-			while (iter.hasNext()) {
+			for (Object obj: list) {
 				
-				S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+				S3UsageSnapshot snapshot = (S3UsageSnapshot) obj;
 				S3SnapshotKey snapshotKey = snapshot.getSnapshotKey();
 				S3SummaryKey summaryKey = new S3SummaryKey(snapshotKey);
 
@@ -168,17 +168,17 @@ public class S3UsageLog
 				findLatestAllSnapshotBefore(period.getBeginningMs());
 
 			@SuppressWarnings("rawtypes")
-			Iterator iter = entityWrapper.createQuery(
+			List list = entityWrapper.createQuery(
 					"from S3UsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
 					+ " AND sus.key.timestampMs < ?")
 					.setLong(0, new Long(latestSnapshotBeforeMs))
 					.setLong(1, new Long(period.getEndingMs()))
-					.iterate();
+					.list();
 			
-			while (iter.hasNext()) {
+			for (Object obj: list) {
 				
-				S3UsageSnapshot snapshot = (S3UsageSnapshot) iter.next();
+				S3UsageSnapshot snapshot = (S3UsageSnapshot) obj;
 				S3SnapshotKey snapshotKey = snapshot.getSnapshotKey();
 				S3SummaryKey summaryKey = new S3SummaryKey(snapshotKey);
 

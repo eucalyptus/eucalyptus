@@ -104,16 +104,16 @@ public class InstanceUsageLog
 				long startingMs = timestampMs - (oneHourMs*i);
 				log.info("Searching for latest timestamp before beginning:" + startingMs);
 				@SuppressWarnings("rawtypes")
-				Iterator iter =
+				List iuses =
 					entityWrapper.createQuery(
 						"from InstanceUsageSnapshot as ius"
 						+ " WHERE ius.timestampMs > ?"
 						+ " AND ius.timestampMs < ?")
 						.setLong(0, new Long(startingMs))
 						.setLong(1, new Long(timestampMs))
-						.iterate();
-				while (iter.hasNext()) {
-					InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) iter.next();
+						.list();
+				for (Object obj: iuses) {
+					InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) obj;
 					foundTimestampMs = snapshot.getTimestampMs();
 				}
 				entityWrapper.commit();
@@ -162,18 +162,18 @@ public class InstanceUsageLog
 
 			
 			@SuppressWarnings("rawtypes")
-			Iterator iter = entityWrapper.createQuery(
+			List list = entityWrapper.createQuery(
 					"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
 					+ " where ia.uuid = ius.uuid"
 					+ " and ius.timestampMs > ?"
 					+ " and ius.timestampMs < ?")
 					.setLong(0, latestSnapshotBeforeMs)
 					.setLong(1, afterEnd)
-					.iterate();
+					.list();
 			
-			while (iter.hasNext()) {
+			for (Object obj: list) {
 
-				Object[] row = (Object[]) iter.next();
+				Object[] row = (Object[]) obj;
 				InstanceAttributes insAttrs = (InstanceAttributes) row[0];
 				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) row[1];
 
