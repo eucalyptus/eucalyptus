@@ -12,7 +12,7 @@ public interface AccessKey extends /*HasId, */Serializable {
   public String getAccessKey( );
   public String getSecretKey( );
   
-  /**
+  /*
    * Returns the SECRET key -- also available via longer named {@link#getSecretKey()}
    * @deprecated {@link #getSecretKey()}
    * @see {@link com.eucalyptus.auth.Accounts}

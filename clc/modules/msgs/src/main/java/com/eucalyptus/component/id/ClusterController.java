@@ -17,7 +17,7 @@ public class ClusterController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), Internets.localhost( ), this.getPort( ) );
+    return String.format( getUriPattern(), Internets.localHostAddress( ), this.getPort( ) );
   }
   
   @Override

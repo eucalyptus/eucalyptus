@@ -14,7 +14,7 @@ import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.VmTypeView;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class VmTypeActivity extends AbstractSearchResultActivity implements VmTypeView.Presenter, DetailView.Presenter {
+public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView.Presenter, DetailView.Presenter {
 
   public static final String TITLE = "VIRTUAL MACHINE TYPES";
   

@@ -95,7 +95,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
@@ -199,7 +199,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -217,7 +217,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccountId( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                Callbacks.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
+                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
               }
             }
           }
@@ -237,7 +237,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       VmInstances.cleanUpAttachedVolumes( vm );
 
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = Callbacks.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );

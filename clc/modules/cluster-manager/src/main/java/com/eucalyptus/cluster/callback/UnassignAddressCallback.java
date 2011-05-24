@@ -83,7 +83,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   private Address       address;
   
   public UnassignAddressCallback( String addr, String vmIp ) {
-    super.setRequest( new UnassignAddressType( addr, vmIp ) );
+    super( new UnassignAddressType( addr, vmIp ) );
     try {
       this.address = Addresses.getInstance( ).lookup( addr );
     } catch ( Exception e ) {

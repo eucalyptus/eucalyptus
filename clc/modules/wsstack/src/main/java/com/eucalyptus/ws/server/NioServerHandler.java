@@ -181,7 +181,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status, Throwable t ) {
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    if ( Logs.DEBUG ) {
+    if ( Logs.EXTREME ) {
       ByteArrayOutputStream os = new ByteArrayOutputStream( );
       PrintWriter out = new PrintWriter( os );
       t.printStackTrace( out );

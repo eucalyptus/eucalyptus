@@ -116,7 +116,7 @@ static char * helpers [LASTHELPER] = {
 };
 
 static char * helpers_path [LASTHELPER];
-static char * pruntf (char *format, ...);
+static char * pruntf (boolean log_error, char *format, ...);
 static int initialized = 0;
 static sem * loop_sem = NULL; // semaphore held while attaching/detaching loopback devices
 
@@ -153,7 +153,7 @@ int diskutil_ddzero (const char * path, const long long sectors, boolean zero_fi
         seek = 0;
     }
 
-    output = pruntf ("%s %s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], path, seek, count);
+    output = pruntf (TRUE, "%s %s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], path, seek, count);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot create disk file %s\n", path);
         ret = ERROR;
@@ -169,11 +169,12 @@ int diskutil_dd (const char * in, const char * out, const int bs, const long lon
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "copying infile data to intermediate disk file...\n");
-    output = pruntf("%s %s if=%s of=%s bs=%d count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count);
+    logprintfl (EUCAINFO, "{%u} copying data from '%s'\n", (unsigned int)pthread_self(), in);
+    logprintfl (EUCAINFO, "{%u}                to '%s' (blocks=%lld)\n", (unsigned int)pthread_self(), out, count);
+    output = pruntf (TRUE, "%s %s if=%s of=%s bs=%d count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot copy '%s' to '%s'\n", in, out);
-        ret = ERROR;
+        logprintfl (EUCAERROR, "{%u} error: cannot copy '%s'\n", (unsigned int)pthread_self(), in);
+        logprintfl (EUCAERROR, "{%u}                 to '%s'\n", (unsigned int)pthread_self(), out);
     } else {
         free (output);
     }
@@ -186,10 +187,13 @@ int diskutil_dd2 (const char * in, const char * out, const int bs, const long lo
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "copying data from %s to %s of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", in, out, count, bs, seek, skip);
-    output = pruntf("%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
+    logprintfl (EUCAINFO, "{%u} copying data from '%s'\n", (unsigned int)pthread_self(), in);
+    logprintfl (EUCAINFO, "{%u}                to '%s'\n", (unsigned int)pthread_self(), out);
+    logprintfl (EUCAINFO, "{%u}                of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", (unsigned int)pthread_self(), count, bs, seek, skip);
+    output = pruntf (TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot copy '%s' to '%s'\n", in, out);
+        logprintfl (EUCAERROR, "{%u} error: cannot copy '%s'\n", (unsigned int)pthread_self(), in);
+        logprintfl (EUCAERROR, "{%u}                 to '%s'\n", (unsigned int)pthread_self(), out);
         ret = ERROR;
     } else {
         free (output);
@@ -203,7 +207,7 @@ int diskutil_mbr (const char * path, const char * type)
     int ret = OK;
     char * output;
 
-    output = pruntf ("LD_PRELOAD='' %s %s --script %s mklabel %s", helpers_path[ROOTWRAP], helpers_path[PARTED], path, type);
+    output = pruntf (TRUE, "LD_PRELOAD='' %s %s --script %s mklabel %s", helpers_path[ROOTWRAP], helpers_path[PARTED], path, type);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot create an MBR\n");
         ret = ERROR;
@@ -219,7 +223,7 @@ int diskutil_part (const char * path, char * part_type, const char * fs_type, co
     int ret = OK;
     char * output;
 
-    output = pruntf ("LD_PRELOAD='' %s %s --script %s mkpart %s %s %llds %llds", helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, (fs_type)?(fs_type):(""), first_sector, last_sector);
+    output = pruntf (TRUE, "LD_PRELOAD='' %s %s --script %s mkpart %s %s %llds %llds", helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, (fs_type)?(fs_type):(""), first_sector, last_sector);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot add a partition\n");
         ret = ERROR;
@@ -237,6 +241,8 @@ sem * diskutil_get_loop_sem (void)
     return loop_sem;
 }
 
+#define LOOP_RETRIES 9
+
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size)
 {
     int found = 0;
@@ -247,9 +253,9 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
     // we retry because we cannot atomically obtain a free loopback
     // device on all distros (some versions of 'losetup' allow a file
     // argument with '-f' options, but some do not)
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<LOOP_RETRIES; i++) {
         sem_p (loop_sem);
-        output = pruntf ("%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
+        output = pruntf (TRUE, "%s %s -f", helpers_path[ROOTWRAP], helpers_path[LOSETUP]);
         sem_v (loop_sem);
         if (output==NULL) // there was a problem
             break;
@@ -264,27 +270,29 @@ int diskutil_loop (const char * path, const long long offset, char * lodev, int 
         free (output);
 
         if (found) {
-            logprintfl (EUCADEBUG, "{%u} attaching to loop device '%s' at offset '%lld' file %s\n", (unsigned int)pthread_self(), lodev, offset, path);
+            boolean do_log = ((i+1)==LOOP_RETRIES); // log error on last try only
+            logprintfl (EUCADEBUG, "{%u} attaching file %s\n", (unsigned int)pthread_self(), path);
+            logprintfl (EUCADEBUG, "{%u}             to %s at offset %lld\n", (unsigned int)pthread_self(), lodev, offset);
             sem_p (loop_sem);
-            output = pruntf ("%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
+            output = pruntf (do_log, "%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
             sem_v (loop_sem);
             if (output==NULL) {
-                logprintfl (EUCAINFO, "WARNING: cannot attach %s to loop device %s (will retry)\n", path, lodev);
+                logprintfl (EUCADEBUG, "{%u} cannot attach to loop device %s (will retry)\n", (unsigned int)pthread_self(), lodev);
             } else {
                 free (output);
                 done = 1;
                 break;
             }
         }
-
-        sleep (3);
+        
+        sleep (1);
         found = 0;
     }
     if (!done) {
-        logprintfl (EUCAINFO, "ERROR: cannot find free loop device or attach to one\n");
+        logprintfl (EUCAINFO, "{%u} error: cannot find free loop device or attach to one\n", (unsigned int)pthread_self());
         ret = ERROR;
     }
-
+    
     return ret;
 }
 
@@ -292,14 +300,16 @@ int diskutil_unloop (const char * lodev)
 {
     int ret = OK;
     char * output;
+    int retried = 0;
 
-    logprintfl (EUCAINFO, "{%u} detaching from loop device '%s'\n", (unsigned int)pthread_self(), lodev);
+    logprintfl (EUCAINFO, "{%u} detaching from loop device %s\n", (unsigned int)pthread_self(), lodev);
 
     // we retry because we have seen spurious errors from 'losetup -d' on Xen:
     //     ioctl: LOOP_CLR_FD: Device or resource bus
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<LOOP_RETRIES; i++) {
+        boolean do_log = ((i+1)==LOOP_RETRIES); // log error on last try only
         sem_p (loop_sem);
-        output = pruntf("%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+        output = pruntf (do_log, "%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
         sem_v (loop_sem);
         if (!output) {           
             ret = ERROR;
@@ -308,11 +318,14 @@ int diskutil_unloop (const char * lodev)
             free (output);
             break;
         }
-        logprintfl (EUCAINFO, "WARNING: cannot dettach loop device %s (will retry)\n", lodev);
+        logprintfl (EUCADEBUG, "{%u} cannot detach loop device %s (will retry)\n", (unsigned int)pthread_self(), lodev);
+        retried++;
         sleep (1);
     }
     if (ret == ERROR) {
-      logprintfl (EUCAINFO, "ERROR: cannot detach loop device\n");
+        logprintfl (EUCAINFO, "{%u} error: cannot detach loop device\n", (unsigned int)pthread_self());
+    } else if (retried) {
+        logprintfl (EUCAINFO, "{%u} succeeded to detach %s after %d retries\n", (unsigned int)pthread_self(), lodev, retried);
     }
 
     return ret;
@@ -323,9 +336,9 @@ int diskutil_mkswap (const char * lodev, const long long size_bytes)
     int ret = OK;
     char * output;
 
-    output = pruntf ("%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes/1024);
+    output = pruntf (TRUE, "%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes/1024);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as swap\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot format partition on '%s' as swap\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -340,9 +353,9 @@ int diskutil_mkfs (const char * lodev, const long long size_bytes)
     char * output;
     int block_size = 4096;
 
-    output = pruntf ("%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes/block_size);
+    output = pruntf (TRUE, "%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes/block_size);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot format partition on '%s' as ext3\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot format partition on '%s' as ext3\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -357,10 +370,10 @@ int diskutil_tune (const char * lodev)
     char * output;
 
     sem_p (loop_sem);
-    output = pruntf ("%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
+    output = pruntf (TRUE, "%s %s %s -c 0 -i 0", helpers_path[ROOTWRAP], helpers_path[TUNE2FS], lodev);
     sem_v (loop_sem);
     if (!output) {
-        logprintfl (EUCAINFO, "ERROR: cannot tune file system on '%s'\n", lodev);
+        logprintfl (EUCAINFO, "{%u} error: cannot tune file system on '%s'\n", (unsigned int)pthread_self(), lodev);
         ret = ERROR;
     } else {
         free (output);
@@ -376,7 +389,7 @@ int diskutil_sectors (const char * path, const int part, long long * first, long
     * first = 0L;
     * last = 0L;
 
-    output = pruntf ("%s %s", helpers_path[FILECMD], path);
+    output = pruntf (TRUE, "%s %s", helpers_path[FILECMD], path);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to extract partition information for '%s'\n", path);
     } else {
@@ -427,7 +440,7 @@ int diskutil_mount (const char * dev, const char * mnt_pt)
     char * output;
 
     sem_p (loop_sem);
-    output = pruntf ("%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
+    output = pruntf (TRUE, "%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
     sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot mount device '%s' on '%s'\n", dev, mnt_pt);
@@ -445,7 +458,7 @@ int diskutil_umount (const char * dev)
     char * output;
 
     sem_p (loop_sem);
-    output = pruntf ("%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
+    output = pruntf (TRUE, "%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
     sem_v (loop_sem);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: cannot unmount device '%s'\n", dev);
@@ -488,14 +501,14 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     char * kfile;
     char * rfile;
 
-    output = pruntf ("%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
+    output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to create grub directory\n");
         return ERROR;
     }
     free (output);
 
-    output = pruntf ("%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
+    output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to copy stage files into grub directory\n");
         return ERROR;
@@ -519,7 +532,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     }
 
     logprintfl (EUCAINFO, "installing kernel, ramdisk, and modules...\n");
-    output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
+    output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
     if (!output) {
         logprintfl (EUCAINFO, "ERROR: failed to copy the kernel to boot directory\n");
         return ERROR;
@@ -527,7 +540,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     free (output);
 
     if (ramdisk) {
-        output = pruntf("%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
+        output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
         if (!output) {
             logprintfl (EUCAINFO, "ERROR: failed to copy the ramdisk to boot directory\n");
             return ERROR;
@@ -584,7 +597,7 @@ int diskutil_ch (const char * path, const char * user, const int perms)
     char * output;
 
     if (user) {
-        output = pruntf ("%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
+        output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
         if (!output) {
             return ERROR;
         }
@@ -592,7 +605,7 @@ int diskutil_ch (const char * path, const char * user, const int perms)
     }
 
     if (perms>0) {
-        output = pruntf ("%s %s 0%o %s", helpers_path[ROOTWRAP], helpers_path[CHMOD], perms, path);
+        output = pruntf (TRUE, "%s %s 0%o %s", helpers_path[ROOTWRAP], helpers_path[CHMOD], perms, path);
         if (!output) {
             return ERROR;
         }
@@ -606,7 +619,7 @@ int diskutil_mkdir (const char * path)
 {
     char * output;
 
-    output = pruntf ("%s %s -p %s", helpers_path[ROOTWRAP], helpers_path[MKDIR], path);
+    output = pruntf (TRUE, "%s %s -p %s", helpers_path[ROOTWRAP], helpers_path[MKDIR], path);
     if (!output) {
         return ERROR;
     }
@@ -619,7 +632,7 @@ int diskutil_cp (const char * from, const char * to)
 {
     char * output;
 
-    output = pruntf ("%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CP], from, to);
+    output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CP], from, to);
     if (!output) {
         return ERROR;
     }
@@ -628,7 +641,7 @@ int diskutil_cp (const char * from, const char * to)
     return OK;
 }
 
-static char * pruntf (char *format, ...)
+static char * pruntf (boolean log_error, char *format, ...)
 {
     va_list ap;
     FILE *IF=NULL;
@@ -657,12 +670,14 @@ static char * pruntf (char *format, ...)
     }
     rc = pclose(IF);
     if (rc) {
-        logprintfl (EUCADEBUG, "%s\n", output);
-        if (output) free(output);
+        if (log_error) {
+            logprintfl (EUCAERROR, "error: bad return code from cmd '%s'\n", cmd);
+            logprintfl (EUCADEBUG, "%s\n", output);
+        }
+        if (output) free (output);
         output = NULL;
-        logprintfl (EUCAERROR, "error: bad return code from cmd '%s'\n", cmd);
     }
-    return(output);
+    return (output);
 }
 
 // round up or down to sector size

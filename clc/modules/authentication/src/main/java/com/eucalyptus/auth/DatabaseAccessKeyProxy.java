@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -36,7 +36,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
           t.setActive( active );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
       throw new AuthException( e );
     }
@@ -55,7 +55,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
           t.setSecretKey( key );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
       throw new AuthException( e );
     }
@@ -74,7 +74,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
           t.setCreateDate( createDate );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setCreateDate for " + this.delegate );
       throw new AuthException( e );
     } 
@@ -89,7 +89,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
       throw new AuthException( e );
     }

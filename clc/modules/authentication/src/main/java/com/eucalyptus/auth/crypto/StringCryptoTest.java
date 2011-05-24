@@ -31,7 +31,9 @@ public class StringCryptoTest {
     while ( ( n = fis.read( block ) ) > 0 ) {
       baos.write( block, 0, n );
     }
-    return baos.toByteArray( );
+    byte[] bytes = baos.toByteArray( );
+    baos.close( );
+    return bytes;
   }
   
 }

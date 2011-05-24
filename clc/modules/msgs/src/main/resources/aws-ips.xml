@@ -65,69 +65,69 @@
 
 <binding force-classes="true" add-constructors="true">
     <!--2008-02-01-->
-    <mapping name="AllocateAddress" class="edu.ucsb.eucalyptus.msgs.AllocateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-    </mapping>
+  <mapping name="AllocateAddress" class="edu.ucsb.eucalyptus.msgs.AllocateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="AllocateAddressResponse" class="edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="publicIp" field="publicIp"/>
-    </mapping>
+  <mapping name="AllocateAddressResponse" class="edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="ReleaseAddress" class="edu.ucsb.eucalyptus.msgs.ReleaseAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="publicIp" field="publicIp"/>
-    </mapping>
+  <mapping name="ReleaseAddress" class="edu.ucsb.eucalyptus.msgs.ReleaseAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="ReleaseAddressResponse" class="edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-    </mapping>
+  <mapping name="ReleaseAddressResponse" class="edu.ucsb.eucalyptus.msgs.ReleaseAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="DescribeAddresses" class="edu.ucsb.eucalyptus.msgs.DescribeAddressesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="publicIpsSet" field="publicIpsSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-            <structure name="item">
-                <value name="publicIp"/>
-            </structure>
-        </collection>
-    </mapping>
+  <mapping name="DescribeAddresses" class="edu.ucsb.eucalyptus.msgs.DescribeAddressesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="publicIpsSet" field="publicIpsSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="publicIp" />
+      </structure>
+    </collection>
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="DescribeAddressesResponse"
-             class="edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="addressesSet" field="addressesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AddressInfoType"/>
-        </collection>
-    </mapping>
+  <mapping name="DescribeAddressesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="addressesSet" field="addressesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AddressInfoType" />
+    </collection>
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="AssociateAddress" class="edu.ucsb.eucalyptus.msgs.AssociateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="publicIp" field="publicIp"/>
-        <value name="instanceId" field="instanceId"/>
-    </mapping>
+  <mapping name="AssociateAddress" class="edu.ucsb.eucalyptus.msgs.AssociateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="publicIp" field="publicIp" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="AssociateAddressResponse" class="edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-    </mapping>
+  <mapping name="AssociateAddressResponse" class="edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="DisassociateAddress" class="edu.ucsb.eucalyptus.msgs.DisassociateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="publicIp" field="publicIp"/>
-    </mapping>
+  <mapping name="DisassociateAddress" class="edu.ucsb.eucalyptus.msgs.DisassociateAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping name="DisassociateAddressResponse"
-             class="edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-    </mapping>
+  <mapping name="DisassociateAddressResponse" class="edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
     <!--2008-02-01-->
-    <mapping class="edu.ucsb.eucalyptus.msgs.AddressInfoType" abstract="true">
-      <value name="publicIp" field="publicIp"/>
-      <value name="instanceId" field="instanceId" usage="optional"/>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.AddressInfoType" abstract="true">
+    <value name="publicIp" field="publicIp" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+  </mapping>
 
 </binding>
