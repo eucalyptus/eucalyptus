@@ -941,9 +941,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
-    } else if ( State.NOTREADY.equals( this.stateMachine.getState( ) ) ) {
-      CheckException ex = ServiceChecks.Severity.ERROR.transform( configuration, new RuntimeException( "Current state is NOTREADY" ) );
-      throw ex;
     }
   }
   
