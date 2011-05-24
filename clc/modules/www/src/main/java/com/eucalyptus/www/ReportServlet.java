@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceReportLine;
 import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
@@ -145,7 +145,7 @@ public class ReportServlet
 				int criterionId = Integer.parseInt(Param.criterionId.get(req));
 				int groupById = Integer.parseInt(Param.groupById.get(req));
 				// TODO: explain magic num
-				GroupByCriterion criterion = GroupByCriterion.values()[criterionId + 1];
+				ReportingCriterion criterion = ReportingCriterion.values()[criterionId + 1];
 				Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
 
 				Map<String, String> params = new HashMap<String, String>();
@@ -155,9 +155,9 @@ public class ReportServlet
 				params.put("sizeTimeTimeUnit", displayUnits.getSizeTimeTimeUnit().toString());
 				params.put("sizeTimeSizeUnit", displayUnits.getSizeTimeSizeUnit().toString());
 
-				GroupByCriterion groupByCriterion = null;
+				ReportingCriterion groupByCriterion = null;
 				if (groupById > 0) {
-					groupByCriterion = GroupByCriterion.values()[groupById - 1];
+					groupByCriterion = ReportingCriterion.values()[groupById - 1];
 					params.put("groupByCriterion", groupByCriterion.toString());
 				}
 

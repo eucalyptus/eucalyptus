@@ -29,7 +29,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.instance.InstanceReportLine;
 import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
@@ -217,7 +217,7 @@ public class Reports extends HttpServlet {
         	Period period = new Period(start, end);
         	int criterionId = Integer.parseInt(Param.criterionId.get(req));
         	int groupById = Integer.parseInt(Param.groupById.get(req));
-        	GroupByCriterion criterion = GroupByCriterion.values()[criterionId+1]; //TODO: explain magic num
+        	ReportingCriterion criterion = ReportingCriterion.values()[criterionId+1]; //TODO: explain magic num
         	Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
  
         	Map<String,String> params = new HashMap<String,String>();
@@ -227,9 +227,9 @@ public class Reports extends HttpServlet {
     		params.put("sizeTimeTimeUnit", displayUnits.getSizeTimeTimeUnit().toString());
     		params.put("sizeTimeSizeUnit", displayUnits.getSizeTimeSizeUnit().toString());
     		
-    		GroupByCriterion groupByCriterion =  null;
+    		ReportingCriterion groupByCriterion =  null;
     		if (groupById > 0) {
-				groupByCriterion = GroupByCriterion.values()[groupById-1];
+				groupByCriterion = ReportingCriterion.values()[groupById-1];
 				params.put("groupByCriterion", groupByCriterion.toString());        		
         	}
     		

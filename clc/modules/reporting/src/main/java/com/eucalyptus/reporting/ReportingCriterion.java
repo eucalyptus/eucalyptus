@@ -1,12 +1,12 @@
 package com.eucalyptus.reporting;
 
 /**
- * <p>GroupByCriterion is a criterion which can be used for grouping or 
- * aggregation of elements in a visual report.
+ * <p>ReportingCriterion is a criterion for elements in a visual report;
+ * for example, you could generate a report by "user" or "cluster".
  * 
  * @author tom.werges
  */
-public enum GroupByCriterion
+public enum ReportingCriterion
 {
 	AVAILABILITY_ZONE("Availability Zone"),
 	CLUSTER("Cluster"),
@@ -15,7 +15,7 @@ public enum GroupByCriterion
 	
 	private final String name;
 	
-	private GroupByCriterion(String name)
+	private ReportingCriterion(String name)
 	{
 		this.name = name;
 	}

@@ -4,7 +4,7 @@ import java.util.*;
 
 import org.mortbay.log.Log;
 
-import com.eucalyptus.reporting.GroupByCriterion;
+import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.units.Units;
 
@@ -26,13 +26,13 @@ public class S3ReportLineGenerator
 	}
 	
 	public List<S3ReportLine> getReportLines(Period period,
-			GroupByCriterion criterion,	Units displayUnits)
+			ReportingCriterion criterion,	Units displayUnits)
 	{
 		return getReportLines(period, null, criterion, displayUnits);
 	}
 
-	public List<S3ReportLine> getReportLines(Period period, GroupByCriterion groupByCrit,
-			GroupByCriterion crit, Units displayUnits)
+	public List<S3ReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
+			ReportingCriterion crit, Units displayUnits)
 	{
 		Map<S3ReportLineKey, S3ReportLine> reportLineMap =
 			new HashMap<S3ReportLineKey, S3ReportLine>();
@@ -63,7 +63,7 @@ public class S3ReportLineGenerator
 	}
 
 	
-	private static String getAttributeValue(GroupByCriterion criterion,
+	private static String getAttributeValue(ReportingCriterion criterion,
 			S3SummaryKey key)
 	{
 		switch (criterion) {
