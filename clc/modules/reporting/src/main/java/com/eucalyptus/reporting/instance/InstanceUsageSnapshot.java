@@ -17,7 +17,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
-class InstanceUsageSnapshot extends AbstractPersistent 
+class InstanceUsageSnapshot
+	extends AbstractPersistent 
 {
 	@Column(name="uuid", nullable=false)
 	protected final String uuid;
@@ -73,6 +74,41 @@ class InstanceUsageSnapshot extends AbstractPersistent
 	Long getCumulativeDiskIoMegs()
 	{
 		return diskIoMegs;
+	}
+
+
+	@Override
+	public int hashCode()
+	{
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result
+				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
+		result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		InstanceUsageSnapshot other = (InstanceUsageSnapshot) obj;
+		if (timestampMs == null) {
+			if (other.timestampMs != null)
+				return false;
+		} else if (!timestampMs.equals(other.timestampMs))
+			return false;
+		if (uuid == null) {
+			if (other.uuid != null)
+				return false;
+		} else if (!uuid.equals(other.uuid))
+			return false;
+		return true;
 	}
 
   /**

@@ -25,9 +25,6 @@ public class StorageSnapshotKey
 	protected final String availabilityZone;
 	@Column(name="timestamp_ms", nullable=false)
 	protected final Long timestampMs;
-	@Column(name="is_all_snapshot", nullable=false)
-	protected Boolean allSnapshot = false;
-	//TODO: update equals and hashcode??
 	
 	protected StorageSnapshotKey()
 	{
@@ -73,16 +70,6 @@ public class StorageSnapshotKey
 		return timestampMs;
 	}
 
-	public Boolean getAllSnapshot()
-	{
-		return allSnapshot;
-	}
-
-	public void setAllSnapshot(Boolean allSnapshot)
-	{
-		this.allSnapshot = allSnapshot;
-	}
-	
 	public StorageSnapshotKey newKey(long newTimestampMs)
 	{
 		return new StorageSnapshotKey(ownerId, accountId, clusterName, availabilityZone,
@@ -92,8 +79,8 @@ public class StorageSnapshotKey
 	@Override
 	public String toString()
 	{
-		return String.format("[owner:%s,account:%s,cluster:%s,zone:%s,timestamp:%d,allSnapshot:%b]",
-				ownerId, accountId, clusterName, availabilityZone, timestampMs, allSnapshot);
+		return String.format("[owner:%s,account:%s,cluster:%s,zone:%s,timestamp:%d]",
+				ownerId, accountId, clusterName, availabilityZone, timestampMs);
 	}
 
 	@Override

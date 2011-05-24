@@ -4,6 +4,8 @@ import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 /**
  * <p>StorageUsageSnapshot is a snapshot of disk data usage at some point in
  * time.
@@ -14,15 +16,14 @@ import org.hibernate.annotations.Entity;
 @PersistenceContext(name="reporting")
 @Table(name="storage_usage_snapshot")
 class StorageUsageSnapshot
+	extends AbstractPersistent
 {
-	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
-	@Column(name="id")
-	private Long id;
 	@Embedded
 	protected StorageSnapshotKey key;
 	@Embedded
 	protected StorageUsageData usageData;
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot = false;
 	
 	protected StorageUsageSnapshot()
 	{
@@ -44,10 +45,36 @@ class StorageUsageSnapshot
 	{
 		return usageData;
 	}
+	
+	public Boolean getAllSnapshot()
+	{
+		return allSnapshot;
+	}
 
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
+	}
+	
 	public String toString()
 	{
-		return String.format("[key:%s,usageData:%s]", this.key, this.usageData);
+		return String.format("[key:%s,usageData:%s,allSnapshot:%b]",
+				this.key, this.usageData, this.allSnapshot);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return key.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj) return true;
+		if (getClass() != obj.getClass()) return false;
+		StorageUsageSnapshot other = (StorageUsageSnapshot) obj;
+		return key.equals(other.key);
 	}
 
 }

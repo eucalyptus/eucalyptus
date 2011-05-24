@@ -4,6 +4,8 @@ import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 /**
  * <p>S3UsageSnapshot is a snapshot of S3 data usage at some point in time.
  * 
@@ -13,15 +15,14 @@ import org.hibernate.annotations.Entity;
 @PersistenceContext(name="reporting")
 @Table(name="s3_usage_snapshot")
 class S3UsageSnapshot
+	extends AbstractPersistent
 {
-	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
-	@Column(name="id")
-	private Long id;
 	@Embedded
 	protected S3SnapshotKey key;
 	@Embedded
 	protected S3UsageData usageData;
+	@Column(name="is_all_snapshot", nullable=false)
+	protected Boolean allSnapshot = false;
 
 
 	protected S3UsageSnapshot()
@@ -53,9 +54,20 @@ class S3UsageSnapshot
 		return usageData;
 	}
 
+	public Boolean getAllSnapshot()
+	{
+		return allSnapshot;
+	}
+
+	public void setAllSnapshot(Boolean allSnapshot)
+	{
+		this.allSnapshot = allSnapshot;
+	}
+
 	public String toString()
 	{
-		return String.format("[key:%s,usageData:%s]", this.key, this.usageData);
+		return String.format("[key:%s,usageData:%s,allSnapshot:%b]", this.key,
+				this.usageData, this.allSnapshot);
 	}
 
 }

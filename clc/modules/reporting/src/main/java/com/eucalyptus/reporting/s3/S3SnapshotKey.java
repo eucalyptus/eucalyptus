@@ -17,8 +17,6 @@ public class S3SnapshotKey
 	protected final String accountId;
 	@Column(name="timestamp_ms", nullable=false)
 	protected final Long timestampMs;
-	@Column(name="is_all_snapshot", nullable=false)
-	protected Boolean allSnapshot = false;
 
 	
 	protected S3SnapshotKey()
@@ -59,16 +57,6 @@ public class S3SnapshotKey
 		return timestampMs;
 	}
 
-	public Boolean getAllSnapshot()
-	{
-		return allSnapshot;
-	}
-
-	public void setAllSnapshot(Boolean allSnapshot)
-	{
-		this.allSnapshot = allSnapshot;
-	}
-	
 	public S3SnapshotKey newKey(long newTimestampMs)
 	{
 		return new S3SnapshotKey(ownerId, accountId, new Long(newTimestampMs));
@@ -77,8 +65,8 @@ public class S3SnapshotKey
 	@Override
 	public String toString()
 	{
-		return String.format("[owner:%s,account:%s,timestamp:%d,all:%b]", ownerId,
-				accountId, timestampMs, allSnapshot);
+		return String.format("[owner:%s,account:%s,timestamp:%d]", ownerId,
+				accountId, timestampMs);
 	}
 
 	@Override
@@ -88,8 +76,6 @@ public class S3SnapshotKey
 		int result = 1;
 		result = prime * result
 				+ ((accountId == null) ? 0 : accountId.hashCode());
-		result = prime * result
-				+ ((allSnapshot == null) ? 0 : allSnapshot.hashCode());
 		result = prime * result + ((ownerId == null) ? 0 : ownerId.hashCode());
 		result = prime * result
 				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
@@ -111,11 +97,6 @@ public class S3SnapshotKey
 				return false;
 		} else if (!accountId.equals(other.accountId))
 			return false;
-		if (allSnapshot == null) {
-			if (other.allSnapshot != null)
-				return false;
-		} else if (!allSnapshot.equals(other.allSnapshot))
-			return false;
 		if (ownerId == null) {
 			if (other.ownerId != null)
 				return false;
@@ -128,6 +109,7 @@ public class S3SnapshotKey
 			return false;
 		return true;
 	}
+
 
 	
 }

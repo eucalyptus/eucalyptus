@@ -80,7 +80,7 @@ public class S3UsageLog
 						"from S3UsageSnapshot as sus"
 						+ " WHERE sus.key.timestampMs > ?"
 						+ " AND sus.key.timestampMs < ?"
-						+ " AND sus.key.allSnapshot = true")
+						+ " AND sus.allSnapshot = true")
 						.setLong(0, new Long(startingMs))
 						.setLong(1, new Long(timestampMs))
 						.iterate();
