@@ -51,24 +51,14 @@
         	padding-bottom:4px;
             vertical-align:middle;
         }
-        .grid input {
+        .grid input[type='text'], .grid input[type='password'], .grid textarea {
             width:98%;
             background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
-        .grid textarea {
-            width:98%;
-            background-color:#DDDDDD;
-            border-style: solid;
-            border-width: 1px;
-            border-color: #999999 #CCCCCC #CCCCCC #999999;
-        }
-        .grid input[readonly=''] {
-        	background-color:#EEEEEE;
-        }
-        .grid textarea[readonly=''] {
+        .grid input[type='text'][readonly=''], .grid input[type='password'][readonly=''], .grid textarea[readonly=''] {
         	background-color:#EEEEEE;
         }
     </ui:style>
