@@ -5,9 +5,11 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.google.common.collect.Lists;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.resources.client.CssResource;
@@ -41,7 +43,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   public static final String ANCHOR = ">>";
   public static final int ARTICLE_LINES = 8;
   
-  class HiddenValue implements HasValueWidget {
+  static class HiddenValue implements HasValueWidget {
     
     private String value; 
     
@@ -61,7 +63,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class TextBoxValue implements HasValueWidget {
+  static class TextBoxValue implements HasValueWidget {
     
     private TextBox textBox;
     
@@ -89,7 +91,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class PasswordTextBoxValue implements HasValueWidget {
+  static class PasswordTextBoxValue implements HasValueWidget {
     
     private PasswordTextBox textBox;
     
@@ -117,7 +119,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class CheckBoxValue implements HasValueWidget {
+  static class CheckBoxValue implements HasValueWidget {
     
     private CheckBox checkBox;
     
@@ -149,7 +151,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class HyperLinkValue implements HasValueWidget {
+  static class HyperLinkValue implements HasValueWidget {
 
     private Anchor anchor;
     
@@ -173,7 +175,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     }
   }
   
-  class TextAreaValue implements HasValueWidget {
+  static class TextAreaValue implements HasValueWidget {
     
     private TextArea textArea;
     
@@ -202,7 +204,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
-  class DateBoxValue implements HasValueWidget {
+  static class DateBoxValue implements HasValueWidget {
     
     private DateBox dateBox;
     
@@ -233,6 +235,65 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
+  static class LabelKey implements HasValueWidget {
+    
+    private Label label;
+    private String key;
+    
+    public LabelKey( String key, String title ) {
+      this.label = new Label( title );
+      this.key = key;
+    }
+    
+    @Override
+    public String getValue( ) {
+      return this.key;
+    }
+    
+    @Override
+    public Widget getWidget( ) {
+      return this.label;
+    }
+    
+  }
+
+  static interface ActionHandler {
+    void act( );  
+  }
+  
+  static class RemovableLabelKey implements HasValueWidget {
+
+    private static final String DELETE_SYMBOL = "&nbsp;[X]&nbsp;";
+    
+    final private LabelWithAnchor label;
+    final private String key;
+    final private ActionHandler action;
+
+    public RemovableLabelKey( String key, String title, ActionHandler action ) {
+      this.key = key;
+      this.action = action;
+      this.label = new LabelWithAnchor( );
+      this.label.setContent( title, DELETE_SYMBOL );
+      this.label.addClickHandler( new ClickHandler( ) {
+        @Override
+        public void onClick( ClickEvent event ) {
+          RemovableLabelKey.this.action.act( );
+        }
+      } );
+    }
+    
+    @Override
+    public Widget getWidget( ) {
+      return this.label;
+    }
+
+    @Override
+    public String getValue( ) {
+      return this.key;
+    }
+    
+  }
+  
   private static final String LABEL_WIDTH = "36%";
   
   @UiField
@@ -250,7 +311,11 @@ public class DetailViewImpl extends Composite implements DetailView {
   private Controller controller;
   private Presenter presenter;
   
-  private ArrayList<HasValueWidget> gridValues = new ArrayList<HasValueWidget>( );
+  private ArrayList<HasValueWidget> gridValues = Lists.newArrayList( );
+  private ArrayList<HasValueWidget> gridKeys = Lists.newArrayList( );
+  private ArrayList<Integer> gridRows = Lists.newArrayList( );
+  
+  private Grid currentGrid;
   
   public DetailViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -281,14 +346,26 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.controller.hideDetail( );
   }
   
-  @Override
-  public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> gridValues ) {
-    LOG.log( Level.INFO, "Show data" );
+  private void clearRows( ) {
     this.gridValues.clear( );
+    this.gridKeys.clear( );
+    this.gridRows.clear( );
+  }
+  
+  private void addRow( HasValueWidget key, HasValueWidget value, Integer rowIndex ) {
+    this.gridKeys.add( key );
+    this.gridValues.add( value );
+    this.gridRows.add( rowIndex );
+  }
+  
+  @Override
+  public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values ) {
+    LOG.log( Level.INFO, "Show data" );
+    clearRows( );
     this.save.setVisible( false );
-    Grid grid = createGrid( descs, gridValues );
-    if ( grid != null ) {
-      gridPanel.setWidget( grid );
+    this.currentGrid = createGrid( descs, values );
+    if ( this.currentGrid != null ) {
+      gridPanel.setWidget( this.currentGrid );
     }
   }
   
@@ -306,21 +383,49 @@ public class DetailViewImpl extends Composite implements DetailView {
       SearchResultFieldDesc desc = descs.get( i );
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
-        HasValueWidget widget = getWidget( desc, val );
-        if ( widget != null ) {
-          gridValues.add( widget );
-          grid.setWidget( row, 0, new Label( desc.getTitle( ) ) );
-          grid.setWidget( row, 1, widget.getWidget( ) );
-          row++;
+        HasValueWidget label = getLabelWidget( i, desc );
+        HasValueWidget content = getContentWidget( desc, val );
+        if ( label != null && content != null ) {
+          grid.setWidget( row, 0, label.getWidget( ) );
+          grid.setWidget( row, 1, content.getWidget( ) );
+          addRow( label, content, row++ );
           continue;
         }
       }
-      gridValues.add( new HiddenValue( val ) );
+      // Hidden fields
+      addRow( new HiddenValue( desc.getName( ) ), new HiddenValue( val ), null );
     }
     return grid;
   }
   
-  private HasValueWidget getWidget( SearchResultFieldDesc desc, String val ) {
+  private void removeTableRow( int index ) {
+    gridKeys.remove( index );
+    gridValues.remove( index );
+    currentGrid.removeRow( gridRows.get( index ) );
+  }
+  
+  private HasValueWidget getLabelWidget( final int index, SearchResultFieldDesc desc ) {
+    switch ( desc.getType( ) ) {
+      case KEYVAL:
+        return new RemovableLabelKey( desc.getName( ), desc.getTitle( ), new ActionHandler( ) {
+          @Override
+          public void act( ) {
+            removeTableRow( index );
+          }
+        } );
+      case NEWKEYVAL:
+        return new TextBoxValue( desc.getName( ), desc.getEditable( ), new ValueChangeHandler<String>( ) {
+          @Override
+          public void onValueChange( ValueChangeEvent<String> event ) {
+            showSaveButton( );
+          }
+        } );
+      default:
+        return new LabelKey( desc.getName( ), desc.getTitle( ) );
+    }
+  }
+  
+  private HasValueWidget getContentWidget( SearchResultFieldDesc desc, String val ) {
     switch ( desc.getType( ) ) {
       case TEXT:
         return new TextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
