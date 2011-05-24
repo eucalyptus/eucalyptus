@@ -232,7 +232,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
         public void run( ) {
           
           for ( final Address addr : view.getMembers( ) ) {
-            if ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) {
+            if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
               Host localHost = Hosts.localHost( );
               LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
               try {
