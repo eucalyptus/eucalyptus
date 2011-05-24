@@ -24,7 +24,7 @@ public class ReportGenerator
 	 * 
 	 * @param groupByCriterion Can be null if none selected
 	 */
-	public void generateReport(ReportType reportType, ReportFormat format,
+	public static void generateReport(ReportType reportType, ReportFormat format,
 			Period period, ReportingCriterion criterion,
 			ReportingCriterion groupByCriterion, Units displayUnits,
 			OutputStream out)
