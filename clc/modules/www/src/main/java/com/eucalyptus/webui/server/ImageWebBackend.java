@@ -18,7 +18,8 @@ public class ImageWebBackend {
   private static final Logger LOG = Logger.getLogger( ImageWebBackend.class );
   
   public static final String ID = "id";
-  public static final String LOCATION = "location";
+  public static final String NAME = "Name";
+  public static final String DESC = "Description";
   public static final String OWNER = "owner";
   public static final String ARCH = "architecture";
   public static final String STATE = "state";
@@ -31,7 +32,8 @@ public class ImageWebBackend {
   public static final ArrayList<SearchResultFieldDesc> COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( LOCATION, "Name", false, "45%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "35%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( KERNEL, "Kernel", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( RAMDISK, "Ramdisk", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, "State", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
@@ -59,7 +61,8 @@ public class ImageWebBackend {
   private static SearchResultRow serializeImage( ImageInfo image ) {
     SearchResultRow result = new SearchResultRow( );
     result.addField( image.getDisplayName( ) );
-    result.addField( image.getImageLocation( ) );
+    result.addField( image.getImageName( ) );
+    result.addField( image.getDescription( ) );
     if ( image instanceof MachineImageInfo ) {
       result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) ); 
     } else {
