@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import com.eucalyptus.auth.principal.UserFullName;
 
 public class ResourceToken implements Comparable {
@@ -88,6 +89,9 @@ public class ResourceToken implements Comparable {
     this.correlationId = correlationId;
     this.userFullName = userFullName;
     this.amount = amount;
+    for( int i = 0; i < amount; i ++ ) {
+      this.instanceUuids.add( UUID.randomUUID( ).toString( ) );
+    }
     this.sequenceNumber = sequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
     this.vmType = vmType;

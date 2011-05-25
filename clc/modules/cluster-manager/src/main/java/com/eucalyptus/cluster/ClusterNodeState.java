@@ -135,9 +135,6 @@ public class ClusterNodeState {
     LOG.debug( sorted );
 
     ResourceToken token = new ResourceToken( userFullName, requestId, this.clusterName, quantity, this.virtualTimer++, vmTypeName );
-    for( int i = 0 ; i < quantity; i++ ) {  
-      token.getInstanceUuids( ).add( UUID.randomUUID( ).toString( ) );
-    }
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
     this.pendingTokens.add( token );
     return token;
