@@ -1,7 +1,6 @@
 package com.eucalyptus.www;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
@@ -24,106 +23,65 @@ import edu.ucsb.eucalyptus.admin.server.SessionInfo;
 public class ReportServlet
 	extends HttpServlet
 {
-	private static Logger LOG = Logger.getLogger( ReportServlet.class );
+	private static final Logger LOG = Logger.getLogger( ReportServlet.class );
 
-	
-	private void exportReport(HttpServletRequest req, HttpServletResponse res)
-		throws IOException
+
+	/**
+	 * <p>Expects the following servlet params:
+	 * type,format,session,start,end,criterion,groupByCriterion
+	 * 
+	 * <p>Type, format, criterion, and groupByCriterion are taken from the
+	 * enums: ReportType, ReportFormat, and ReportingCriterion.
+	 * GroupByCriterion can also have the value "None". Start and
+	 * end are in milliseconds. Session is a session id string.
+	 */
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res)
+		throws ServletException, IOException
 	{
-		//TODO: res stuff from enum
+		this.verifySession(Param.session.get(req));
 		
+	
+		/* Parse all params
+		 */
 		final ReportType reportType = ReportType.valueOf(Param.type.get(req));
 		final ReportFormat format = ReportFormat.valueOf(Param.format.get(req));
-
 		final long start = Long.parseLong(Param.start.get(req));
 		final long end = Long.parseLong(Param.end.get(req));
 		final Period period = new Period(start, end);
-		final int criterionId = Integer.parseInt(Param.criterionId.get(req));
-		final int groupById = Integer.parseInt(Param.groupById.get(req));
-		// TODO: explain magic num
-		final ReportingCriterion criterion = ReportingCriterion.values()[criterionId + 1];
+		final ReportingCriterion criterion =
+			ReportingCriterion.valueOf(Param.criterion.get(req));
 		// TODO: configurable
 		final Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+		
+		ReportingCriterion groupByCriterion = null;
+		//GroupByCriterion can optionally have value "None"; check for it
+		if (req.getParameter(Param.groupByCriterion.name()).equalsIgnoreCase("None")) {
+			groupByCriterion =
+				ReportingCriterion.valueOf(Param.groupByCriterion.get(req));
+		}
+		LOG.info(String.format("Params: type:%s format:%s period:%s"
+				+ "criterion:%s groupBy:%s", reportType, format, period,
+				criterion, groupByCriterion));
 
-		// TODO: explain magic num
-		final ReportingCriterion groupByCriterion =
-			(groupById > 0)
-			? ReportingCriterion.values()[groupById - 1]
-			: null;
-					
+		
+		
+		/* Set servlet response content type, etc, based upon report format.
+		 */
+		setContentTypeHeader(res, format, Param.type.get(req));
+		
+		
+		/* Generate the report and send it thru the OutputStream
+		 */
 		ReportGenerator.generateReport(reportType, format, period, criterion,
-			groupByCriterion, displayUnits,	res.getOutputStream());
-	}
-
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse res)
-			throws ServletException, IOException
-	{
-		for (Param p : Param.values()) {
-			try {
-				p.get(req);
-			} catch (IllegalArgumentException e) {
-				if (p.isRequired()) {
-					LOG.debug(e, e);
-					throw new RuntimeException(e);
-				}
-			}
-		}
-
-		try {
-			this.verifySession(Param.session.get());
-		} catch (NoSuchFieldException e) {
-			LOG.debug(e, e);
-			throw new RuntimeException(e);
-		}
-		for (Param p : Param.values()) {
-			try {
-				LOG.debug(String.format("REPORT: %10.10s=%s", p.name(), p.get()));
-			} catch (NoSuchFieldException e1) {
-				LOG.debug(String.format("REPORT: %10.10s=%s", p.name(),
-						e1.getMessage()));
-			}
-		}
-		this.exportReport(req, res);
+				groupByCriterion, displayUnits,	res.getOutputStream());
 	  
 	}
 
-
-	enum Param {
+	
+	private enum Param {
 		type, format, session, start, end,
-		criterionId, groupById;
-
-		private String value = null;
-		private Boolean required = Boolean.TRUE;
-
-		public Boolean isRequired()
-		{
-			return this.required;
-		}
-
-		private Param(String value, Boolean required)
-		{
-			this.value = value;
-			this.required = required;
-		}
-
-		private Param()
-		{
-		}
-
-		private Param(Boolean required)
-		{
-			this.required = required;
-		}
-
-		public String get() throws NoSuchFieldException
-		{
-			if (this.value == null) {
-				throw new NoSuchFieldException();
-			} else {
-				return this.value;
-			}
-		}
+		criterion, groupByCriterion;
 
 		public String get(HttpServletRequest req)
 				throws IllegalArgumentException
@@ -132,11 +90,34 @@ public class ReportServlet
 				throw new IllegalArgumentException("'" + this.name()
 						+ "' is a required argument.");
 			} else {
-				this.value = req.getParameter(this.name());
-				LOG.debug("Found parameter: " + this.name() + "=" + this.value);
-				return this.value;
+				return req.getParameter(this.name());
 			}
 		}
+	}
+
+	private void setContentTypeHeader(HttpServletResponse res,
+			ReportFormat format, String filename)
+	{
+		switch (format) {
+			case csv:
+				res.setContentType("text/plain");
+				res.setHeader("Content-Disposition", "file; filename="
+						+ filename + ".csv");
+				break;
+			case html:
+				res.setContentType("text/html");
+				break;
+			case pdf:
+				res.setContentType("application/pdf");
+				res.setHeader("Content-Disposition", "file; filename="
+						+ filename + ".pdf");
+				break;
+			case xls:
+				res.setContentType("application/vnd.ms-excel");
+				res.setHeader("Content-Disposition", "file; filename="
+						+ filename + ".xls");
+				break;
+		}		
 	}
 	
 	private void verifySession(String sessionId)
@@ -158,90 +139,6 @@ public class ReportServlet
 			throw new RuntimeException("Error obtaining session info.");
 		}
 		session.setLastAccessed(System.currentTimeMillis());
-	}
-	
-	enum Type
-	{
-		pdf {
-			@Override
-			public JRExporter getReportExporter(HttpServletRequest request,
-					HttpServletResponse res, String name) throws IOException
-			{
-				res.setContentType("application/pdf");
-				res.setHeader("Content-Disposition", "file; filename=" + name
-						+ ".pdf");
-				JRExporter exporter = new JRPdfExporter();
-				exporter.setParameter(JRExporterParameter.OUTPUT_STREAM,
-						res.getOutputStream());
-				return exporter;
-			}
-		},
-		csv {
-			@Override
-			public JRExporter getReportExporter(HttpServletRequest request,
-					HttpServletResponse res, String name) throws IOException
-			{
-				res.setContentType("text/plain");
-				res.setHeader("Content-Disposition", "file; filename=" + name
-						+ ".csv");
-				JRExporter exporter = new JRCsvExporter();
-				exporter.setParameter(JRExporterParameter.OUTPUT_STREAM,
-						res.getOutputStream());
-				return exporter;
-			}
-		},
-		html {
-			@Override
-			public JRExporter getReportExporter(HttpServletRequest request,
-					HttpServletResponse res, String name) throws IOException
-			{
-				PrintWriter out = res.getWriter();
-				res.setContentType("text/html");
-				JRExporter exporter = new JRHtmlExporter();
-				exporter.setParameter(new JRExporterParameter("EUCA_WWW_DIR")
-				{
-				}, "/");
-				exporter.setParameter(JRExporterParameter.OUTPUT_WRITER,
-						res.getWriter());
-				exporter.setParameter(
-						JRHtmlExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS,
-						Boolean.TRUE);
-				exporter.setParameter(
-						JRHtmlExporterParameter.IS_USING_IMAGES_TO_ALIGN,
-						Boolean.FALSE);
-				exporter.setParameter(
-						JRHtmlExporterParameter.IGNORE_PAGE_MARGINS,
-						Boolean.TRUE);
-				return exporter;
-			}
-
-			@Override
-			public void close(HttpServletResponse res) throws IOException
-			{
-				res.getWriter().close();
-			}
-		},
-		xls {
-			@Override
-			public JRExporter getReportExporter(HttpServletRequest request,
-					HttpServletResponse res, String name) throws IOException
-			{
-				res.setContentType("application/vnd.ms-excel");
-				res.setHeader("Content-Disposition", "file; filename=" + name
-						+ ".xls");
-				JRExporter exporter = new JRXlsExporter();
-				exporter.setParameter(JRExporterParameter.OUTPUT_STREAM,
-						res.getOutputStream());
-				return exporter;
-			}
-		};
-		public abstract JRExporter getReportExporter(HttpServletRequest request,
-				HttpServletResponse res, String name) throws IOException;
-
-		public void close(HttpServletResponse res) throws IOException
-		{
-			res.getOutputStream().close();
-		}
 	}
 	
 }
