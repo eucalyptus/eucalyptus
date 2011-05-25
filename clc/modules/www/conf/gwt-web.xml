@@ -104,6 +104,14 @@
   </servlet>
 
   <servlet>
+    <description>New Report Generation Servlet</description>
+    <display-name>Report Servlet</display-name>
+    <servlet-name>ReportServlet</servlet-name>
+    <servlet-class>com.eucalyptus.www.ReportServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet>
     <description>Logs into eucalyptus and returns a session id</description>
     <display-name>Login Servlet</display-name>
     <servlet-name>LoginServlet</servlet-name>
@@ -151,6 +159,11 @@
   <servlet-mapping>
     <servlet-name>LoginServlet</servlet-name>
     <url-pattern>/loginservlet</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>ReportServlet</servlet-name>
+    <url-pattern>/reportservlet</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
