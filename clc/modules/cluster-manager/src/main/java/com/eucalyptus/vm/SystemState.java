@@ -260,7 +260,7 @@ public class SystemState {
       } catch ( XPathExpressionException e ) {
         LOG.error( e, e );
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException e ) { 
       LOG.error( e, e );
     } catch ( DOMException e ) {
       LOG.error( e, e );
