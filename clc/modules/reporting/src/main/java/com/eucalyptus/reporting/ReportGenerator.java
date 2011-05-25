@@ -4,11 +4,12 @@ import java.io.File;
 import java.io.OutputStream;
 import java.util.*;
 
+import org.apache.log4j.Logger;
+
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 
-import com.eucalyptus.reporting.instance.InstanceReportLine;
-import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
+import com.eucalyptus.reporting.instance.*;
 import com.eucalyptus.reporting.s3.S3ReportLine;
 import com.eucalyptus.reporting.s3.S3ReportLineGenerator;
 import com.eucalyptus.reporting.storage.StorageReportLine;
@@ -18,6 +19,7 @@ import com.eucalyptus.system.SubDirectory;
 
 public class ReportGenerator
 {
+	private static Logger log = Logger.getLogger( ReportGenerator.class );
 	
 	/**
 	 * <p>Generates a report and sends it to an OutputStream
@@ -60,21 +62,21 @@ public class ReportGenerator
 			case INSTANCE:
 				List<InstanceReportLine> irl =
 					InstanceReportLineGenerator.getInstance()
-						.getReportLines(period, criterion, groupByCriterion,
+						.getReportLines(period, groupByCriterion, criterion,
 							displayUnits);
 				dataSource = new JRBeanCollectionDataSource(irl);
 				break;
 			case STORAGE:
 				List<StorageReportLine> srl =
 					StorageReportLineGenerator.getInstance()
-						.getReportLines(period, criterion, groupByCriterion,
+						.getReportLines(period, groupByCriterion, criterion,
 							displayUnits);
 				dataSource = new JRBeanCollectionDataSource(srl);
 				break;
 			case S3:
 				List<S3ReportLine> s3rl =
 					S3ReportLineGenerator.getInstance()
-						.getReportLines(period, criterion, groupByCriterion,
+						.getReportLines(period, groupByCriterion, criterion,
 							displayUnits);
 				dataSource = new JRBeanCollectionDataSource(s3rl);
 				break;
