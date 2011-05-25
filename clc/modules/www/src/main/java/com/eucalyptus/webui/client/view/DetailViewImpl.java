@@ -424,7 +424,6 @@ public class DetailViewImpl extends Composite implements DetailView {
       SearchResultFieldDesc desc = descs.get( i );
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
-        LOG.log( Level.INFO, "TYPE=" + desc.getType( ).name( ) );
         if ( desc.getType( ).equals( Type.NEWKEYVAL ) ) {
           // Add the new value input row at the end
           addNewKeyValRow( row );
@@ -502,6 +501,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     if ( rowIndex != null && rowIndex >= 0 ) {
       this.gridRows.add( rowIndex );
       if ( rowIndex == currentGrid.getRowCount( ) - 1 ) {
+        LOG.log( Level.INFO, "Insert row at " + rowIndex );
         currentGrid.insertRow( rowIndex );
       }
       currentGrid.setWidget( rowIndex, 0, keyWidget );
