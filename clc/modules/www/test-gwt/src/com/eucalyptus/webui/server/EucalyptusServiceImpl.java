@@ -62,7 +62,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
                                                                    new SearchResultRow( Arrays.asList( "testA", "A", "modify", "#start:", "test", "test1", "test2", "" ) )
                                                                  );
   private static final List<SearchResultFieldDesc> FIELDS = Arrays.asList( new SearchResultFieldDesc( "Name", true, "40%" ),
-                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, false ),
+                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, true ),
                                                                            new SearchResultFieldDesc( "Action", false, "0px", TableDisplay.NONE, Type.ACTION, false, false ),
                                                                            new SearchResultFieldDesc( "Link", false, "0px", TableDisplay.NONE, Type.LINK, false, false ),
                                                                            new SearchResultFieldDesc( "Access key", false, "0px", TableDisplay.NONE, Type.TEXT, true, false ),

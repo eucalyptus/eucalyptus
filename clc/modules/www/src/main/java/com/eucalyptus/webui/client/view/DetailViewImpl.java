@@ -410,17 +410,25 @@ public class DetailViewImpl extends Composite implements DetailView {
     }
   }
   
+  private int getGridSize( ArrayList<SearchResultFieldDesc> descs ) {
+    int i = 0;
+    for ( SearchResultFieldDesc d : descs ) {
+      if ( d != null && !d.getHidden( ) ) i++;
+    }
+    return i;
+  }
+  
   private void createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
     if ( descs == null || descs.size( ) < 1 || vals == null || vals.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Empty or partial input" );
       return;
     }
-    int size = Math.min( descs.size( ), vals.size( ) );
+    int size = getGridSize( descs );
     this.currentGrid = new Grid( size, 2 );
     this.currentGrid.addStyleName( gridStyle.grid( ) );
     this.currentGrid.getColumnFormatter( ).setWidth( 0, LABEL_WIDTH );
     int row = 0;
-    for ( int i = 0; i < size; i++ ) {
+    for ( int i = 0; i < descs.size( ); i++ ) {
       SearchResultFieldDesc desc = descs.get( i );
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
@@ -438,7 +446,7 @@ public class DetailViewImpl extends Composite implements DetailView {
         }
       }
       // Hidden fields
-      addRow( desc.getName( ), null/*keyWidget*/, new HiddenValue( val ), null/*rowIndex*/ );
+      addRow( desc != null ? desc.getName( ) : "", null/*keyWidget*/, new HiddenValue( val ), null/*rowIndex*/ );
     }
   }
   
