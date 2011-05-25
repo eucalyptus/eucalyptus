@@ -105,5 +105,10 @@ public class InstanceReportLine
 	{
 		this.summary.addUsage(summary);
 	}
+	
+	public String toString()
+	{
+		return String.format("[key:%s,summary:%s]", this.key, this.summary);
+	}
 
 }
