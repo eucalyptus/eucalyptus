@@ -53,7 +53,7 @@ clean:
 	@$(RM) -f $(OBJS) eucalyptus-cloud
 
 distclean: clean
-	@$(RM) -f $(OBJS) eucalyptus-cloud eucalyptus-opts.h eucalyptus-opts.c
+	@$(RM) -f $(OBJS) eucalyptus-cloud
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud

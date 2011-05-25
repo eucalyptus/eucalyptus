@@ -51,19 +51,16 @@
         	padding-bottom:4px;
             vertical-align:middle;
         }
-        .grid input[type='text'] {
+        .grid input[type='text'], .grid input[type='password'], .grid textarea {
             width:98%;
             background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
-        .grid input[type='password'] {
-            width:98%;
-            background-color:#DDDDDD;
-            border-style: solid;
-            border-width: 1px;
-            border-color: #999999 #CCCCCC #CCCCCC #999999;                
+        .grid input[type='text'][readonly=''], .grid input[type='password'][readonly=''], .grid textarea[readonly=''] {
+        	background-color:#EEEEEE;
+        }
     </ui:style>
     
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>

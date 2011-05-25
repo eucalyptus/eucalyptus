@@ -346,16 +346,18 @@ public class Component implements HasName<Component> {
   }
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    this.setServiceGoalState( configuration, this.serviceRegistry.getServices( ).size( ) == 1
-                              ? State.ENABLED
-                                : State.DISABLED );
-    return ServiceTransitions.transitionChain( configuration, State.ENABLED );
+    State goal = this.serviceRegistry.getServices( ).size( ) == 1
+    ? State.ENABLED
+      : State.DISABLED;
+    this.setServiceGoalState( configuration, goal );
+    return ServiceTransitions.transitionChain( configuration, goal );
   }
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    this.setServiceGoalState( configuration, this.serviceRegistry.getServices( ).size( ) == 1
-                         ? State.ENABLED
-                           : State.DISABLED );
+    State goal = this.serviceRegistry.getServices( ).size( ) == 1
+    ? State.ENABLED
+      : State.DISABLED;
+    this.setServiceGoalState( configuration, goal );
     return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
   }
   

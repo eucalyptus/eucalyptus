@@ -203,7 +203,6 @@ public class SystemState {
     long splitTime = vm.getSplitTime( );
     VmState oldState = vm.getState( );
     vm.setServiceTag( runVm.getServiceTag( ) );
-    vm.setUuid( runVm.getUuid( ) );
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
@@ -261,7 +260,7 @@ public class SystemState {
       } catch ( XPathExpressionException e ) {
         LOG.error( e, e );
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException e ) { 
       LOG.error( e, e );
     } catch ( DOMException e ) {
       LOG.error( e, e );
@@ -271,6 +270,7 @@ public class SystemState {
   
   private static void restoreInstance( final String cluster, final VmInfo runVm ) {
     try {
+      String instanceUuid = runVm.getUuid( );
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
       UserFullName ownerId = UserFullName.getInstance( runVm.getOwnerId( ) );
@@ -341,7 +341,7 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( ownerId, instanceId, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );

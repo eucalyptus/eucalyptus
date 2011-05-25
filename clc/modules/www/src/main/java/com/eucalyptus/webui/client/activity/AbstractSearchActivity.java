@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.activity;
 
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
@@ -7,8 +8,11 @@ import com.eucalyptus.webui.client.place.SearchPlace;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultCache;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.KnowsPageSize;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.SearchRangeChangeHandler;
@@ -18,9 +22,15 @@ import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
 
-public abstract class AbstractSearchResultActivity extends AbstractActivity implements DetailView.Presenter, SearchRangeChangeHandler, KnowsPageSize {
+/**
+ * Boilerplate of a search activity.
+ * 
+ * @author Ye Wen (wenye@eucalyptus.com)
+ *
+ */
+public abstract class AbstractSearchActivity extends AbstractActivity implements DetailView.Presenter, SearchRangeChangeHandler, KnowsPageSize {
   
-  private static final Logger LOG = Logger.getLogger( AbstractSearchResultActivity.class.getName( ) );
+  private static final Logger LOG = Logger.getLogger( AbstractSearchActivity.class.getName( ) );
   
   protected static final int DEFAULT_PAGE_SIZE = 25;
   protected static final int DETAIL_PANE_SIZE = 400;//px
@@ -36,7 +46,7 @@ public abstract class AbstractSearchResultActivity extends AbstractActivity impl
   protected AcceptsOneWidget container;
   protected IsWidget view;
     
-  public AbstractSearchResultActivity( SearchPlace place, ClientFactory clientFactory ) {
+  public AbstractSearchActivity( SearchPlace place, ClientFactory clientFactory ) {
     this.place = place;
     this.search = URL.decode( place.getSearch( ) );
     this.clientFactory = clientFactory;
@@ -56,7 +66,8 @@ public abstract class AbstractSearchResultActivity extends AbstractActivity impl
     LoadingAnimationView view = this.clientFactory.getLoadingAnimationView( );
     container.setWidget( view );
     
-    doSearch( URL.decode( place.getSearch( ) ), new SearchRange( 0, pageSize ) );
+    LOG.log( Level.INFO, "Search " + getTitle( ) + ": " + place.getSearch( ) );
+    doSearch( place.getSearch( ), new SearchRange( 0, pageSize ) );
   }
   
   @Override
@@ -66,9 +77,19 @@ public abstract class AbstractSearchResultActivity extends AbstractActivity impl
   }
   
   protected void displayData( SearchResult result ) {
-    LOG.log( Level.INFO, "Received " + result );
-    cache.update( result );
-    showView( result );
+    if ( this.place != this.clientFactory.getMainPlaceController( ).getWhere( ) ) {
+      LOG.log( Level.INFO, "Place was changed prematurely" );
+      return;
+    }
+    if ( result != null ) {
+      LOG.log( Level.INFO, "Received " + result );
+      cache.update( result );
+      showView( result );
+    } else {
+      ErrorSinkView errorView = this.clientFactory.getErrorSinkView( );
+      errorView.setMessage( "Search '" + search + "' failed." );
+      container.setWidget( errorView );
+    }
   }
   
   @Override
@@ -93,6 +114,13 @@ public abstract class AbstractSearchResultActivity extends AbstractActivity impl
       cache.clear( );
       doSearch( this.search, range );      
     }
+  }
+  
+  protected void showSingleSelectedDetails( SearchResultRow selected ) {
+    ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
+    descs.addAll( cache.getDescs( ) );
+    descs.addAll( selected.getExtraFieldDescs( ) );
+    this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
   }
   
   protected abstract void doSearch( String query, SearchRange range );

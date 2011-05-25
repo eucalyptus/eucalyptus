@@ -14,7 +14,7 @@ import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class ConfigActivity extends AbstractSearchResultActivity implements ConfigView.Presenter, DetailView.Presenter {
+public class ConfigActivity extends AbstractSearchActivity implements ConfigView.Presenter, DetailView.Presenter {
   
   public static final String TITLE = "SYSTEM CONFIGURATIONS";
   
@@ -65,15 +65,8 @@ public class ConfigActivity extends AbstractSearchResultActivity implements Conf
     } else {
       LOG.log( Level.INFO, "Selection changed to " + selection );
       this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
-      showSelectedDetails( );
+      showSingleSelectedDetails( selection );
     }
-  }
-
-  private void showSelectedDetails( ) {
-    ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
-    descs.addAll( cache.getDescs( ) );
-    descs.addAll( currentSelected.getExtraFieldDescs( ) );
-    this.clientFactory.getShellView( ).getDetailView( ).showData( descs, currentSelected.getRow( ) );          
   }
 
   @Override

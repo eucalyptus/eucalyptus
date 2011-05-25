@@ -333,7 +333,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   
   @Override
   public boolean shareSameAccount( String userId1, String userId2 ) {
-    if ( userId1 == userId2 ) {
+    if ( userId1.equals( userId2 ) ) {
       return true;
     }
     if ( userId1 == null || userId2 == null ) {
