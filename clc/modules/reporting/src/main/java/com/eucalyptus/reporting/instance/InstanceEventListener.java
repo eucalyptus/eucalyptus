@@ -74,6 +74,7 @@ public class InstanceEventListener
 				}
 				recentlySeenUuids.add(uuid);
 			  }
+			  attrEntityWrapper.commit();
 		  } catch (Exception ex) {
 			  attrEntityWrapper.rollback();
 			  log.error(ex);
