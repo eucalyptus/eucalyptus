@@ -73,7 +73,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
@@ -85,8 +85,8 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   private Address       address;
   
   public AssignAddressCallback( Address address ) {
+    super( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
     this.address = address;
-    super.setRequest( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
   }
   
   @Override
@@ -99,10 +99,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   
@@ -146,7 +146,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
     } else if ( this.address.isAssigned( ) ) {
-      Callbacks.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
     }
   }
   

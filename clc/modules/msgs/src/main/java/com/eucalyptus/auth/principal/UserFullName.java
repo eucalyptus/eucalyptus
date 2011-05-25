@@ -63,28 +63,52 @@
 
 package com.eucalyptus.auth.principal;
 
+import java.lang.reflect.UndeclaredThrowableException;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
-import com.google.common.collect.ImmutableList;
 
 public class UserFullName extends AccountFullName implements FullName {
+  private static Logger LOG = Logger.getLogger( UserFullName.class );
   private final String userId;
   private final String userName;
-  private UserFullName( User user ) {
-    super( Accounts.lookupAccount( user ), "user", user.getName( ) );
+  private UserFullName( Account account, User user ) throws AuthException {
+    super( account, "user", user.getName( ) );
     this.userId = user.getUserId( );
     this.userName = user.getName( );
   }
   
+  public static UserFullName getInstance( String userId ) {
+    try {
+      return getInstance( Accounts.lookupUserById( userId ) );
+    } catch ( AuthException ex ) {
+      throw new UndeclaredThrowableException( ex );
+    }
+    
+  }
   public static UserFullName getInstance( User user ) {
-    if( user == null ) {
-      return new UserFullName( FakePrincipals.NOBODY_USER );
-    } else if( user == FakePrincipals.SYSTEM_USER ) {
-      return new UserFullName( FakePrincipals.SYSTEM_USER );
-    } else {
-      return new UserFullName( user );
+    try {
+      if( user == null ) {
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+      } else if( FakePrincipals.SYSTEM_USER.equals( user ) ) {
+        return new UserFullName( FakePrincipals.SYSTEM_ACCOUNT, FakePrincipals.SYSTEM_USER );
+      } else if( FakePrincipals.NOBODY_USER.equals( user ) ) {
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+      } else {
+        Account account = user.getAccount( );
+        return new UserFullName( account, user );
+      }
+    } catch ( AuthException ex ) {
+      LOG.error( ex.getMessage( ) );
+      try {
+        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+      } catch ( AuthException ex1 ) {
+        LOG.error( ex1 , ex1 );
+        throw new UndeclaredThrowableException( ex );
+      }
+    } catch ( Exception ex ) {
+      throw new UndeclaredThrowableException( ex );
     }
   }
 

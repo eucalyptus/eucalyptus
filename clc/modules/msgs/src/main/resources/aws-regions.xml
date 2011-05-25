@@ -64,23 +64,24 @@
   -->
 <binding force-classes="true" add-constructors="true">
     <!--2008-12-01-->
-    <mapping name="DescribeRegionsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="regionInfo" field="regionInfo" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RegionInfoType"/>
-        </collection>
-    </mapping>
+  <mapping name="DescribeRegionsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="regionInfo" field="regionInfo" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.RegionInfoType" />
+    </collection>
+  </mapping>
     <!--2008-12-01-->
-    <mapping class="edu.ucsb.eucalyptus.msgs.RegionInfoType" abstract="true">
-        <value name="regionName" field="regionName"/>
-        <value name="regionEndpoint" field="regionEndpoint"/>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.RegionInfoType" abstract="true">
+    <value name="regionName" field="regionName" />
+    <value name="regionEndpoint" field="regionEndpoint" />
+  </mapping>
     <!--2008-12-01-->
-    <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <collection name="regionSet" field="regions" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-            <structure name="item">
-                <value name="regionName"/>
-            </structure>
-        </collection>
-    </mapping>
+  <mapping name="DescribeRegions" class="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <collection name="regionSet" field="regions" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="regionName" />
+      </structure>
+    </collection>
+  </mapping>
 </binding>

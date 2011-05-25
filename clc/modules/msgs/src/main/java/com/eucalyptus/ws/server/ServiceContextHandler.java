@@ -82,7 +82,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.context.ServiceInitializationException;
 import com.eucalyptus.context.ServiceStateException;
@@ -92,7 +91,6 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.HasSideEffect;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -142,12 +140,10 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
         reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
       }
-      if( Logs.DEBUG ) {
-        Long currTime = System.currentTimeMillis( );
-        EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, 
+      Long currTime = System.currentTimeMillis( );
+      Logs.exhaust( ).debug( EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, 
 //                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
-                          "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ).debug( );
-      }
+                        "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ) );
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );

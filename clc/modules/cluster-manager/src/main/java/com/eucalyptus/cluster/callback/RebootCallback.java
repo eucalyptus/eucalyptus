@@ -74,10 +74,10 @@ public class RebootCallback extends MessageCallback<RebootInstancesType,RebootIn
   private static Logger LOG = Logger.getLogger( RebootCallback.class );
 
   public RebootCallback( String instanceId ) {
-    this.setRequest( new RebootInstancesType( instanceId ) );
+    super( new RebootInstancesType( instanceId ) );
   }
   public RebootCallback( RebootInstancesType msg ) {
-    this.setRequest( msg );
+    super( msg );
   }
 
   @Override

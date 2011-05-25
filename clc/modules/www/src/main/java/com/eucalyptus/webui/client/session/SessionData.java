@@ -7,6 +7,8 @@ public class SessionData {
   
   public static final String VERSION = "version";
   public static final String SEARCH_RESULT_PAGE_SIZE = "search-result-page-size";
+  public static final String LOGO_TITLE = "logo-title";
+  public static final String LOGO_SUBTITLE = "logo-subtitle";
   
   private LoginUserProfile user;
   private HashMap<String, String> props = new HashMap<String, String>( );

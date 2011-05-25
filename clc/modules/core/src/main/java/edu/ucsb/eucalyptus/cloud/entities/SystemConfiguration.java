@@ -66,35 +66,25 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.net.SocketException;
-import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PersistenceException;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ServiceConfigurations;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.WalrusConfiguration;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.ForwardImages;
-import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.StorageProperties;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -103,24 +93,9 @@ import com.eucalyptus.util.StorageProperties;
 @ConfigurableClass( root = "config", description = "Basic system configuration." )
 public class SystemConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
-  @ConfigurableField( description = "Hostname of the cloud controller." )
-  @Column( name = "system_info_cloud_host" )
-  private String  cloudHost;
-  @ConfigurableField( description = "Default kernel to use when none is supplied by an image's manifest or the user at runtime." )
-  @Column( name = "system_info_default_kernel" )
-  private String  defaultKernel;
-  @ConfigurableField( description = "Default ramdisk to use when none is supplied by an image's manifest or the user at runtime." )
-  @Column( name = "system_info_default_ramdisk" )
-  private String  defaultRamdisk;
   @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )
   @Column( name = "system_registration_id" )
   private String  registrationId;
-  @Column( name = "system_max_user_public_addresses" )
-  private Integer maxUserPublicAddresses;
-  @Column( name = "system_do_dynamic_public_addresses" )
-  private Boolean doDynamicPublicAddresses;
-  @Column( name = "system_reserved_public_addresses" )
-  private Integer systemReservedPublicAddresses;
   @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
@@ -133,34 +108,10 @@ public class SystemConfiguration extends AbstractPersistent {
   public SystemConfiguration( ) {
   }
 
-  public SystemConfiguration( final String defaultKernel, final String defaultRamdisk, final Integer maxUserPublicAddresses,
-                              final Boolean doDynamicPublicAddresses, final Integer systemReservedPublicAddresses,
-                              final String dnsDomain, final String nameserver, final String nameserverAddress, final String cloudHost ) {
-    this.defaultKernel = defaultKernel;
-    this.defaultRamdisk = defaultRamdisk;
-    this.maxUserPublicAddresses = maxUserPublicAddresses;
-    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
-    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
+  public SystemConfiguration( final String dnsDomain, final String nameserver, final String nameserverAddress ) {
     this.dnsDomain = dnsDomain;
     this.nameserver = nameserver;
     this.nameserverAddress = nameserverAddress;
-    this.cloudHost = cloudHost;
-  }
-  
-  public String getDefaultKernel( ) {
-    return defaultKernel;
-  }
-  
-  public String getDefaultRamdisk( ) {
-    return defaultRamdisk;
-  }
-  
-  public void setDefaultKernel( final String defaultKernel ) {
-    this.defaultKernel = defaultKernel;
-  }
-  
-  public void setDefaultRamdisk( final String defaultRamdisk ) {
-    this.defaultRamdisk = defaultRamdisk;
   }
   
   public String getRegistrationId( ) {
@@ -170,31 +121,7 @@ public class SystemConfiguration extends AbstractPersistent {
   public void setRegistrationId( final String registrationId ) {
     this.registrationId = registrationId;
   }
-  
-  public Integer getMaxUserPublicAddresses( ) {
-    return maxUserPublicAddresses;
-  }
-  
-  public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
-    this.maxUserPublicAddresses = maxUserPublicAddresses;
-  }
-  
-  public Integer getSystemReservedPublicAddresses( ) {
-    return systemReservedPublicAddresses;
-  }
-  
-  public void setSystemReservedPublicAddresses( final Integer systemReservedPublicAddresses ) {
-    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
-  }
-  
-  public Boolean isDoDynamicPublicAddresses( ) {
-    return doDynamicPublicAddresses;
-  }
-  
-  public void setDoDynamicPublicAddresses( final Boolean doDynamicPublicAddresses ) {
-    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
-  }
-  
+    
   public String getDnsDomain( ) {
     return dnsDomain;
   }
@@ -219,19 +146,11 @@ public class SystemConfiguration extends AbstractPersistent {
     this.nameserverAddress = nameserverAddress;
   }
   
-  public String getCloudHost( ) {
-    return cloudHost;
-  }
-  
-  public void setCloudHost( String cloudHost ) {
-    this.cloudHost = cloudHost;
-  }
-  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( cloudHost == null ) ? 0 : cloudHost.hashCode( ) );
+    result = prime * result + ( ( registrationId == null ) ? 0 : registrationId.hashCode( ) );
     return result;
   }
   
@@ -241,9 +160,9 @@ public class SystemConfiguration extends AbstractPersistent {
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     SystemConfiguration other = ( SystemConfiguration ) obj;
-    if ( cloudHost == null ) {
-      if ( other.cloudHost != null ) return false;
-    } else if ( !cloudHost.equals( other.cloudHost ) ) return false;
+    if ( registrationId == null ) {
+      if ( other.registrationId != null ) return false;
+    } else if ( !registrationId.equals( other.registrationId ) ) return false;
     return true;
   }
 
@@ -269,57 +188,15 @@ public class SystemConfiguration extends AbstractPersistent {
   	return conf;
   }
 
-  public static String getCloudUrl() {
-    try {
-      String cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
-      if( cloudHost == null ) {
-        for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( Internets.testLocal( w.getHostName( ) ) ) {
-            cloudHost = w.getHostName( );
-            break;
-          }
-        }
-      }
-      if( cloudHost == null ) {
-        cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
-      }
-      return String.format( "http://%s:8773/services/Eucalyptus", cloudHost );
-    } catch ( PersistenceException e ) {
-      return "http://127.0.0.1:8773/services/Eucalyptus";
-    }
-  }
-
   public static String getWalrusUrl() throws EucalyptusCloudException {
-    String walrusHost = null;
-    try {
-      walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, ComponentIds.lookup(Walrus.class).name( ) ).getHostName( );
-    } catch ( Throwable e ) {
-      try {
-        walrusHost = ServiceConfigurations.getConfiguration( WalrusConfiguration.class, "Walrus" ).getHostName( );
-      } catch ( Throwable ex ) {
-      }
+    Component walrus = Components.lookup( Walrus.class );
+    if( walrus.hasEnabledService( ) ) {
+      ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+      return walrusConfig.getUri( ).toASCIIString( );
+    } else {
+      LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
+      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773 ).toASCIIString( );
     }
-    return String.format( "http://%s:8773/services/Walrus", walrusHost == null ? "127.0.0.1" : walrusHost );
-  }
-
-  public static String getCloudHostAddress( ) {
-    String cloudHost = null;
-    try {
-      cloudHost = SystemConfiguration.getSystemConfiguration( ).getCloudHost( );
-      if( cloudHost == null ) {
-        for( WalrusConfiguration w : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
-          if( Internets.testLocal( w.getHostName( ) ) ) {
-            cloudHost = w.getHostName( );
-            break;
-          }
-        }
-      }
-    } catch ( PersistenceException e ) {
-    }
-    if( cloudHost == null ) {
-      cloudHost = Internets.getAllAddresses( ).get( 0 );//TODO:GRZE:FIXTHISDFSDFSDF
-    }
-    return cloudHost;
   }
 
   public static String getInternalIpAddress ()
@@ -337,16 +214,6 @@ public class SystemConfiguration extends AbstractPersistent {
     if( sysConf.getRegistrationId() == null ) {
       sysConf.setRegistrationId( UUID.randomUUID().toString() );
     }
-    if(sysConf.getCloudHost() == null) {
-      String ipAddr = SystemConfiguration.getInternalIpAddress ();
-      sysConf.setCloudHost(ipAddr);
-    }
-    if(sysConf.getDefaultKernel() == null) {
-      sysConf.setDefaultRamdisk( ForwardImages.defaultKernel( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
-    }
-    if(sysConf.getDefaultRamdisk() == null) {
-      sysConf.setDefaultRamdisk( ForwardImages.defaultRamdisk( ) );//TODO:GRZE:ASAP this semantic no longer makes any sense.  fix it.
-    }
     if(sysConf.getDnsDomain() == null) {
       sysConf.setDnsDomain(DNSProperties.DOMAIN);
     }
@@ -355,15 +222,6 @@ public class SystemConfiguration extends AbstractPersistent {
     }
     if(sysConf.getNameserverAddress() == null) {
       sysConf.setNameserverAddress(DNSProperties.NS_IP);
-    }
-    if( sysConf.getMaxUserPublicAddresses() == null ) {
-      sysConf.setMaxUserPublicAddresses( 5 );
-    }
-    if( sysConf.isDoDynamicPublicAddresses() == null ) {
-      sysConf.setDoDynamicPublicAddresses( true );
-    }
-    if( sysConf.getSystemReservedPublicAddresses() == null ) {
-      sysConf.setSystemReservedPublicAddresses( 10 );
     }
     return sysConf;
   }

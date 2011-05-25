@@ -27,8 +27,8 @@ import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.NioSslHandler;
@@ -174,8 +174,8 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        if( !Logs.TRACE ) {
-          LOG.info( "Creating server boss thread pool. (log level TRACE for details)" );
+        if( !Logs.EXTREME ) {
+          LOG.info( "Creating server boss thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
           LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_BOSS_POOL_MAX_THREADS ) );
@@ -196,8 +196,8 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverWorkerThreadPool == null ) {
-        if( !Logs.TRACE ) {
-          LOG.info( "Creating server worker thread pool. (log level TRACE for details)" );
+        if( !Logs.EXTREME ) {
+          LOG.info( "Creating server worker thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
           LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_POOL_MAX_THREADS ) );
@@ -228,8 +228,8 @@ public class ChannelUtil {
     ChannelUtil.setupServer( );
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    if( !Logs.TRACE ) {
-      LOG.info( "Creating server bootstrap. (log level TRACE for details)" );
+    if( !Logs.EXTREME ) {
+      LOG.info( "Creating server bootstrap. (log level EXTREME for details)" );
     } else {
       LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
       LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.tcpNoDelay", CHANNEL_NODELAY ) );

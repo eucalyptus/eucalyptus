@@ -61,10 +61,10 @@
         <div class="{style.horizontalLeft}"><img alt="Eucalyptus" src="themes/active/logo.png"/></div>
         <table class="{style.horizontalLeft} {style.titleBox}"><tbody>
             <tr>
-                <td class="{style.titleBig}">EUCALYPTUS</td>
+                <td class="{style.titleBig}"><g:Label ui:field="logoTitle">EUCALYPTUS</g:Label></td>
             </tr>
             <tr>
-                <td class="{style.titleSmall}">YOUR FRIENDLY CLOUD</td>
+                <td class="{style.titleSmall}"><g:Label ui:field="logoSubtitle">YOUR FRIENDLY CLOUD</g:Label></td>
             </tr>
         </tbody></table>
         <div class="{style.horizontalLeft} {style.userDiv}">

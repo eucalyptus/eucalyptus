@@ -281,8 +281,10 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   public boolean isPeer( String peerName, String peerNetworkName ) {
     VmNetworkPeer peer = new VmNetworkPeer( peerName, peerNetworkName );
     for( PacketFilterRule pf : this.rules ) {
-      if( pf.getPeers( ).contains( peer ) ) {
-        return true;
+      if( pf.getPeers( ) != null) {
+        if( pf.getPeers( ).contains( peer ) ) {
+          return true;
+        }
       }
     }
     return false;

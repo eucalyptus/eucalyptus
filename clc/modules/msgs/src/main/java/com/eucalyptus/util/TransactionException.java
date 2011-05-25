@@ -1,6 +1,8 @@
 package com.eucalyptus.util;
 
-public class TransactionException extends EucalyptusCloudException {
+import java.util.concurrent.ExecutionException;
+
+public class TransactionException extends ExecutionException {
 
   public TransactionException( ) {
     super( );

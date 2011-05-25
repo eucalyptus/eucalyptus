@@ -12,7 +12,7 @@ public class PublicAddressStateCallback extends SubjectMessageCallback<Cluster, 
   private static Logger LOG = Logger.getLogger( PublicAddressStateCallback.class );
   
   public PublicAddressStateCallback( ) {
-    this.setRequest( ( DescribePublicAddressesType ) new DescribePublicAddressesType( ).regarding( ) );
+    super( ( DescribePublicAddressesType ) new DescribePublicAddressesType( ).regarding( ) );
   }
   
   @Override

@@ -94,8 +94,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
   private final AttachedVolume attachedVolume;
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
   public VolumeAttachCallback( AttachVolumeType request, AttachedVolume attachVol ) {
+    super( request );
     this.attachedVolume = attachVol;
-    this.setRequest( request );
   }
   
 

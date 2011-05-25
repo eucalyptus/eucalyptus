@@ -85,8 +85,9 @@ public class VmReplyTransform {
     Context ctx = Contexts.lookup( );
 
     List<String> networkNames = new ArrayList<String>();
-    for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
-
+    if ( vmAllocInfo.getNetworks() != null ) {
+      for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+    }
     ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
                                                                ctx.getUserFullName().getNamespace( ),
                                                                networkNames );

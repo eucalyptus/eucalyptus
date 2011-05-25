@@ -64,14 +64,15 @@
   -->
 
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2008-02-01/" name="ec2_amazonaws_com_doc_2008_02_01">
-    <namespace uri="http://ec2.amazonaws.com/doc/2008-02-01/" default="elements"/>
-    <include path="aws-null-base.xml"/>
-    <include path="aws-instances.xml"/>
-    <include path="aws-images.xml"/>
-    <include path="aws-image-attr.xml"/>
-    <include path="aws-keypairs.xml"/>
-    <include path="aws-security.xml"/>
-    <include path="aws-zones.xml"/>
-    <include path="aws-regions.xml"/>
-    <include path="aws-ips.xml"/>
+  <namespace uri="http://ec2.amazonaws.com/doc/2008-02-01/" default="elements" />
+  <include path="aws-null-base.xml" />
+  <include path="aws-instances.xml" />
+  <include path="aws-bundling.xml" />
+  <include path="aws-images.xml" />
+  <include path="aws-image-attr.xml" />
+  <include path="aws-keypairs.xml" />
+  <include path="aws-security.xml" />
+  <include path="aws-zones.xml" />
+  <include path="aws-regions.xml" />
+  <include path="aws-ips.xml" />
 </binding>

@@ -189,7 +189,7 @@ public class ClusterAddressInfo extends EucalyptusData implements Comparable<Clu
   }
   
   public String toString( ) {
-    return String.format( "ClusterAddressInfo %s %s orphanCount=%s", this.address, this.instanceIp, this.orphanCount );
+    return String.format( "ClusterAddressInfo %s %s", this.address, this.instanceIp );
   }
 }
 

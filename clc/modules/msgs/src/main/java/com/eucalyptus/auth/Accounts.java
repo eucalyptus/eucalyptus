@@ -141,44 +141,11 @@ public class Accounts {
    * @deprecated TEMPORARY
    */
   @Deprecated
-  public static UserFullName lookupUserFullNameById( String userId ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static UserFullName lookupUserFullNameByName( String userName ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userName ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with name " + userName + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
   public static AccountFullName lookupAccountFullNameByUserId( String userId ) {
     try {
       return AccountFullName.getInstance( Accounts.lookupUserById( userId ).getAccount( ) );
     } catch ( AuthException ex ) {
       throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static AccountFullName lookupAccountFullNameByUserName( String userName ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupUserByName( userName ).getAccount( ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userName + " something has gone seriously wrong.", ex );
     }
   }
   /**
@@ -192,20 +159,4 @@ public class Accounts {
       throw new RuntimeException( "Failed to identify user with id " + accountId + " something has gone seriously wrong.", ex );
     }
   }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static Account lookupAccount( User user ) {
-    if( FakePrincipals.NOBODY_USER.equals( user ) ) {
-      return FakePrincipals.NOBODY_ACCOUNT;
-    } else {
-      try {
-        return user.getAccount( );
-      } catch ( AuthException ex ) {
-        return FakePrincipals.NOBODY_ACCOUNT;
-      }
-    }
-  }
-  
 }

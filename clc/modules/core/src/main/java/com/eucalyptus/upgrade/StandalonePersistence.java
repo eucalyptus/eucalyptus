@@ -23,7 +23,6 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
@@ -165,8 +164,8 @@ public class StandalonePersistence {
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
     boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-    Logs.DEBUG = doDebug;
-    Logs.TRACE = doDebug;
+//    Logs.DEBUG = doDebug;
+//    Logs.TRACE = doDebug;
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );

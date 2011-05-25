@@ -174,7 +174,9 @@ public class Reports extends HttpServlet {
               out.flush( );
             } else {
               out.println( "ERROR getting log information for " + host );
-              out.println( logInfo.toString( ) );
+              if ( logInfo != null ) {
+                out.println( logInfo.toString( ) );
+	      }
             }
           } catch ( Throwable e ) {
             LOG.debug( e, e );

@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -15,16 +17,19 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.WalrusProperties;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
-import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
+import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -64,6 +69,7 @@ public class ConfigurationWebBackend {
   public static final String DNS_IP = "DNS IP";
   public static final String MAX_USER_PUBLIC_ADDRESSES = "Max public addresses per user";
   public static final String ENABLE_DYNAMIC_PUBLIC_ADDRESSES = "Enable dynamic public addresses";
+  public static final String SYSTEM_RESERVED_PUBLIC_ADDRESSES = "System reserved public addresses";
   
   public static final String PORT = "Port";
   public static final String MAX_VLAN = "Max VLAN tag";
@@ -76,24 +82,25 @@ public class ConfigurationWebBackend {
   public static final int TYPE_FIELD_INDEX = 2;
   
   // Common fields
-  public static final ArrayList<SearchResultFieldDesc> COMMON_CONFIG_FIELD_DESCS = Lists.newArrayList( );
+  public static final ArrayList<SearchResultFieldDesc> COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( ID, ID, false, "0px", TableDisplay.NONE, Type.TEXT, false, true ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_CONFIG_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, ID, false, "0px", TableDisplay.NONE, Type.TEXT, false, true ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "50%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
   }
   // Cloud config extra fields
   public static final ArrayList<SearchResultFieldDesc> CLOUD_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
   static {
-    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultKernel", DEFAULT_KERNEL, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
-    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultRamdisk", DEFAULT_RAMDISK, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
     CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "dnsDomain", DNS_DOMAIN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
     CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "nameserver", DNS_NAMESERVER, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
     CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "nameserverAddress", DNS_IP, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultKernel", DEFAULT_KERNEL, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultRamdisk", DEFAULT_RAMDISK, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
     CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "doDynamicPublicAddresses", ENABLE_DYNAMIC_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.BOOLEAN, true, false ) );
     CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxUserPublicAddresses", MAX_USER_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+    CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "systemReservedPublicAddresses", SYSTEM_RESERVED_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
   }
   // Cluster config extra fields
   public static final ArrayList<SearchResultFieldDesc> CLUSTER_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
@@ -117,16 +124,17 @@ public class ConfigurationWebBackend {
     result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) ); // id
     result.addField( CLOUD_NAME );                            // name  
     result.addField( CLOUD_TYPE );                            // type
-    result.addField( sysConf.getCloudHost( ) );               // host
+    result.addField( Internets.localHostAddress( ) );               // host
     result.addField( "" );                                    // port
     // Then fill in the specific fields
-    result.addField( sysConf.getDefaultKernel( ) );           // default kernel
-    result.addField( sysConf.getDefaultRamdisk( ) );          // default ramdisk
     result.addField( sysConf.getDnsDomain( ) );               // dns domain
     result.addField( sysConf.getNameserver( ) );              // dns nameserver
     result.addField( sysConf.getNameserverAddress( ) );       // dns IP
-    result.addField( sysConf.isDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
-    result.addField( sysConf.getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user    
+    result.addField( ImageConfiguration.getInstance( ).getDefaultKernelId( ) );           // default kernel
+    result.addField( ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) );          // default ramdisk
+    result.addField( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
+    result.addField( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user
+    result.addField( AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( ).toString( ) ); // system reserved addresses
   }
   
   /**
@@ -142,38 +150,31 @@ public class ConfigurationWebBackend {
     return result;
   }
   
-  private static void deserializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow input ) {
-    int i = COMMON_CONFIG_FIELD_DESCS.size( );
-    sysConf.setDefaultKernel( input.getField( i++ ) );
-    sysConf.setDefaultRamdisk( input.getField( i++ ) );
-    sysConf.setDnsDomain( input.getField( i++ ) );
-    sysConf.setNameserver( input.getField( i++ ) );
-    sysConf.setNameserverAddress( input.getField( i++ ) );
-    sysConf.setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( i++ ) ) );
-    try {
-      Integer val = Integer.parseInt( input.getField( i++ ) );
-      sysConf.setMaxUserPublicAddresses( val );
-    } catch ( Exception e ) { }
+  private static void deserializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow input, int index ) {
+    sysConf.setDnsDomain( input.getField( index++ ) );
+    sysConf.setNameserver( input.getField( index++ ) );
+    sysConf.setNameserverAddress( input.getField( index++ ) );
   }
-  
+
   /**
    * Set the cloud configuration using UI input.
    * 
    * @param input
    */
-  public static void setCloudConfiguration( SearchResultRow input ) throws EucalyptusServiceException {
+  public static void setCloudConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
+    final int i = COMMON_FIELD_DESCS.size( );
     EntityWrapper<SystemConfiguration> db = EntityWrapper.get( SystemConfiguration.class );
     SystemConfiguration sysConf = null;
     try {
       sysConf = db.getUnique( new SystemConfiguration( ) );
-      deserializeSystemConfiguration( sysConf, input );
+      deserializeSystemConfiguration( sysConf, input, i );
       db.commit( );
       DNSProperties.update( );      
     } catch ( EucalyptusCloudException e ) {
       try {
         LOG.debug( e, e );
         sysConf = new SystemConfiguration( );
-        deserializeSystemConfiguration( sysConf, input );
+        deserializeSystemConfiguration( sysConf, input, i );
         db.persist( sysConf );
         db.commit( );
         DNSProperties.update( );
@@ -186,6 +187,46 @@ public class ConfigurationWebBackend {
       ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
     } catch ( EventFailedException e ) {
       LOG.debug( e, e );
+    }
+    final int j = i + 3;
+    try {
+      Transactions.one( ImageConfiguration.getInstance( ), new Callback<ImageConfiguration>( ) {
+        @Override
+        public void fire( ImageConfiguration t ) {
+          int n = j;
+          t.setDefaultKernelId( input.getField( n++ ) );
+          t.setDefaultRamdiskId( input.getField( n++ ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      LOG.error( "Failed to set image configuration", e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to set image configuration", e );
+    }
+    final int k = j + 2;
+    try {
+      Transactions.one( AddressingConfiguration.getInstance( ), new Callback<AddressingConfiguration>( ) {
+        
+        @Override
+        public void fire( AddressingConfiguration t ) {
+          int n = k;
+          t.setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( n++ ) ) );
+          try {
+            t.setMaxUserPublicAddresses( Integer.parseInt( input.getField( n++ ) ) );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+          }
+          try {
+            t.setSystemReservedPublicAddresses( Integer.parseInt( input.getField( n++ ) ) );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      LOG.error( "Failed to set addressing configuration", e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to set image configuration", e );
     }    
   }
   
@@ -220,7 +261,7 @@ public class ConfigurationWebBackend {
   }
   
   private static void deserializeClusterConfiguration( ClusterConfiguration clusterConf, SearchResultRow input ) {
-    int i = COMMON_CONFIG_FIELD_DESCS.size( );
+    int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
       clusterConf.setMaxVlan( val );
@@ -422,7 +463,7 @@ public class ConfigurationWebBackend {
    */
   public static void setWalrusConfiguration( SearchResultRow input ) throws EucalyptusServiceException  {
     ArrayList<ComponentProperty> properties = Lists.newArrayList( );
-    deserializeComponentProperties( properties, input, COMMON_CONFIG_FIELD_DESCS.size( ) );
+    deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
     UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
     updateWalrusConfiguration.setName( WalrusProperties.NAME );
     updateWalrusConfiguration.setProperties( properties );

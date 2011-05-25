@@ -65,109 +65,111 @@
 
 <binding force-classes="true" add-constructors="true">
 
-    <mapping class="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" abstract="true">
-        <value name="userId" field="userId" usage="optional"/>
-        <value name="group" field="group" usage="optional"/>
-    </mapping>
+  <mapping class="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" abstract="true">
+    <value name="userId" field="userId" usage="optional" />
+    <value name="group" field="group" usage="optional" />
+  </mapping>
 
-    <mapping name="ModifyImageAttributeResponse"
-             class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-    </mapping>
+  <mapping name="ModifyImageAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
 
-    <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId" usage="required"/>
-        <structure usage="optional">
-            <structure name="launchPermission" usage="optional">
-                <structure name="add" usage="optional">
-                    <collection field="add" factory="org.jibx.runtime.Utility.arrayListFactory">
-                        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType"/>
-                    </collection>
-                </structure>
-                <structure name="remove" usage="optional">
-                    <collection field="remove" factory="org.jibx.runtime.Utility.arrayListFactory">
-                        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType"/>
-                    </collection>
-                </structure>
-            </structure>
+  <mapping name="ModifyImageAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" usage="required" />
+    <structure usage="optional">
+      <structure name="launchPermission" usage="optional">
+        <structure name="add" usage="optional">
+          <collection field="add" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
+          </collection>
         </structure>
-        <!--2007-03-01-->
-        <structure usage="optional" name="productCodes">
-            <collection field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-                <structure name="item">
-                    <value name="productCode"/>
-                </structure>
-            </collection>
+        <structure name="remove" usage="optional">
+          <collection field="remove" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
+          </collection>
         </structure>
-    </mapping>
-
-    <mapping name="DescribeImageAttributeResponse"
-             class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId"/>
-        <collection name="launchPermission" usage="optional" field="launchPermission" factory="org.jibx.runtime.Utility.arrayListFactory" test-method="hasLaunchPermissions">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType"/>
-        </collection>
+      </structure>
+    </structure>
         <!--2007-03-01-->
-        <collection name="productCodes" usage="optional" field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" test-method="hasProductCodes">
-            <structure name="item">
-                <value name="productCode"/>
-            </structure>
-        </collection>
-        <!--2008-02-01-->
-        <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" test-method="hasKernel">
-            <value name="value"/>
-        </collection>
-        <!--2008-02-01-->
-        <collection name="ramdisk" usage="optional"  field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String" test-method="hasRamdisk">
-            <value name="value"/>
-        </collection>
-        <collection name="blockDeviceMapping" usage="optional" field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory" test-method="hasBlockDeviceMapping">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType"/>
-        </collection>
-    </mapping>
+    <structure usage="optional" name="productCodes">
+      <collection field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+        <structure name="item">
+          <value name="productCode" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
 
-    <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType"  extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId"/>
-        <value name="launchPermission" field="launchPermission" usage="optional"/>
+  <mapping name="DescribeImageAttributeResponse" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" />
+    <collection name="launchPermission" usage="optional" field="launchPermission" factory="org.jibx.runtime.Utility.arrayListFactory"
+      test-method="hasLaunchPermissions">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType" />
+    </collection>
         <!--2007-03-01-->
-        <value name="productCodes" field="productCodes" usage="optional"/>
+    <collection name="productCodes" usage="optional" field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasProductCodes">
+      <structure name="item">
+        <value name="productCode" />
+      </structure>
+    </collection>
         <!--2008-02-01-->
-        <value name="kernel" field="kernel" usage="optional"/>
+    <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasKernel">
+      <value name="value" />
+    </collection>
         <!--2008-02-01-->
-        <value name="ramdisk" field="ramdisk" usage="optional"/>
+    <collection name="ramdisk" usage="optional" field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasRamdisk">
+      <value name="value" />
+    </collection>
+    <collection name="blockDeviceMapping" usage="optional" field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory"
+      test-method="hasBlockDeviceMapping">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeImageAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" />
+    <value name="launchPermission" field="launchPermission" usage="optional" />
+        <!--2007-03-01-->
+    <value name="productCodes" field="productCodes" usage="optional" />
         <!--2008-02-01-->
-        <value name="blockDeviceMapping" field="blockDeviceMapping" usage="optional"/>
-    </mapping>
+    <value name="kernel" field="kernel" usage="optional" />
+        <!--2008-02-01-->
+    <value name="ramdisk" field="ramdisk" usage="optional" />
+        <!--2008-02-01-->
+    <value name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" />
+  </mapping>
 
-    <mapping name="ResetImageAttributeResponse"
-             class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-    </mapping>
+  <mapping name="ResetImageAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
 
-    <mapping name="ResetImageAttribute" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="imageId" field="imageId"/>
-        <value name="launchPermission" field="launchPermission"/>
-    </mapping>
+  <mapping name="ResetImageAttribute" class="edu.ucsb.eucalyptus.msgs.ResetImageAttributeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="imageId" field="imageId" />
+    <value name="launchPermission" field="launchPermission" />
+  </mapping>
 
-    <mapping name="ConfirmProductInstance" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="productCode" field="productCode"/>
-        <value name="instanceId" field="instanceId"/>
-    </mapping>
-    <mapping name="ConfirmProductInstanceResponse" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType"
-             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return"/>
-        <value name="ownerId" field="ownerId" usage="optional"/>
-    </mapping>
+  <mapping name="ConfirmProductInstance" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="productCode" field="productCode" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+  <mapping name="ConfirmProductInstanceResponse" class="edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+    <value name="ownerId" field="ownerId" usage="optional" />
+  </mapping>
 
 </binding>

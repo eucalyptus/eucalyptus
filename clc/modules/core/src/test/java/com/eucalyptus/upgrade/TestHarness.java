@@ -1,18 +1,21 @@
 package com.eucalyptus.upgrade;
 
-import java.io.*;
+import java.io.File;
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -20,15 +23,13 @@ import org.junit.Test;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runners.Parameterized.Parameters;
-
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
-import com.eucalyptus.upgrade.StandalonePersistence;
-import com.eucalyptus.upgrade.TestDescription;
-import com.eucalyptus.upgrade.TestListener;
-import com.eucalyptus.util.Logs;
 import com.google.common.base.Predicate;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 public class TestHarness
 {
@@ -125,8 +126,8 @@ public class TestHarness
 							.getProperty("euca.log.level"));
 					boolean doDebug = "DEBUG".equals(System
 							.getProperty("euca.log.level")) || doTrace;
-					Logs.DEBUG = doDebug;
-					Logs.TRACE = doDebug;
+//					Logs.DEBUG = doDebug;
+//					Logs.TRACE = doDebug;
 
 					if ((StandalonePersistence.eucaDest = System
 							.getProperty("euca.upgrade.destination")) == null) {

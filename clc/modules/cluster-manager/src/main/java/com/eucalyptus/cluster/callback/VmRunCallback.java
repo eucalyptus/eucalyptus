@@ -90,8 +90,8 @@ public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> 
   private ResourceToken token;
   
   public VmRunCallback( final VmRunType msg, final ResourceToken token ) {
+    super( msg );
     this.token = token;
-    this.setRequest( msg );
   }
 
   @Override
