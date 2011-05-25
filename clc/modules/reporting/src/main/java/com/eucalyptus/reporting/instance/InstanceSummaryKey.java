@@ -42,6 +42,12 @@ public class InstanceSummaryKey
 	{
 		return availabilityZone;
 	}
+	
+	public String toString()
+	{
+		return String.format("[owner:%s,account:%s,cluster:%s,zone:%s]",
+				ownerId, accountId, clusterName, availabilityZone);
+	}
 
 	@Override
 	public int hashCode()
