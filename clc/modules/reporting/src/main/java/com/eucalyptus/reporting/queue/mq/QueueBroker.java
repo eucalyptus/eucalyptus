@@ -66,11 +66,12 @@ public class QueueBroker
 		Component reportingComponent = Components.lookup(Reporting.class);
 		if (null!=reportingComponent && !reportingComponent.isEnabledLocally()) {
 			log.info("Searching for remote reporting broker");
-			NavigableSet<Service> services = reportingComponent.getServices();
-			for (Service service: services) {
-				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
-						service.getServiceConfiguration().getHostName(), DEFAULT_PORT);
-			}
+			//TODO: merge in
+			//NavigableSet<Service> services = reportingComponent.;
+//			for (Service service: services) {
+//				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
+//						service.getServiceConfiguration().getHostName(), DEFAULT_PORT);
+//			}
 			if (remoteBrokerUrl==null) {
 				throw new QueueRuntimeException("Unable to locate reporting broker over network");
 			}
