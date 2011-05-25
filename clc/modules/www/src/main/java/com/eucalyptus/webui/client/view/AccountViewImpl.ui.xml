@@ -21,13 +21,13 @@
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="newButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="newButton">
                                     <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New account
                                 </g:Anchor>                            
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}" ui:field="delButton">
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
                                     <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
                                 </g:Anchor>
                             </td>

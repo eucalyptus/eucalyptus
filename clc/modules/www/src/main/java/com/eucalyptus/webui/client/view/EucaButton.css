@@ -2,7 +2,7 @@ a.button,button {
 	display: inline-block;
 	padding: 5px;
 	color: #3C3C3D;
-	font-size:90%;
+	font-size:14px;
 	text-shadow: 1px 1px 0 #FFFFFF;
 	background-color: #ECECEC;
 	white-space: nowrap;
@@ -123,7 +123,12 @@ a.button.big,button.big {
 	padding-right: 17px;
 }
 
-button.big {
+a.button.small,button.small {
+    font-size: 12px;
+    padding-left: 4px;
+    padding-right: 5px;
+    padding-top: 3px;
+    padding-bottom: 5px;
 }
 
 a.button span.icon,button span.icon {

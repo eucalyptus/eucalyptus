@@ -9,18 +9,25 @@ public interface GlobalResources extends ClientBundle {
   
   public interface EucaButtonStyle extends CssResource {
     String button( );
+    String icon( );
+    String pill( );
+
+    String active( );
+    
+    String big( );
+    String small( );
+    
+    String primary( );
+
+    String positive( );
+    String negative( );
+
+    String left( );
+    String middle( );
+    String right( );
+
     String minus( );
     String plus( );
-    String middle( );
-    String pill( );
-    String primary( );
-    String left( );
-    String positive( );
-    String right( );
-    String icon( );
-    String active( );
-    String negative( );
-    String big( );
     String floppy( );
     String report( );
   }
