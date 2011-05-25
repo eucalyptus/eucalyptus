@@ -3,31 +3,24 @@ package com.eucalyptus.reporting;
 public enum ReportType
 {
 	S3
-		("S3", "s3.jrxml", "nested_s3.jrxml", ReportingCriterion.USER,
-		ReportingCriterion.ACCOUNT),
+		("S3", "s3.jrxml", "nested_s3.jrxml"),
 
 	STORAGE
-		("Storage", "storage.jrxml", "nested_storage.jrxml",
-		ReportingCriterion.USER, ReportingCriterion.ACCOUNT,
-		ReportingCriterion.CLUSTER, ReportingCriterion.AVAILABILITY_ZONE),
+		("Storage", "storage.jrxml", "nested_storage.jrxml"),
 
 	INSTANCE
-		("Instance", "instance.jrxml", "nested_instance.jrxml",
-		ReportingCriterion.USER, ReportingCriterion.ACCOUNT,
-		ReportingCriterion.CLUSTER, ReportingCriterion.AVAILABILITY_ZONE);
+		("Instance", "instance.jrxml", "nested_instance.jrxml");
 	
 	private final String reportName;
 	private final String jrxmlFilename;
 	private final String nestedJrxmlFilename;
-	private final ReportingCriterion[] allowedCriteria;
 	
 	private ReportType(String reportName, String jrxmlFilename,
-			String nestedJrxmlFilename, ReportingCriterion... allowedCriteria)
+			String nestedJrxmlFilename)
 	{
 		this.reportName = reportName;
 		this.jrxmlFilename = jrxmlFilename;
 		this.nestedJrxmlFilename = nestedJrxmlFilename;
-		this.allowedCriteria = allowedCriteria;
 	}
 	
 	public String getReportName()
@@ -45,9 +38,5 @@ public enum ReportType
 		return this.nestedJrxmlFilename;
 	}
 	
-	public ReportingCriterion[] getAllowedCriteria()
-	{
-		return this.allowedCriteria;
-	}
 	
 }
