@@ -1,9 +1,10 @@
 package com.eucalyptus.reporting.instance;
 
+import java.io.*;
 import java.util.*;
 
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.reporting.ReportingBootstrapper;
+import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
@@ -102,8 +103,21 @@ public class FalseDataGenerator
 		return ((correctVal - error) < val) && (val < (correctVal + error));
 	}
 	
+	
+	@ExposedCommand
+	public static void generateTestReport()
+	{
+		System.out.println(" ----> GENERATING TEST REPORT");
 
-
+		try {
+			OutputStream os = new FileOutputStream("/tmp/testReport.csv");
+			ReportGenerator.generateReport(ReportType.INSTANCE, ReportFormat.csv, new Period(1104566480000l, 1104571200000l),
+					ReportingCriterion.USER, null, null, os);
+			os.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	@ExposedCommand
 	public static void removeFalseData()
