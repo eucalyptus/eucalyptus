@@ -496,6 +496,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
   
   private void addRow( String key, Widget keyWidget, HasValueWidget valueWidget, Integer rowIndex ) {
+    LOG.log( Level.INFO, "Adding " + key + " to row " + ( rowIndex != null ? rowIndex : "N/A" ) );
     this.gridKeys.add( key );
     this.gridValues.add( valueWidget );
     if ( rowIndex != null && rowIndex >= 0 ) {
