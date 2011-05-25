@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.google.common.collect.Lists;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.SpanElement;
@@ -39,11 +40,6 @@ public class DetailViewImpl extends Composite implements DetailView {
   interface GridStyle extends CssResource {
     String grid( );
   }
-  
-  public static final String ANCHOR = ">>";
-  public static final int ARTICLE_LINES = 8;
-  
-  public static final String PASSWORD_ACTION = "password";
   
   static interface ActionHandler {
     void act( );  
@@ -159,20 +155,22 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   static class HyperLinkValue implements HasValueWidget {
 
-    private Anchor anchor;
+    private IconButton link;
     
     public HyperLinkValue( String url ) {
-      this.anchor = new Anchor( ANCHOR, url );
+      this.link = new IconButton( );
+      this.link.setType( IconButton.Type.show );
+      this.link.setHref( url );
     }
     
     @Override
     public String getValue( ) {
-      return this.anchor.getHref( );
+      return this.link.getHref( );
     }
 
     @Override
     public Widget getWidget( ) {
-      return this.anchor;
+      return this.link;
     }
   
     @Override
@@ -243,11 +241,14 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   static class ActionValue implements HasValueWidget {
 
-    private Anchor anchor;
+    private IconButton button;
+    private IconButton.Type type;
     
-    public ActionValue( String value, final ActionHandler action ) {
-      this.anchor = new Anchor( value );
-      this.anchor.addClickHandler( new ClickHandler( ) {
+    public ActionValue( String val, final ActionHandler action ) {
+      this.type = getType( val );
+      this.button = new IconButton( );
+      this.button.setType( this.type );
+      this.button.addClickHandler( new ClickHandler( ) {
         @Override
         public void onClick( ClickEvent event ) {
           action.act( );
@@ -255,14 +256,22 @@ public class DetailViewImpl extends Composite implements DetailView {
       } );
     }
     
+    private static IconButton.Type getType( String typeVal ) {
+      try {
+        return IconButton.Type.valueOf( typeVal );
+      } catch ( Exception e ) {
+        return IconButton.Type.modify;
+      }
+    }
+    
     @Override
     public Widget getWidget( ) {
-      return this.anchor;
+      return this.button;
     }
 
     @Override
     public String getValue( ) {
-      return this.anchor.getText( );
+      return this.type.name( );
     }
     
     @Override
@@ -271,62 +280,67 @@ public class DetailViewImpl extends Composite implements DetailView {
     }
   }
   
-  static class LabelKey implements HasValueWidget {
-    
-    private Label label;
-    private String key;
-    
-    public LabelKey( String key, String title ) {
-      this.label = new Label( title );
-      this.key = key;
-    }
-    
-    @Override
-    public String getValue( ) {
-      return this.key;
-    }
-    
-    @Override
-    public Widget getWidget( ) {
-      return this.label;
-    }
-    
-  }
-  
-  static class RemovableLabelKey implements HasValueWidget {
+  static class RemovableValue implements HasValueWidget {
 
-    private static final String DELETE_SYMBOL = "&nbsp;[X]&nbsp;";
+    private InputWithButton input;
     
-    final private LabelWithAnchor label;
-    final private String key;
-    final private ActionHandler action;
-
-    public RemovableLabelKey( String key, String title, ActionHandler action ) {
-      this.key = key;
-      this.action = action;
-      this.label = new LabelWithAnchor( );
-      this.label.setContent( title, DELETE_SYMBOL );
-      this.label.addClickHandler( new ClickHandler( ) {
+    public RemovableValue( String val, ValueChangeHandler<String> changeHandler, final ActionHandler actionHandler ) {
+      this.input = new InputWithButton( );
+      this.input.setValue( val );
+      this.input.setType( IconButton.Type.remove );
+      this.input.addValueChangeHandler( changeHandler );
+      this.input.addClickHandler( new ClickHandler( ) {
         @Override
         public void onClick( ClickEvent event ) {
-          RemovableLabelKey.this.action.act( );
+          actionHandler.act( );
         }
       } );
     }
     
     @Override
     public Widget getWidget( ) {
-      return this.label;
+      return this.input;
     }
 
     @Override
     public String getValue( ) {
-      return this.key;
+      return this.input.getValue( );
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.getValue( );
     }
     
   }
   
+  public static final String ANCHOR = "Show";
+  public static final int ARTICLE_LINES = 8;
+  public static final String PASSWORD_ACTION = "password";
+  
   private static final String LABEL_WIDTH = "36%";
+  private static final String NEW_KEY = "enter new info";
+  
+  private final ValueChangeHandler<String> STRING_VALUE_CHANGE_HANDLER = new ValueChangeHandler<String>( ) {
+    @Override
+    public void onValueChange( ValueChangeEvent<String> event ) {
+      showSaveButton( );
+    }
+  };
+
+  private final ValueChangeHandler<Boolean> BOOLEAN_VALUE_CHANGE_HANDLER = new ValueChangeHandler<Boolean>( ) {
+    @Override
+    public void onValueChange( ValueChangeEvent<Boolean> event ) {
+      showSaveButton( );
+    }
+  };
+
+  private final ValueChangeHandler<Date> DATE_VALUE_CHANGE_HANDLER = new ValueChangeHandler<Date>( ) {
+    @Override
+    public void onValueChange( ValueChangeEvent<Date> event ) {
+      showSaveButton( );
+    }
+  };
   
   @UiField
   GridStyle gridStyle;
@@ -344,7 +358,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   private Presenter presenter;
   
   private ArrayList<HasValueWidget> gridValues = Lists.newArrayList( );
-  private ArrayList<HasValueWidget> gridKeys = Lists.newArrayList( );
+  private ArrayList<String> gridKeys = Lists.newArrayList( );
   private ArrayList<Integer> gridRows = Lists.newArrayList( );
   
   private Grid currentGrid;
@@ -382,12 +396,7 @@ public class DetailViewImpl extends Composite implements DetailView {
     this.gridValues.clear( );
     this.gridKeys.clear( );
     this.gridRows.clear( );
-  }
-  
-  private void addRow( HasValueWidget key, HasValueWidget value, Integer rowIndex ) {
-    this.gridKeys.add( key );
-    this.gridValues.add( value );
-    this.gridRows.add( rowIndex );
+    this.currentGrid = null;
   }
   
   @Override
@@ -395,114 +404,137 @@ public class DetailViewImpl extends Composite implements DetailView {
     LOG.log( Level.INFO, "Show data" );
     clearRows( );
     this.save.setVisible( false );
-    this.currentGrid = createGrid( descs, values );
+    createGrid( descs, values );
     if ( this.currentGrid != null ) {
       gridPanel.setWidget( this.currentGrid );
     }
   }
   
-  private Grid createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
+  private void createGrid( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> vals ) {
     if ( descs == null || descs.size( ) < 1 || vals == null || vals.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Empty or partial input" );
-      return null;
+      return;
     }
     int size = Math.min( descs.size( ), vals.size( ) );
-    Grid grid = new Grid( size, 2 );
-    grid.addStyleName( gridStyle.grid( ) );
-    grid.getColumnFormatter( ).setWidth( 0, LABEL_WIDTH );
+    this.currentGrid = new Grid( size, 2 );
+    this.currentGrid.addStyleName( gridStyle.grid( ) );
+    this.currentGrid.getColumnFormatter( ).setWidth( 0, LABEL_WIDTH );
     int row = 0;
     for ( int i = 0; i < size; i++ ) {
       SearchResultFieldDesc desc = descs.get( i );
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
-        HasValueWidget label = getLabelWidget( i, desc );
-        HasValueWidget content = getContentWidget( desc, val );
-        if ( label != null && content != null ) {
-          grid.setWidget( row, 0, label.getWidget( ) );
-          grid.setWidget( row, 1, content.getWidget( ) );
-          addRow( label, content, row++ );
-          continue;
+        LOG.log( Level.INFO, "TYPE=" + desc.getType( ).name( ) );
+        if ( desc.getType( ).equals( Type.NEWKEYVAL ) ) {
+          // Add the new value input row at the end
+          addNewKeyValRow( row );
+          // This should be the last row
+          break;
+        } else {
+          HasValueWidget widget = getContentWidget( desc.getType( ), desc.getName( ), val, desc.getEditable( ) );
+          if ( widget != null ) {
+            addRow( desc.getName( ), new Label( desc.getTitle( ) ), widget, row++ );
+            continue;
+          }
         }
       }
       // Hidden fields
-      addRow( new HiddenValue( desc.getName( ) ), new HiddenValue( val ), null );
+      addRow( desc.getName( ), null/*keyWidget*/, new HiddenValue( val ), null/*rowIndex*/ );
     }
-    return grid;
   }
   
-  private void removeTableRow( int index ) {
+  private void addNewKeyValRow( final int rowIndex ) {
+    LOG.log( Level.INFO, "Adding NEWKEYVAL row." );
+    final TextBox keyInput = new TextBox( );
+    keyInput.setValue( NEW_KEY );
+    final InputWithButton valueInput = new InputWithButton( );
+    valueInput.setType( IconButton.Type.add );
+    valueInput.addClickHandler( new ClickHandler( ) {
+      @Override
+      public void onClick( ClickEvent event ) {
+        HasValueWidget widget = getContentWidget( Type.KEYVAL, keyInput.getValue( ), valueInput.getValue( ), true );
+        // Always append to the end, but before the new value input row.
+        addRow( keyInput.getValue( ), new Label( keyInput.getValue( ) ), widget, currentGrid.getRowCount( ) - 1 );
+        keyInput.setValue( NEW_KEY );
+        valueInput.setValue( "" );
+      }
+    } );
+    currentGrid.setWidget( rowIndex, 0, keyInput );
+    currentGrid.setWidget( rowIndex, 1, valueInput );
+  }
+
+  private int findKeyIndex( String key ) {
+    int i;
+    for ( i = 0; i < gridKeys.size( ); i++ ) {
+      if ( key != null && key.equals( gridKeys.get( i ) ) ) {
+        return i;
+      }
+    }
+    return -1;
+  }
+  
+  private void updateFieldRowMapping( int index ) {
+    for ( int i = index; i < gridRows.size( ); i++ ) {
+      Integer row = gridRows.get( i );
+      if ( row != null ) {
+        gridRows.set( index, row - 1 );
+      }
+    }
+  }
+  
+  private void removeRow( String key ) {
+    int index = findKeyIndex( key );
+    if ( index < 0 ) {
+      return;
+    }
     gridKeys.remove( index );
     gridValues.remove( index );
     currentGrid.removeRow( gridRows.get( index ) );
+    gridRows.remove( index );
+    updateFieldRowMapping( index );
   }
   
-  private HasValueWidget getLabelWidget( final int index, SearchResultFieldDesc desc ) {
-    switch ( desc.getType( ) ) {
-      case KEYVAL:
-        return new RemovableLabelKey( desc.getName( ), desc.getTitle( ), new ActionHandler( ) {
-          @Override
-          public void act( ) {
-            removeTableRow( index );
-          }
-        } );
-      case NEWKEYVAL:
-        return new TextBoxValue( desc.getName( ), desc.getEditable( ), new ValueChangeHandler<String>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<String> event ) {
-            showSaveButton( );
-          }
-        } );
-      default:
-        return new LabelKey( desc.getName( ), desc.getTitle( ) );
+  private void addRow( String key, Widget keyWidget, HasValueWidget valueWidget, Integer rowIndex ) {
+    this.gridKeys.add( key );
+    this.gridValues.add( valueWidget );
+    if ( rowIndex != null && rowIndex >= 0 ) {
+      this.gridRows.add( rowIndex );
+      if ( rowIndex == currentGrid.getRowCount( ) - 1 ) {
+        currentGrid.insertRow( rowIndex );
+      }
+      currentGrid.setWidget( rowIndex, 0, keyWidget );
+      currentGrid.setWidget( rowIndex, 1, valueWidget.getWidget( ) );
+    } else {
+      this.gridRows.add( null );
     }
   }
   
-  private HasValueWidget getContentWidget( final SearchResultFieldDesc desc, String val ) {
-    switch ( desc.getType( ) ) {
+  private HasValueWidget getContentWidget( Type type, final String key, String val, boolean editable ) {
+    switch ( type ) {
       case TEXT:
-      case KEYVAL:
-      case NEWKEYVAL:
-        return new TextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<String> event ) {
-            showSaveButton( );
-          }
-        } );
+        return new TextBoxValue( val, editable, STRING_VALUE_CHANGE_HANDLER );
       case ARTICLE:
-        return new TextAreaValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<String> event ) {
-            showSaveButton( );
-          }
-        } );        
+        return new TextAreaValue( val, editable, STRING_VALUE_CHANGE_HANDLER );
       case HIDDEN:
-        return new PasswordTextBoxValue( val, desc.getEditable( ), new ValueChangeHandler<String>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<String> event ) {
-            showSaveButton( );
-          }
-        } );
+        return new PasswordTextBoxValue( val, editable, STRING_VALUE_CHANGE_HANDLER );
       case BOOLEAN:
-        return new CheckBoxValue( val, desc.getEditable( ), new ValueChangeHandler<Boolean>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<Boolean> event ) {
-            showSaveButton( );
-          }
-        } );
+        return new CheckBoxValue( val, editable, BOOLEAN_VALUE_CHANGE_HANDLER );
       case DATE:
-        return new DateBoxValue( val, desc.getEditable( ), new ValueChangeHandler<Date>( ) {
-          @Override
-          public void onValueChange( ValueChangeEvent<Date> event ) {
-            showSaveButton( );
-          }
-        } );
+        return new DateBoxValue( val, editable, DATE_VALUE_CHANGE_HANDLER );
       case LINK:
         return new HyperLinkValue( val );
       case ACTION:
         return new ActionValue( val, new ActionHandler( ) {
           @Override
           public void act( ) {
-            popupAction( desc.getName( ) );
+            popupAction( key );
+          }
+        } );
+      case KEYVAL:
+        return new RemovableValue( val, STRING_VALUE_CHANGE_HANDLER, new ActionHandler( ) {
+          @Override
+          public void act( ) {
+            removeRow( key );
           }
         } );
     }

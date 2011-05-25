@@ -49,20 +49,26 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return Categories.getTags( );
   }
 
-  private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test1", "1" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test2", "2" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test3", "3" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test4", "4" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test5", "5" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test6", "6" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test7", "7" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test8", "8" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "test9", "9" ) ),
-                                                                   new SearchResultRow( Arrays.asList( "testA", "A" ) )
+  private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test1", "1", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test2", "2", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test3", "3", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test4", "4", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test5", "5", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test6", "6", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test7", "7", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test8", "8", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "test9", "9", "modify", "#start:", "test", "test1", "test2", "" ) ),
+                                                                   new SearchResultRow( Arrays.asList( "testA", "A", "modify", "#start:", "test", "test1", "test2", "" ) )
                                                                  );
   private static final List<SearchResultFieldDesc> FIELDS = Arrays.asList( new SearchResultFieldDesc( "Name", true, "40%" ),
-                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, false )
+                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, false ),
+                                                                           new SearchResultFieldDesc( "Action", false, "0px", TableDisplay.NONE, Type.ACTION, false, false ),
+                                                                           new SearchResultFieldDesc( "Link", false, "0px", TableDisplay.NONE, Type.LINK, false, false ),
+                                                                           new SearchResultFieldDesc( "Access key", false, "0px", TableDisplay.NONE, Type.TEXT, true, false ),
+                                                                           new SearchResultFieldDesc( "Certificate", false, "0px", TableDisplay.NONE, Type.KEYVAL, true, false ),
+                                                                           new SearchResultFieldDesc( "Another fancy key", false, "0px", TableDisplay.NONE, Type.KEYVAL, true, false ),
+                                                                           new SearchResultFieldDesc( "", false, "0px", TableDisplay.NONE, Type.NEWKEYVAL, true, false )
                                                                          );
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {

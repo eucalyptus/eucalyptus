@@ -61,7 +61,7 @@ public class EuareWebBackend {
   public static final String USERID = "userid";
   public static final String OWNERID = "ownerid";
   
-  public static final String ACTION_CHANGE = "Change";
+  public static final String ACTION_CHANGE = "modify";
     
   public static final ArrayList<SearchResultFieldDesc> ACCOUNT_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
