@@ -1,13 +1,9 @@
 package com.eucalyptus.www;
 
-import java.io.*;
+import java.io.IOException;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
-
-import net.sf.jasperreports.engine.JRExporter;
-import net.sf.jasperreports.engine.JRExporterParameter;
-import net.sf.jasperreports.engine.export.*;
 
 import org.apache.log4j.Logger;
 
@@ -20,6 +16,7 @@ import com.google.gwt.user.client.rpc.SerializableException;
 import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
 import edu.ucsb.eucalyptus.admin.server.SessionInfo;
 
+@SuppressWarnings("serial")
 public class ReportServlet
 	extends HttpServlet
 {
