@@ -457,6 +457,7 @@ public class DetailViewImpl extends Composite implements DetailView {
         addRow( keyInput.getValue( ), new Label( keyInput.getValue( ) ), widget, currentGrid.getRowCount( ) - 1 );
         keyInput.setValue( NEW_KEY );
         valueInput.setValue( "" );
+        showSaveButton( );
       }
     } );
     currentGrid.setWidget( rowIndex, 0, keyInput );
@@ -535,6 +536,7 @@ public class DetailViewImpl extends Composite implements DetailView {
           @Override
           public void act( ) {
             removeRow( key );
+            showSaveButton( );
           }
         } );
     }
