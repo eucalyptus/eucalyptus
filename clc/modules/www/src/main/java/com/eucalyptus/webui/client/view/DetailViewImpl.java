@@ -495,14 +495,17 @@ public class DetailViewImpl extends Composite implements DetailView {
     if ( index < 0 ) {
       return;
     }
+    LOG.log( Level.INFO, "Removing key=" + key + " index=" + index + " row=" + gridRows.get( index ) );
     gridKeys.remove( index );
     gridValues.remove( index );
     currentGrid.removeRow( gridRows.get( index ) );
     gridRows.remove( index );
     updateFieldRowMapping( index );
+    LOG.log( Level.INFO, "Current row mapping: " + gridRows );
   }
   
   private void addRow( String key, Widget keyWidget, HasValueWidget valueWidget, Integer rowIndex ) {
+    LOG.log( Level.INFO, "Adding " + key + " to row " + ( rowIndex != null ? rowIndex : "N/A" ) );
     this.gridKeys.add( key );
     this.gridValues.add( valueWidget );
     if ( rowIndex != null && rowIndex >= 0 ) {
