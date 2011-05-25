@@ -163,7 +163,11 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException, CheckException {
-    Clusters.lookup( config ).check( );
+    try {
+      Clusters.lookup( config ).check( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex );
+    }
   }
   
 }
