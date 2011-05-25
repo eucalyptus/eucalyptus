@@ -40,9 +40,9 @@ public interface GlobalResources extends ClientBundle {
   @Source( "image/plus_12x12_white.png" )
   ImageResource plusWhite( );
   
-  @Source( "image/minus_12x3_gray.png" )
+  @Source( "image/minus_12x12_gray.png" )
   ImageResource minusGray( );
-  @Source( "image/minus_12x3_white.png" )
+  @Source( "image/minus_12x12_white.png" )
   ImageResource minusWhite( );
 
   @Source( "image/floppy_12x12_gray.png" )

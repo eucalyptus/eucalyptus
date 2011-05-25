@@ -154,11 +154,9 @@ a.big.button span.icon,button.big span.icon {
 }
 
 @sprite a.button span.icon.minus,button span.icon.minus {
-	height:6px;
     gwt-image:'minusGray';
 }
 @sprite a.button:hover span.icon.minus,button:hover span.icon.minus {
-	height:6px;
     gwt-image:'minusWhite';
 }
 
