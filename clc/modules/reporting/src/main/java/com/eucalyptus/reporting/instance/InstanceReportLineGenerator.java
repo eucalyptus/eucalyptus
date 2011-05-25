@@ -2,14 +2,16 @@ package com.eucalyptus.reporting.instance;
 
 import java.util.*;
 
-import org.mortbay.log.Log;
+import org.apache.log4j.Logger;
 
-import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.units.Units;
 
 public class InstanceReportLineGenerator
 {
+	private static Logger log = Logger.getLogger( InstanceReportLineGenerator.class );
+
 	private static InstanceReportLineGenerator instance;
 	
 	public static InstanceReportLineGenerator getInstance()
@@ -34,6 +36,10 @@ public class InstanceReportLineGenerator
 	public List<InstanceReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
 			ReportingCriterion crit, Units displayUnits)
 	{
+		if (period==null || crit==null || displayUnits==null) {
+			throw new IllegalArgumentException("Args can't be null");
+		}
+		
 		Map<InstanceReportLineKey, InstanceReportLine> reportLineMap =
 			new HashMap<InstanceReportLineKey, InstanceReportLine>();
 		
@@ -41,7 +47,7 @@ public class InstanceReportLineGenerator
 		Map<InstanceSummaryKey, InstanceUsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
 		for (InstanceSummaryKey key: usageMap.keySet()) {
-			Log.info("Adding key:" + key + " data:" + usageMap.get(key));
+			//log.info("!!Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
 			InstanceReportLineKey lineKey = new InstanceReportLineKey(critVal, groupVal);
@@ -55,6 +61,7 @@ public class InstanceReportLineGenerator
 		}
 
 		final List<InstanceReportLine> results = new ArrayList<InstanceReportLine>();
+		//log.info("size:" + reportLineMap.keySet().size());
 		for (InstanceReportLineKey lineKey: reportLineMap.keySet()) {
 			results.add(reportLineMap.get(lineKey));
 		}
