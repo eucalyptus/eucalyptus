@@ -53,7 +53,8 @@ public class ReportServlet
 		
 		ReportingCriterion groupByCriterion = null;
 		//GroupByCriterion can optionally have value "None"; check for it
-		if (req.getParameter(Param.groupByCriterion.name()).equalsIgnoreCase("None")) {
+		String groupByParam = req.getParameter(Param.groupByCriterion.name());
+		if (groupByParam!=null && !groupByParam.equalsIgnoreCase("None")) {
 			groupByCriterion =
 				ReportingCriterion.valueOf(Param.groupByCriterion.get(req));
 		}
