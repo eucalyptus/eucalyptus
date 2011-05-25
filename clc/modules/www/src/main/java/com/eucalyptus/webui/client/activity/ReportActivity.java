@@ -1,12 +1,11 @@
 package com.eucalyptus.webui.client.activity;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
+
 import com.eucalyptus.webui.client.ClientFactory;
 import com.eucalyptus.webui.client.place.ReportPlace;
 import com.eucalyptus.webui.client.view.ReportView;
-import com.eucalyptus.webui.client.view.StartView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Timer;
@@ -29,11 +28,13 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     ReportView reportView = this.clientFactory.getReportView( );
     reportView.setPresenter( this );
+
+    
     reportView.init( new Date( ),
                      new Date( ),
-                     Arrays.asList( "criteria1", "criteria2" ),
-                     Arrays.asList( "group1", "group2", "group3" ),
-                     Arrays.asList( "type1", "type2" ) );
+                     new String[] {"User","Account","Cluster","Availability Zone"},
+                     new String[] {"None","Account","Cluster","Availability Zone"},
+                     new String[] {"Instance","Storage","S3"});
     container.setWidget( reportView );
   }
 
