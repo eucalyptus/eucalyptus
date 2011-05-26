@@ -7,14 +7,11 @@ import javax.servlet.http.*;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.units.Units;
-import com.google.gwt.user.client.rpc.SerializableException;
-
-import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
-import edu.ucsb.eucalyptus.admin.server.SessionInfo;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
+import com.eucalyptus.webui.server.*;
 
 @SuppressWarnings("serial")
 public class ReportServlet
@@ -36,9 +33,8 @@ public class ReportServlet
 	protected void doGet(HttpServletRequest req, HttpServletResponse res)
 		throws ServletException, IOException
 	{
-		this.verifySession(Param.session.get(req));
-		
-	
+		this.verifySession(Param.session.getRaw(req));
+
 		/* Parse all params
 		 */
 		final ReportType reportType = ReportType.valueOf(Param.type.get(req));
@@ -54,7 +50,7 @@ public class ReportServlet
 		ReportingCriterion groupByCriterion = null;
 		//GroupByCriterion can optionally have value "None"; check for it
 		String groupByParam = req.getParameter(Param.groupByCriterion.name());
-		if (groupByParam!=null && !groupByParam.equalsIgnoreCase("None")) {
+		if (groupByParam!=null && !groupByParam.equalsIgnoreCase("NONE")) {
 			groupByCriterion =
 				ReportingCriterion.valueOf(Param.groupByCriterion.get(req));
 		}
@@ -81,8 +77,8 @@ public class ReportServlet
 		type, format, session, start, end,
 		criterion, groupByCriterion;
 
-		public String get(HttpServletRequest req)
-				throws IllegalArgumentException
+		public String getRaw(HttpServletRequest req)
+			throws IllegalArgumentException
 		{
 			if (req.getParameter(this.name()) == null) {
 				throw new IllegalArgumentException("'" + this.name()
@@ -91,26 +87,32 @@ public class ReportServlet
 				return req.getParameter(this.name());
 			}
 		}
+		
+		public String get(HttpServletRequest req)
+			throws IllegalArgumentException
+		{
+			return getRaw(req).toUpperCase().replace(' ', '_');
+		}
 	}
 
 	private void setContentTypeHeader(HttpServletResponse res,
 			ReportFormat format, String filename)
 	{
 		switch (format) {
-			case csv:
+			case CSV:
 				res.setContentType("text/plain");
 				res.setHeader("Content-Disposition", "file; filename="
 						+ filename + ".csv");
 				break;
-			case html:
+			case HTML:
 				res.setContentType("text/html");
 				break;
-			case pdf:
+			case PDF:
 				res.setContentType("application/pdf");
 				res.setHeader("Content-Disposition", "file; filename="
 						+ filename + ".pdf");
 				break;
-			case xls:
+			case XLS:
 				res.setContentType("application/vnd.ms-excel");
 				res.setHeader("Content-Disposition", "file; filename="
 						+ filename + ".xls");
@@ -118,25 +120,21 @@ public class ReportServlet
 		}		
 	}
 	
-	private void verifySession(String sessionId)
+	private void verifySession( String sessionId )
 	{
-		SessionInfo session;
+	    WebSession ws = WebSessionManager.getInstance( ).getSession( sessionId );
+	    if ( ws == null ) {
+	    	throw new RuntimeException("Session verification failed:" + sessionId);
+	    }
+	    User user;
 		try {
-			session = EucalyptusWebBackendImpl.verifySession(sessionId);
-			User user = null;
-			try {
-				user = Accounts.lookupUserByName(session.getUserId());
-			} catch (Exception e) {
-				throw new RuntimeException("User does not exist");
-			}
-			if (!user.isSystemAdmin()) {
-				throw new RuntimeException(
-						"Only administrators can view reports.");
-			}
-		} catch (SerializableException e1) {
-			throw new RuntimeException("Error obtaining session info.");
+			user = EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
+		} catch ( EucalyptusServiceException ex ) {
+			throw new RuntimeException("Session verification failed", ex);
 		}
-		session.setLastAccessed(System.currentTimeMillis());
+	    if ( user==null || !user.isSystemAdmin() ) {
+	    	throw new RuntimeException("Only admins can generate reports");
+	    }
 	}
 	
 }
