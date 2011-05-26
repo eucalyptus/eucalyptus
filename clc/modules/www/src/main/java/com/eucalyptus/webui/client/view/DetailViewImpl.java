@@ -401,7 +401,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   @Override
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values ) {
-    LOG.log( Level.INFO, "Show data" );
+    LOG.log( Level.INFO, "Show data: " + descs + " | " + values );
     clearRows( );
     this.save.setVisible( false );
     createGrid( descs, values );
