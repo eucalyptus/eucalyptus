@@ -14,6 +14,7 @@ import com.eucalyptus.webui.client.view.CreateAccountView;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.HasValueWidget;
+import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.RootPanel;
@@ -88,7 +89,7 @@ public class AccountActivity extends AbstractSearchActivity
   }
 
   @Override
-  public void createAccount( ) {
+  public void onCreateAccount( ) {
     if ( createAccountDialog == null ) {
       createAccountDialog = new DialogBox( );
       createAccountDialog.setText( "Create a new account" );
@@ -102,9 +103,26 @@ public class AccountActivity extends AbstractSearchActivity
   }
 
   @Override
-  public void createAccount( String value ) {
-    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 2000 );
+  public void doCreateAccount( final String value ) {
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
     this.createAccountDialog.hide( );
+    
+    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        String error = "Failed to create account " + value + ": " + caught.getMessage( );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, 60000 );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
+      }
+
+      @Override
+      public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + value + " created", 60000 );
+        doSearch( place.getSearch( ), range );
+      }
+      
+    } );
   }
 
   @Override

@@ -228,5 +228,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.setRows( SearchUtil.getRange( searchResult, range ) );
     return result;
   }
+
+  @Override
+  public void createAccount( Session session, String accountName ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.createAccount( accountName );
+  }
   
 }

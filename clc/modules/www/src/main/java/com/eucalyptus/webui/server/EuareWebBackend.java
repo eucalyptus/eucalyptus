@@ -684,7 +684,7 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to get keys", e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to get keys for query: " + query );      
+      throw new EucalyptusServiceException( "Failed to get keys for query " + query + ": " + e.getMessage( ) );      
     }    
     return results;    
   }
@@ -698,6 +698,14 @@ public class EuareWebBackend {
     result.addField( key.getCreateDate( ) == null ? "" : key.getCreateDate( ).toString( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.user ).add( ID, user.getUserId( ) ).url( ) );
     return result;
+  }
+
+  public static void createAccount( String accountName ) throws EucalyptusServiceException {
+    try {
+      Accounts.addAccount( accountName );
+    } catch ( Exception e ) {
+      throw new EucalyptusServiceException( "Failed to create account " + accountName + ": " + e.getMessage( ) );
+    }
   }
 
 }

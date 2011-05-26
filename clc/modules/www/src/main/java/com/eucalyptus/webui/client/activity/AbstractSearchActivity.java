@@ -68,7 +68,8 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     
     LOG.log( Level.INFO, "Search " + getTitle( ) + ": " + place.getSearch( ) );
     // At the beginning, don't sort
-    doSearch( place.getSearch( ), new SearchRange( 0, pageSize, -1/*sortField*/, true ) );
+    range = new SearchRange( 0, pageSize, -1/*sortField*/, true );
+    doSearch( place.getSearch( ), range );
   }
   
   @Override

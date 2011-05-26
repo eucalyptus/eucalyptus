@@ -10,7 +10,7 @@ public interface CreateAccountView extends IsWidget {
   
   public interface Presenter {
 
-    void createAccount( String value );
+    void doCreateAccount( String value );
 
     void cancel( );
     
