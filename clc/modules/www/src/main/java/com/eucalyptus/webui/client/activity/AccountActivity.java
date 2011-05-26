@@ -17,19 +17,17 @@ import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.DialogBox;
-import com.google.gwt.user.client.ui.RootPanel;
 
 public class AccountActivity extends AbstractSearchActivity
     implements AccountView.Presenter, DetailView.Presenter, CreateAccountView.Presenter {
   
   public static final String TITLE = "ACCOUNTS";
+  public static final String CREATE_ACCOUNT_CAPTION = "Create a new account";
   
   private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
   
   private Set<SearchResultRow> currentSelected;
-  
-  private DialogBox createAccountDialog;
-  
+    
   public AccountActivity( AccountPlace place, ClientFactory clientFactory ) {
     super( place, clientFactory );
   }
@@ -90,22 +88,14 @@ public class AccountActivity extends AbstractSearchActivity
 
   @Override
   public void onCreateAccount( ) {
-    if ( createAccountDialog == null ) {
-      createAccountDialog = new DialogBox( );
-      createAccountDialog.setText( "Create a new account" );
-      createAccountDialog.setWidget( this.clientFactory.getCreateAccountView( ) );
-      createAccountDialog.setGlassEnabled( true );
-    }
-    this.clientFactory.getCreateAccountView( ).init( );
-    this.clientFactory.getCreateAccountView( ).setPresenter( this );
-    createAccountDialog.center( );
-    createAccountDialog.show( );
+    CreateAccountView dialog = this.clientFactory.getCreateAccountView( );
+    dialog.setPresenter( this );
+    dialog.display( CREATE_ACCOUNT_CAPTION );
   }
 
   @Override
   public void doCreateAccount( final String value ) {
     this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
-    this.createAccountDialog.hide( );
     
     this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<Void>( ) {
 
@@ -118,16 +108,13 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onSuccess( Void arg0 ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + value + " created", 60000 );
+        String info = "Account " + value + " created";
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, 60000 );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
         reloadCurrentRange( );
       }
       
     } );
-  }
-
-  @Override
-  public void cancel( ) {
-    this.createAccountDialog.hide( );
   }
   
 }
