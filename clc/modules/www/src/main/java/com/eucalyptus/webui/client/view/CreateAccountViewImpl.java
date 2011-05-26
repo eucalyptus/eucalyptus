@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.view;
 
+import com.google.common.base.Strings;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.uibinder.client.UiBinder;
@@ -35,7 +36,9 @@ public class CreateAccountViewImpl extends Composite implements CreateAccountVie
   
   @UiHandler( "ok" )
   void handleOkClickEvent( ClickEvent event ) {
-    this.presenter.createAccount( name.getValue( ) );
+    if ( Strings.isNullOrEmpty( name.getValue( ) ) ) {
+      this.presenter.doCreateAccount( name.getValue( ) );
+    }
   }
 
   @UiHandler( "cancel" )
