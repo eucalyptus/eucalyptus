@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.view;
 
+import com.eucalyptus.webui.shared.InputChecker;
 import com.google.common.base.Strings;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -28,6 +29,9 @@ public class CreateAccountViewImpl extends Composite implements CreateAccountVie
   @UiField
   TextBox name;
   
+  @UiField
+  Label error;
+  
   private Presenter presenter;
   
   public CreateAccountViewImpl( ) {
@@ -36,8 +40,11 @@ public class CreateAccountViewImpl extends Composite implements CreateAccountVie
   
   @UiHandler( "ok" )
   void handleOkClickEvent( ClickEvent event ) {
-    if ( Strings.isNullOrEmpty( name.getValue( ) ) ) {
+    String checkError = InputChecker.checkAccountName( name.getValue( ) );
+    if ( checkError == null ) {
       this.presenter.doCreateAccount( name.getValue( ) );
+    } else {
+      error.setText( checkError );
     }
   }
 
@@ -48,6 +55,7 @@ public class CreateAccountViewImpl extends Composite implements CreateAccountVie
 
   @Override
   public void init( ) {
+    error.setText( "" );
     name.setText( "" );
   }
 

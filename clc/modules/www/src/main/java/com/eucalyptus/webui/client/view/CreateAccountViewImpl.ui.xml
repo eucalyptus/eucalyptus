@@ -30,14 +30,12 @@
             float:right;
             margin-left:16px;
         }
-        .loading {
-        	float:left;
-        }
         .error {
         	font-size:12px;
         	font-style:italic;
         	color:red;
             vertical-align:middle;
+            float:left;
         }
     </ui:style>
     
@@ -52,6 +50,7 @@
                 </tr>
                 <tr>
                     <td colspan="2">
+                        <g:Label addStyleNames="{style.error}" ui:field="error"></g:Label>
                         <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.positive} {style.button}" ui:field="ok">
                             <span class="{global.buttonCss.check} {global.buttonCss.icon}"/>OK
                         </g:Anchor>

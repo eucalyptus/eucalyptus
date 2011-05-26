@@ -119,7 +119,7 @@ public class AccountActivity extends AbstractSearchActivity
       @Override
       public void onSuccess( Void arg0 ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + value + " created", 60000 );
-        doSearch( place.getSearch( ), range );
+        reloadCurrentRange( );
       }
       
     } );
