@@ -1,3 +1,4 @@
+/* Inspired by the GitHub style button from http://css3buttons.michaelhenriksen.dk */
 a.button,button {
 	display: inline-block;
 	padding: 5px;
@@ -172,4 +173,18 @@ a.big.button span.icon,button.big span.icon {
 }
 @sprite a.button:hover span.icon.report,button:hover span.icon.report {
     gwt-image:'reportWhite';
+}
+
+@sprite a.button span.icon.check,button span.icon.check {
+    gwt-image:'checkGray';
+}
+@sprite a.button:hover span.icon.check,button:hover span.icon.check {
+    gwt-image:'checkWhite';
+}
+
+@sprite a.button span.icon.x,button span.icon.x {
+    gwt-image:'xGray';
+}
+@sprite a.button:hover span.icon.x,button:hover span.icon.x {
+    gwt-image:'xWhite';
 }

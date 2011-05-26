@@ -1,0 +1,83 @@
+.gwt-PopupPanelGlass {
+	background-color:#000000;
+	opacity:0.3;
+	filter:alpha(opacity=30);
+}
+
+.gwt-DialogBox {
+	background-color:#EEEEEE;
+	-moz-border-radius-topleft: 6px;
+	-moz-border-radius-topright: 6px;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+}
+
+.gwt-DialogBox .dialogTopLeftInner {
+	width:0px;
+}
+
+.gwt-DialogBox .dialogTopRightInner {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogMiddleLeftInner {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogMiddleRightInner {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogBottomLeftInner {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogBottomRightInner {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogTopLeft {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogTopRight {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogMiddleLeft {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogMiddleRight {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogBottomLeft {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogBottomRight {
+    width:0px;
+}
+
+.gwt-DialogBox .dialogTopCenterInner .Caption {
+    padding: 4px 4px 4px 8px;
+	-moz-border-radius-topleft: 6px;
+	-moz-border-radius-topright: 6px;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+    cursor:default;
+    font-size: 14px;
+    color: #333333;
+    text-align: center;
+    text-shadow: 1px 1px 1px #FFFFFF;
+    filter:literal("dropshadow(color=#FFFFFF, offx=1, offy=1)");
+    background: #f1e767;
+    background:-moz-linear-gradient(top, #f1e767 0%, #feb645 100%);
+    background:-webkit-gradient(linear, left top, left bottom, color-stop(0%,#f1e767), color-stop(100%,#feb645));
+    background:-webkit-linear-gradient(top, #f1e767 0%,#feb645 100%);
+    background:-o-linear-gradient(top, #f1e767 0%,#feb645 100%);
+    background:-ms-linear-gradient(top, #f1e767 0%,#feb645 100%);
+    filter:progid:DXImageTransform.Microsoft.gradient( startColorstr='#f1e767', endColorstr='#feb645',GradientType=0 );
+    background:linear-gradient(top, #f1e767 0%,#feb645 100%);
+}

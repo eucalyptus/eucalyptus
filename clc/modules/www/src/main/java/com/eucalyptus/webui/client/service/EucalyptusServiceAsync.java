@@ -38,5 +38,7 @@ public interface EucalyptusServiceAsync {
   void lookupCertificate( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
   void lookupImage( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
+
+  void createAccount( Session session, String accountName, AsyncCallback<Void> callback );
   
 }

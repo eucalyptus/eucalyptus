@@ -43,7 +43,7 @@ public class AccountViewImpl extends Composite implements AccountView {
 
   @UiHandler( "newButton" )
   void handleNewButtonClick( ClickEvent e ) {
-    
+    this.presenter.createAccount( );
   }
   
   @UiHandler( "delButton" )

@@ -11,8 +11,8 @@ import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.AccountViewImpl;
 import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
-import com.eucalyptus.webui.client.view.DetailView;
-import com.eucalyptus.webui.client.view.DetailViewImpl;
+import com.eucalyptus.webui.client.view.CreateAccountView;
+import com.eucalyptus.webui.client.view.CreateAccountViewImpl;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
 import com.eucalyptus.webui.client.view.GroupView;
@@ -88,6 +88,8 @@ public class ClientFactoryImpl implements ClientFactory {
 	private CertView certView;
 	private ImageView imageView;
 
+	private CreateAccountView createAccountView;
+	
   @Override
   public LocalSession getLocalSession( ) {
     return localSession;
@@ -283,6 +285,14 @@ public class ClientFactoryImpl implements ClientFactory {
       imageView = new ImageViewImpl( );
     }
     return imageView;
+  }
+  
+  @Override
+  public CreateAccountView getCreateAccountView( ) {
+    if ( createAccountView == null ) {
+      createAccountView = new CreateAccountViewImpl( );
+    }
+    return createAccountView;
   }
   
 }

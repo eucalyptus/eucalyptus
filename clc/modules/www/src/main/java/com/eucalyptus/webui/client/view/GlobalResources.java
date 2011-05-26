@@ -30,6 +30,8 @@ public interface GlobalResources extends ClientBundle {
     String plus( );
     String floppy( );
     String report( );
+    String x( );
+    String check( );
   }
   
   @Source( "EucaButton.css" )
@@ -54,5 +56,15 @@ public interface GlobalResources extends ClientBundle {
   ImageResource reportGray( );
   @Source( "image/article_12x12_white.png" )
   ImageResource reportWhite( );
-  
+
+  @Source( "image/check_12x12_gray.png" )
+  ImageResource checkGray( );
+  @Source( "image/check_12x12_white.png" )
+  ImageResource checkWhite( );
+
+  @Source( "image/x_12x12_gray.png" )
+  ImageResource xGray( );
+  @Source( "image/x_12x12_white.png" )
+  ImageResource xWhite( );
+
 }

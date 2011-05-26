@@ -40,7 +40,8 @@
         color:#414141;
         padding:12px 0px 8px 10px;
         text-align:left;
-        text-shadow:1px 1px 1px #FFFFFF;
+        text-shadow: 1px 1px 1px #FFFFFF;
+        filter:literal("dropshadow(color=#FFFFFF, offx=1, offy=1)");
     }
     </ui:style>
     

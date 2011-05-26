@@ -5,7 +5,7 @@ import com.eucalyptus.webui.client.session.LocalSession;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.CertView;
-import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.CreateAccountView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.GroupView;
 import com.eucalyptus.webui.client.view.ImageView;
@@ -114,5 +114,7 @@ public interface ClientFactory {
   CertView getCertView( );
   
   ImageView getImageView( );
+  
+  CreateAccountView getCreateAccountView( );
   
 }

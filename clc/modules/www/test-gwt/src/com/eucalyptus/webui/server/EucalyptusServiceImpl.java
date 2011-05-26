@@ -75,21 +75,23 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     System.out.println( "New search: " + range );
     
     final int sortField = range.getSortField( );
-    final boolean ascending = range.isAscending( );
-    Collections.sort( DATA, new Comparator<SearchResultRow>( ) {
-      @Override
-      public int compare( SearchResultRow r1, SearchResultRow r2 ) {
-        if ( r1 == r2 ) {
-          return 0;
+    if ( sortField >= 0 ) {
+      final boolean ascending = range.isAscending( );
+      Collections.sort( DATA, new Comparator<SearchResultRow>( ) {
+        @Override
+        public int compare( SearchResultRow r1, SearchResultRow r2 ) {
+          if ( r1 == r2 ) {
+            return 0;
+          }
+          // Compare the name columns.
+          int diff = -1;
+          if ( r1 != null ) {
+            diff = ( r2 != null ) ? r1.getField( sortField ).compareTo( r2.getField( sortField ) ) : 1;
+          }
+          return ascending ? diff : -diff;
         }
-        // Compare the name columns.
-        int diff = -1;
-        if ( r1 != null ) {
-          diff = ( r2 != null ) ? r1.getField( sortField ).compareTo( r2.getField( sortField ) ) : 1;
-        }
-        return ascending ? diff : -diff;
-      }
-    } );
+      } );
+    }
     int resultLength = Math.min( range.getLength( ), DATA.size( ) - range.getStart( ) );
     SearchResult result = new SearchResult( DATA.size( ), range );
     result.setDescs( FIELDS );
@@ -166,6 +168,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  @Override
+  public void createAccount( Session session, String accountName ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
   }
 
 }

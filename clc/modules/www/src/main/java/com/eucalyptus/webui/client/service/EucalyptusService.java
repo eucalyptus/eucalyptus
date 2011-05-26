@@ -170,4 +170,13 @@ public interface EucalyptusService extends RemoteService {
    */
   SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException;
   
+  /**
+   * Create a new account.
+   * 
+   * @param session
+   * @param accountName
+   * @throws EucalyptusServiceException
+   */
+  void createAccount( Session session, String accountName ) throws EucalyptusServiceException;
+  
 }

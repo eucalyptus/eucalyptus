@@ -67,7 +67,8 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     container.setWidget( view );
     
     LOG.log( Level.INFO, "Search " + getTitle( ) + ": " + place.getSearch( ) );
-    doSearch( place.getSearch( ), new SearchRange( 0, pageSize ) );
+    // At the beginning, don't sort
+    doSearch( place.getSearch( ), new SearchRange( 0, pageSize, -1/*sortField*/, true ) );
   }
   
   @Override
