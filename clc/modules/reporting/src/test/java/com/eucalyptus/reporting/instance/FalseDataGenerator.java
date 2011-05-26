@@ -27,7 +27,7 @@ import com.eucalyptus.util.ExposedCommand;
  */
 public class FalseDataGenerator
 {
-	private static final int NUM_USAGE    = 512;
+	private static final int NUM_USAGE    = 2048;
 	private static final int NUM_INSTANCE = 32;
 	private static final long START_TIME  = 1104566400000l; //Jan 1, 2005 12:00AM
 	private static final int TIME_USAGE_APART = 150000; //ms
