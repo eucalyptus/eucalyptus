@@ -3,6 +3,7 @@ package com.eucalyptus.reporting.storage;
 import com.eucalyptus.reporting.units.*;
 
 public class StorageReportLine
+	implements Comparable<StorageReportLine>
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
@@ -63,6 +64,20 @@ public class StorageReportLine
 	void addUsage(StorageUsageSummary summary)
 	{
 		this.summary.addUsage(summary);
+	}
+
+	public String toString()
+	{
+		return String.format("[label:%s,groupBy:%s,volSizeMax:%d,volSizeTime:%d,snapsSizeMax:%d,snapsSizeTime:%d]",
+						getLabel(), getGroupBy(), getVolumesSizeMax(),
+						getVolumesSizeTime(), getSnapshotsSizeMax(),
+						getSnapshotsSizeTime());
+	}
+
+	@Override
+	public int compareTo(StorageReportLine other)
+	{
+		return key.compareTo(other.key);
 	}
 
 

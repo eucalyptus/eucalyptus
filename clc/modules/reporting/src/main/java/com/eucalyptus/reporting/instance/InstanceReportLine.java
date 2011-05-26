@@ -3,6 +3,7 @@ package com.eucalyptus.reporting.instance;
 import com.eucalyptus.reporting.units.*;
 
 public class InstanceReportLine
+	implements Comparable<InstanceReportLine>
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
@@ -110,5 +111,12 @@ public class InstanceReportLine
 	{
 		return String.format("[key:%s,summary:%s]", this.key, this.summary);
 	}
+	
+	@Override
+	public int compareTo(InstanceReportLine other)
+	{
+		return key.compareTo(other.key);
+	}
+
 
 }

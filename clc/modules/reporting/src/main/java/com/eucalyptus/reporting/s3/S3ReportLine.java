@@ -1,8 +1,10 @@
 package com.eucalyptus.reporting.s3;
 
+import com.eucalyptus.reporting.storage.StorageReportLine;
 import com.eucalyptus.reporting.units.*;
 
 public class S3ReportLine
+	implements Comparable<S3ReportLine>
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
@@ -55,6 +57,12 @@ public class S3ReportLine
 	void addUsage(S3UsageSummary summary)
 	{
 		this.summary.addUsage(summary);
+	}
+
+	@Override
+	public int compareTo(S3ReportLine other)
+	{
+		return key.compareTo(other.key);
 	}
 
 }
