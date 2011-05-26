@@ -43,7 +43,6 @@ public class StorageReportLineGenerator
 		Map<StorageSummaryKey, StorageUsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
 		for (StorageSummaryKey key: usageMap.keySet()) {
-			log.info("Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
 			StorageReportLineKey lineKey = new StorageReportLineKey(critVal, groupVal);
@@ -61,14 +60,7 @@ public class StorageReportLineGenerator
 			results.add(reportLineMap.get(lineKey));
 		}
 
-		for (StorageReportLine line: results) {
-			log.info("line:" + line);
-		}
-		log.info("SORT");
 		Collections.sort(results);
-		for (StorageReportLine line: results) {
-			log.info("line:" + line);
-		}
 
 		return results;
 	}
