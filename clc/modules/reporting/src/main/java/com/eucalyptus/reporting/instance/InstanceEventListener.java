@@ -33,11 +33,11 @@ public class InstanceEventListener
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
 		  InstanceEvent event = (InstanceEvent) e;
-		  log.info("--: Received instance event:" + event);
+		  log.info("Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
 		  if (uuid == null) {
-			  log.warn("--: Received null uuid");
+			  log.warn("Received null uuid");
 			  return;
 		  }
 
@@ -70,7 +70,7 @@ public class InstanceEventListener
 					});
 				} catch (Exception ex) {
 					attrEntityWrapper.add(insAttrs);
-					log.info("--: Wrote Reporting Instance:" + uuid);
+					log.info("Wrote Reporting Instance:" + uuid);
 				}
 				recentlySeenUuids.add(uuid);
 			  }
@@ -101,13 +101,11 @@ public class InstanceEventListener
 		  EntityWrapper<InstanceUsageSnapshot> entityWrapper =
 			  EntityWrapper.get(InstanceUsageSnapshot.class);
 		  try {
-			  log.info("--: Determining if events should be written, interval:" + getWriteIntervalMs());
 			  if (receivedEventMs > (lastWriteMs + getWriteIntervalMs())) {
 				  for (String key: recentUsageSnapshots.keySet()) {
 					  InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
-					  log.info("--: beginning event writing for:" + ius.getUuid() + ":" + ius.getEntityId());
 					  entityWrapper.add(ius);
-					  log.info("--: Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
+					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
 				  }
 				  recentUsageSnapshots.clear();
 				  lastWriteMs = receivedEventMs;

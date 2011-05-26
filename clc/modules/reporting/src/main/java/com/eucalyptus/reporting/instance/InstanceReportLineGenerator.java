@@ -47,7 +47,6 @@ public class InstanceReportLineGenerator
 		Map<InstanceSummaryKey, InstanceUsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
 		for (InstanceSummaryKey key: usageMap.keySet()) {
-			//log.info("!!Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
 			InstanceReportLineKey lineKey = new InstanceReportLineKey(critVal, groupVal);
@@ -61,7 +60,6 @@ public class InstanceReportLineGenerator
 		}
 
 		final List<InstanceReportLine> results = new ArrayList<InstanceReportLine>();
-		//log.info("size:" + reportLineMap.keySet().size());
 		for (InstanceReportLineKey lineKey: reportLineMap.keySet()) {
 			results.add(reportLineMap.get(lineKey));
 		}
