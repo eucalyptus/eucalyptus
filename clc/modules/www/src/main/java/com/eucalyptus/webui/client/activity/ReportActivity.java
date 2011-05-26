@@ -58,18 +58,28 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 
   @Override
   public void downloadHtml( ) {
-    // TODO Auto-generated method stub
     
   }
 
   @Override
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
-    // TODO Fill in real report logic
-    Timer t = new Timer( ) {
+
+	String sessionId = clientFactory.getLocalSession().getSession().getId();
+	final String reportUrl =
+		"https://localhost:8443/reportservlet"
+	    + "?session=" + sessionId
+		+ "&type=" + type
+		+ "&format=HTML"
+		+ "&start="	+ fromDate.getTime()
+		+ "&end=" + toDate.getTime()
+		+ "&criterion=" + criteria
+		+ "&groupByCriterion=" + groupBy;
+  	
+	  Timer t = new Timer( ) {
 
       @Override
       public void run( ) {
-        clientFactory.getReportView( ).loadReport( "http://www.google.com" );
+        clientFactory.getReportView( ).loadReport( reportUrl );
       }
       
     };
