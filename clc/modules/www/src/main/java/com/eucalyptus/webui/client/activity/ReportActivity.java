@@ -1,6 +1,5 @@
 package com.eucalyptus.webui.client.activity;
 
-import java.util.Arrays;
 import java.util.Date;
 
 import com.eucalyptus.webui.client.ClientFactory;
@@ -38,38 +37,67 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     container.setWidget( reportView );
   }
 
+  
+  private void downloadReport(String format)
+  {
+	  if (this.sessionId == null) return;
+
+	  final String reportUrl =
+		    "https://localhost:8443/reportservlet"
+			+ "?session=" + sessionId
+			+ "&type=" + type
+			+ "&format=" + format
+			+ "&start="	+ fromDate.getTime()
+			+ "&end=" + toDate.getTime()
+			+ "&criterion=" + criteria
+			+ "&groupByCriterion=" + groupBy;
+
+	  Timer t = new Timer( ) {
+
+	      @Override
+	      public void run( ) {
+	        clientFactory.getReportView( ).loadReport( reportUrl );
+	      }
+	      
+	    };
+	    t.schedule( 2000 );
+  }
+  
   @Override
   public void downloadPdf( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("PDF");
   }
 
   @Override
   public void downloadCsv( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("CSV");
   }
 
   @Override
   public void downloadXls( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("XLS");
   }
 
   @Override
   public void downloadHtml( ) {
-    
+	  downloadReport("HTML");    
   }
 
+  private String sessionId = null;
+  private Date fromDate;
+  private Date toDate;
+  private String criteria;
+  private String groupBy;
+  private String type;
+  
   @Override
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
 
 	String sessionId = clientFactory.getLocalSession().getSession().getId();
-	final String reportUrl =
-		"https://localhost:8443/reportservlet"
-	    + "?session=" + sessionId
+	final String reportUrl = "https://localhost:8443/reportservlet"
+		+ "?session=" + sessionId
 		+ "&type=" + type
-		+ "&format=HTML"
+		+ "&format=HTML" 
 		+ "&start="	+ fromDate.getTime()
 		+ "&end=" + toDate.getTime()
 		+ "&criterion=" + criteria
@@ -84,6 +112,14 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
       
     };
     t.schedule( 2000 );
+
+    this.sessionId = sessionId;
+    this.fromDate = fromDate;
+    this.toDate = toDate;
+    this.criteria = criteria;
+    this.groupBy = groupBy;
+    this.type = type;
+    
   }
   
 }
