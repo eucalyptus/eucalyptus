@@ -272,6 +272,9 @@ public class Images {
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }
+  public static BlockStorageImageInfo exampleBlockStorageWithImageId( final String imageId ) {
+    return new BlockStorageImageInfo( imageId );
+  }
   
   public static KernelImageInfo exampleKernelWithImageId( final String imageId ) {
     return new KernelImageInfo( imageId );
