@@ -192,8 +192,9 @@ class EucaConf(object):
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
                                help='used with --register-* to skip syncing keys')
-        self.parser.add_option('-d', type='string', metavar='<dir>',
-                               action='store', dest='euca_dir',
+        self.parser.add_option('-d', action='callback', type='string',
+                               metavar='<dir>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'EUCALYPTUS'},
                                help='point EUCALYPTUS to <dir>')
         self.parser.add_option('--cc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
@@ -294,8 +295,8 @@ class EucaConf(object):
             filepath = self.args[0]
         elif filepath is None:
             # use the value passed in with -d option, if present
-            if self.options.euca_dir:
-                euca_dir = self.options.euca_dir
+            if self.specified_options.has_key('EUCALYPTUS'):
+                euca_dir = self.specified_options['EUCALYPTUS']
             else:
                 euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
             filepath = os.path.join(euca_dir, DefaultEucaConfPath)
