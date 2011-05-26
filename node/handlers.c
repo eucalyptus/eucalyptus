@@ -543,12 +543,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
         goto free;
     }
-    error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
-    if (error) {
-        logprintfl(EUCAFATAL, "[%s] start instance network failed for instance, terminating it\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
-    }
+
     strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
     if (nc_state.config_use_virtio_net) {
         instance->params.nicType = NIC_TYPE_VIRTIO;

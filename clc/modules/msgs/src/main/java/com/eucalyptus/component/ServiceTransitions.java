@@ -299,6 +299,9 @@ public class ServiceTransitions {
           }
         } else {
           try {
+//            if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
+//              parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+//            }
             parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
             transitionCallback.fire( );//TODO:GRZE: this is not complete.
           } catch ( Throwable ex ) {
@@ -331,7 +334,16 @@ public class ServiceTransitions {
             }
           }
         } else {
-          transitionCallback.fire( );//TODO:GRZE: this is not complete.
+          try {
+            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+          } catch ( Throwable ex ) {
+            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
+              transitionCallback.fireException( ex );
+            } else {
+              transitionCallback.fire( );
+            }
+          }
         }
       }
     },

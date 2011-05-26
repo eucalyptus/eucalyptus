@@ -80,6 +80,14 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
+  public enum LookupBlockStorage implements Lookup<BlockStorageImageInfo> {
+    INSTANCE;
+    @Override
+    public BlockStorageImageInfo lookup( String identifier ) {
+      return EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
+    }
+  }
+
   public enum LookupMachine implements Lookup<MachineImageInfo> {
     INSTANCE;
     @Override

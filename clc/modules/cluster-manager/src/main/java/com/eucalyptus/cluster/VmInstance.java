@@ -145,6 +145,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
+  private final String                                instanceUuid;
+  private int           stateCounter        = 0;
+  private static String SEND_USER_TERMINATE = "SIGTERM";
   @Transient
   private final FullName                              owner;
   private final String                                clusterName;
@@ -187,7 +190,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private Long                                        networkBytes  = 0l;
   
   public VmInstance( final UserFullName owner, 
-                     final String instanceId, 
+                     final String instanceId, final String instanceUuid, 
                      final String reservationId, final int launchIndex, 
                      final String placement,
                      final byte[] userData, 
@@ -197,6 +200,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     super( owner, instanceId );
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.owner = owner;
     this.clusterName = placement;
@@ -294,9 +298,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       : "" );
   }
   
-  private int           stateCounter        = 0;
-  private String uuid;
-  private static String SEND_USER_TERMINATE = "SIGTERM";
   
   private void addReasonDetail( String... extra ) {
     for ( String s : extra ) {
@@ -367,7 +368,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getId( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
                                                                     this.clusterName, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
@@ -646,10 +647,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return conf != null && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
 
-  public void setUuid( String uuid ) {
-    this.uuid = uuid;
-  }
-  
   public void setLaunchTime( final Date launchTime ) {
     this.launchTime = launchTime;
   }
@@ -922,8 +919,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return this.partition;
   }
 
-  public String getUuid( ) {
-    return this.uuid;
+  public String getInstanceUuid( ) {
+    return this.instanceUuid;
   }
   
 }
