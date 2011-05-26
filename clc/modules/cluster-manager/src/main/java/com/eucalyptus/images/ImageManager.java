@@ -131,7 +131,7 @@ public class ImageManager {
       bootSet = Emis.bootsetWithKernel( bootSet );
       bootSet = Emis.bootsetWithRamdisk( bootSet );
     }
-    ArrayList<String> ancestorIds = Lists.newArrayList( );//GRZE: fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
+    ArrayList<String> ancestorIds = Lists.newArrayList( );//TODO:GRZE:OMGFIXME fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
     
     Emis.checkStoredImage( bootSet );
     
