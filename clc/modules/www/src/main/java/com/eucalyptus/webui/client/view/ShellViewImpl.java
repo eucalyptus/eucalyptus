@@ -133,4 +133,9 @@ public class ShellViewImpl extends Composite implements ShellView {
     return this.detail;
   }
 
+  @Override
+  public LogView getLogView( ) {
+    return this.log;
+  }
+
 }

@@ -32,6 +32,10 @@ public class LogViewImpl extends Composite implements LogView {
     ImageResource error( );
   }
   
+  private static final int MAX_LOG_LINES = 1024;
+  private static final String TIME_COL_WIDTH = "160px";
+  private static final String ICON_COL_WIDTH = "30px";
+  
   @UiField
   ScrollPanel panel;
   
@@ -41,44 +45,50 @@ public class LogViewImpl extends Composite implements LogView {
   private Resources resources;
   
   private Grid currentGrid;
-  private Image errorImage;
-  private Image infoImage;
   
   public LogViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
-    
     resources = GWT.create( Resources.class );
-    
     createGrid( );
-    
-    this.currentGrid.setHTML( 0, 0, getTimeString( new Date( ) ) );
-    this.currentGrid.setWidget( 0, 1, new Image( resources.error( ) ) );
-    this.currentGrid.setHTML( 0, 2, "Loading this message and write to log window" );
-    
-    this.currentGrid.setHTML( 1, 0, getTimeString( new Date( ) ) );
-    this.currentGrid.setWidget( 1, 1,  new Image( resources.info( ) ) );
-    this.currentGrid.setHTML( 1, 2, "Again loading this message and write to log window" );
-    
-    this.currentGrid.setHTML( 2, 0, getTimeString( new Date( ) ) );
-    this.currentGrid.setWidget( 2, 1,  new Image( resources.info( ) ) );
-    this.currentGrid.setHTML( 2, 2, "Again loading this message and write to log window" );
-    
-    this.currentGrid.setHTML( 3, 0, getTimeString( new Date( ) ) );
-    this.currentGrid.setWidget( 3, 1,  new Image( resources.info( ) ) );
-    this.currentGrid.setHTML( 3, 2, "Again loading this message and write to log window" );
-
     this.panel.setWidget( currentGrid );
   }
 
   private void createGrid( ) {
-    this.currentGrid = new Grid( 7, 3 );
+    this.currentGrid = new Grid( 1, 3 );
     this.currentGrid.addStyleName( gridStyle.grid( ) );
-    this.currentGrid.getColumnFormatter( ).setWidth( 0, "160px" );
-    this.currentGrid.getColumnFormatter( ).setWidth( 1, "30px" );
+    this.currentGrid.getColumnFormatter( ).setWidth( 0, TIME_COL_WIDTH );
+    this.currentGrid.getColumnFormatter( ).setWidth( 1, ICON_COL_WIDTH );
+    this.currentGrid.setHTML( 0, 0, getTimeString( new Date( ) ) );
+    this.currentGrid.setWidget( 0, 1, getLogIcon( LogType.INFO ) );
+    this.currentGrid.setHTML( 0, 2, "Main screen loaded" );
   }
   
   private String getTimeString( Date date ) {
     return DateTimeFormat.getFormat( DateTimeFormat.PredefinedFormat.DATE_TIME_MEDIUM ).format( date );
+  }
+
+  private Image getLogIcon( LogType type ) {
+    switch ( type ) {
+      case ERROR:
+        return new Image( resources.error( ) );
+      default:
+        return new Image( resources.info( ) );
+    }
+  }
+  
+  @Override
+  public void log( LogType type, String content ) {
+    this.currentGrid.insertRow( 0 );
+    this.currentGrid.setHTML( 0, 0, getTimeString( new Date( ) ) );
+    this.currentGrid.setWidget( 0, 1, getLogIcon( type ) );
+    this.currentGrid.setHTML( 0, 2, content != null ? content : "" );
+    truncateLog( );
+  }
+
+  private void truncateLog( ) {
+    if ( this.currentGrid.getRowCount( ) > MAX_LOG_LINES ) {    
+      this.currentGrid.removeRow( this.currentGrid.getRowCount( ) - 1 );
+    }
   }
   
 }

@@ -18,6 +18,7 @@ import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
+import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.eucalyptus.webui.client.view.SearchHandler;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.UserSettingView;
@@ -97,6 +98,8 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
     shellView.getDetailView( ).setController( this );
     
     container.setWidget( shellView );
+    
+    shellView.getLogView( ).log( LogType.INFO, "Logged in as " + user );
   }
   
   private void getLoginUserProfile( ) {
