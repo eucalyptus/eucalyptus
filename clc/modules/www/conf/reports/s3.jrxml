@@ -17,7 +17,7 @@
 	<title>
 		<band height="72">
 			<frame>
-				<reportElement mode="Opaque" x="-20" y="-20" width="595" height="92" backcolor="#FFCC33"/>
+				<reportElement mode="Opaque" x="-20" y="-20" width="595" height="92" backcolor="#4D4D4F"/>
 				<staticText>
 					<reportElement x="20" y="20" width="234" height="43" forecolor="#FFFFFF"/>
 					<textElement>
@@ -44,28 +44,28 @@
 				<reportElement x="-20" y="40" width="595" height="1" forecolor="#666666"/>
 			</line>
 			<textField>
-				<reportElement mode="Opaque" x="0" y="0" width="138" height="40" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="0" y="0" width="138" height="40" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$P{criterion}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement mode="Opaque" x="138" y="0" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="138" y="0" width="138" height="20" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<text>Buckets</text>
 			</staticText>
 			<staticText>
-				<reportElement mode="Opaque" x="276" y="0" width="276" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="276" y="0" width="276" height="20" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<text>Objects</text>
 			</staticText>
 			<staticText>
-				<reportElement mode="Opaque" x="-20" y="0" width="20" height="40" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="-20" y="0" width="20" height="40" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
@@ -73,28 +73,28 @@
 			</staticText>
 
 			<textField>
-				<reportElement mode="Opaque" x="138" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="138" y="20" width="138" height="20" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression>"Max Num"</textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement mode="Opaque" x="276" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="276" y="20" width="138" height="20" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression>"Max (" + $P{sizeUnit} + ")"</textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement mode="Opaque" x="414" y="20" width="138" height="20" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="414" y="20" width="138" height="20" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
 				<textFieldExpression>$P{sizeTimeSizeUnit} + "-" + $P{sizeTimeTimeUnit}</textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement mode="Opaque" x="553" y="0" width="22" height="40" forecolor="#000000" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="553" y="0" width="22" height="40" forecolor="#000000" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Center">
 					<font size="14" isBold="true"/>
 				</textElement>
@@ -143,12 +143,12 @@
 	<pageFooter>
 		<band height="17">
 			<textField>
-				<reportElement mode="Opaque" x="0" y="4" width="515" height="13" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="0" y="4" width="515" height="13" backcolor="#FEFEFE"/>
 				<textElement textAlignment="Right"/>
 				<textFieldExpression class="java.lang.String"><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
 			</textField>
 			<textField evaluationTime="Report">
-				<reportElement mode="Opaque" x="515" y="4" width="40" height="13" backcolor="#FFFF66"/>
+				<reportElement mode="Opaque" x="515" y="4" width="40" height="13" backcolor="#FEFEFE"/>
 				<textElement/>
 				<textFieldExpression class="java.lang.String"><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
 			</textField>
