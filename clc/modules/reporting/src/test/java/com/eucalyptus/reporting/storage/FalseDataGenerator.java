@@ -14,9 +14,9 @@ public class FalseDataGenerator
 	private static final int  NUM_ACCOUNTS = 16;
 	private static final int  NUM_CLUSTERS = 4;
 	private static final int  NUM_ZONES    = 2;
-	private static final int  SNAPSHOTS_PER_USER = 64;
+	private static final int  SNAPSHOTS_PER_USER = 256;
 	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final int  TIME_USAGE_APART = 500000; //ms
+	private static final int  TIME_USAGE_APART = 1000000; //ms
 	private static final long MAX_MS = ((SNAPSHOTS_PER_USER+1) * TIME_USAGE_APART) + START_TIME;
 	private static final long ERROR_MARGIN_MS = 60*60*1000;
 
