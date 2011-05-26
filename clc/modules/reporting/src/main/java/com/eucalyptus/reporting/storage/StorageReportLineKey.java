@@ -1,7 +1,11 @@
 package com.eucalyptus.reporting.storage;
 
+import org.apache.log4j.Logger;
+
 public class StorageReportLineKey
+	implements Comparable<StorageReportLineKey>
 {
+	private static Logger log = Logger.getLogger( StorageReportLineKey.class );
 	private final String label;
 	private final String groupByLabel;
 
@@ -26,6 +30,11 @@ public class StorageReportLineKey
 	public String getGroupByLabel()
 	{
 		return groupByLabel;
+	}
+	
+	public String toString()
+	{
+		return "[label:" + label + " groupBy:" + groupByLabel + "]";
 	}
 
 	@Override
@@ -60,6 +69,18 @@ public class StorageReportLineKey
 		} else if (!label.equals(other.label))
 			return false;
 		return true;
+	}
+
+	@Override
+	public int compareTo(StorageReportLineKey other)
+	{
+		if (groupByLabel==null) {
+			return label.compareTo(other.label);
+		} else {
+			return (groupByLabel.compareTo(other.groupByLabel)==0)
+				? label.compareTo(other.label)
+				: groupByLabel.compareTo(other.groupByLabel); 			
+		}
 	}
 	
 }

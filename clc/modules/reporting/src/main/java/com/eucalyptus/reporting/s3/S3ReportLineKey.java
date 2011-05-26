@@ -1,6 +1,8 @@
 package com.eucalyptus.reporting.s3;
 
+
 public class S3ReportLineKey
+	implements Comparable<S3ReportLineKey>
 {
 	private final String label;
 	private final String groupByLabel;
@@ -62,4 +64,16 @@ public class S3ReportLineKey
 		return true;
 	}
 	
+	@Override
+	public int compareTo(S3ReportLineKey other)
+	{
+		if (groupByLabel==null) {
+			return label.compareTo(other.label);
+		} else {
+			return (groupByLabel.compareTo(other.groupByLabel)==0)
+				? label.compareTo(other.label)
+				: groupByLabel.compareTo(other.groupByLabel); 			
+		}
+	}
+
 }
