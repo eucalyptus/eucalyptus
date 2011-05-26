@@ -368,7 +368,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getId( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
                                                                     this.clusterName, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
