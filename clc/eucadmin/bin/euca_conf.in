@@ -191,10 +191,9 @@ class EucaConf(object):
                                help='list registered SCs')
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
-                               help='used only with --register-* to skip syncing keys')
-        self.parser.add_option('-d', action='callback', type='string',
-                               metavar='<dir>', callback=self.option_callback,
-                               callback_kwargs={'optname' : 'EUCALYPTUS'},
+                               help='used with --register-* to skip syncing keys')
+        self.parser.add_option('-d', type='string', metavar='<dir>',
+                               action='store', dest='euca_dir',
                                help='point EUCALYPTUS to <dir>')
         self.parser.add_option('--cc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
@@ -294,7 +293,11 @@ class EucaConf(object):
         if len(self.args) > 0:
             filepath = self.args[0]
         elif filepath is None:
-            euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
+            # use the value passed in with -d option, if present
+            if self.options.euca_dir:
+                euca_dir = self.options.euca_dir
+            else:
+                euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
             filepath = os.path.join(euca_dir, DefaultEucaConfPath)
         try:
             self.config = eucadmin.configfile.ConfigFile(filepath)
