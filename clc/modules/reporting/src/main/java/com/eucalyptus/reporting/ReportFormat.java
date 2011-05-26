@@ -8,7 +8,7 @@ import net.sf.jasperreports.engine.export.*;
 
 public enum ReportFormat
 {
-	pdf {
+	PDF {
 		@Override
 		public JRExporter getExporter()
 			throws IOException
@@ -16,14 +16,14 @@ public enum ReportFormat
 			return new JRPdfExporter();
 		}
 	},
-	csv {
+	CSV {
 		@Override
 		public JRExporter getExporter() throws IOException
 		{
 			return new JRCsvExporter();
 		}
 	},
-	html {
+	HTML {
 		@Override
 		public JRExporter getExporter()
 			throws IOException
@@ -44,7 +44,7 @@ public enum ReportFormat
 			return exporter;
 		}
 	},
-	xls {
+	XLS {
 		@Override
 		public JRExporter getExporter() throws IOException
 		{
