@@ -66,6 +66,7 @@ public class InstanceReportLineGenerator
 			results.add(reportLineMap.get(lineKey));
 		}
 		
+		Collections.sort(results);
 		return results;
 	}
 

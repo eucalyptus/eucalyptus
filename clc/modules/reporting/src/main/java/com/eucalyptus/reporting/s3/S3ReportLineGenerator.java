@@ -59,6 +59,7 @@ public class S3ReportLineGenerator
 			results.add(reportLineMap.get(lineKey));
 		}
 		
+		Collections.sort(results);
 		return results;
 	}
 

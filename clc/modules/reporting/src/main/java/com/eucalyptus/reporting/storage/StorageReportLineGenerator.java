@@ -2,7 +2,7 @@ package com.eucalyptus.reporting.storage;
 
 import java.util.*;
 
-import org.mortbay.log.Log;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
@@ -10,6 +10,8 @@ import com.eucalyptus.reporting.units.Units;
 
 public class StorageReportLineGenerator
 {
+	private static Logger log = Logger.getLogger( StorageReportLineGenerator.class );
+
 	private static StorageReportLineGenerator instance;
 	
 	public static StorageReportLineGenerator getInstance()
@@ -41,7 +43,7 @@ public class StorageReportLineGenerator
 		Map<StorageSummaryKey, StorageUsageSummary> usageMap = 
 			usageLog.getUsageSummaryMap(period);
 		for (StorageSummaryKey key: usageMap.keySet()) {
-			Log.info("Adding key:" + key + " data:" + usageMap.get(key));
+			log.info("Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
 			StorageReportLineKey lineKey = new StorageReportLineKey(critVal, groupVal);
@@ -58,7 +60,16 @@ public class StorageReportLineGenerator
 		for (StorageReportLineKey lineKey: reportLineMap.keySet()) {
 			results.add(reportLineMap.get(lineKey));
 		}
-		
+
+		for (StorageReportLine line: results) {
+			log.info("line:" + line);
+		}
+		log.info("SORT");
+		Collections.sort(results);
+		for (StorageReportLine line: results) {
+			log.info("line:" + line);
+		}
+
 		return results;
 	}
 
