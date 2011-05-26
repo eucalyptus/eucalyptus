@@ -89,9 +89,9 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
   return doRunInstance (meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
 }
 
-int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
+int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
-    return doTerminateInstance (meta, instanceId, shutdownState, previousState);
+  return doTerminateInstance (meta, instanceId, force, shutdownState, previousState);
 }
 int ncAssignAddressStub (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp){
   return(0);
