@@ -21,6 +21,7 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
+import com.eucalyptus.webui.shared.InputChecker;
 import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.QueryValue;
 import com.eucalyptus.webui.shared.query.SearchQuery;
@@ -705,6 +706,8 @@ public class EuareWebBackend {
       Account account = Accounts.addAccount( accountName );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
+      LOG.error( "Failed to create account " + accountName, e );
+      LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to create account " + accountName + ": " + e.getMessage( ) );
     }
   }
@@ -724,6 +727,30 @@ public class EuareWebBackend {
     if ( hasError ) {
       throw new EucalyptusServiceException( "Failed to delete some accounts" );
     }
+  }
+
+  public static void modifyAccounts( ArrayList<String> values ) throws EucalyptusServiceException {
+    try {
+      // deserialize
+      int i = 0;
+      String accountId = values.get( i++ );
+      String newName = values.get( i++ );
+      
+      Account account = Accounts.lookupAccountById( accountId );
+      if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+        throw new EucalyptusServiceException( "System account can not be modified" );
+      }
+      String error = InputChecker.checkAccountName( newName );
+      if ( error != null ) {
+        throw new EucalyptusServiceException( "Invalid account name: " + error );
+      }
+      account.setName( newName );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to modify account " + values, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
+    }
+    
   }
 
 }

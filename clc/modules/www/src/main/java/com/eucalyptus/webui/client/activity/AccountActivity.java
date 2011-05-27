@@ -37,13 +37,14 @@ public class AccountActivity extends AbstractSearchActivity
     super( place, clientFactory );
   }
 
-  protected void doSearch( String search, SearchRange range ) {    
+  protected void doSearch( final String search, SearchRange range ) {    
     this.clientFactory.getBackendService( ).lookupAccount( this.clientFactory.getLocalSession( ).getSession( ), search, range,
                                                            new AsyncCallback<SearchResult>( ) {
       
       @Override
       public void onFailure( Throwable caught ) {
         LOG.log( Level.WARNING, "Search failed: " + caught );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Account search " + search + " failed: " + caught.getMessage( ) );
         displayData( null );
       }
       
@@ -71,8 +72,29 @@ public class AccountActivity extends AbstractSearchActivity
 
   @Override
   public void saveValue( ArrayList<HasValueWidget> values ) {
-    // TODO Auto-generated method stub
+    final ArrayList<String> newVals = Lists.newArrayList( );
+    for ( HasValueWidget w : values ) {
+      newVals.add( w.getValue( ) );
+    }
     
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Modifying account " + newVals + " ...", 0 );
+    
+    clientFactory.getBackendService( ).modifyAccounts( clientFactory.getLocalSession( ).getSession( ), newVals, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify account with new values: " + newVals + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Successfully modified account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified account with " + newVals );
+        reloadCurrentRange( );
+      }
+      
+    } );
   }
 
   @Override
@@ -106,16 +128,14 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
-        String error = "Failed to create account " + value + ": " + caught.getMessage( );
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + value + " failed: " + caught.getMessage( ) );
       }
 
       @Override
       public void onSuccess( String accountId ) {
-        String info = "Account " + accountId + " created";
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + accountId + " created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New account " + accountId + " created" );
         reloadCurrentRange( );
       }
       
@@ -151,16 +171,14 @@ public class AccountActivity extends AbstractSearchActivity
 
         @Override
         public void onFailure( Throwable caught ) {
-          String error = "Failure in deleting accounts: " + caught.getMessage( );
-          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete accounts " + ids + ": " + caught.getMessage( ) );
         }
 
         @Override
         public void onSuccess( Void arg0 ) {
-          String info = "Accounts " + ids + " deleted";
-          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-          clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Accounts deleted", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Accounts " + ids + " deleted" );
           reloadCurrentRange( );
         }
         

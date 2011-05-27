@@ -188,4 +188,14 @@ public interface EucalyptusService extends RemoteService {
    */
   void deleteAccounts( Session session, ArrayList<String> ids ) throws EucalyptusServiceException;
   
+  /**
+   * Modify account.
+   * 
+   * @param session
+   * @param keys
+   * @param values
+   * @throws EucalyptusServiceException
+   */
+  void modifyAccounts( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+  
 }

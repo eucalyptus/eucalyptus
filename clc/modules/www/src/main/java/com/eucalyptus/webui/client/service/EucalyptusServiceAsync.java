@@ -42,5 +42,7 @@ public interface EucalyptusServiceAsync {
   void createAccount( Session session, String accountName, AsyncCallback<String> callback );
 
   void deleteAccounts( Session session, ArrayList<String> ids, AsyncCallback<Void> callback );
+
+  void modifyAccounts( Session session, ArrayList<String> values, AsyncCallback<Void> callback );
   
 }
