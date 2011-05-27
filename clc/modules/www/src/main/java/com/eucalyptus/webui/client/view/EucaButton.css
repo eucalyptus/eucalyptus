@@ -46,7 +46,6 @@ button:focus,a.button:hover,button:hover {
 }
 
 a.button:active,button:active,a.button.active,button.active {
-	/*background-position: 0 -81px;*/
 	border-color: #347BBA;
 	background-color: #0F5EA2;
 	color: #FFFFFF;
@@ -74,8 +73,7 @@ a.button.positive:focus,button.positive:focus,a.button.positive:hover,button.pos
 }
 
 a.button.positive:active,button.positive:active,a.button.positive.active,button.positive.active {
-	/*background-position: 0 -320px;*/
-	background-color: #45BF55;
+y	background-color: #45BF55;
 }
 
 a.button.pill,button.pill {
@@ -99,13 +97,42 @@ a.button.small,button.small {
     padding-bottom: 7px;
 }
 
+a.button.left,button.left {
+    -webkit-border-bottom-right-radius: 0px;
+    -webkit-border-top-right-radius: 0px;
+    -moz-border-radius-bottomright: 0px;
+    -moz-border-radius-topright: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0px;
+    margin-right: 0px;
+    border-right: none;
+}
+
+a.button.middle,button.middle {
+    margin-right: 0px;
+    margin-left: 0px;
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+    border-radius: 0px;
+    border-right: none;
+}
+
+a.button.right,button.right {
+    -webkit-border-bottom-left-radius: 0px;
+    -webkit-border-top-left-radius: 0px;
+    -moz-border-radius-bottomleft: 0px;
+    -moz-border-radius-topleft: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    margin-left: 0px;
+}
+
 a.button span.icon,button span.icon {
 	display: inline-block;
 	width: 12px;
 	height: 12px;
 	margin: auto 5px auto auto;
 	position: relative;
-	float:left;
 	top: 0;
 	background-repeat: no-repeat;
 	background-position: center center;

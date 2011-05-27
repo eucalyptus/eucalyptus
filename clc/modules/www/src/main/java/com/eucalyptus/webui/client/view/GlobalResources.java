@@ -22,6 +22,10 @@ public interface GlobalResources extends ClientBundle {
     String positive( );
     String negative( );
 
+    String left( );
+    String middle( );
+    String right( );
+    
     String minus( );
     String plus( );
     String floppy( );

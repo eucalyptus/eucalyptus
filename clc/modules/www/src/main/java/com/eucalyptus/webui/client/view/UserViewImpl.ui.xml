@@ -29,13 +29,13 @@
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addPolicyButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addPolicyButton">
                                     <span class="{global.buttonCss.lock} {global.buttonCss.icon}"/>Add policy
                                 </g:Anchor>                            
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addKeyButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.middle}" ui:field="addKeyButton">
                                     <span class="{global.buttonCss.key} {global.buttonCss.icon}"/>Add key
                                 </g:Anchor>                            
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addCertButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addCertButton">
                                     <span class="{global.buttonCss.sun} {global.buttonCss.icon}"/>Add certificate
                                 </g:Anchor>                            
                             </td>

@@ -25,23 +25,23 @@
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="newButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="newButton">
                                     <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New account
                                 </g:Anchor>                            
                             </td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="delButton">
                                     <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
                                 </g:Anchor>
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addUserButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addUserButton">
                                     <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>New user
                                 </g:Anchor>
                             </td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addGroupButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addGroupButton">
                                     <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>New group
                                 </g:Anchor>                            
                             </td>
