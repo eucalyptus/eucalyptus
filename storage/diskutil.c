@@ -497,9 +497,9 @@ int diskutil_write2file (const char * file, const char * str)
 int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk)
 {
     int ret = OK;
-    char * output;
-    char * kfile;
-    char * rfile;
+    char * output = NULL;
+    char * kfile = NULL;
+    char * rfile = NULL;
 
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
     if (!output) {
@@ -677,6 +677,7 @@ static char * pruntf (boolean log_error, char *format, ...)
     if (output == NULL) {
         logprintfl (EUCAERROR, "error: failed to allocate mem for output\n");
         va_end(ap);
+        pclose(IF);
         return(NULL);
     }
 

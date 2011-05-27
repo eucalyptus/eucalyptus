@@ -249,10 +249,12 @@ int main (int argc, char * argv[])
                 err ("failed while verifying requirements");
         }
     }
+    if(!root) err ("failed to find root while verifying requirements");
     
     // see if work blobstore will be needed at any stage
     // and open or create the work blobstore
     blobstore * work_bs = NULL;
+
     if (tree_uses_blobstore (root)) {
         // set the function that will catch blobstore errors
         blobstore_set_error_function ( &bs_errors ); 
