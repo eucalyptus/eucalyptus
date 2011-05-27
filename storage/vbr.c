@@ -609,7 +609,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     int map_entries = 1; // first map entry is for the MBR
     long long offset_bytes = 512 * MBR_BLOCKS; // first partition begins after MBR
     assert (disk);
-    for (int i=0; i<EUCA_MAX_PARTITIONS && a->deps[i]; i++) {
+    for (int i=0; i<MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         artifact * dep = a->deps[i];
         if (! dep->is_partition)
             continue;
@@ -803,9 +803,10 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
             art_free (a->deps[i]);
         }
-        free (a);
+
         logprintfl (EUCADEBUG, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
                     a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
+        free (a);
     }
 }
 
@@ -1152,7 +1153,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
 
     return disk;
 free:
-    art_free (disk);
+    if(disk) art_free (disk);
     return NULL;
 }
 
@@ -1671,6 +1672,7 @@ static int check_blob (blobstore * bs, const char * keyword, int expect)
     if ((bytes = fread (buf, 1, sizeof (buf) - 1, f)) < 1) {
         printf ("error: failed to fread() from output of '%s' (returned %d)\n", cmd, bytes);
         perror ("test_vbr");
+        pclose (f);
         return 1;
     }
     buf [bytes] = '\0';
