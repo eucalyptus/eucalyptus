@@ -67,20 +67,20 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableList;
 
-public interface StateMachine<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> {
+public interface StateMachine<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
+  public abstract P getParent( );
+  
+  public abstract ImmutableList<S> getStates( );
+  
+  public abstract ImmutableList<TransitionHandler<P, S, T>> getTransitions( );
   
   public abstract boolean isLegalTransition( T transitionName );
-  
-  public abstract CheckedListenableFuture<P> startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException;
-  
-  public abstract CheckedListenableFuture<P> startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException;
   
   public abstract S getState( );
   
   public abstract boolean isBusy( );
   
-  public abstract ImmutableList<S> getStates( );
+  public abstract CheckedListenableFuture<P> transitionByName( T transitionName ) throws IllegalStateException, ExistingTransitionException;
   
-  public abstract ImmutableList<TransitionImpl<P, S, T>> getTransitions( );
-  
+  public abstract CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException;
 }

@@ -89,12 +89,12 @@ import org.hibernate.TransientObjectException;
 import org.hibernate.TypeMismatchException;
 import org.hibernate.UnresolvableObjectException;
 import org.hibernate.WrongClassException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.JDBCConnectionException;
 import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
-import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -137,19 +137,13 @@ public class PersistenceErrorFilter {
       @Override
       public RuntimeException handleException( RuntimeException e ) {
         String msg = this.getMessage( e );
-        if( !Logs.DEBUG ) {
-          LOG.error( msg, e );
-        }
+        Logs.exhaust( ).error( msg, e );
         return e;
       }
     };
     protected String getMessage( RuntimeException e ) {
       String msg = new StringBuilder( ).append( "[" ).append( this.name( ) ).append( "] Persistence error occurred because of: " + e.getMessage( ) ).toString( );
-      if ( Logs.DEBUG ) {
-        LOG.error( msg, e );
-      } else {
-        LOG.error( msg );
-      }
+      Logs.exhaust( ).error( msg, e );
       return msg;
     }
     

@@ -30,6 +30,7 @@
 
 import os
 import sys
+import pwd
 import socket
 import shutil
 from boto.utils import mklist

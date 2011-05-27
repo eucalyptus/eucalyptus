@@ -75,6 +75,11 @@ public class AnonymousMessage extends BaseMessage implements Cloneable, Serializ
 @ComponentMessage(Empyrean.class)
 public class EmpyreanMessage extends BaseMessage implements Cloneable, Serializable {
 }
+public class ModifyServiceType extends EmpyreanMessage {
+  String name;
+  String state;
+}
+public class ModifyServiceResponseType extends EmpyreanMessage implements HasSideEffect {}
 public class ServiceTransitionType extends EmpyreanMessage  {
   ArrayList<ServiceInfoType> services = new ArrayList<ServiceInfoType>();
 }
@@ -87,16 +92,18 @@ public class EnableServiceResponseType extends ServiceTransitionType implements 
 public class DisableServiceType extends ServiceTransitionType {}
 public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
 public class ServiceId extends EucalyptusData {
-  String uuid;/** A UUID of the registration **/
+  String uuid;/** UUID of the registration **/
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String type;/** name of the ComponentId **/
+  String fullName;/** full name of the registration **/
   String uri;
 }
 public class ServiceInfoType extends EucalyptusData {
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
-  String type;/** one of: cluster, walrus, storage, node, or eucalyptus **/
+  String type;/** name of the ComponentId **/
+  String fullName;/** full name of the registration **/
   ArrayList<String> uris = new ArrayList<String>( );
 }
 public class ServiceStatusType extends EucalyptusData {
@@ -104,8 +111,27 @@ public class ServiceStatusType extends EucalyptusData {
   String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
+  ArrayList<ServiceStatusDetail> statusDetails = new ArrayList<ServiceStatusDetail>( );
+}
+public class ServiceStatusDetail extends EucalyptusData {
+  String   severity;
+  String   uuid;
+  String   message;
+  String   serviceFullName;
+  String   serviceName;
+  String   serviceHost;
+  String   stackTrace;
+  String   timestamp;
 }
 public class DescribeServicesType extends ServiceTransitionType {
+  Boolean listAll;
+  Boolean listInternal;
+  Boolean showEvents;
+  Boolean showEventStacks;
+  String byServiceType;
+  String byHost;
+  String byState;
+  String byPartition;
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );

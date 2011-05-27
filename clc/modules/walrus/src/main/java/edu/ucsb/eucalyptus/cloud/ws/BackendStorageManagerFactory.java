@@ -73,7 +73,7 @@ public class BackendStorageManagerFactory {
 
 	private static Logger LOG = Logger.getLogger( BackendStorageManagerFactory.class );
 
-	public static StorageManager getStorageManager() {
+	public static StorageManager getStorageManager() throws Exception {
 		String storageManager = "FileSystemStorageManager";
 		if(System.getProperty("walrus.storage.manager") != null) {
 			storageManager = System.getProperty("walrus.storage.manager");
@@ -82,12 +82,14 @@ public class BackendStorageManagerFactory {
 			storageManager = "edu.ucsb.eucalyptus.storage.fs." + storageManager;
 			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();
 		} catch (InstantiationException e) {
-			LOG.error(e, e); 
+			LOG.error(e, e);
+                        throw e;
 		} catch (IllegalAccessException e) {
-			LOG.error(e, e); 
+			LOG.error(e, e);
+    			throw e; 
 		} catch (ClassNotFoundException e) {
 			LOG.error(e, e); 
+			throw e;
 		}
-		return null;
 	}
 }

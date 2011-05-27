@@ -9,6 +9,19 @@ public abstract class SubjectMessageCallback<P, Q extends BaseMessage, R extends
     super( );
   }
 
+  protected SubjectMessageCallback( P subject ) {
+    this.subject = subject;
+  }
+
+  protected SubjectMessageCallback( Q request ) {
+    super( request );
+  }
+
+  protected SubjectMessageCallback( P subject, Q request ) {
+    super( request );
+    this.subject = subject;
+  }
+
   /**
    * @return the subject
    */

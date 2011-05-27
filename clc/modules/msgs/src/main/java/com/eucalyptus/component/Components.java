@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
@@ -272,10 +273,10 @@ public class Components {
                 buf.append( "-> " + b.toString( ) ).append( "\n" );
               }
               buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-              for ( Service s : comp.getServices( ) ) {
+              for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
                 try {
-                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getServiceConfiguration( ).getUri( ) ).append( "\n" );
-                  buf.append( "|-> Service config:   " ).append( s.getServiceConfiguration( ) ).append( "\n" );
+                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getUri( ) ).append( "\n" );
+                  buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
                 } catch ( Exception ex ) {
                   LOG.error( ex, ex );
                 }
@@ -286,7 +287,7 @@ public class Components {
         }
       }
     }
-
+    
     public static Function<Service, ServiceConfiguration> serviceToServiceConfiguration( ) {
       return new Function<Service, ServiceConfiguration>( ) {
         
@@ -297,25 +298,41 @@ public class Components {
       };
     }
     
-  }
-  
-  public static class Predicates {
-    public static final Predicate<Service> enabledService( ) {
-      return new Predicate<Service>( ) {
+    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
+      return new Function<ServiceId, ServiceConfiguration>( ) {
         
         @Override
-        public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getState( ) );
+        public ServiceConfiguration apply( ServiceId serviceId ) {
+          try {
+            Component comp = Components.lookup( serviceId.getType( ) );
+            return comp.lookupServiceConfiguration( serviceId.getName( ) );
+          } catch ( NoSuchElementException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          }
         }
       };
     }
     
-    public static Predicate<Service> serviceInPartition( String partitionName ) {
-      return new Predicate<Service>( ) {
+  }
+  
+  public static class Predicates {
+    public static final Predicate<ServiceConfiguration> enabledService( ) {
+      return new Predicate<ServiceConfiguration>( ) {
         
         @Override
-        public boolean apply( Service arg0 ) {
-          return Component.State.ENABLED.equals( arg0.getState( ) );
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return Component.State.ENABLED.isIn( arg0 );
+        }
+      };
+    }
+    
+    public static Predicate<ServiceConfiguration> serviceInPartition( final String partitionName ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        
+        @Override
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return partitionName.equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
         }
       };
     }

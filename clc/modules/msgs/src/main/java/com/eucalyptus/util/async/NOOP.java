@@ -97,24 +97,4 @@ public class NOOP implements RemoteCallback {
   public BaseMessage getRequest( ) {
     return new EucalyptusMessage( );
   }
-  
-  /**
-   * @see com.eucalyptus.util.async.RemoteCallback#regarding(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param msg
-   * @return
-   */
-  @Override
-  public RemoteCallback regarding( BaseMessage msg ) {
-    return this;
-  }
-  
-  /**
-   * @see com.eucalyptus.util.async.RemoteCallback#regardingUserRequest(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param msg
-   * @return
-   */
-  @Override
-  public RemoteCallback regardingUserRequest( BaseMessage msg ) {
-    return this;
-  }
 }

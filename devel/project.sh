@@ -42,7 +42,8 @@ fixProjectName() {
 
 fixProjectName ${SRC_DIR}/clc/.project clc
 fixProjectName ${SRC_DIR}/project/.project c
-fixProjectName ${SRC_DIR}/clc/tools/.project python
+fixProjectName ${SRC_DIR}/clc/eucadmin/.project eucadmin
+fixProjectName ${SRC_DIR}/devel/.project devel
   
 for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do 
   f=$(basename $m)

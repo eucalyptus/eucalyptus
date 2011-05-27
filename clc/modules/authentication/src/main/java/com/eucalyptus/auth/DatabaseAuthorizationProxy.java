@@ -8,7 +8,7 @@ import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -42,7 +42,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getConditions for " + this.delegate );
     }
     return results;
@@ -57,7 +57,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
@@ -87,7 +87,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
           results.addAll( t.getActions( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getActions for " + this.delegate );
     }
     return results;
@@ -102,7 +102,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
           results.addAll( t.getResources( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getResources for " + this.delegate );
     }
     return results;
@@ -117,7 +117,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
           results.add( new DatabaseGroupProxy( t.getStatement( ).getPolicy( ).getGroup( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
     }
     return results.get( 0 );

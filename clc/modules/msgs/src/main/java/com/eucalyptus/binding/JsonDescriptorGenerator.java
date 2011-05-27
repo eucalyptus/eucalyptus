@@ -134,7 +134,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     if ( outFile.exists( ) ) {
       outFile.delete( );
     }
-    FileWriter out;
+    FileWriter out = null;
     try {
       out = new FileWriter( outFile, true );
       out.write( stuff );
@@ -145,6 +145,11 @@ public class JsonDescriptorGenerator extends BindingGenerator {
       throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
     } catch ( IOException ex ) {
       LOG.error( ex , ex );
+      try {
+        out.close();
+      } catch ( Exception e ) {
+	LOG.error(e, e);
+      }
       throw new RuntimeException( "Failed to create JSON descriptor file: " + outFile.getAbsolutePath( ) + " because of " + ex.getMessage( ), ex );
     }
   }

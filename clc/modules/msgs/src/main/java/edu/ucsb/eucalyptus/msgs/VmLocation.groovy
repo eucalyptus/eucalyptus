@@ -70,6 +70,8 @@ public class ClusterMessage extends EucalyptusMessage{}
 public class DescribeAvailabilityZonesType extends ClusterMessage { //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "ZoneName")
   ArrayList<String> availabilityZoneSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeAvailabilityZonesResponseType extends ClusterMessage { //** added 2008-02-01  **/
   ArrayList<ClusterInfoType> availabilityZoneInfo = new ArrayList<ClusterInfoType>();
@@ -78,6 +80,8 @@ public class DescribeAvailabilityZonesResponseType extends ClusterMessage { //**
 public class DescribeRegionsType extends ClusterMessage { //** added 2008-12-01  **/
   @HttpParameterMapping (parameter = "Region")
   ArrayList<String> regions = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeRegionsResponseType extends ClusterMessage { //** added 2008-12-01  **/
   ArrayList<RegionInfoType> regionInfo = new ArrayList<ClusterInfoType>();

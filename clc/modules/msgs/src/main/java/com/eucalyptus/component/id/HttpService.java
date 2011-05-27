@@ -81,7 +81,7 @@ public class HttpService extends ComponentId.Unpartioned {
   
   @Override
   public Boolean hasDispatcher( ) {
-    return true;
+    return false;
   }
   
   @Override

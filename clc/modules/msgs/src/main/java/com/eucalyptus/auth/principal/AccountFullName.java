@@ -64,6 +64,7 @@
 package com.eucalyptus.auth.principal;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
@@ -177,6 +178,23 @@ public class AccountFullName implements FullName {
   public String getUniqueId( ) {
     return this.accountId;
   }
+
+  public static AccountFullName getInstance( String accountId ) {
+    Account account = null;
+    try {
+      account = Accounts.lookupAccountById( accountId );
+    } catch ( AuthException ex ) {
+      LOG.error( ex , ex );
+    }
+    if( account == null ) {
+      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
+    } else if( account == FakePrincipals.SYSTEM_USER ) {
+      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );
+    } else {
+      return new AccountFullName( account );
+    }
+  }
+
   public static AccountFullName getInstance( Account account ) {
     if( account == null ) {
       return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT );

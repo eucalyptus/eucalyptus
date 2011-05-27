@@ -61,13 +61,11 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.msgs
+package edu.ucsb.eucalyptus.msgs;
 
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -80,7 +78,6 @@ public class DeregisterImageType extends VmImageMessage {
 }
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
-
   String imageId;
   ArrayList<LaunchPermissionItemType> launchPermission = new ArrayList<LaunchPermissionItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
@@ -130,6 +127,8 @@ public class DescribeImagesType extends VmImageMessage {
   ArrayList<String> imagesSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "Owner")
   ArrayList<String> ownersSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 /** *******************************************************************************/
 public class ModifyImageAttributeResponseType extends VmImageMessage {
@@ -176,6 +175,7 @@ public class RegisterImageType extends VmImageMessage {
   String kernelId;
   String ramdiskId;
   String rootDeviceName;
+  @HttpParameterMapping (parameter = "BlockDeviceMapping")
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
 }
 /** *******************************************************************************/
@@ -205,6 +205,8 @@ public class ImageDetails extends EucalyptusData {
   String rootDeviceName = "/dev/sda1";
   String name;
   String description;
+  String virtualizationType;
+  String hypervisor;
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
 

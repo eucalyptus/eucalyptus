@@ -669,7 +669,8 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     //  make disk bootable if necessary
     if (a->make_bootable) {
-        logprintfl (EUCAERROR, "error: making disk bootable is NOT IMPLEMENTED!\n"); // TODO!
+        logprintfl (EUCAINFO, "[%s] making disk bootable\n", a->instanceId);
+
     }
 
     ret = OK;

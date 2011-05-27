@@ -19,10 +19,10 @@ import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.records.EventRecord;
 
 public class Context {
   private static Logger            LOG           = Logger.getLogger( Context.class );
@@ -44,6 +44,7 @@ public class Context {
       this.message = msg;
     }};
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
+    this.user = FakePrincipals.SYSTEM_USER;
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -107,9 +108,12 @@ public class Context {
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
-        return Accounts.lookupUserFullNameByName( effectiveUserId );
+        return UserFullName.getInstance( Accounts.lookupUserByName( effectiveUserId ) );
       } catch ( RuntimeException ex ) {
         LOG.error( ex );
+        return UserFullName.getInstance( this.getUser( ) );
+      } catch ( AuthException ex ) {
+        LOG.error( ex , ex );
         return UserFullName.getInstance( this.getUser( ) );
       }
     } else {
@@ -118,7 +122,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemAdmin( ) || this.getUser( ).isSystemInternal( ) || FakePrincipals.SYSTEM_USER_ERN.equals( this.getEffectiveUserFullName( ) );
+    return this.getUser( ).isSystemInternal( ) || FakePrincipals.SYSTEM_USER_ERN.equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {

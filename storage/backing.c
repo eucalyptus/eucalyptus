@@ -207,7 +207,7 @@ static void set_path (char * path, unsigned int path_size, const ncInstance * in
     }
 }
 
-static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, int allow_block_dev)
+static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, int allow_block_dev) // TODO: remove this obsolete function
 {
     logprintfl (EUCAINFO, "[%s] preparing backing of type %s (pulled from '%s')...\n", instance->instanceId, vbr->typeName, vbr->resourceLocation);
     int ret = ERROR;
@@ -523,7 +523,7 @@ static void set_disk_dev (virtualBootRecord * vbr)
     snprintf (vbr->guestDeviceName, sizeof (vbr->guestDeviceName), "%sd%c%s", type, disk, part);
 }
 
-static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtualBootRecord ** parts, int partitions)
+static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtualBootRecord ** parts, int partitions) // remove this obsolete function
 {
     logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
@@ -633,7 +633,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     return ret;
 }
 
-int create_instance_backing1 (ncInstance * instance)
+int create_instance_backing1 (ncInstance * instance) // remove this obsolete function
 {
     int ret = ERROR;
     int total_prereqs = 0;
@@ -709,7 +709,7 @@ int create_instance_backing1 (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing1 (ncInstance * instance, int destroy_files)
+int destroy_instance_backing1 (ncInstance * instance, int destroy_files) // TODO: remove this obsolete function
 {
     int ret = OK;
     int total_prereqs = 0;

@@ -57,11 +57,14 @@
 *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
- */
+*******************************************************************************
+* Author: chris grzegorczyk <grze@eucalyptus.com>
+*/
 package edu.ucsb.eucalyptus.msgs
+
+import java.util.ArrayList;
+import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.PolicySpec;
 
 public class UnimplementedMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -83,3 +86,82 @@ public class DescribeReservedInstancesResponseType extends UnimplementedMessage 
   ArrayList<String> reservedInstancesSet = new ArrayList<String>();
 }
 /** *******************************************************************************/
+public class Filter extends EucalyptusData {
+  String name;
+  ArrayList<String> valueSet = new ArrayList<String>( );
+}
+public class ResourceTag extends EucalyptusData {
+  String key;
+  String value;
+  public ResourceTagSetItemType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBETAGS )
+public class DescribeTagsType extends ResourceTagMessage  {
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  public DescribeTagsType() {  }
+}
+public class DescribeTagsResponseType extends ResourceTagMessage  {
+  String requestId;
+  ArrayList<TagInfo> tagSet = new ArrayList<TagInfo>( );
+  public DescribeTagsResponseType() {  }
+}
+public class DeleteTagsResponseType extends ResourceTagMessage {
+  String requestId;
+  public DeleteTagsResponseType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETETAGS )
+public class DeleteTagsType extends ResourceTagMessage {
+  ArrayList<String> resourcesSet = new ArrayList<String>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  public DeleteTagsType() {  }
+}
+public class TagInfo extends EucalyptusData {
+  String resourceId;
+  String resourceType;
+  String key;
+  String value;
+  public TagSetItemType() {  }
+}
+public class CreateTagsResponseType extends ResourceTagMessage  {
+  public CreateTagsResponseType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATETAGS )
+public class CreateTagsType extends ResourceTagMessage  {
+  ArrayList<String> resourcesSet = new ArrayList<String>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  public CreateTagsType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEPLACEMENTGROUP )
+public class CreatePlacementGroupType extends VmPlacementMessage {
+  String groupName;
+  String strategy;
+  public CreatePlacementGroupType() {  }
+}
+public class CreatePlacementGroupResponseType extends VmPlacementMessage {
+  public CreatePlacementGroupResponseType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETEPLACEMENTGROUP )
+public class DeletePlacementGroupType extends VmPlacementMessage {
+  String groupName;
+  public DeletePlacementGroupType() {  }
+}
+public class DeletePlacementGroupResponseType extends VmPlacementMessage {
+  public DeletePlacementGroupResponseType() {  }
+}
+public class PlacementGroupInfo extends EucalyptusData {
+  String groupName;
+  String strategy;
+  String state;
+  public PlacementGroupInfoType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEPLACEMENTGROUPS )
+public class DescribePlacementGroupsType extends VmPlacementMessage {
+  ArrayList<String> placementGroupSet = new ArrayList<String>();
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  public DescribePlacementGroupsType() {  }
+}
+public class DescribePlacementGroupsResponseType extends VmPlacementMessage {
+  ArrayList<PlacementGroupInfo> placementGroupSet = new ArrayList<PlacementGroupInfo>();
+  public DescribePlacementGroupsResponseType() {  }
+}
