@@ -708,4 +708,21 @@ public class EuareWebBackend {
     }
   }
 
+  public static void deleteAccounts( ArrayList<String> ids ) throws EucalyptusServiceException {
+    boolean hasError = false;
+    for ( String id : ids ) {
+      try { 
+        Account account = Accounts.lookupAccountById( id );
+        Accounts.deleteAccount( account.getName( ), false, true );
+      } catch ( Exception e ) {
+        LOG.error( "Failed to delete account " + id, e );
+        LOG.debug( e, e );
+        hasError = true;
+      }
+    }
+    if ( hasError ) {
+      throw new EucalyptusServiceException( "Failed to delete some accounts" );
+    }
+  }
+
 }

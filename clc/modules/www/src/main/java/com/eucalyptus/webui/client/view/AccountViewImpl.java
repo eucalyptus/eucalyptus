@@ -48,7 +48,7 @@ public class AccountViewImpl extends Composite implements AccountView {
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteAccounts( );
   }
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {

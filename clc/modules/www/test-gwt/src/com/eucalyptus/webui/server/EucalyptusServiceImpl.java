@@ -176,4 +176,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     
   }
 
+  @Override
+  public void deleteAccounts( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
 }

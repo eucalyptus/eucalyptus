@@ -8,6 +8,7 @@ public interface AccountView extends IsWidget, CanDisplaySearchResult, Clearable
   
   public interface Presenter extends SearchRangeChangeHandler, MultiSelectionChangeHandler, KnowsPageSize {
     void onCreateAccount( );
+    void onDeleteAccounts( );
   }
   
 }

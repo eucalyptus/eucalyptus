@@ -234,5 +234,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     verifySession( session );
     EuareWebBackend.createAccount( accountName );
   }
+
+  @Override
+  public void deleteAccounts( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deleteAccounts( ids );
+  }
   
 }

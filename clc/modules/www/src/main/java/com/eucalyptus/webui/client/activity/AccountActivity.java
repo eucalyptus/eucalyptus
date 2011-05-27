@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.activity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -10,19 +11,23 @@ import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.view.AccountView;
+import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.CreateAccountView;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LogView.LogType;
+import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.gwt.user.client.ui.DialogBox;
 
 public class AccountActivity extends AbstractSearchActivity
-    implements AccountView.Presenter, DetailView.Presenter, CreateAccountView.Presenter {
+    implements AccountView.Presenter, DetailView.Presenter, CreateAccountView.Presenter, ConfirmationView.Presenter {
   
   public static final String TITLE = "ACCOUNTS";
   public static final String CREATE_ACCOUNT_CAPTION = "Create a new account";
+  public static final String DELETE_ACCOUNTS_CAPTION = "Delete selected accounts";
+  public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure to delete following selected accounts?";
   
   private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
   
@@ -102,19 +107,64 @@ public class AccountActivity extends AbstractSearchActivity
       @Override
       public void onFailure( Throwable caught ) {
         String error = "Failed to create account " + value + ": " + caught.getMessage( );
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, 60000 );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
       }
 
       @Override
       public void onSuccess( Void arg0 ) {
         String info = "Account " + value + " created";
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, 60000 );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
         reloadCurrentRange( );
       }
       
     } );
   }
+
+  @Override
+  public void onDeleteAccounts( ) {
+    if ( currentSelected != null ) {
+      ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+      dialog.setPresenter( this );
+      dialog.display( DELETE_ACCOUNTS_CAPTION, DELETE_ACCOUNTS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+    }
+  }
+
+  @Override
+  public void confirm( String subject ) {
+    if ( DELETE_ACCOUNTS_SUBJECT.equals( subject ) ) {
+      deleteSelectedAccounts( );
+    }
+  }
   
+  private void deleteSelectedAccounts( ) {
+    if ( currentSelected != null ) {
+      final ArrayList<String> ids = Lists.newArrayList( ); 
+      for ( SearchResultRow row : currentSelected ) {
+        ids.add( row.getField( 0 ) );
+      }
+      
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Deleting accounts ...", 0 );
+      
+      clientFactory.getBackendService( ).deleteAccounts( clientFactory.getLocalSession( ).getSession( ), ids, new AsyncCallback<Void>( ) {
+
+        @Override
+        public void onFailure( Throwable caught ) {
+          String error = "Failed to delete some accounts: " + caught.getMessage( );
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
+        }
+
+        @Override
+        public void onSuccess( Void arg0 ) {
+          String info = "Accounts " + ids + " deleted";
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
+          reloadCurrentRange( );
+        }
+        
+      } );
+    }
+  }
 }
