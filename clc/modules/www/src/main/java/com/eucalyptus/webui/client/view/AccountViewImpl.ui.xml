@@ -15,9 +15,13 @@
         <g:north size="36">
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
-                    <colgroup width="100px"/>
-                    <colgroup width="10px"/>
-                    <colgroup width="100px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="50px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="50px"/>
+                    <colgroup width="1px"/>
                     <tbody>
                         <tr>
                             <td>
@@ -25,11 +29,27 @@
                                     <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New account
                                 </g:Anchor>                            
                             </td>
-                            <td>&nbsp;</td>
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
                                     <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
                                 </g:Anchor>
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addUserButton">
+                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>New user
+                                </g:Anchor>
+                            </td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addGroupButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>New group
+                                </g:Anchor>                            
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addPolicyButton">
+                                    <span class="{global.buttonCss.lock} {global.buttonCss.icon}"/>Add policy
+                                </g:Anchor>                            
                             </td>
                         </tr>
                     </tbody>

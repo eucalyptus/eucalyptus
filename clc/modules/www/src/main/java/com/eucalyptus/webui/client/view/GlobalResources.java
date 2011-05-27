@@ -22,16 +22,17 @@ public interface GlobalResources extends ClientBundle {
     String positive( );
     String negative( );
 
-    String left( );
-    String middle( );
-    String right( );
-
     String minus( );
     String plus( );
     String floppy( );
     String report( );
     String x( );
     String check( );
+    String user( );
+    String group( );
+    String lock( );
+    String key( );
+    String sun( );
   }
   
   @Source( "EucaButton.css" )
@@ -67,4 +68,29 @@ public interface GlobalResources extends ClientBundle {
   @Source( "image/x_12x12_white.png" )
   ImageResource xWhite( );
 
+  @Source( "image/user_12x12_gray.png" )
+  ImageResource userGray( );
+  @Source( "image/user_12x12_white.png" )
+  ImageResource userWhite( );
+
+  @Source( "image/group_12x12_gray.png" )
+  ImageResource groupGray( );
+  @Source( "image/group_12x12_white.png" )
+  ImageResource groupWhite( );
+
+  @Source( "image/lock_fill_12x12_gray.png" )
+  ImageResource lockGray( );
+  @Source( "image/lock_fill_12x12_white.png" )
+  ImageResource lockWhite( );
+
+  @Source( "image/key_fill_12x12_gray.png" )
+  ImageResource keyGray( );
+  @Source( "image/key_fill_12x12_white.png" )
+  ImageResource keyWhite( );
+  
+  @Source( "image/sun_12x12_gray.png" )
+  ImageResource sunGray( );
+  @Source( "image/sun_12x12_white.png" )
+  ImageResource sunWhite( );
+    
 }
