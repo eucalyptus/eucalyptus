@@ -13,8 +13,6 @@ import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
 import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.ConfirmationViewImpl;
-import com.eucalyptus.webui.client.view.CreateAccountView;
-import com.eucalyptus.webui.client.view.CreateAccountViewImpl;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
 import com.eucalyptus.webui.client.view.GroupView;
