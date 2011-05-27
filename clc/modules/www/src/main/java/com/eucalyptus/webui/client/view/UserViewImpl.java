@@ -37,17 +37,27 @@ public class UserViewImpl extends Composite implements UserView {
   public UserViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
-
-  @UiHandler( "newButton" )
-  void handleNewButtonClick( ClickEvent e ) {
-    
-  }
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
     
   }
   
+  @UiHandler( "addPolicyButton" )
+  void handleAddPolicyButtonClick( ClickEvent e ) {
+    
+  }
+
+  @UiHandler( "addKeyButton" )
+  void handleAddKeyButtonClick( ClickEvent e ) {
+    
+  }
+
+  @UiHandler( "addCertButton" )
+  void handleAddCertButtonClick( ClickEvent e ) {
+    
+  }
+
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
