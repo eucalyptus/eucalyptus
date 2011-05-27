@@ -330,10 +330,11 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       rc = ncRebootInstanceStub(ncs, meta, instId);
     } else if (!strcmp(ncOp, "ncTerminateInstance")) {
       char *instId = va_arg(al, char *);
+      int force = va_arg(al, int);
       int *shutdownState = va_arg(al, int *);
       int *previousState = va_arg(al, int *);
       
-      rc = ncTerminateInstanceStub(ncs, meta, instId, shutdownState, previousState);
+      rc = ncTerminateInstanceStub(ncs, meta, instId, force, shutdownState, previousState);
       if (timeout) {
 	if (!rc) {
 	  len = 2;
@@ -498,6 +499,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       }
     } else if (!strcmp(ncOp, "ncTerminateInstance")) {
       char *instId = va_arg(al, char *);
+      int force = va_arg(al, int);
       int *shutdownState = va_arg(al, int *);
       int *previousState = va_arg(al, int *);
       if (shutdownState && previousState) {
@@ -2391,7 +2393,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
   return(0);
 }
 
-int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int **outStatus) {
+int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int force, int **outStatus) {
   int i, j, shutdownState, previousState, rc, start, stop, done=0, timeout, ret=0;
   char *instId;
   ccInstance *myInstance=NULL;
@@ -2409,7 +2411,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
     return(1);
   }
   logprintfl(EUCAINFO,"TerminateInstances(): called \n");
-  logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d, firstInstId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"));
+  logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
   
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -2456,7 +2458,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	  }
 	}
 
-	rc = ncClientCall(ccMeta, 0, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance", instId, &shutdownState, &previousState);
+	rc = ncClientCall(ccMeta, 0, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance", instId, force, &shutdownState, &previousState);
 	if (rc) {
 	  (*outStatus)[i] = 1;
 	  logprintfl(EUCAWARN, "TerminateInstances(): failed to terminate '%s': instance may not exist any longer\n", instId);
