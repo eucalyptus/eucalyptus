@@ -10,6 +10,7 @@ import com.eucalyptus.webui.client.view.CreateAccountView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.GroupView;
 import com.eucalyptus.webui.client.view.ImageView;
+import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.KeyView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
@@ -115,9 +116,9 @@ public interface ClientFactory {
   CertView getCertView( );
   
   ImageView getImageView( );
-  
-  CreateAccountView getCreateAccountView( );
-  
+    
   ConfirmationView getConfirmationView( );
+  
+  InputView getInputView( );
   
 }

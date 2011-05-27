@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -22,6 +23,7 @@ import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.eucalyptus.webui.shared.InputChecker;
+import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
 import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.QueryValue;
 import com.eucalyptus.webui.shared.query.SearchQuery;
@@ -740,15 +742,15 @@ public class EuareWebBackend {
       if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
         throw new EucalyptusServiceException( "System account can not be modified" );
       }
-      String error = InputChecker.checkAccountName( newName );
-      if ( error != null ) {
-        throw new EucalyptusServiceException( "Invalid account name: " + error );
-      }
-      account.setName( newName );
+      account.setName( ValueCheckerFactory.createAccountNameChecker( ).check( newName ) );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify account " + values, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
+      if ( e instanceof EucalyptusServiceException ) {
+        throw ( EucalyptusServiceException ) e;
+      } else {
+        throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
+      }
     }
     
   }

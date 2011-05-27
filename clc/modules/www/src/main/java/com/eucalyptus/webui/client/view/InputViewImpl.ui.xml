@@ -4,13 +4,13 @@
     
     <ui:style>
         .outer {
-        	margin-left:20px;
-        	margin-right:20px;
-        	margin-top:8px;
-        	margin-bottom:24px;
+            margin-left:20px;
+            margin-right:20px;
+            margin-top:8px;
+            margin-bottom:24px;
         }
         .outer td {
-        	padding-top:16px;
+            padding-top:16px;
         }
         .label {
             font-size:14px;
@@ -31,11 +31,35 @@
             margin-left:16px;
         }
         .error {
-        	font-size:12px;
-        	font-style:italic;
-        	color:red;
+            font-size:12px;
+            font-style:italic;
+            color:red;
             vertical-align:middle;
             float:left;
+        }
+        .content {
+        	width:100%;
+        }
+    </ui:style>
+    
+    <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.InputViewImpl.GridStyle">
+        .grid {
+            font-size:80%;
+            color:#333333;          
+            width:100%;
+        }
+        .grid td {
+            padding-top:4px;
+            padding-bottom:4px;
+            vertical-align:middle;
+        }
+        .grid input[type='text'], .grid input[type='password'], .grid textarea {
+            color:#222222;
+            width:270px;
+            background-color:#F2F2F2;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
     </ui:style>
     
@@ -45,11 +69,13 @@
         <table class="{style.outer}">
             <tbody>
                 <tr>
-                    <td><g:Label addStyleNames="{style.label}">New account name</g:Label></td>
-                    <td><g:TextBox addStyleNames="{style.input}" ui:field="name"></g:TextBox></td>
+                    <td><g:Label addStyleNames="{style.label}" ui:field="subject"/></td>
                 </tr>
                 <tr>
-                    <td colspan="2">
+                    <td><g:SimplePanel addStyleNames="{style.content}" ui:field="contentPanel"/></td>
+                </tr>
+                <tr>
+                    <td>
                         <g:Label addStyleNames="{style.error}" ui:field="error"></g:Label>
                         <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.positive} {style.button}" ui:field="ok">
                             <span class="{global.buttonCss.check} {global.buttonCss.icon}"/>OK

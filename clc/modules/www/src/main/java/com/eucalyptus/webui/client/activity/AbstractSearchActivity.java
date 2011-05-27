@@ -125,6 +125,17 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
   }
   
+  protected static String getField( ArrayList<String> values, int index ) {
+    if ( values != null && values.size( ) > index ) {
+      return values.get( index );
+    }
+    return null;
+  }
+  
+  protected static String emptyForNull( String s ) {
+    return s == null ? "" : s;
+  }
+  
   protected abstract void doSearch( String query, SearchRange range );
   
   protected abstract String getTitle( );

@@ -80,5 +80,17 @@ public class GroupActivity extends AbstractSearchActivity implements GroupView.P
     }
     ( ( GroupView ) this.view ).showSearchResult( result );    
   }
+
+  @Override
+  public void onCreateGroup( ) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void onDeleteGroup( ) {
+    // TODO Auto-generated method stub
+    
+  }
   
 }

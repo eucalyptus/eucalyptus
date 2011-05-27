@@ -12,20 +12,27 @@ import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.ConfirmationView;
-import com.eucalyptus.webui.client.view.CreateAccountView;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
+import com.eucalyptus.webui.client.view.InputField;
+import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LogView.LogType;
+import com.eucalyptus.webui.shared.checker.ValueChecker;
+import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class AccountActivity extends AbstractSearchActivity
-    implements AccountView.Presenter, DetailView.Presenter, CreateAccountView.Presenter, ConfirmationView.Presenter {
+    implements AccountView.Presenter, DetailView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
   
   public static final String TITLE = "ACCOUNTS";
+  
   public static final String CREATE_ACCOUNT_CAPTION = "Create a new account";
+  public static final String CREATE_ACCOUNT_SUBJECT = "Enter account information to create a new account:";
+  public static final String ACCOUNT_NAME_INPUT_TITLE = "New account name";
+  
   public static final String DELETE_ACCOUNTS_CAPTION = "Delete selected accounts";
   public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure to delete following selected accounts?";
   
@@ -77,20 +84,21 @@ public class AccountActivity extends AbstractSearchActivity
       newVals.add( w.getValue( ) );
     }
     
-    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Modifying account " + newVals + " ...", 0 );
+    final String accountId = emptyForNull( getField( newVals, 0 ) );
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Modifying account " + accountId + " ...", 0 );
     
     clientFactory.getBackendService( ).modifyAccounts( clientFactory.getLocalSession( ).getSession( ), newVals, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify account with new values: " + newVals + ": " + caught.getMessage( ) );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify account " + accountId  + ": " + caught.getMessage( ) );
       }
 
       @Override
       public void onSuccess( Void arg0 ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Successfully modified account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified account with " + newVals );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified account " + accountId );
         reloadCurrentRange( );
       }
       
@@ -115,31 +123,27 @@ public class AccountActivity extends AbstractSearchActivity
 
   @Override
   public void onCreateAccount( ) {
-    CreateAccountView dialog = this.clientFactory.getCreateAccountView( );
+    InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
-    dialog.display( CREATE_ACCOUNT_CAPTION );
-  }
-
-  @Override
-  public void doCreateAccount( final String value ) {
-    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
-    
-    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<String>( ) {
+    final ValueChecker checker = ValueCheckerFactory.createAccountNameChecker( );
+    dialog.display( CREATE_ACCOUNT_CAPTION, CREATE_ACCOUNT_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
       @Override
-      public void onFailure( Throwable caught ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + value + " failed: " + caught.getMessage( ) );
+      public String getTitle( ) {
+        return ACCOUNT_NAME_INPUT_TITLE;
       }
 
       @Override
-      public void onSuccess( String accountId ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + accountId + " created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New account " + accountId + " created" );
-        reloadCurrentRange( );
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return checker;
       }
       
-    } );
+    } ) ) );
   }
 
   @Override
@@ -148,6 +152,8 @@ public class AccountActivity extends AbstractSearchActivity
       ConfirmationView dialog = this.clientFactory.getConfirmationView( );
       dialog.setPresenter( this );
       dialog.display( DELETE_ACCOUNTS_CAPTION, DELETE_ACCOUNTS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+    } else {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select accounts to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
     }
   }
 
@@ -185,4 +191,33 @@ public class AccountActivity extends AbstractSearchActivity
       } );
     }
   }
+
+  @Override
+  public void process( String subject, ArrayList<String> values ) {
+    if ( CREATE_ACCOUNT_SUBJECT.equals( subject ) ) {
+      doCreateAccount( values.get( 0 ) );
+    }
+  }
+  
+  private void doCreateAccount( final String value ) {
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
+    
+    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<String>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + value + " failed: " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( String accountId ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Account " + accountId + " created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New account " + accountId + " created" );
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
 }
