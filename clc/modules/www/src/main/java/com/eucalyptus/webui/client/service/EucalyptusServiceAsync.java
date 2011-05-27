@@ -39,7 +39,7 @@ public interface EucalyptusServiceAsync {
 
   void lookupImage( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
-  void createAccount( Session session, String accountName, AsyncCallback<Void> callback );
+  void createAccount( Session session, String accountName, AsyncCallback<String> callback );
 
   void deleteAccounts( Session session, ArrayList<String> ids, AsyncCallback<Void> callback );
   

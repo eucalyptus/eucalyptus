@@ -700,9 +700,10 @@ public class EuareWebBackend {
     return result;
   }
 
-  public static void createAccount( String accountName ) throws EucalyptusServiceException {
+  public static String createAccount( String accountName ) throws EucalyptusServiceException {
     try {
-      Accounts.addAccount( accountName );
+      Account account = Accounts.addAccount( accountName );
+      return account.getAccountNumber( );
     } catch ( Exception e ) {
       throw new EucalyptusServiceException( "Failed to create account " + accountName + ": " + e.getMessage( ) );
     }

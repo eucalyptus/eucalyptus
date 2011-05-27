@@ -171,9 +171,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public void createAccount( Session session, String accountName ) throws EucalyptusServiceException {
-    // TODO Auto-generated method stub
-    
+  public String createAccount( Session session, String accountName ) throws EucalyptusServiceException {
+    return "1234";
   }
 
   @Override

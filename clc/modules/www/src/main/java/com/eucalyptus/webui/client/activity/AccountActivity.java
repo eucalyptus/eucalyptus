@@ -102,7 +102,7 @@ public class AccountActivity extends AbstractSearchActivity
   public void doCreateAccount( final String value ) {
     this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
     
-    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<Void>( ) {
+    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<String>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {
@@ -112,8 +112,8 @@ public class AccountActivity extends AbstractSearchActivity
       }
 
       @Override
-      public void onSuccess( Void arg0 ) {
-        String info = "Account " + value + " created";
+      public void onSuccess( String accountId ) {
+        String info = "Account " + accountId + " created";
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, info, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, info );
         reloadCurrentRange( );
@@ -151,7 +151,7 @@ public class AccountActivity extends AbstractSearchActivity
 
         @Override
         public void onFailure( Throwable caught ) {
-          String error = "Failed to delete some accounts: " + caught.getMessage( );
+          String error = "Failure in deleting accounts: " + caught.getMessage( );
           clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, error, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
           clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, error );
         }
