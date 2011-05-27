@@ -31,10 +31,14 @@
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addPolicyButton">
                                     <span class="{global.buttonCss.lock} {global.buttonCss.icon}"/>Add policy
-                                </g:Anchor>                            
+                                </g:Anchor>
+                            </td>
+                            <td>
                                 <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.middle}" ui:field="addKeyButton">
                                     <span class="{global.buttonCss.key} {global.buttonCss.icon}"/>Add key
-                                </g:Anchor>                            
+                                </g:Anchor>
+                            </td>
+                            <td>                             
                                 <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addCertButton">
                                     <span class="{global.buttonCss.sun} {global.buttonCss.icon}"/>Add certificate
                                 </g:Anchor>                            
