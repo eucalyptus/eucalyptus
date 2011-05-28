@@ -30,8 +30,18 @@ public class AccountActivity extends AbstractSearchActivity
   public static final String TITLE = "ACCOUNTS";
   
   public static final String CREATE_ACCOUNT_CAPTION = "Create a new account";
-  public static final String CREATE_ACCOUNT_SUBJECT = "Enter account information to create a new account:";
-  public static final String ACCOUNT_NAME_INPUT_TITLE = "New account name";
+  public static final String CREATE_ACCOUNT_SUBJECT = "Enter information to create a new account:";
+  public static final String ACCOUNT_NAME_INPUT_TITLE = "Account name";
+  
+  public static final String CREATE_USER_CAPTION = "Create new users";
+  public static final String CREATE_USER_SUBJECT = "Enter information to create new users (using space to separate names):";
+  public static final String USER_NAME_INPUT_TITLE = "User names";
+  public static final String USER_PATH_INPUT_TITLE = "User path";
+  
+  public static final String CREATE_GROUP_CAPTION = "Create new groups";
+  public static final String CREATE_GROUP_SUBJECT = "Enter information to create new groups (using space to separate names):";
+  public static final String GROUP_NAME_INPUT_TITLE = "Group names";
+  public static final String GROUP_PATH_INPUT_TITLE = "Group path";
   
   public static final String DELETE_ACCOUNTS_CAPTION = "Delete selected accounts";
   public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure to delete following selected accounts?";
@@ -87,7 +97,7 @@ public class AccountActivity extends AbstractSearchActivity
     final String accountId = emptyForNull( getField( newVals, 0 ) );
     this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Modifying account " + accountId + " ...", 0 );
     
-    clientFactory.getBackendService( ).modifyAccounts( clientFactory.getLocalSession( ).getSession( ), newVals, new AsyncCallback<Void>( ) {
+    clientFactory.getBackendService( ).modifyAccount( clientFactory.getLocalSession( ).getSession( ), newVals, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {
@@ -125,7 +135,6 @@ public class AccountActivity extends AbstractSearchActivity
   public void onCreateAccount( ) {
     InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
-    final ValueChecker checker = ValueCheckerFactory.createAccountNameChecker( );
     dialog.display( CREATE_ACCOUNT_CAPTION, CREATE_ACCOUNT_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
       @Override
@@ -140,7 +149,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return checker;
+        return ValueCheckerFactory.createAccountNameChecker( );
       }
       
     } ) ) );
@@ -196,6 +205,10 @@ public class AccountActivity extends AbstractSearchActivity
   public void process( String subject, ArrayList<String> values ) {
     if ( CREATE_ACCOUNT_SUBJECT.equals( subject ) ) {
       doCreateAccount( values.get( 0 ) );
+    } else if ( CREATE_USER_SUBJECT.equals( subject ) ) {
+      doCreateUser( values.get( 0 ), values.get( 1 ) );
+    } else if ( CREATE_GROUP_SUBJECT.equals( subject ) ) {
+      doCreateGroup( values.get( 0 ), values.get( 1 ) );
     }
   }
   
@@ -218,6 +231,110 @@ public class AccountActivity extends AbstractSearchActivity
       }
       
     } );
+  }
+
+  @Override
+  public void onCreateUser( ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single account to create users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    InputView dialog = this.clientFactory.getInputView( );
+    dialog.setPresenter( this );
+    dialog.display( CREATE_USER_CAPTION, CREATE_USER_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return USER_NAME_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createUserAndGroupNamesChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return USER_PATH_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPathChecker( );
+      }
+      
+    } ) ) );    
+  }
+
+  private void doCreateUser( final String name, final String path ) {
+    
+  }
+  
+  @Override
+  public void onCreateGroup( ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single account to create groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    InputView dialog = this.clientFactory.getInputView( );
+    dialog.setPresenter( this );
+    dialog.display( CREATE_GROUP_CAPTION, CREATE_GROUP_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return GROUP_NAME_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createUserAndGroupNamesChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return GROUP_PATH_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPathChecker( );
+      }
+      
+    } ) ) );
+  }
+
+  private void doCreateGroup( String name, String path ) {
+    
+  }
+  
+  @Override
+  public void onAddPolicy( ) {
+    // TODO Auto-generated method stub
+    
   }
 
 }

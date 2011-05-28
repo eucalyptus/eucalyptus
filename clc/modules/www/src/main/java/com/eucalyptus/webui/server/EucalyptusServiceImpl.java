@@ -18,6 +18,8 @@ import com.eucalyptus.webui.shared.query.QueryParser;
 import com.eucalyptus.webui.shared.query.QueryParsingException;
 import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.SearchQuery;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
@@ -25,6 +27,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final Logger LOG = Logger.getLogger( EucalyptusServiceImpl.class );
   
   private static final long serialVersionUID = 1L;
+
+  private static final String WHITESPACE_PATTERN = "\\s+";
   
   private static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
@@ -242,9 +246,179 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public void modifyAccounts( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+  public void modifyAccount( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
     verifySession( session );
-    EuareWebBackend.modifyAccounts( values );
+    EuareWebBackend.modifyAccount( values );
+  }
+
+  @Override
+  public ArrayList<String> createUsers( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( names ) ) {
+      throw new EucalyptusServiceException( "Invalid names for creating users: " + names );
+    }
+    ArrayList<String> users = Lists.newArrayList( );
+    for ( String name : names.split( WHITESPACE_PATTERN ) ) {
+      if ( !Strings.isNullOrEmpty( name ) ) {
+        users.add( EuareWebBackend.createUser( accountId, name, path ) );
+      }
+    }
+    return users;
+  }
+
+  @Override
+  public ArrayList<String> createGroups( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( names ) ) {
+      throw new EucalyptusServiceException( "Invalid names for creating groups: " + names );
+    }
+    ArrayList<String> groups = Lists.newArrayList( );
+    for ( String name : names.split( WHITESPACE_PATTERN ) ) {
+      if ( !Strings.isNullOrEmpty( name ) ) {
+        groups.add( EuareWebBackend.createGroup( accountId, name, path ) );
+      }
+    }
+    return groups;    
+  }
+
+  @Override
+  public void deleteUsers( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deleteUsers( ids );
+  }
+
+  @Override
+  public void deleteGroups( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deleteGroups( ids );
+  }
+
+  @Override
+  public void addAccountPolicy( Session session, String accountId, String name, String document ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.addAccountPolicy( accountId, name, document );
+  }
+
+  @Override
+  public void addUserPolicy( Session session, String userId, String name, String document ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.addUserPolicy( userId, name, document );
+  }
+
+  @Override
+  public void addGroupPolicy( Session session, String groupId, String name, String document ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.addGroupPolicy( groupId, name, document );
+  }
+
+  @Override
+  public void deletePolicy( Session session, SearchResultRow policySerialized ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deletePolicy( policySerialized );
+  }
+
+  @Override
+  public void deleteAccessKey( Session session, SearchResultRow keySerialized ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deleteAccessKey( keySerialized );
+  }
+
+  @Override
+  public void deleteCertificate( Session session, SearchResultRow certSerialized ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.deleteCertificate( certSerialized );
+  }
+
+  @Override
+  public void addUsersToGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( userNames ) || groupIds == null || groupIds.size( ) < 1 ) {
+      throw new EucalyptusServiceException( "Empty names or empty group ids" );
+    }
+    for ( String groupId : groupIds ) {
+      for ( String userName : userNames.split( WHITESPACE_PATTERN ) ) {
+        if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
+          EuareWebBackend.addUserToGroupByName( userName, groupId );
+        }
+      }
+    }
+  }
+
+  @Override
+  public void addUsersToGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( groupNames ) || userIds == null || userIds.size( ) < 1 ) {
+      throw new EucalyptusServiceException( "Empty names or empty group ids" );
+    }
+    for ( String userId : userIds ) {
+      for ( String groupName : groupNames.split( WHITESPACE_PATTERN ) ) {
+        EuareWebBackend.addUserToGroupById( userId, groupName );
+      }
+    }
+  }
+
+  @Override
+  public void removeUsersFromGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( userNames ) || groupIds == null || groupIds.size( ) < 1 ) {
+      throw new EucalyptusServiceException( "Empty names or empty group ids" );
+    }
+    for ( String groupId : groupIds ) {
+      for ( String userName : userNames.split( WHITESPACE_PATTERN ) ) {
+        if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
+          EuareWebBackend.removeUserFromGroupByName( userName, groupId );
+        }
+      }
+    }
+  }
+
+  @Override
+  public void removeUsersFromGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
+    verifySession( session );
+    if ( Strings.isNullOrEmpty( groupNames ) || userIds == null || userIds.size( ) < 1 ) {
+      throw new EucalyptusServiceException( "Empty names or empty group ids" );
+    }
+    for ( String userId : userIds ) {
+      for ( String groupName : groupNames.split( WHITESPACE_PATTERN ) ) {
+        EuareWebBackend.removeUserFromGroupById( userId, groupName );
+      }
+    }
+  }
+
+  @Override
+  public void modifyUser( Session session, ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.modifyUser( keys, values );
+  }
+
+  @Override
+  public void modifyGroup( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.modifyGroup( values );
+  }
+
+  @Override
+  public void modifyAccessKey( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.modifyAccessKey( values );
+  }
+
+  @Override
+  public void modifyCertificate( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.modifyCertificate( values );
+  }
+
+  @Override
+  public void addAccessKey( Session session, String userId ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.addAccessKey( userId );
+  }
+
+  @Override
+  public void addCertificate( Session session, String userId, String pem ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.addCertificate( userId, pem );
   }
   
 }

@@ -53,17 +53,17 @@ public class AccountViewImpl extends Composite implements AccountView {
   
   @UiHandler( "addUserButton" )
   void handleAddUserButtonClick( ClickEvent e ) {
-    
+    this.presenter.onCreateUser( );
   }
 
   @UiHandler( "addGroupButton" )
   void handleAddGroupButtonClick( ClickEvent e ) {
-    
+    this.presenter.onCreateGroup( );
   }
 
   @UiHandler( "addPolicyButton" )
   void handleAddPolicyButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddPolicy( );
   }
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {

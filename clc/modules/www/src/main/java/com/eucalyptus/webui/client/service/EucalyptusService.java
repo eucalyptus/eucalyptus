@@ -196,6 +196,203 @@ public interface EucalyptusService extends RemoteService {
    * @param values
    * @throws EucalyptusServiceException
    */
-  void modifyAccounts( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+  void modifyAccount( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+  
+  /**
+   * Create multiple users in the same account, with same path.
+   * 
+   * @param session
+   * @param accountId
+   * @param names User names separated by spaces.
+   * @param path
+   * @return the created user names.
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> createUsers( Session session, String accountId, String names, String path ) throws EucalyptusServiceException;
+  
+  /**
+   * Create multiple groups in the same account, with same path.
+   * 
+   * @param session
+   * @param accountId
+   * @param names Group names separated by spaces.
+   * @param path
+   * @return the created group names.
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> createGroups( Session session, String accountId, String names, String path ) throws EucalyptusServiceException;
+  
+  /**
+   * Delete a list of users.
+   * 
+   * @param session
+   * @param ids
+   * @throws EucalyptusServiceException
+   */
+  void deleteUsers( Session session, ArrayList<String> ids ) throws EucalyptusServiceException;
+  
+  /**
+   * Delete a list of groups.
+   * 
+   * @param session
+   * @param ids
+   * @throws EucalyptusServiceException
+   */
+  void deleteGroups( Session session, ArrayList<String> ids ) throws EucalyptusServiceException;
+  
+  /**
+   * Add policy to account.
+   * 
+   * @param session
+   * @param accountId
+   * @param name
+   * @param document
+   * @throws EucalyptusServiceException
+   */
+  void addAccountPolicy( Session session, String accountId, String name, String document ) throws EucalyptusServiceException;
+  
+  /**
+   * Add policy to user.
+   * 
+   * @param session
+   * @param usertId
+   * @param name
+   * @param document
+   * @throws EucalyptusServiceException
+   */
+  void addUserPolicy( Session session, String usertId, String name, String document ) throws EucalyptusServiceException;
+  
+  /**
+   * Add policy to group.
+   * 
+   * @param session
+   * @param groupId
+   * @param name
+   * @param document
+   * @throws EucalyptusServiceException
+   */
+  void addGroupPolicy( Session session, String groupId, String name, String document ) throws EucalyptusServiceException;
+  
+  /**
+   * Delete a policy.
+   * 
+   * @param session
+   * @param policySerialized
+   * @throws EucalyptusServiceException
+   */
+  void deletePolicy( Session session, SearchResultRow policySerialized ) throws EucalyptusServiceException;
+  
+  /**
+   * Delete an access key.
+   * 
+   * @param session
+   * @param keySerialized
+   * @throws EucalyptusServiceException
+   */
+  void deleteAccessKey( Session session, SearchResultRow keySerialized ) throws EucalyptusServiceException;
+  
+  /**
+   * Delete certificate.
+   * 
+   * @param session
+   * @param certSerialized
+   * @throws EucalyptusServiceException
+   */
+  void deleteCertificate( Session session, SearchResultRow certSerialized ) throws EucalyptusServiceException;
+ 
+  /**
+   * Add users to groups using user names input
+   * 
+   * @param session
+   * @param userNames
+   * @param groupIds
+   * @throws EucalyptusServiceException
+   */
+  void addUsersToGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException;
+  
+  /**
+   * Add users to groups using group names input.
+   * 
+   * @param session
+   * @param userIds
+   * @param groupNames
+   * @throws EucalyptusServiceException
+   */
+  void addUsersToGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException;
+  
+  /**
+   * Remove users from groups using user names input.
+   * 
+   * @param session
+   * @param userNames
+   * @param groupIds
+   * @throws EucalyptusServiceException
+   */
+  void removeUsersFromGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException;
+  
+  /**
+   * Remove users from groups using group names input.
+   * 
+   * @param session
+   * @param userIds
+   * @param groupNames
+   * @throws EucalyptusServiceException
+   */
+  void removeUsersFromGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException;
+  
+  /**
+   * Modify user info.
+   * 
+   * @param session
+   * @param keys
+   * @param values
+   * @throws EucalyptusServiceException
+   */
+  void modifyUser( Session session, ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException;
+  
+  /**
+   * Modify group info.
+   * 
+   * @param session
+   * @param values
+   * @throws EucalyptusServiceException
+   */
+  void modifyGroup( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+  
+  /**
+   * Modify access key info.
+   * 
+   * @param session
+   * @param values
+   * @throws EucalyptusServiceException
+   */
+  void modifyAccessKey( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+  
+  /**
+   * Modify certificate info.
+   * 
+   * @param session
+   * @param values
+   * @throws EucalyptusServiceException
+   */
+  void modifyCertificate( Session session, ArrayList<String> values ) throws EucalyptusServiceException;
+
+  /**
+   * Add an access key to a user.
+   * 
+   * @param session
+   * @param userId
+   * @throws EucalyptusServiceException
+   */
+  void addAccessKey( Session session, String userId ) throws EucalyptusServiceException;
+  
+  /**
+   * Add a certificate to a user.
+   * 
+   * @param session
+   * @param userId
+   * @throws EucalyptusServiceException
+   */
+  void addCertificate( Session session, String userId, String pem ) throws EucalyptusServiceException;
   
 }

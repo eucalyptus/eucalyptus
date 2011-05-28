@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.server;
 
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
@@ -26,7 +28,9 @@ import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.QueryValue;
 import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.eucalyptus.webui.shared.query.SearchQuery.Matcher;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class EuareWebBackend {
@@ -729,7 +733,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void modifyAccounts( ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyAccount( ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // deserialize
       int i = 0;
@@ -751,6 +755,354 @@ public class EuareWebBackend {
       }
     }
     
+  }
+
+  public static String createUser( String accountId, String name, String path ) {
+    try {
+      Account account = Accounts.lookupAccountById( accountId );
+      User user = account.addUser( name, path, true, true, null );
+      return user.getName( );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to create user " + name + " in " + accountId );
+      LOG.debug( e, e );
+    }
+    return null;
+  }
+
+  public static String createGroup( String accountId, String name, String path ) {
+    try {
+      Account account = Accounts.lookupAccountById( accountId );
+      Group group = account.addGroup( name, path );
+      return group.getName( );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to create group " + name + " in " + accountId );
+      LOG.debug( e, e );
+    }
+    return null;
+  }
+  
+  public static void deleteUsers( ArrayList<String> ids ) throws EucalyptusServiceException {
+    boolean hasError = false;
+    for ( String id : ids ) {
+      try { 
+        Group group = Accounts.lookupGroupById( id );
+        Account account = group.getAccount( );
+        account.deleteGroup( group.getName( ), true );
+      } catch ( Exception e ) {
+        LOG.error( "Failed to delete group " + id, e );
+        LOG.debug( e, e );
+        hasError = true;
+      }
+    }
+    if ( hasError ) {
+      throw new EucalyptusServiceException( "Failed to delete some groups" );
+    }
+  }
+
+  public static void deleteGroups( ArrayList<String> ids ) throws EucalyptusServiceException {
+    boolean hasError = false;
+    for ( String id : ids ) {
+      try { 
+        User user = Accounts.lookupUserById( id );
+        Account account = user.getAccount( );
+        account.deleteUser( user.getName( ), false, true );
+      } catch ( Exception e ) {
+        LOG.error( "Failed to delete group " + id, e );
+        LOG.debug( e, e );
+        hasError = true;
+      }
+    }
+    if ( hasError ) {
+      throw new EucalyptusServiceException( "Failed to delete some groups" );
+    }    
+  }
+
+  public static void addAccountPolicy( String accountId, String name, String document ) throws EucalyptusServiceException {
+    try {
+      Account account = Accounts.lookupAccountById( accountId );
+      User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      admin.addPolicy( name, document );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add new policy " + name + " to account " + accountId, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to add policy " + name + " to account " + accountId + ": " + e.getMessage( ) );
+    }
+  }
+
+  public static void addUserPolicy( String userId, String name, String document ) throws EucalyptusServiceException {
+    try {
+      User user = Accounts.lookupUserById( userId );
+      user.addPolicy( name, document );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add new policy " + name + " to user " + userId, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to add policy " + name + " to user " + userId + ": " + e.getMessage( ) );
+    }
+  }
+
+  public static void addGroupPolicy( String groupId, String name, String document ) throws EucalyptusServiceException {
+    try {
+      Group group = Accounts.lookupGroupById( groupId );
+      group.addPolicy( name, document );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add new policy " + name + " to group " + groupId, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to add policy " + name + " to group " + groupId + ": " + e.getMessage( ) );
+    }
+  }
+
+  public static void deletePolicy( SearchResultRow policySerialized ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      i++;//ID
+      String policyName = policySerialized.getField( i++ );
+      i++;//Version
+      String accountName = policySerialized.getField( i++ );
+      String groupName = policySerialized.getField( i++ );
+      String userName = policySerialized.getField( i++ );
+      Account account = Accounts.lookupAccountByName( accountName );
+      if ( !Strings.isNullOrEmpty( userName ) ) {
+        User user = account.lookupUserByName( userName );
+        user.removePolicy( policyName );
+      } else {
+        Group group = account.lookupGroupByName( groupName );
+        group.removePolicy( policyName );
+      }
+    } catch ( Exception e ) {
+      LOG.error( "Failed to delete policy " + policySerialized, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to delete policy " + policySerialized + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void deleteAccessKey( SearchResultRow keySerialized ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String keyId = keySerialized.getField( i++ );
+      i++;//Active
+      String accountName = keySerialized.getField( i++ );
+      String userName = keySerialized.getField( i++ );
+      Account account = Accounts.lookupAccountByName( accountName );
+      User user = account.lookupUserByName( userName );
+      user.removeKey( keyId );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to delete key " + keySerialized, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to delete key " + keySerialized + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void deleteCertificate( SearchResultRow certSerialized ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String certId = certSerialized.getField( i++ );
+      i++;//Active
+      i++;//Revoked
+      String accountName = certSerialized.getField( i++ );
+      String userName = certSerialized.getField( i++ );
+      Account account = Accounts.lookupAccountByName( accountName );
+      User user = account.lookupUserByName( userName );
+      user.removeKey( certId );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to delete cert " + certSerialized, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to delete cert " + certSerialized + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void addUserToGroupByName( String userName, String groupId ) {
+    try {
+      Group group = Accounts.lookupGroupById( groupId );
+      group.addUserByName( userName );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add user " + userName + " to group " + groupId, e );
+      LOG.debug( e, e );
+    }    
+  }
+
+  public static void addUserToGroupById( String userId, String groupName ) {
+    try {
+      User user = Accounts.lookupUserById( userId );
+      Account account = user.getAccount( );
+      Group group = account.lookupGroupByName( groupName );
+      group.addUserByName( user.getName( ) );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
+      LOG.debug( e, e );
+    }    
+  }
+
+  public static void removeUserFromGroupByName( String userName, String groupId ) {
+    try {
+      Group group = Accounts.lookupGroupById( groupId );
+      group.removeUserByName( userName );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to remove user " + userName + " from group " + groupId, e );
+      LOG.debug( e, e );
+    }
+  }
+
+  public static void removeUserFromGroupById( String userId, String groupName ) {
+    try {
+      User user = Accounts.lookupUserById( userId );
+      Account account = user.getAccount( );
+      Group group = account.lookupGroupByName( groupName );
+      group.removeUserByName( user.getName( ) );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to remove user " + userId + " from group " + groupName, e );
+      LOG.debug( e, e );
+    }
+  }
+
+  public static void addAccessKey( String userId ) throws EucalyptusServiceException {
+    try {
+      User user = Accounts.lookupUserById( userId );
+      user.createKey( );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to create key for user " + userId, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to create key for user " + userId + ": " + e.getMessage( ) );
+    }
+  }
+
+  public static void addCertificate( String userId, String pem ) throws EucalyptusServiceException {
+    try {
+      User user = Accounts.lookupUserById( userId );
+      String encodedPem = B64.url.encString( pem );
+      for ( Certificate c : user.getCertificates( ) ) {
+        if ( c.getPem( ).equals( encodedPem ) ) {
+          if ( !c.isRevoked( ) ) {
+            throw new EucalyptusServiceException( "Trying to upload a duplicate certificate: " + c.getCertificateId( ) );        
+          } else {
+            user.removeCertificate( c.getCertificateId( ) );
+          }
+        }
+      }
+      X509Certificate x509 = X509CertHelper.toCertificate( encodedPem );
+      if ( x509 == null ) {
+        throw new EucalyptusServiceException( "Invalid certificate content" );        
+      }
+      user.addCertificate( x509 );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to add certificate to user " + userId + ": " + pem, e );
+      LOG.debug( e, e );
+      if ( e instanceof EucalyptusServiceException ) {
+        throw ( EucalyptusServiceException ) e;
+      }
+      throw new EucalyptusServiceException( "Failed to add certificate to user " + userId );
+    }
+  }
+
+  public static void modifyCertificate( ArrayList<String> values ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String certId = values.get( i++ );
+      String active = values.get( i++ );
+      i++;//Revoked
+      String accountName = values.get( i++ );
+      String userName = values.get( i++ );
+      Account account = Accounts.lookupAccountByName( accountName );
+      User user = account.lookupUserByName( userName );
+      Certificate cert = user.getCertificate( certId );
+      cert.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to modify cert " + values, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to modify cert " + values + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void modifyAccessKey( ArrayList<String> values ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String keyId = values.get( i++ );
+      String active = values.get( i++ );
+      String accountName = values.get( i++ );
+      String userName = values.get( i++ );
+      Account account = Accounts.lookupAccountByName( accountName );
+      User user = account.lookupUserByName( userName );
+      AccessKey key = user.getKey( keyId );
+      key.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to modify key " + values, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to modify key " + values + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void modifyGroup( ArrayList<String> values ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String groupId = values.get( i++ );
+      String groupName = values.get( i++ );
+      String path = values.get( i++ );
+      
+      Group group = Accounts.lookupGroupById( groupId );
+      if ( !group.getName( ).equals( groupName ) ) {
+        group.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( groupName ) );
+      }
+      if ( !group.getPath( ).equals( path ) ) {
+        group.setPath( path );
+      }
+    } catch ( Exception e ) {
+      LOG.error( "Failed to modify group " + values, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to modify group " + values + ": " + e.getMessage( ) );      
+    }
+  }
+
+  public static void modifyUser( ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
+    try {
+      // Deserialize
+      int i = 0;
+      String userId = values.get( i++ );
+      String userName = values.get( i++ );
+      String path = values.get( i++ );
+      i++;//Account
+      String enabled = values.get( i++ );
+      i++;//Reg
+      i++;//Arn
+      i++;//AccountID
+      i++;//Groups
+      i++;//Policies
+      i++;//Password
+      Long expiration = Long.parseLong( values.get( i++ ) );
+      i++;//Keys
+      i++;//Certs
+      Map<String, String> newInfo = Maps.newHashMap( );
+      for ( int k = i; k < values.size( ); k++ ) {
+        String key = keys.get( k );
+        String value = values.get( k );
+        if ( !Strings.isNullOrEmpty( key ) ) {
+          newInfo.put( key, value );
+        }
+      }
+      
+      User user = Accounts.lookupUserById( userId );
+      if ( !user.getName( ).equals( userName ) ) {
+        user.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( userName ) );
+      }
+      if ( user.getPath( ) != null && !user.getPath( ).equals( path ) ) {
+        user.setPath( path );
+      }
+      if ( !user.isEnabled( ).toString( ).equalsIgnoreCase( enabled ) ) {
+        user.setEnabled( !user.isEnabled( ) );
+      }
+      if ( !user.getPasswordExpires( ).equals( expiration ) ) {
+        user.setPasswordExpires( expiration );
+      }
+      user.setInfo( newInfo );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to modify user " + keys + " = " + values, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to modify user " + keys + " = " + values + ": " + e.getMessage( ) );      
+    }
   }
 
 }
