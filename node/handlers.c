@@ -1124,7 +1124,7 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
     return ret;
 }
 
-int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
+int doTerminateInstance (ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
 	int ret; 
 
@@ -1134,9 +1134,9 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState,
 	logprintfl (EUCAINFO, "[%s] doTerminateInstance: invoked\n", instanceId);
     
 	if (nc_state.H->doTerminateInstance) 
-		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
+		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, force, shutdownState, previousState);
 	else 
-		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
+		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, force, shutdownState, previousState);
     
 	return ret;
 }

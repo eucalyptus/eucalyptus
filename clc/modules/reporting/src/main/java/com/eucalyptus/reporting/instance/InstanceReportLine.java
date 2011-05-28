@@ -2,33 +2,32 @@ package com.eucalyptus.reporting.instance;
 
 import com.eucalyptus.reporting.units.*;
 
-public class InstanceDisplayBean
+public class InstanceReportLine
+	implements Comparable<InstanceReportLine>
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
 	
-	private final String label;
-	private final String groupBy;
+	private final InstanceReportLineKey key;
 	private final InstanceUsageSummary summary;
 	private final Units units;
 
-	InstanceDisplayBean(String label, String groupBy,
+	InstanceReportLine(InstanceReportLineKey key,
 			InstanceUsageSummary summary, Units units)
 	{
-		this.label = label;
-		this.groupBy = groupBy;
+		this.key = key;
 		this.summary = summary;
 		this.units = units;
 	}
 
 	public String getLabel()
 	{
-		return label;
+		return key.getLabel();
 	}
 
 	public String getGroupBy()
 	{
-		return groupBy;
+		return key.getGroupByLabel();
 	}
 
 	public Long getM1SmallNum()
@@ -102,5 +101,22 @@ public class InstanceDisplayBean
 	{
 		return units;
 	}
+	
+	void addUsage(InstanceUsageSummary summary)
+	{
+		this.summary.addUsage(summary);
+	}
+	
+	public String toString()
+	{
+		return String.format("[key:%s,summary:%s]", this.key, this.summary);
+	}
+	
+	@Override
+	public int compareTo(InstanceReportLine other)
+	{
+		return key.compareTo(other.key);
+	}
+
 
 }

@@ -214,6 +214,7 @@ find_and_terminate_instance (
                              struct nc_state_t *nc_state,
                              ncMetadata *meta,
                              char *instanceId, 
+                             int force,
                              ncInstance **instance_p,
                              char destroy)
 {
@@ -231,12 +232,12 @@ find_and_terminate_instance (
     for (i=0 ; i < instance->volumesSize; ++i) {
         int ret = OK;
         ncVolume *volume = &instance->volumes[i];
-        logprintfl (EUCAINFO, "[%s] on termination detaching volume %s\n", instanceId, volume->volumeId);
+        logprintfl (EUCAINFO, "[%s, force=%d] on termination detaching volume %s\n", instanceId, force, volume->volumeId);
         if (nc_state->H->doDetachVolume) 
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
         else
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        if(ret != OK)
+        if((ret != OK) && (force == 0))
             return ret;
 	}
 
@@ -275,6 +276,7 @@ static int
 doTerminateInstance( struct nc_state_t *nc,
                      ncMetadata *meta,
                      char *instanceId,
+                     int force,
                      int *shutdownState,
                      int *previousState)
 {
@@ -282,7 +284,7 @@ doTerminateInstance( struct nc_state_t *nc,
 	int err;
     
 	sem_p (inst_sem);
-	err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	err = find_and_terminate_instance (nc, meta, instanceId, force, &instance, 1);
 	if (err!=OK) {
 		sem_v(inst_sem);
 		return err;
@@ -654,7 +656,7 @@ doCreateImage(	struct nc_state_t *nc,
 	change_state (instance, CREATEIMAGE_SHUTDOWN);
 	change_createImage_state (instance, CREATEIMAGE_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
         sem_v (inst_sem);
         if (params) free(params);
@@ -958,7 +960,7 @@ doBundleInstance(
 	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
 	  sem_v (inst_sem);
 	  if (params) free(params);

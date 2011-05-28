@@ -1248,8 +1248,8 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   
   // working vars
   char **instIds;
-  int instIdsLen, i, rc, *outStatus;
-  axis2_bool_t status=AXIS2_TRUE;
+  int instIdsLen, i, rc, *outStatus=NULL, force=0;
+  axis2_bool_t status=AXIS2_TRUE, forceBool=AXIS2_FALSE;
   char statusMessage[256];
 
   ncMetadata ccMeta;
@@ -1262,11 +1262,17 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
   for (i=0; i<instIdsLen; i++) {
     instIds[i] = adb_terminateInstancesType_get_instanceIds_at(tit, env, i);
   }
-  
+  forceBool = adb_terminateInstancesType_get_force(tit, env);
+  if (forceBool == AXIS2_TRUE) {
+    force = 1;
+  } else {
+    force = 0;
+  }
+
   rc=1;
   if (!DONOTHING) {
     outStatus = malloc(sizeof(int) * instIdsLen);
-    rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, &outStatus);
+    rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, force, &outStatus);
   }
   
   if (instIds) free(instIds);
