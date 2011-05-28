@@ -44,6 +44,11 @@ public class GroupViewImpl extends Composite implements GroupView {
     
   }
 
+  @UiHandler( "removeUserButton" )
+  void handleRemoveUserButtonClick( ClickEvent e ) {
+    
+  }
+  
   @UiHandler( "addPolicyButton" )
   void handleAddPolicyButtonClick( ClickEvent e ) {
     

@@ -73,7 +73,7 @@ a.button.positive:focus,button.positive:focus,a.button.positive:hover,button.pos
 }
 
 a.button.positive:active,button.positive:active,a.button.positive.active,button.positive.active {
-y	background-color: #45BF55;
+ 	background-color: #45BF55;
 }
 
 a.button.pill,button.pill {

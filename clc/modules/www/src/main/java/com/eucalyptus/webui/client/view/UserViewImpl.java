@@ -43,6 +43,16 @@ public class UserViewImpl extends Composite implements UserView {
     
   }
   
+  @UiHandler( "addToGroupButton" )
+  void handleAddToGroupButtonClick( ClickEvent e ) {
+    
+  }
+  
+  @UiHandler( "removeFromGroupButton" )
+  void handleRemoveFromGroupButtonClick( ClickEvent e ) {
+    
+  }
+  
   @UiHandler( "addPolicyButton" )
   void handleAddPolicyButtonClick( ClickEvent e ) {
     

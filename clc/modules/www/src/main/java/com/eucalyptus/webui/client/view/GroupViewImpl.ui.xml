@@ -18,6 +18,7 @@
                     <colgroup width="1px"/>
                     <colgroup width="50px"/>
                     <colgroup width="1px"/>
+                    <colgroup width="1px"/>
                     <colgroup width="50px"/>
                     <colgroup width="1px"/>
                     <tbody>
@@ -29,10 +30,15 @@
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addUserButton">
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addUserButton">
                                     <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>Add user
                                 </g:Anchor>
                             </td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="removeUserButton">
+                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>Remove user
+                                </g:Anchor>
+                            </td>                            
                             <td>&nbsp;</td>
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addPolicyButton">
