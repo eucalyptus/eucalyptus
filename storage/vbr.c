@@ -185,7 +185,11 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     // identify the type of resource location from location string
     int error = OK;
     if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
-        vbr->locationType = NC_LOCATION_URL;
+        if (strcasestr (vbr->resourceLocation, "/services/Walrus/")) {
+            vbr->locationType = NC_LOCATION_WALRUS;
+        } else {
+            vbr->locationType = NC_LOCATION_URL;
+        }
         strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation ||
                strchr (vbr->resourceLocation, ',')) { // TODO: remove this transitionary iSCSI crutch?
@@ -545,7 +549,7 @@ static int partition_creator (artifact * a) // creates a new partition from scra
         format = diskutil_mkswap (dest_dev, a->size_bytes);
         break;
     default:
-        logprintfl (EUCAERROR, "[%s] error: format of type %s is NOT IMPLEMENTED\n", a->instanceId, vbr->formatName);
+        logprintfl (EUCAERROR, "[%s] error: format of type %d/%s is NOT IMPLEMENTED\n", a->instanceId, vbr->format, vbr->formatName);
     }
     
     if (format != OK) {
@@ -607,12 +611,21 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     virtualBootRecord * p1 = NULL;
     virtualBootRecord * disk = a->vbr;
     int map_entries = 1; // first map entry is for the MBR
+    int root_entry = -1; // we do not know the root entry 
+    int root_part = -1; // we do not know the root partition
+    const char * kernel_path = NULL;
+    const char * ramdisk_path = NULL; 
     long long offset_bytes = 512 * MBR_BLOCKS; // first partition begins after MBR
     assert (disk);
     for (int i=0; i<EUCA_MAX_PARTITIONS && a->deps[i]; i++) {
         artifact * dep = a->deps[i];
-        if (! dep->is_partition)
+        if (! dep->is_partition) {
+            if (dep->vbr && dep->vbr->type==NC_RESOURCE_KERNEL)
+                kernel_path = blockblob_get_file (dep->bb);
+            if (dep->vbr && dep->vbr->type==NC_RESOURCE_RAMDISK)
+                ramdisk_path = blockblob_get_file (dep->bb);
             continue;
+        }
         virtualBootRecord * p = dep->vbr;
         assert (p);
         if (p1==NULL)
@@ -627,9 +640,16 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         map [map_entries].first_block_dst = (offset_bytes / 512);
         map [map_entries].len_blocks = (dep->size_bytes / 512);
         logprintfl (EUCADEBUG, "[%s] mapping partition %d from %s [%lld-%lld]\n", 
-                    a->instanceId, map_entries, blockblob_get_dev (a->deps[i]->bb), map [map_entries].first_block_dst, map [map_entries].first_block_dst + map [map_entries].len_blocks);
-
+                    a->instanceId, 
+                    map_entries, 
+                    blockblob_get_dev (a->deps[i]->bb), 
+                    map [map_entries].first_block_dst, 
+                    map [map_entries].first_block_dst + map [map_entries].len_blocks);
         offset_bytes+=dep->size_bytes;
+        if (p->type==NC_RESOURCE_IMAGE && root_entry==-1) {
+            root_entry = map_entries;
+            root_part = i;
+        }
         map_entries++;
     }
     assert (p1);
@@ -640,6 +660,64 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     disk->guestDeviceBus = p1->guestDeviceBus;
     disk->diskNumber = p1->diskNumber;
     set_disk_dev (disk);
+
+    //  make disk bootable if necessary
+    if (a->make_bootable) {
+        boolean bootification_failed = 1;
+
+        logprintfl (EUCAINFO, "[%s] making disk bootable\n", a->instanceId);
+        if (root_entry<1 || root_part<0) {
+            logprintfl (EUCAERROR, "[%s] error: cannot make bootable a disk without an image\n", a->instanceId);
+            goto cleanup;
+        }
+        if (kernel_path==NULL) {
+            logprintfl (EUCAERROR, "[%s] error: no kernel found among the VBRs\n", a->instanceId);
+            goto cleanup;
+        }
+        if (ramdisk_path==NULL) {
+            logprintfl (EUCAERROR, "[%s] error: no ramdisk found among the VBRs\n", a->instanceId);
+            goto cleanup;
+        }
+        blockblob * root = map [root_entry].source.blob;
+        const char * dev = blockblob_get_dev (root);
+        
+        // mount the root partition
+        char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
+        if (mkdtemp (mnt_pt)==NULL) {
+            logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId, strerror (errno));
+            goto cleanup;
+        }
+        if (diskutil_mount (dev, mnt_pt) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", a->instanceId, dev, mnt_pt);
+            goto cleanup;
+        }
+        
+        // copy in kernel and ramdisk
+        logprintfl (EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
+        logprintfl (EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
+        logprintfl (EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
+        if (diskutil_grub_files (mnt_pt, root_part, kernel_path, ramdisk_path)!=OK) {
+            logprintfl (EUCAERROR, "[%s] error: failed to make partition bootable\n", a->instanceId, root_part);
+            goto unmount;
+        }
+
+        bootification_failed = 0;
+        
+    unmount:
+        
+        // unmount partition and delete the mount point
+        if (diskutil_umount (mnt_pt) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to unmount %s (there may be a resource leak)\n", a->instanceId, mnt_pt);
+            bootification_failed = 1;
+        }
+        if (rmdir (mnt_pt) != 0) {
+            logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
+            bootification_failed = 1;
+        }
+        
+        if (bootification_failed)
+            goto cleanup;
+    }
 
     // map the partitions to the disk
     if (blockblob_clone (a->bb, map, map_entries)==-1) {
@@ -667,12 +745,12 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         }
     }
 
-    //  make disk bootable if necessary
-    if (a->make_bootable) {
-        logprintfl (EUCAINFO, "[%s] making disk bootable\n", a->instanceId);
-
+    if (diskutil_grub_mbr (blockblob_get_dev (a->bb), root_part)!=OK) {
+        logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
+        goto unmount;
     }
 
+    
     ret = OK;
  cleanup:
     return ret;
@@ -804,9 +882,9 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
             art_free (a->deps[i]);
         }
-        free (a);
         logprintfl (EUCADEBUG, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
                     a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
+        free (a);
     }
 }
 
@@ -914,7 +992,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
     case NC_LOCATION_AOE:
-        logprintfl (EUCAERROR, "[%s] error: backing of type %s is NOT IMPLEMENTED\n", current_instanceId, vbr->typeName);
+        logprintfl (EUCAERROR, "[%s] error: location of type %d is NOT IMPLEMENTED\n", current_instanceId, vbr->locationType);
         return NULL;
 
     case NC_LOCATION_WALRUS: {
@@ -1172,43 +1250,45 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 const char * sshkey, // key to inject into the root partition 
                 const char * instanceId) // ID of the instance (for logging purposes only)
 {
-    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+    if (instanceId)
+        strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
 
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
-    virtualBootRecord * prereq [EUCA_MAX_VBRS];
-    int total_prereqs = 0;
+    virtualBootRecord * prereq_vbrs [EUCA_MAX_VBRS];
+    int total_prereq_vbrs = 0;
     virtualBootRecord * parts  [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];
     int total_parts = 0;
     bzero (parts, sizeof (parts));
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
         if (vbr->type==NC_RESOURCE_KERNEL || vbr->type==NC_RESOURCE_RAMDISK) {
-            prereq [total_prereqs++] = vbr;
+            prereq_vbrs [total_prereq_vbrs++] = vbr;
         } else {
             parts [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
             total_parts++;
         }
     }
-    logprintfl (EUCADEBUG, "[%s] found %d prereqs and %d partitions in the VBR\n", instanceId, total_prereqs, total_parts);
+    logprintfl (EUCADEBUG, "[%s] found %d prereqs and %d partitions in the VBR\n", instanceId, total_prereq_vbrs, total_parts);
 
     artifact * root = art_alloc (instanceId, NULL, -1, FALSE, FALSE, NULL, NULL); // allocate a sentinel artifact
     if (root == NULL)
         return NULL;
     
-    // if disk does not need to be bootable, we'll need 
-    // kernel and ramdisk as a top-level dependencies
+    // allocate kernel and ramdisk artifacts.
     artifact * prereq_arts [EUCA_MAX_VBRS];
     int total_prereq_arts = 0;
-    if (!make_bootable) { 
-        for (int i=0; i<total_prereqs; i++) {
-            virtualBootRecord * vbr = prereq [i];
-            artifact * dep = art_alloc_vbr (vbr, make_work_copy, TRUE, NULL);
-            if (dep == NULL) 
-                goto free;
+    for (int i=0; i<total_prereq_vbrs; i++) {
+        virtualBootRecord * vbr = prereq_vbrs [i];
+        artifact * dep = art_alloc_vbr (vbr, make_work_copy, TRUE, NULL);
+        if (dep == NULL) 
+            goto free;
+        prereq_arts [total_prereq_arts++] = dep;
+        
+        // if disk does not need to be bootable, we'll need 
+        // kernel and ramdisk as a top-level dependencies
+        if (!make_bootable)
             if (art_add_dep (root, dep) != OK)
                 goto free;
-            prereq_arts [total_prereq_arts++] = dep;
-        }
     }
     
     // then attach disks and partitions
@@ -1234,7 +1314,13 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                             logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
                             goto out;
                         }
-                        disk_arts [k] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), prereq_arts, total_prereq_arts, NULL, 0, disk_arts [k], make_bootable, make_work_copy, use_sshkey);
+                        disk_arts [k] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), 
+                                                        prereq_arts, total_prereq_arts, 
+                                                        NULL, 0, 
+                                                        disk_arts [k], 
+                                                        make_bootable, 
+                                                        make_work_copy, 
+                                                        use_sshkey);
                         if (disk_arts [k] == NULL) {
                             arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                             goto free;
@@ -1250,7 +1336,14 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                         logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
                         goto out;
                     }
-                    disk_arts [0] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, make_bootable, make_work_copy,  use_sshkey);
+                    disk_arts [0] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), 
+                                                    prereq_arts, 
+                                                    total_prereq_arts, 
+                                                    disk_arts + 1, partitions, 
+                                                    NULL, 
+                                                    make_bootable, 
+                                                    make_work_copy,
+                                                    use_sshkey);
                     if (disk_arts [0] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -1403,7 +1496,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
     long long started = time_usec();
     assert (root);
 
-    logprintfl (EUCADEBUG, "[%s] implementing artifact %s\n", root->instanceId, root->id);
+    logprintfl (EUCADEBUG, "[%s] implementing artifact %03d|%s\n", root->instanceId, root->seq, root->id);
 
     int ret = OK;
     int tries = 0;
