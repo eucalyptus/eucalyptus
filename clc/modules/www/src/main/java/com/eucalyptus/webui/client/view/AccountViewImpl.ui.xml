@@ -31,18 +31,18 @@
                             </td>
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="delButton">
-                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete account
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete accounts
                                 </g:Anchor>
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addUserButton">
-                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>New user
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addUsersButton">
+                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>New users
                                 </g:Anchor>
                             </td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addGroupButton">
-                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>New group
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addGroupsButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>New groups
                                 </g:Anchor>                            
                             </td>
                             <td>&nbsp;</td>

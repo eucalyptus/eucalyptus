@@ -40,32 +40,32 @@ public class UserViewImpl extends Composite implements UserView {
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteUsers( );
   }
   
-  @UiHandler( "addToGroupButton" )
+  @UiHandler( "addToGroupsButton" )
   void handleAddToGroupButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddGroups( );
   }
   
-  @UiHandler( "removeFromGroupButton" )
+  @UiHandler( "removeFromGroupsButton" )
   void handleRemoveFromGroupButtonClick( ClickEvent e ) {
-    
+    this.presenter.onRemoveGroups( );
   }
   
   @UiHandler( "addPolicyButton" )
   void handleAddPolicyButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddPolicy( );
   }
 
   @UiHandler( "addKeyButton" )
   void handleAddKeyButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddKey( );
   }
 
   @UiHandler( "addCertButton" )
   void handleAddCertButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddCert( );
   }
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {

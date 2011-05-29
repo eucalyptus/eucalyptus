@@ -51,14 +51,14 @@ public class AccountViewImpl extends Composite implements AccountView {
     this.presenter.onDeleteAccounts( );
   }
   
-  @UiHandler( "addUserButton" )
-  void handleAddUserButtonClick( ClickEvent e ) {
-    this.presenter.onCreateUser( );
+  @UiHandler( "addUsersButton" )
+  void handleAddUsersButtonClick( ClickEvent e ) {
+    this.presenter.onCreateUsers( );
   }
 
-  @UiHandler( "addGroupButton" )
-  void handleAddGroupButtonClick( ClickEvent e ) {
-    this.presenter.onCreateGroup( );
+  @UiHandler( "addGroupsButton" )
+  void handleAddGroupsButtonClick( ClickEvent e ) {
+    this.presenter.onCreateGroups( );
   }
 
   @UiHandler( "addPolicyButton" )

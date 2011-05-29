@@ -9,8 +9,8 @@ public interface AccountView extends IsWidget, CanDisplaySearchResult, Clearable
   public interface Presenter extends SearchRangeChangeHandler, MultiSelectionChangeHandler, KnowsPageSize {
     void onCreateAccount( );
     void onDeleteAccounts( );
-    void onCreateUser( );
-    void onCreateGroup( );
+    void onCreateUsers( );
+    void onCreateGroups( );
     void onAddPolicy( );
   }
   

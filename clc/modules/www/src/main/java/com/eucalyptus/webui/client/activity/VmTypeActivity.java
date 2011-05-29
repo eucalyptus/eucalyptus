@@ -47,7 +47,7 @@ public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
       LOG.log( Level.WARNING, "No valid values or empty selection" );
     }

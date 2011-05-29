@@ -36,22 +36,22 @@ public class GroupViewImpl extends Composite implements GroupView {
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteGroup( );
   }
   
-  @UiHandler( "addUserButton" )
-  void handleAddUserButtonClick( ClickEvent e ) {
-    
+  @UiHandler( "addUsersButton" )
+  void handleAddUsesrButtonClick( ClickEvent e ) {
+    this.presenter.onAddUsers( );
   }
 
-  @UiHandler( "removeUserButton" )
-  void handleRemoveUserButtonClick( ClickEvent e ) {
-    
+  @UiHandler( "removeUsersButton" )
+  void handleRemoveUsersButtonClick( ClickEvent e ) {
+    this.presenter.onRemoveUsers( );
   }
   
   @UiHandler( "addPolicyButton" )
   void handleAddPolicyButtonClick( ClickEvent e ) {
-    
+    this.presenter.onAddPolicy( );
   }
 
   public GroupViewImpl( ) {

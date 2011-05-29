@@ -60,9 +60,8 @@ public class ImageActivity extends AbstractSearchActivity implements ImageView.P
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
-    // TODO Auto-generated method stub
-    
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
+    // Nothing to do for now.
   }
 
   @Override

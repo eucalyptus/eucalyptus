@@ -27,18 +27,18 @@
                         <tr>
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
-                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete user
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete users
                                 </g:Anchor>
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addToGroupButton">
-                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Add to group
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addToGroupsButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Add to groups
                                 </g:Anchor>                            
                             </td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="removeFromGroupButton">
-                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Remove from group
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="removeFromGroupsButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Remove from groups
                                 </g:Anchor>                            
                             </td>                            
                             <td>&nbsp;</td>                            
