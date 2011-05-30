@@ -1,3 +1,4 @@
+#! /bin/bash
 
 # 
 # Runs any class in the standard JUnit harness. Does not require Eucalyptus to be
@@ -32,7 +33,7 @@ CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyp
 #echo $CLASSPATH
 
 # set a bunch of other variables for euca_imager to work
-export VDDK_HOME="/usr/local"
+export VDDK_HOME="$EUCALYPTUS/packages/vddk"
 export LD_LIBRARY_PATH="$EUCALYPTUS/packages/axis2c-1.6.0/lib:$EUCALYPTUS/packages/axis2c-1.6.0/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
 export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
 
