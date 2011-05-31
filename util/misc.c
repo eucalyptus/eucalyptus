@@ -773,14 +773,17 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 
   hostTagFull[0] = '\0';
   PH = popen("hostname", "r");
-  fscanf(PH, "%256s", hostName);
-  pclose(PH);
-  snprintf (hostTagFull, 256, "%s/%s", hostName, hostTag);
+  if(PH) {
+      fscanf(PH, "%256s", hostName);
+      pclose(PH);
   
-  gettimeofday(&tv, NULL);
-  ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
+      snprintf (hostTagFull, 256, "%s/%s", hostName, hostTag);
+  
+      gettimeofday(&tv, NULL);
+      ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
 
-  logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
+      logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
+  }
 }
 
 int logprintf(const char *format, ...) {

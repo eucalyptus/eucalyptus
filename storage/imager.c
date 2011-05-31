@@ -221,6 +221,8 @@ int main (int argc, char * argv[])
 
             if (cmd_params==NULL) {
                 cmd_params = calloc (MAX_PARAMS+1, sizeof(imager_param)); // +1 for terminating NULL
+                if(!cmd_params)
+                    err ("calloc failed");
             }
             if (nparams+1>MAX_PARAMS)
                 err ("too many parameters (max is %d)", MAX_PARAMS);
@@ -247,10 +249,12 @@ int main (int argc, char * argv[])
                 err ("failed while verifying requirements");
         }
     }
+    if(!root) err ("failed to find root while verifying requirements");
     
     // see if work blobstore will be needed at any stage
     // and open or create the work blobstore
     blobstore * work_bs = NULL;
+
     if (root && tree_uses_blobstore (root)) {
         // set the function that will catch blobstore errors
         blobstore_set_error_function ( &bs_errors ); 
@@ -342,12 +346,15 @@ char * parse_loginpassword (const char * s)
     char * val = strdup (s);
     FILE * fp;
     if ((fp = fopen (s, "r"))!=NULL) {
+        if(val) 
+            free(val);
         val = fp2str (fp);
         if (val==NULL) {
             err ("failed to read file '%s'", s);
         } else {
             logprintfl (EUCAINFO, "read in contents from '%s'\n", s);
         }
+        fclose(fp);
     }
 
     return val;
