@@ -16,10 +16,10 @@
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
                     <colgroup width="1px"/>
-                    <colgroup width="50px"/>
+                    <colgroup width="20px"/>
                     <colgroup width="1px"/>
                     <colgroup width="1px"/>
-                    <colgroup width="50px"/>
+                    <colgroup width="20px"/>
                     <colgroup width="1px"/>
                     <tbody>
                         <tr>
