@@ -1,24 +1,20 @@
 package com.eucalyptus.reporting;
 
-import java.util.*;
+import java.util.Timer;
 
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.*;
+import com.eucalyptus.bootstrap.*;
 import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.instance.*;
-import com.eucalyptus.reporting.storage.*;
+import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
+import com.eucalyptus.reporting.queue.mq.QueueBroker;
+import com.eucalyptus.reporting.s3.S3EventListener;
+import com.eucalyptus.reporting.storage.StorageEventListener;
 
 @Provides(Reporting.class)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
@@ -28,12 +24,14 @@ public class ReportingBootstrapper
 	private static Logger log = Logger.getLogger( ReportingBootstrapper.class );
 
 	private static long POLLER_DELAY_MS = 10000l;
-	
-	private StorageEventPoller storagePoller;
-	private InstanceEventListener instanceListener;
+
+	private StorageEventListener storageListener;
+	private static InstanceEventListener instanceListener = null;
+	private S3EventListener s3Listener;
 	private QueueFactory queueFactory;
+	private QueueBroker queueBroker;
 	private Timer timer;
-	
+
 
 	public ReportingBootstrapper()
 	{
@@ -75,51 +73,66 @@ public class ReportingBootstrapper
 		}
 	}
 
-	
-	
+
+
 	@Override
 	public boolean start()
 	{
 		try {
-			
+
 
 			/* Start queue broker
 			 */
-			QueueBroker.getInstance().startup();
-			log.info("Queue broker started");
-			
+//			queueBroker = QueueBroker.getInstance();
+//			queueBroker.startup();
+//			log.info("Queue broker started");
+
 			queueFactory = QueueFactory.getInstance();
 			queueFactory.startup();
-			
+
 			/* Start storage receiver and storage queue poller thread
 			 */
-			QueueReceiver storageReceiver = queueFactory.getReceiver(QueueIdentifier.STORAGE);
-			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
-			timer = new Timer(true);
-			timer.schedule(new TimerTask() {
-				@Override
-				public void run()
-				{
-					poller.writeEvents();
-				}
-			}, 0, POLLER_DELAY_MS);
-			this.storagePoller = poller;
+			QueueReceiver storageReceiver =
+				queueFactory.getReceiver(QueueIdentifier.STORAGE);
+			if (storageListener == null) {
+				storageListener = new StorageEventListener();
+				log.info("New storage listener instantiated");
+			} else {
+				log.info("Used existing storage listener");
+			}
+			storageReceiver.addEventListener(storageListener);
+
+//			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
+//			this.storagePoller = poller;
+//			timer = new Timer(true);
+//			timer.schedule(new TimerTask() {
+//				@Override
+//				public void run()
+//				{
+//					poller.writeEvents();
+//				}
+//			}, 0, POLLER_DELAY_MS);
 			log.info("Storage queue poller started");
-			
+
 			/* Start instance receiver and instance listener
 			 */
 			QueueReceiver instanceReceiver =
 				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
-			if (instanceListener == null) {
-				instanceListener = new InstanceEventListener();
-				log.info("New instance listener instantiated");
+			instanceReceiver.addEventListener(getInstanceListener());
+
+
+			QueueReceiver s3Receiver =
+				queueFactory.getReceiver(QueueIdentifier.S3);
+			if (s3Listener == null) {
+				s3Listener = new S3EventListener();
+				log.info("New s3 listener instantiated");
 			} else {
-				log.info("Used existing instance listener");
+				log.info("Used existing s3 listener");
 			}
-			instanceReceiver.addEventListener(instanceListener);
-			
-      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
-        
+			s3Receiver.addEventListener(s3Listener);
+
+			ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
+
         @Override
         public void fireEvent( Event event ) {
           if ( event instanceof InstanceEvent ) {
@@ -168,11 +181,11 @@ public class ReportingBootstrapper
 	public boolean stop()
 	{
 		try {
-			log.info("ReportingBootstrapper stopped");
 			instanceListener.flush();
 			timer.cancel();
-			storagePoller.writeEvents();
 			queueFactory.shutdown();
+			queueBroker.shutdown();
+			log.info("ReportingBootstrapper stopped");
 			return true;
 		} catch (Exception ex) {
 			log.error("ReportingBootstrapper failed to stop", ex);
@@ -180,10 +193,14 @@ public class ReportingBootstrapper
 		}
 	}
 
-	public void setOverriddenInstanceEventListener(
-			InstanceEventListener overriddenListener)
+	public static InstanceEventListener getInstanceListener()
 	{
-		this.instanceListener = overriddenListener;
+		if (instanceListener == null)
+			instanceListener = new InstanceEventListener();
+		return instanceListener;
 	}
 
+
+
+	
 }

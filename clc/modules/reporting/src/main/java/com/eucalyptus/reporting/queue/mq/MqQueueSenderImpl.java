@@ -1,4 +1,4 @@
-package com.eucalyptus.reporting.queue;
+package com.eucalyptus.reporting.queue.mq;
 
 import javax.jms.*;
 
@@ -7,24 +7,26 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
+import com.eucalyptus.reporting.queue.QueueSender;
 
-class QueueSenderImpl
+class MqQueueSenderImpl
 	implements QueueSender
 {
-	private static Logger log = Logger.getLogger( QueueSenderImpl.class );
+	private static Logger log = Logger.getLogger( MqQueueSenderImpl.class );
 
 	private final String brokerUrl;
 	private final QueueFactory.QueueIdentifier queueIdentifier;
-	
+
 	private ActiveMQConnectionFactory connectionFactory;
 	private Connection connection;
 	private Session session;
 	private ActiveMQQueue queue;
 	private MessageProducer producer;
 
-	
-	QueueSenderImpl(String brokerUrl, QueueIdentifier queueIdentifier)
+
+	MqQueueSenderImpl(String brokerUrl, QueueIdentifier queueIdentifier)
 	{
 		this.brokerUrl = brokerUrl;
 		this.queueIdentifier = queueIdentifier;
@@ -57,7 +59,7 @@ class QueueSenderImpl
 		}
 
 	}
-	
+
 	@Override
 	public void send(Event e)
 	{

@@ -1,4 +1,4 @@
-package com.eucalyptus.reporting.queue;
+package com.eucalyptus.reporting.queue.mq;
 
 import java.util.*;
 
@@ -9,12 +9,14 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.reporting.queue.*;
+import com.eucalyptus.reporting.queue.QueueReceiver;
 import com.eucalyptus.event.EventListener;
 
-class QueueReceiverImpl
+class MqQueueReceiverImpl
 	implements QueueReceiver, MessageListener
 {
-	private static Logger log = Logger.getLogger( QueueReceiverImpl.class );
+	private static Logger log = Logger.getLogger( MqQueueReceiverImpl.class );
 
 	private final String brokerUrl;
 	private final QueueFactory.QueueIdentifier identifier;
@@ -25,7 +27,7 @@ class QueueReceiverImpl
 	private MessageConsumer consumer;
 	private List<EventListener<Event>> listeners;
 
-	QueueReceiverImpl(String brokerUrl, QueueFactory.QueueIdentifier identifier)
+	MqQueueReceiverImpl(String brokerUrl, QueueFactory.QueueIdentifier identifier)
 	{
 		this.brokerUrl = brokerUrl;
 		this.identifier = identifier;
@@ -44,7 +46,7 @@ class QueueReceiverImpl
 		} catch (JMSException jmse) {
 			throw new QueueRuntimeException(jmse);
 		}
-		log.info("QueueReceiverImpl started");
+		log.info("MqQueueReceiverImpl started");
 
 	}
 	
@@ -56,7 +58,7 @@ class QueueReceiverImpl
 		} catch (JMSException jmse) {
 			throw new QueueRuntimeException(jmse);
 		}	
-		log.info("QueueReceiverImpl stopped");
+		log.info("MqQueueReceiverImpl stopped");
 	}
 	
 	@Override
@@ -104,5 +106,11 @@ class QueueReceiverImpl
 		for (EventListener<Event> el: listeners) {
 			el.fireEvent(event);
 		}
+	}
+
+	@Override
+	public void removeAllListeners()
+	{
+		listeners.clear();
 	}
 }

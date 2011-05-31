@@ -8,12 +8,12 @@ package com.eucalyptus.reporting.instance;
  * 
  * @author tom.werges
  */
-public class UsageData
+public class InstanceUsageData
 {
 	private final Long networkIoMegs;
 	private final Long diskIoMegs;
 
-	public UsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
+	public InstanceUsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
 	{
 		this.networkIoMegs = totalNetworkIoMegs;
 		this.diskIoMegs = totalDiskIoMegs;
@@ -33,7 +33,7 @@ public class UsageData
 	 * Sum the numeric fields of two UsageData objects. If either operand is null
 	 * for any field then the resultant field is null.
 	 */
-	public UsageData sum(UsageData other)
+	public InstanceUsageData sum(InstanceUsageData other)
 	{
 		final Long sumNetworkIoMegs =
 			(this.networkIoMegs==null || other.networkIoMegs==null)
@@ -45,14 +45,14 @@ public class UsageData
 			? null
 			: new Long(other.diskIoMegs.longValue() + this.diskIoMegs.longValue());
 
-		return new UsageData(sumNetworkIoMegs, sumDiskIoMegs);
+		return new InstanceUsageData(sumNetworkIoMegs, sumDiskIoMegs);
 	}
 
 	/**
 	 * Subtract the numeric fields of one UsageData from another. If either 
 	 * operand is null for any field then the resultant field is null.
 	 */
-	public UsageData subtractFrom(UsageData other)
+	public InstanceUsageData subtractFrom(InstanceUsageData other)
 	{
 		final Long subtractedNetworkIoMegs =
 			(this.networkIoMegs==null || other.networkIoMegs==null)
@@ -64,7 +64,7 @@ public class UsageData
 			? null
 			: new Long(other.diskIoMegs.longValue() - this.diskIoMegs.longValue());
 
-		return new UsageData(subtractedNetworkIoMegs, subtractedDiskIoMegs);
+		return new InstanceUsageData(subtractedNetworkIoMegs, subtractedDiskIoMegs);
 	}
 	
 	

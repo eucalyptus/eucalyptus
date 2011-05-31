@@ -80,6 +80,7 @@ public class TestHarness
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
+		System.exit(0);  //This is necessary now; some shutdown process is hanging
 		//return (anyFail) ? 1 : 0;
 	}
 
@@ -337,6 +338,7 @@ public class TestHarness
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
+			System.out.println("Executed method");
 		}
 		// List<Class> testList = Lists.transform( Lists.newArrayList(
 		// cmd.getOptionValues( "test" ) ), new Function<String, Class>( ) {

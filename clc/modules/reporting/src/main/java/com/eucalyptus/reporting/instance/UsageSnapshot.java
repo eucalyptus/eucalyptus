@@ -11,7 +11,7 @@ package com.eucalyptus.reporting.instance;
 class UsageSnapshot
 {
 	private final Long timestampMs;
-	private final UsageData cumulativeUsageData;
+	private final InstanceUsageData cumulativeUsageData;
 
 	/**
 	 * For hibernate usage only; don't extend this class
@@ -22,7 +22,7 @@ class UsageSnapshot
 		this.cumulativeUsageData = null;
 	}
 
-	public UsageSnapshot(long timestampMs, UsageData cumulativeUsageData)
+	public UsageSnapshot(long timestampMs, InstanceUsageData cumulativeUsageData)
 	{
 		this.timestampMs = new Long(timestampMs);
 		this.cumulativeUsageData = cumulativeUsageData;
@@ -34,7 +34,7 @@ class UsageSnapshot
 		return this.timestampMs.longValue();
 	}
 
-	public UsageData getCumulativeUsageData()
+	public InstanceUsageData getCumulativeUsageData()
 	{
 		return this.cumulativeUsageData;
 	}

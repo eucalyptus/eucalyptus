@@ -2,33 +2,32 @@ package com.eucalyptus.reporting.storage;
 
 import com.eucalyptus.reporting.units.*;
 
-public class StorageDisplayBean
+public class StorageReportLine
+	implements Comparable<StorageReportLine>
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);
 	
-	private final String label;
-	private final String groupBy;
+	private final StorageReportLineKey key;
 	private final StorageUsageSummary summary;
 	private final Units units;
 
-	StorageDisplayBean(String label, String groupBy,
+	StorageReportLine(StorageReportLineKey key,
 			StorageUsageSummary summary, Units units)
 	{
-		this.label = label;
-		this.groupBy = groupBy;
+		this.key = key;
 		this.summary = summary;
 		this.units = units;
 	}
 
 	public String getLabel()
 	{
-		return label;
+		return key.getLabel();
 	}
 
 	public String getGroupBy()
 	{
-		return groupBy;
+		return key.getGroupByLabel();
 	}
 
 	public Long getVolumesSizeMax()
@@ -57,22 +56,29 @@ public class StorageDisplayBean
 				INTERNAL_UNITS.getSizeTimeTimeUnit(), units.getSizeTimeTimeUnit());
 	}
 
-	public Long getObjectsSizeMax()
-	{
-		return UnitUtil.convertSize(summary.getObjectsMegsMax(),
-				INTERNAL_UNITS.getSizeUnit(), units.getSizeUnit());
-	}
-
-	public Long getObjectsSizeTime()
-	{
-		return UnitUtil.convertSizeTime(summary.getObjectsMegsSecs(),
-				INTERNAL_UNITS.getSizeTimeSizeUnit(), units.getSizeTimeSizeUnit(),
-				INTERNAL_UNITS.getSizeTimeTimeUnit(), units.getSizeTimeTimeUnit());
-	}
-	
 	public Units getUnits()
 	{
 		return units;
 	}
+	
+	void addUsage(StorageUsageSummary summary)
+	{
+		this.summary.addUsage(summary);
+	}
+
+	public String toString()
+	{
+		return String.format("[label:%s,groupBy:%s,volSizeMax:%d,volSizeTime:%d,snapsSizeMax:%d,snapsSizeTime:%d]",
+						getLabel(), getGroupBy(), getVolumesSizeMax(),
+						getVolumesSizeTime(), getSnapshotsSizeMax(),
+						getSnapshotsSizeTime());
+	}
+
+	@Override
+	public int compareTo(StorageReportLine other)
+	{
+		return key.compareTo(other.key);
+	}
+
 
 }
