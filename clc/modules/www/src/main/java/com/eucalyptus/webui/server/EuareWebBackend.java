@@ -203,8 +203,8 @@ public class EuareWebBackend {
       if ( user.getPassword( ).equals( newEncrypted ) ) {
         throw new EucalyptusServiceException( "New password is the same as old one" );
       }
-      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) ) {
-        throw new EucalyptusServiceException( "Can use user name as password" );
+      if ( newEncrypted.equals( Crypto.generateHashedPassword( user.getName( ) ) ) ) {
+        throw new EucalyptusServiceException( "Can not use user name as password" );
       }
       user.setPassword( newEncrypted );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
