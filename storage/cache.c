@@ -433,6 +433,7 @@ char * alloc_tmp_file (const char * name_base, long long size)
     int tmp_fd = mkstemp (path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "error: failed to create a temporary file under %s\n", path);
+        free(path);
         return NULL;
     }
     close (tmp_fd);
@@ -600,6 +601,8 @@ int verify_disk_item (const disk_item * di, artifacts_spec * spec)
     char * spec_summary = gen_summary (spec);
     if (file_summary==NULL) {
         logprintfl (EUCAWARN, "warning: failed to read summary file '%s'\n", di->summ);
+        if(spec_summary != NULL)
+            free(spec_summary);
         ret = OK;
     } else {
         if (spec_summary!=NULL) {
@@ -744,7 +747,7 @@ output_file * preprocess_output_path (const char * id, artifacts_spec * spec, bo
         if (o->cache_copy!=NULL) { // there is a copy with this id in the cache?
             lock_disk_item (o->cache_copy); // NOTE: may be unlocked by the _delete
             if (verify_disk_item (o->cache_copy, spec)) { // does it match the spec?
-                if (prev_spec!=NULL && verify_disk_item (o->work_copy, prev_spec)==OK) { // does it match previous stage's spec?
+                if (prev_spec!=NULL && o->work_copy != NULL && verify_disk_item (o->work_copy, prev_spec)==OK) { // does it match previous stage's spec?
                     logprintfl (EUCAINFO, "found previous stage's cache copy of image '%s'\n", id);
                     if (add_summ_disk_item (o->cache_copy, spec)!=OK) { // update the spec
                         logprintfl (EUCAERROR, "error: failed to update summary of cache copy of '%s'\n", id);

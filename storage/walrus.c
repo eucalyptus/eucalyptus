@@ -350,6 +350,12 @@ char * walrus_get_digest (const char * url)
 {
     char * digest_str = NULL;
     char * digest_path = strdup ("/tmp/walrus-digest-XXXXXX");
+
+    if(!digest_path) {
+       logprintfl (EUCAERROR, "{%u} error: failed to strdup digest path\n", (unsigned int)pthread_self());
+       return digest_path;
+    }
+
     int tmp_fd = mkstemp (digest_path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create a digest file %s\n", (unsigned int)pthread_self(), digest_path);
@@ -363,6 +369,9 @@ char * walrus_get_digest (const char * url)
             digest_str = file2strn (digest_path, 100000);
         }
         unlink (digest_path);
+    }
+    if(digest_path) {
+        free(digest_path);
     }
     return digest_str;
 }
