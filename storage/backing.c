@@ -533,6 +533,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     blockblob * pbbs [EUCA_MAX_PARTITIONS];
     blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
 
+    bzero(pbbs, sizeof(blockblob *) * EUCA_MAX_PARTITIONS);
     // run through partitions, add their sizes, populate the map
     for (int i=0; i<partitions; i++) {
         virtualBootRecord * p = * (parts + i);
@@ -859,7 +860,8 @@ ncInstance * load_instance_struct (const char * instanceId)
     if ((fd = open(checkpoint_path, O_RDONLY)) < 0 
         || read (fd, instance, meta_size) < meta_size) {
         logprintfl(EUCADEBUG, "load_instance_struct: failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror (errno));
-        close (fd);
+        if(fd >= 0)
+            close (fd);
         goto free;
     }
     close (fd);
