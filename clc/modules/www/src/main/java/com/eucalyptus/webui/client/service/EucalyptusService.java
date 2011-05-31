@@ -395,4 +395,88 @@ public interface EucalyptusService extends RemoteService {
    */
   void addCertificate( Session session, String userId, String pem ) throws EucalyptusServiceException;
   
+  /**
+   * Change user password and/or email.
+   * 
+   * @param session
+   * @param userId
+   * @param oldPass
+   * @param newPass
+   * @param email
+   */
+  void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException;
+  
+  /**
+   * Sign up a new account by user.
+   * 
+   * @param accountName
+   * @param password
+   * @param email
+   * @throws EucalyptusServiceException
+   */
+  void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException;
+ 
+  /**
+   * Sign up a new user in an account.
+   * 
+   * @param userName
+   * @param accountName
+   * @param password
+   * @param email
+   * @throws EucalyptusServiceException
+   */
+  void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException;
+  
+  /**
+   * Approve account signups.
+   * 
+   * @param session
+   * @param accountNames
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> approveAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException;
+  
+  /**
+   * Reject account signups.
+   * 
+   * @param session
+   * @param accountNames
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> rejectAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException;
+  
+  /**
+   * Approve user signups.
+   * 
+   * @param session
+   * @param userIds
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> approveUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException;
+  
+  /**
+   * Reject user signups.
+   * 
+   * @param session
+   * @param userIds
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  ArrayList<String> rejectUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException;
+  
+  /**
+   * Confirm a user for both account signup (confirm the admin) and user signup.
+   * 
+   * @param confirmationCode
+   * @throws EucalyptusServiceException
+   */
+  void confirmUser( String confirmationCode ) throws EucalyptusServiceException;
+  
+  void requestPasswordRecovery( String userName, String accountName, String email ) throws EucalyptusServiceException;
+  
+  void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException;
+  
 }

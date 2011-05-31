@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class AccountActivity extends AbstractSearchActivity
-    implements AccountView.Presenter, DetailView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
+    implements AccountView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
   
   public static final String TITLE = "ACCOUNTS";
   
@@ -50,7 +50,13 @@ public class AccountActivity extends AbstractSearchActivity
   
   public static final String DELETE_ACCOUNTS_CAPTION = "Delete selected accounts";
   public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure to delete following selected accounts?";
-  
+
+  public static final String APPROVE_ACCOUNTS_CAPTION = "Approve selected accounts";
+  public static final String APPROVE_ACCOUNTS_SUBJECT = "Are you sure to approve following selected accounts?";
+
+  public static final String REJECT_ACCOUNTS_CAPTION = "Reject selected accounts";
+  public static final String REJECT_ACCOUNTS_SUBJECT = "Are you sure to reject following selected accounts?";
+
   private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
   
   private Set<SearchResultRow> currentSelected;
@@ -175,6 +181,10 @@ public class AccountActivity extends AbstractSearchActivity
   public void confirm( String subject ) {
     if ( DELETE_ACCOUNTS_SUBJECT.equals( subject ) ) {
       doDeleteAccounts( );
+    } else if ( APPROVE_ACCOUNTS_SUBJECT.equals( subject ) ) {
+      doApproveAccounts( );
+    } else if ( REJECT_ACCOUNTS_SUBJECT.equals( subject ) ) {
+      doRejectAccounts( );
     }
   }
   
@@ -447,6 +457,88 @@ public class AccountActivity extends AbstractSearchActivity
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Policy added", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New policy " + name + " is added to account " + accountId );
         //reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
+  @Override
+  public void onApprove( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select accounts to approve", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+    dialog.setPresenter( this );
+    dialog.display( APPROVE_ACCOUNTS_CAPTION, APPROVE_ACCOUNTS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+  }
+
+  private void doApproveAccounts( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      return;
+    }
+    // Pick account names
+    final ArrayList<String> ids = Lists.newArrayList( ); 
+    for ( SearchResultRow row : currentSelected ) {
+      ids.add( row.getField( 1 ) );
+    }
+    
+    clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Approving accounts ...", 0 );
+    
+    clientFactory.getBackendService( ).approveAccounts( clientFactory.getLocalSession( ).getSession( ), ids, new AsyncCallback<ArrayList<String>>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to approve accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to approve accounts " + ids + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( ArrayList<String> approved ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Accounts approved", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Accounts " + approved + " approved" );
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+  
+  @Override
+  public void onReject( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select accounts to reject", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+    dialog.setPresenter( this );
+    dialog.display( REJECT_ACCOUNTS_CAPTION, REJECT_ACCOUNTS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+  }
+  
+  private void doRejectAccounts( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      return;
+    }
+    // Pick account names
+    final ArrayList<String> ids = Lists.newArrayList( ); 
+    for ( SearchResultRow row : currentSelected ) {
+      ids.add( row.getField( 1 ) );
+    }
+    
+    clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Rejecting accounts ...", 0 );
+    
+    clientFactory.getBackendService( ).rejectAccounts( clientFactory.getLocalSession( ).getSession( ), ids, new AsyncCallback<ArrayList<String>>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to reject accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to reject accounts " + ids + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( ArrayList<String> approved ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Accounts rejected", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Accounts " + approved + " rejected" );
+        reloadCurrentRange( );
       }
       
     } );

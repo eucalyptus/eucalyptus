@@ -68,6 +68,16 @@ public class UserViewImpl extends Composite implements UserView {
     this.presenter.onAddCert( );
   }
 
+  @UiHandler( "approveButton" )
+  void handleApproveButtonClick( ClickEvent e ) {
+    this.presenter.onApprove( );
+  }
+
+  @UiHandler( "rejectButton" )
+  void handleRejectButtonClick( ClickEvent e ) {
+    this.presenter.onReject( );
+  }
+
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );

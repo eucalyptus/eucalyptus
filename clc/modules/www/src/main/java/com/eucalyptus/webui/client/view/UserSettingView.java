@@ -10,6 +10,12 @@ public interface UserSettingView extends IsWidget {
   
   public interface Presenter {
     void logout( );
+
+    void onShowProfile( );
+
+    void onChangePassword( );
+
+    void onDownloadCredential( );
   }
   
 }

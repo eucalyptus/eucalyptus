@@ -11,6 +11,10 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.MouseOutEvent;
+import com.google.gwt.event.dom.client.MouseOutHandler;
+import com.google.gwt.event.dom.client.MouseOverEvent;
+import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.resources.client.CssResource;
@@ -93,6 +97,49 @@ public class DetailViewImpl extends Composite implements DetailView {
     
   }
   
+  static class RevealingTextBoxValue implements HasValueWidget {
+    
+    public static final String HINT = "Mouse over to see";
+    
+    private TextBox textBox;
+    private String value;
+    
+    public RevealingTextBoxValue( final String value ) {
+      this.value = value;
+      this.textBox = new TextBox( );
+      this.textBox.setReadOnly( true );
+      this.textBox.setValue( HINT );
+      this.textBox.addMouseOverHandler( new MouseOverHandler( ) {
+        @Override
+        public void onMouseOver( MouseOverEvent event ) {
+          textBox.setValue( value == null ? "" : value );
+        }
+      } );
+      this.textBox.addMouseOutHandler( new MouseOutHandler( ) {
+        @Override
+        public void onMouseOut( MouseOutEvent arg0 ) {
+          textBox.setValue( HINT );
+        }
+      } );
+    }
+    
+    @Override
+    public String getValue( ) {
+      return this.value;
+    }
+
+    @Override
+    public Widget getWidget( ) {
+      return textBox;
+    }
+    
+    @Override
+    public String toString( ) {
+      return getValue( );
+    }
+    
+  }
+    
   static class PasswordTextBoxValue implements HasValueWidget {
     
     private PasswordTextBox textBox;
@@ -316,7 +363,6 @@ public class DetailViewImpl extends Composite implements DetailView {
   
   public static final String ANCHOR = "Show";
   public static final int ARTICLE_LINES = 8;
-  public static final String PASSWORD_ACTION = "password";
   
   private static final String LABEL_WIDTH = "36%";
   private static final String NEW_KEY = "enter new info";
@@ -529,6 +575,8 @@ public class DetailViewImpl extends Composite implements DetailView {
         return new TextAreaValue( val, editable, STRING_VALUE_CHANGE_HANDLER );
       case HIDDEN:
         return new PasswordTextBoxValue( val, editable, STRING_VALUE_CHANGE_HANDLER );
+      case REVEALING:
+        return new RevealingTextBoxValue( val );
       case BOOLEAN:
         return new CheckBoxValue( val, editable, BOOLEAN_VALUE_CHANGE_HANDLER );
       case DATE:
@@ -555,9 +603,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
 
   protected void popupAction( String key ) {
-    if ( PASSWORD_ACTION.equals( key ) ) {
-      // TODO: popup the password change dialog
-    }
+    this.presenter.onAction( key );
   }
 
   private void showSaveButton( ) {

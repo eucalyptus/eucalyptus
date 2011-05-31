@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class UserActivity extends AbstractSearchActivity
-    implements UserView.Presenter, DetailView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
+    implements UserView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
   
   public static final String TITLE = "USERS";
   
@@ -50,6 +50,20 @@ public class UserActivity extends AbstractSearchActivity
   public static final String ADD_CERT_CAPTION = "Add new certificate";
   public static final String ADD_CERT_SUBJECT = "Enter new certificate to assign to the selected user:";
   public static final String CERT_PEM_INPUT_TITLE = "Certificate (PEM)";
+  
+  public static final String CHANGE_PASSWORD_CAPTION = "Change password";
+  public static final String CHANGE_PASSWORD_SUBJECT = "Enter new password:";
+  public static final String OLD_PASSWORD_INPUT_TITLE = "Old password";
+  public static final String NEW_PASSWORD_INPUT_TITLE = "New password";
+  public static final String NEW_PASSWORD2_INPUT_TITLE = "Type again";
+  
+  public static final String APPROVE_USERS_CAPTION = "Approve selected users";
+  public static final String APPROVE_USERS_SUBJECT = "Are you sure to approve following selected users?";
+
+  public static final String REJECT_USERS_CAPTION = "Reject selected users";
+  public static final String REJECT_USERS_SUBJECT = "Are you sure to reject following selected users?";
+
+  private static final String ACTION_PASSWORD = "password";
   
   private static final Logger LOG = Logger.getLogger( UserActivity.class.getName( ) );
   
@@ -139,7 +153,7 @@ public class UserActivity extends AbstractSearchActivity
   @Override
   public void onDeleteUsers( ) {
     if ( currentSelected == null || currentSelected.size( ) < 1 ) {
-      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select accounts to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select users to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
       return;
     }
     ConfirmationView dialog = this.clientFactory.getConfirmationView( );
@@ -297,6 +311,8 @@ public class UserActivity extends AbstractSearchActivity
       doAddPolicy( values.get( 0 ), values.get( 1 ) );
     } else if ( ADD_CERT_SUBJECT.equals( subject ) ) {
       doAddCert( values.get( 0 ) );
+    } else if ( CHANGE_PASSWORD_SUBJECT.equals( subject ) ) {
+      doChangePassword( values.get( 0 ), values.get( 1 ) );
     }
   }
 
@@ -414,6 +430,10 @@ public class UserActivity extends AbstractSearchActivity
       doDeleteUsers( );
     } else if ( ADD_KEY_SUBJECT.equals( subject ) ) {
       doAddKey( );
+    } else if ( APPROVE_USERS_SUBJECT.equals( subject ) ) {
+      doApproveUsers( );
+    } else if ( REJECT_USERS_SUBJECT.equals( subject ) ) {
+      doRejectUsers( );
     }
   }
 
@@ -466,6 +486,179 @@ public class UserActivity extends AbstractSearchActivity
       public void onSuccess( Void arg0 ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Users deleted", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Users " + ids + " deleted" );
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
+  @Override
+  public void onAction( String key ) {
+    if ( ACTION_PASSWORD.equals( key ) ) {
+      onChangePassword( );
+    }
+  }
+  
+  private void onChangePassword( ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single user to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    InputView dialog = this.clientFactory.getInputView( );
+    dialog.setPresenter( this );
+    dialog.display( CHANGE_PASSWORD_CAPTION, CHANGE_PASSWORD_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return OLD_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.NEWPASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPasswordChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD2_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    } ) ) );
+  }
+  
+  private void doChangePassword( String oldPass, String newPass ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      return;
+    }
+    final String userId = this.currentSelected.toArray( new SearchResultRow[0] )[0].getField( 0 );
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing password ...", 0 );
+    
+    this.clientFactory.getBackendService( ).changePassword( this.clientFactory.getLocalSession( ).getSession( ), userId, oldPass, newPass, null, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change password for user " + userId + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( Void arg ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Password changed", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Password changed for user " + userId );
+        //reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
+  @Override
+  public void onApprove( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select users to approve", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+    dialog.setPresenter( this );
+    dialog.display( APPROVE_USERS_CAPTION, APPROVE_USERS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+  }
+  
+  private void doApproveUsers( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      return;
+    }
+    final ArrayList<String> ids = Lists.newArrayList( ); 
+    for ( SearchResultRow row : currentSelected ) {
+      ids.add( row.getField( 0 ) );
+    }
+    
+    clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Approving users ...", 0 );
+    
+    clientFactory.getBackendService( ).approveUsers( clientFactory.getLocalSession( ).getSession( ), ids, new AsyncCallback<ArrayList<String>>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to approve users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to approve users " + ids + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( ArrayList<String> approved ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Users approved", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Users " + approved + " approved" );
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+  
+  @Override
+  public void onReject( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select users to reject", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+    dialog.setPresenter( this );
+    dialog.display( REJECT_USERS_CAPTION, REJECT_USERS_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+  }
+  
+  private void doRejectUsers( ) {
+    if ( currentSelected == null || currentSelected.size( ) < 1 ) {
+      return;
+    }
+    final ArrayList<String> ids = Lists.newArrayList( ); 
+    for ( SearchResultRow row : currentSelected ) {
+      ids.add( row.getField( 0 ) );
+    }
+    
+    clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Rejecting users ...", 0 );
+    
+    clientFactory.getBackendService( ).rejectAccounts( clientFactory.getLocalSession( ).getSession( ), ids, new AsyncCallback<ArrayList<String>>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to reject users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to reject users " + ids + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( ArrayList<String> approved ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Users rejected", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Users " + approved + " rejected" );
         reloadCurrentRange( );
       }
       

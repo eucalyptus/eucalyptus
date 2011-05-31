@@ -107,5 +107,4 @@ public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView
     ( ( VmTypeView ) this.view ).showSearchResult( result );
   }
 
-  
 }

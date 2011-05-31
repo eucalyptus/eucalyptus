@@ -425,5 +425,24 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Failed to find access key", e );      
     }
   }
+
+  @Override
+  public User lookupUserByConfirmationCode( String code ) throws AuthException {
+    if ( code == null ) {
+      throw new AuthException( "Empty confirmation code to search" );
+    }
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    UserEntity example = new UserEntity( );
+    example.setConfirmationCode( code );
+    try {
+      UserEntity user = db.getUnique( example );
+      db.commit( );
+      return new DatabaseUserProxy( user );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
+    }   
+  }
   
 }

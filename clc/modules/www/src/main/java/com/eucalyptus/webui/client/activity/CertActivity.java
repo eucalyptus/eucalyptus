@@ -20,8 +20,7 @@ import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class CertActivity extends AbstractSearchActivity
-    implements CertView.Presenter, DetailView.Presenter, ConfirmationView.Presenter {
+public class CertActivity extends AbstractSearchActivity implements CertView.Presenter, ConfirmationView.Presenter {
   
   public static final String TITLE = "X509 CERTIFICATES";
   

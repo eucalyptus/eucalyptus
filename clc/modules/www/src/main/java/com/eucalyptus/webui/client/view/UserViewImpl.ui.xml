@@ -16,13 +16,16 @@
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
                     <colgroup width="1px"/>
-                    <colgroup width="50px"/>
+                    <colgroup width="20px"/>
                     <colgroup width="1px"/>
                     <colgroup width="1px"/>
-                    <colgroup width="50px"/>                    
+                    <colgroup width="20px"/>                    
                     <colgroup width="1px"/>
                     <colgroup width="1px"/>
                     <colgroup width="1px"/>
+                    <colgroup width="20px"/>                    
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>                    
                     <tbody>
                         <tr>
                             <td>
@@ -57,6 +60,17 @@
                                     <span class="{global.buttonCss.sun} {global.buttonCss.icon}"/>Add certificate
                                 </g:Anchor>                            
                             </td>
+                            <td>&nbsp;</td>
+                            <td>                             
+                                <g:Anchor styleName="{global.buttonCss.positive} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="approveButton">
+                                    <span class="{global.buttonCss.check} {global.buttonCss.icon}"/>Approve
+                                </g:Anchor>                            
+                            </td>
+                            <td>                             
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="rejectButton">
+                                    <span class="{global.buttonCss.x} {global.buttonCss.icon}"/>Reject
+                                </g:Anchor>                            
+                            </td>                            
                         </tr>
                     </tbody>
                 </table>

@@ -24,8 +24,8 @@ import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class GroupActivity extends AbstractSearchActivity 
-    implements GroupView.Presenter, DetailView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
+public class GroupActivity extends AbstractSearchActivity
+    implements GroupView.Presenter, ConfirmationView.Presenter, InputView.Presenter {
   
   public static final String TITLE = "GROUPS";
   
@@ -132,7 +132,7 @@ public class GroupActivity extends AbstractSearchActivity
   @Override
   public void onDeleteGroup( ) {
     if ( currentSelected == null || currentSelected.size( ) < 1 ) {
-      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select accounts to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select groups to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
       return;
     }
     ConfirmationView dialog = this.clientFactory.getConfirmationView( );

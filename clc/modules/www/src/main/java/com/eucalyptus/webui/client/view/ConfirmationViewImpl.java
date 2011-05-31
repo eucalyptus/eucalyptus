@@ -40,6 +40,7 @@ public class ConfirmationViewImpl extends DialogBox implements ConfirmationView 
   private Presenter presenter;
   
   public ConfirmationViewImpl( ) {
+    super( );
     setWidget( uiBinder.createAndBindUi( this ) );
     setGlassEnabled( true );
   }

@@ -21,6 +21,7 @@ import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
 
@@ -29,7 +30,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final long serialVersionUID = 1L;
 
   private static final String WHITESPACE_PATTERN = "\\s+";
-  
+    
   private static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
     if ( ws == null ) {
@@ -54,15 +55,20 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty user name or password" );
     }
     // Parse userId in the follow forms:
-    // 1. "user" (meaning "user" in "eucalyptus" account)
-    // 2. "user@account"
+    // 1. "user@account"
+    // 2. any of the parts is missing, using the default: "admin" for user and "eucalyptus" for account.
+    //    So it could be "test" (test@eucalyptus) or "@test" (admin@test).
     String[] splits = fullname.split( "@", 2 );
-    String userName = splits[0];
+    String userName = User.ACCOUNT_ADMIN;
     String accountName = Account.SYSTEM_ACCOUNT;
-    if ( splits.length > 1 ) {
+    if ( !Strings.isNullOrEmpty( splits[0] ) ) {
+      userName = splits[0];
+    }
+    if ( !Strings.isNullOrEmpty( splits[1] ) ) {
       accountName = splits[1];
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
+    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to login attack.
     return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
@@ -76,11 +82,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException {
     User user = verifySession( session );
-    try {
-      return new LoginUserProfile( user.getName( ), user.getAccount( ).getName( ) );
-    } catch ( Exception e ) {
-      throw new EucalyptusServiceException( "Failed to retrieve user profile" );
-    }
+    return EuareWebBackend.getLoginUserProfile( user );
   }
 
   @Override
@@ -420,5 +422,63 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     verifySession( session );
     EuareWebBackend.addCertificate( userId, pem );
   }
-  
+
+  @Override
+  public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+    verifySession( session );
+    EuareWebBackend.changeUserPassword( userId, oldPass, newPass, email );
+  }
+
+  @Override
+  public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
+    User admin = EuareWebBackend.createAccount( accountName, password, email );
+    EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+
+  @Override
+  public ArrayList<String> approveAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
+    verifySession( session );
+    return EuareWebBackend.processAccountSignups( accountNames, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public ArrayList<String> rejectAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
+    verifySession( session );
+    return EuareWebBackend.processAccountSignups( accountNames, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public ArrayList<String> approveUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
+    verifySession( session );
+    return EuareWebBackend.processUserSignups( userIds, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public ArrayList<String> rejectUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
+    verifySession( session );
+    return EuareWebBackend.processUserSignups( userIds, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
+    User user = EuareWebBackend.createUser( userName, accountName, password, email );
+    EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public void confirmUser( String confirmationCode ) throws EucalyptusServiceException {
+    EuareWebBackend.confirmUser( confirmationCode );
+  }
+
+  @Override
+  public void requestPasswordRecovery( String userName, String accountName, String email ) throws EucalyptusServiceException {
+    EuareWebBackend.requestPasswordRecovery( userName, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+  }
+
+  @Override
+  public void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
+    EuareWebBackend.resetPassword( confirmationCode, password );
+  }
+    
 }

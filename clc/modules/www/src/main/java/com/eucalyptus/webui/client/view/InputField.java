@@ -7,6 +7,8 @@ public interface InputField {
   public enum ValueType {
     TEXT,
     TEXTAREA,
+    PASSWORD,
+    NEWPASSWORD
   }
   
   String getTitle( );

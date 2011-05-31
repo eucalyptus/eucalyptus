@@ -12,6 +12,8 @@ public interface AccountView extends IsWidget, CanDisplaySearchResult, Clearable
     void onCreateUsers( );
     void onCreateGroups( );
     void onAddPolicy( );
+    void onApprove( );
+    void onReject( );
   }
   
 }

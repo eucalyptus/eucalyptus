@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.activity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -10,20 +11,26 @@ import com.eucalyptus.webui.client.ClientFactory;
 import com.eucalyptus.webui.client.ExPlaceHistoryHandler;
 import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.LogoutPlace;
-import com.eucalyptus.webui.client.place.SearchPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
+import com.eucalyptus.webui.client.view.InputField;
+import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
+import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.eucalyptus.webui.client.view.SearchHandler;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.UserSettingView;
+import com.eucalyptus.webui.shared.checker.ValueChecker;
+import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
 import com.google.gwt.activity.shared.AbstractActivity;
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
@@ -34,13 +41,24 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  * @author Ye Wen (wenye@eucalyptus.com)
  *
  */
-public class ShellActivity extends AbstractActivity implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Controller, SearchHandler {
+public class ShellActivity extends AbstractActivity
+    implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Controller, SearchHandler, InputView.Presenter {
   
   private static final Logger LOG = Logger.getLogger( ShellActivity.class.getName( ) );
   
   private static final String DEFAULT_VERSION = "Eucalyptus unknown version";
   private static final String DEFAULT_LOGO_TITLE = "EUCALYPTUS";
   private static final String DEFAULT_LOGO_SUBTITLE = "YOUR FRIENDLY CLOUD";
+  
+  public static final String CHANGE_PASSWORD_CAPTION = "Change password";
+  public static final String FIRST_TIME_CAPTION = "Enter first time information";
+  public static final String MANUAL_CHANGE_PASSWORD_SUBJECT = "Please enter new password:";
+  public static final String FIRST_TIME_SUBJECT = "First time login. Please fill in the following information:";
+  public static final String PASSWORD_EXPIRED_SUBJECT = "Password expired. Please change your password:";
+  public static final String OLD_PASSWORD_INPUT_TITLE = "Old password";
+  public static final String NEW_PASSWORD_INPUT_TITLE = "New password";
+  public static final String NEW_PASSWORD2_INPUT_TITLE = "Type again";
+  public static final String EMAIL_INPUT_TITLE = "Email";
   
   private ClientFactory clientFactory;
   private ShellPlace place;
@@ -121,7 +139,18 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
         } else {
           clientFactory.getSessionData( ).setLoginUser( result );
           clientFactory.getLoadingProgressView( ).setProgress( 33 );
-          getSystemProperties( );
+          if ( result.getLoginAction( ) != null ) {
+            switch ( result.getLoginAction( ) ) {
+              case FIRSTTIME:
+                showFirstTimeDialog( );
+                break;
+              case EXPIRATION:
+                showChangePasswordDialog( PASSWORD_EXPIRED_SUBJECT );
+                break;
+            }
+          } else {
+            getSystemProperties( );
+          }
         }
       }
       
@@ -218,5 +247,212 @@ public class ShellActivity extends AbstractActivity implements FooterView.Presen
   public void hideDetail( ) {
     this.clientFactory.getShellView( ).hideDetail( );
   }
+
+  // Clicked on user setting menu to show user profile
+  @Override
+  public void onShowProfile( ) {
+    this.search( clientFactory.getSessionData( ).getLoginUser( ).getUserProfileSearch( ) );
+  }
+
+  private void showChangePasswordDialog( String subject ) {
+    InputView dialog = this.clientFactory.getInputView( );
+    dialog.setPresenter( this );
+    dialog.display( CHANGE_PASSWORD_CAPTION, subject, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return OLD_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.NEWPASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPasswordChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD2_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    } ) ) );
+    
+  }
+  
+  private void showFirstTimeDialog( ) {
+    InputView dialog = this.clientFactory.getInputView( );
+    dialog.setPresenter( this );
+    dialog.display( FIRST_TIME_CAPTION, FIRST_TIME_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return EMAIL_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createEmailChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return OLD_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.NEWPASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPasswordChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return NEW_PASSWORD2_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
+    } ) ) );
+    
+  }
+  
+  // This is when user clicks the user setting manual to change password.
+  @Override
+  public void onChangePassword( ) {
+    showChangePasswordDialog( MANUAL_CHANGE_PASSWORD_SUBJECT );
+  }
+
+  // Returned from dialog
+  @Override
+  public void process( String subject, ArrayList<String> values ) {
+    if ( MANUAL_CHANGE_PASSWORD_SUBJECT.equals( subject ) || PASSWORD_EXPIRED_SUBJECT.equals( subject ) ) {
+      doChangePassword( subject, values.get( 0 ), values.get( 1 ), null );
+    } else if ( FIRST_TIME_SUBJECT.equals( subject ) ) {
+      doChangePassword( subject, values.get( 1 ), values.get( 2 ), values.get( 0 ) );
+    }
+  }
+
+  private void doChangePassword( final String subject, String oldPass, String newPass, String email ) {
+    final String userId = this.clientFactory.getSessionData( ).getLoginUser( ).getUserId( );
+    
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing password ...", 0 );
+    
+    this.clientFactory.getBackendService( ).changePassword( this.clientFactory.getLocalSession( ).getSession( ), userId, oldPass, newPass, email, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change password for user " + userId + ": " + caught.getMessage( ) );
+        // Password change failure is the same as cancelling the dialog
+        cancel( subject );
+      }
+
+      @Override
+      public void onSuccess( Void arg ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Password changed", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Password changed for user " + userId );
+        clientFactory.getSessionData( ).getLoginUser( ).setLoginAction( null );
+        if ( FIRST_TIME_SUBJECT.equals( subject ) || PASSWORD_EXPIRED_SUBJECT.equals( subject ) ) {
+          // If it is a forced password change, continue the loading.
+          getSystemProperties( );
+        }
+      }
+      
+    } );
+  }
+
+  // This is when the password change dialog (forced or manual) being cancelled
+  @Override
+  public void cancel( String subject ) {
+    if ( FIRST_TIME_SUBJECT.equals( subject ) || PASSWORD_EXPIRED_SUBJECT.equals( subject ) ) {
+      // If user chooses not to change password this time, logout.
+      LOG.log( Level.WARNING, "User chooses not to change password" );
+      clientFactory.getLocalSession( ).clearSession( );
+      clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
+    }
+    
+  }
+  
+  @Override
+  public void onDownloadCredential( ) {
+    LoginUserProfile user = clientFactory.getSessionData( ).getLoginUser( );
+    Window.open( GWT.getModuleBaseURL( ) + "getX509?" +
+                "account=" + user.getAccountName( ) +
+                "&user=" + user.getUserName( ) +
+                "&code=" + user.getUserToken( ),
+                "_self", "" );
+  }
+
   
 }

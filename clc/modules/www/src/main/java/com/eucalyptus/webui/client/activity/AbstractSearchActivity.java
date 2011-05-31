@@ -124,6 +124,14 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     descs.addAll( selected.getExtraFieldDescs( ) );
     this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
   }
+ 
+  public void onAction( String key ) {
+    //Nothing to do.
+  }
+  
+  public void cancel( String subject ) {
+    //Nothing to do.
+  }
   
   protected static String getField( ArrayList<String> values, int index ) {
     if ( values != null && values.size( ) > index ) {

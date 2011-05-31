@@ -9,6 +9,8 @@ import com.eucalyptus.webui.client.session.LocalSessionImpl;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.AccountViewImpl;
+import com.eucalyptus.webui.client.view.ActionResultView;
+import com.eucalyptus.webui.client.view.ActionResultViewImpl;
 import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
 import com.eucalyptus.webui.client.view.ConfirmationView;
@@ -89,6 +91,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private KeyView keyView;
 	private CertView certView;
 	private ImageView imageView;
+	private ActionResultView actionResultView;
 
 	// Dialogs
 	private ConfirmationView confirmationView;
@@ -305,6 +308,14 @@ public class ClientFactoryImpl implements ClientFactory {
       inputView = new InputViewImpl( );
     }
     return inputView;
+  }
+
+  @Override
+  public ActionResultView getActionResultView( ) {
+    if ( actionResultView == null ) {
+      actionResultView = new ActionResultViewImpl( );
+    }
+    return actionResultView;
   }
   
 }

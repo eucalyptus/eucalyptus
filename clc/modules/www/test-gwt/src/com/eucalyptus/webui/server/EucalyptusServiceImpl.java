@@ -33,7 +33,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException {
-    return new LoginUserProfile( "admin", "eucalyptus" );
+    return new LoginUserProfile( "1234", "admin", "eucalyptus", "123456", "user:id=1234", null );
   }
 
   @Override
@@ -179,6 +179,148 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void deleteAccounts( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
     // TODO Auto-generated method stub
     
+  }
+
+  @Override
+  public void modifyAccount( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public ArrayList<String> createUsers( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ArrayList<String> createGroups( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void deleteUsers( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void deleteGroups( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addAccountPolicy( Session session, String accountId, String name, String document ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addUserPolicy( Session session, String usertId, String name, String document ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addGroupPolicy( Session session, String groupId, String name, String document ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void deletePolicy( Session session, SearchResultRow policySerialized ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void deleteAccessKey( Session session, SearchResultRow keySerialized ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void deleteCertificate( Session session, SearchResultRow certSerialized ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addUsersToGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addUsersToGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void removeUsersFromGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void removeUsersFromGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void modifyUser( Session session, ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void modifyGroup( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void modifyAccessKey( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void modifyCertificate( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addAccessKey( Session session, String userId ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void addCertificate( Session session, String userId, String pem ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
+    try {
+      Thread.sleep( 2000 );
+    } catch ( InterruptedException e ) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
 }

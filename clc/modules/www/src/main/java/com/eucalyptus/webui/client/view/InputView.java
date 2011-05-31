@@ -12,6 +12,8 @@ public interface InputView extends IsWidget {
   public interface Presenter {
 
     void process( String subject, ArrayList<String> values );
+
+    void cancel(String subject );
     
   }
   

@@ -20,8 +20,7 @@ import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class PolicyActivity extends AbstractSearchActivity 
-    implements PolicyView.Presenter, DetailView.Presenter, ConfirmationView.Presenter {
+public class PolicyActivity extends AbstractSearchActivity implements PolicyView.Presenter, ConfirmationView.Presenter {
   
   public static final String TITLE = "ACCESS POLICIES";
   

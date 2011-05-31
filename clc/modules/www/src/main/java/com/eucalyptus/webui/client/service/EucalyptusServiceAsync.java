@@ -84,5 +84,25 @@ public interface EucalyptusServiceAsync {
   void addAccessKey( Session session, String userId, AsyncCallback<Void> callback );
 
   void addCertificate( Session session, String userId, String pem, AsyncCallback<Void> callback );
+
+  void changePassword( Session session, String userId, String oldPass, String newPass, String email, AsyncCallback<Void> callback );
+
+  void signupAccount( String accountName, String password, String email, AsyncCallback<Void> callback );
+
+  void approveAccounts( Session session, ArrayList<String> accountNames, AsyncCallback<ArrayList<String>> callback );
+
+  void rejectAccounts( Session session, ArrayList<String> accountNames, AsyncCallback<ArrayList<String>> callback );
+
+  void approveUsers( Session session, ArrayList<String> userIds, AsyncCallback<ArrayList<String>> callback );
+
+  void rejectUsers( Session session, ArrayList<String> userIds, AsyncCallback<ArrayList<String>> callback );
+
+  void signupUser( String userName, String accountName, String password, String email, AsyncCallback<Void> callback );
+
+  void confirmUser( String confirmationCode, AsyncCallback<Void> callback );
+
+  void requestPasswordRecovery( String userName, String accountName, String email, AsyncCallback<Void> callback );
+
+  void resetPassword( String confirmationCode, String password, AsyncCallback<Void> callback );
   
 }
