@@ -1,4 +1,4 @@
-package com.eucalyptus.reporting.queue;
+package com.eucalyptus.reporting.queue.mq;
 
 import java.util.*;
 
@@ -8,6 +8,7 @@ import org.apache.log4j.*;
 
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.reporting.queue.QueueRuntimeException;
 import com.eucalyptus.system.SubDirectory;
 
 public class QueueBroker
@@ -63,12 +64,16 @@ public class QueueBroker
 		 */
 		String remoteBrokerUrl = null;
 		Component reportingComponent = Components.lookup(Reporting.class);
-		if (null!=reportingComponent && !reportingComponent.isEnabledLocally( )) {
+		if (null!=reportingComponent && !reportingComponent.isEnabledLocally()) {
 			log.info("Searching for remote reporting broker");
-			NavigableSet<ServiceConfiguration> services = reportingComponent.lookupServiceConfigurations();
-			for (ServiceConfiguration service: services) {
-				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
-						service.getHostName( ), DEFAULT_PORT);
+			//TODO: merge in
+			//NavigableSet<Service> services = reportingComponent.;
+//			for (Service service: services) {
+//				remoteBrokerUrl = String.format(DEFAULT_REMOTE_URL_FORMAT,
+//						service.getServiceConfiguration().getHostName(), DEFAULT_PORT);
+//			}
+			if (remoteBrokerUrl==null) {
+				throw new QueueRuntimeException("Unable to locate reporting broker over network");
 			}
 		} else {
 			log.info("Reporting broker will run locally");
@@ -86,13 +91,14 @@ public class QueueBroker
 				brokerService.addNetworkConnector(remoteBrokerUrl);
 			}
 			brokerService.setUseJmx(false);
-			brokerThread = new JmsBrokerThread(brokerService);
-			brokerThread.start();
-			Thread.sleep(1000); // give the broker a moment to startup; TODO:
-								// fix this
-			if (brokerThread.getStartException() != null) {
-				throw brokerThread.getStartException();
-			}
+			brokerService.start();
+//			brokerThread = new JmsBrokerThread(brokerService);
+//			brokerThread.start();
+//			Thread.sleep(1000); // give the broker a moment to startup; TODO:
+//								// fix this
+//			if (brokerThread.getStartException() != null) {
+//				throw brokerThread.getStartException();
+//			}
 		} catch (Exception ex) {
 			throw new QueueRuntimeException(ex);
 		}
@@ -167,4 +173,3 @@ public class QueueBroker
 	}
 
 }
-

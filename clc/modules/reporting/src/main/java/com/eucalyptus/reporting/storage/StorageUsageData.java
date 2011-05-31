@@ -13,10 +13,6 @@ public class StorageUsageData
 	protected Long snapshotsNum;
 	@Column(name="snapshot_megs", nullable=false)
 	protected Long snapshotsMegs;
-	@Column(name="objects_num", nullable=false)
-	protected Long objectsNum;
-	@Column(name="objects_megs", nullable=false)
-	protected Long objectsMegs;
 	
 	public StorageUsageData()
 	{
@@ -24,16 +20,13 @@ public class StorageUsageData
 		this.volumesMegs    = new Long(0);
 		this.snapshotsNum   = new Long(0);
 		this.snapshotsMegs  = new Long(0);
-		this.objectsNum     = new Long(0);
-		this.objectsMegs    = new Long(0);
 	}
 
 	public StorageUsageData(Long volumesNum, Long volumesMegs, Long snapshotsNum,
-			Long snapshotsMegs, Long objectsNum, Long objectsMegs)
+			Long snapshotsMegs)
 	{
 		if (volumesNum == null || volumesMegs == null || snapshotsNum == null
-				|| snapshotsMegs == null || objectsNum == null
-				|| objectsMegs == null)
+				|| snapshotsMegs == null)
 		{
 			throw new IllegalArgumentException("args can't be null");
 		}
@@ -41,8 +34,6 @@ public class StorageUsageData
 		this.volumesMegs    = volumesMegs;
 		this.snapshotsNum   = snapshotsNum;
 		this.snapshotsMegs  = snapshotsMegs;
-		this.objectsNum     = objectsNum;
-		this.objectsMegs    = objectsMegs;
 	}
 
 	public Long getVolumesNum()
@@ -65,16 +56,6 @@ public class StorageUsageData
 		return snapshotsMegs;
 	}
 	
-	public Long getObjectsNum()
-	{
-		return objectsNum;
-	}
-	
-	public Long getObjectsMegs()
-	{
-		return objectsMegs;
-	}
-
 	public void setVolumesNum(Long volumesNum)
 	{
 		if (volumesNum==null) throw new IllegalArgumentException("arg can't be null");
@@ -99,18 +80,6 @@ public class StorageUsageData
 		this.snapshotsMegs = snapshotsMegs;
 	}
 
-	public void setObjectsNum(Long objectsNum)
-	{
-		if (objectsNum==null) throw new IllegalArgumentException("arg can't be null");
-		this.objectsNum = objectsNum;
-	}
-
-	public void setObjectsMegs(Long objectsMegs)
-	{
-		if (objectsMegs==null) throw new IllegalArgumentException("arg can't be null");
-		this.objectsMegs = objectsMegs;
-	}
-
 	private static Long sumLongs(Long a, Long b)
 	{
 		return new Long(a.longValue() + b.longValue());
@@ -123,17 +92,15 @@ public class StorageUsageData
 				sumLongs(this.volumesNum, other.volumesNum),
 				sumLongs(this.volumesMegs, other.volumesMegs),
 				sumLongs(this.snapshotsNum, other.snapshotsNum),
-				sumLongs(this.snapshotsMegs, other.snapshotsMegs),
-				sumLongs(this.objectsNum, other.objectsNum),
-				sumLongs(this.objectsMegs, other.objectsMegs)
+				sumLongs(this.snapshotsMegs, other.snapshotsMegs)
 				);
 	}
 
 	public String toString()
 	{
-		return String.format("[vols:%d,volsMegs:%d,snaps:%d,snapsMegs:%d,objs:%d,"
-				+ "objsMegs:%d]", volumesNum, volumesMegs, snapshotsNum,
-				snapshotsMegs, objectsNum, objectsMegs);
+		return String.format("[vols:%d,volsMegs:%d,snaps:%d,snapsMegs:%d]",
+				volumesNum, volumesMegs, snapshotsNum,
+				snapshotsMegs);
 	}
 
 

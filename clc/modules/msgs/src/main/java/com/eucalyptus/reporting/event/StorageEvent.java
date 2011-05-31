@@ -4,7 +4,7 @@ package com.eucalyptus.reporting.event;
 public class StorageEvent
 	implements Event
 {
-	public enum EventType { S3Object, EbsVolume, EbsSnapshot };
+	public enum EventType { EbsVolume, EbsSnapshot };
 	
 	private final EventType eventType;
 	private final boolean   createOrDelete;

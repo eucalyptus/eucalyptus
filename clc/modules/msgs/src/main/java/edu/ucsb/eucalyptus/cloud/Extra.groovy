@@ -135,8 +135,6 @@ public class VmAllocationInfo extends EucalyptusMessage {
 
   public void setCorrelationId( String correlationId ) {
   }
-  
-  
 }
 
 public class VmDescribeType extends EucalyptusMessage {
@@ -254,6 +252,17 @@ public class VirtualBootRecord extends EucalyptusData {
   String guestDeviceName = "none";
   Long size = -1l;
   String format = "none";
+
+  def VirtualBootRecord() {}
+  
+  def VirtualBootRecord(final id, final resourceLocation, final type, final guestDeviceName, final size, final format) {
+	  this.id = id;
+	  this.resourceLocation = resourceLocation;
+	  this.type = type;
+	  this.guestDeviceName = guestDeviceName;
+	  this.size = size;
+	  this.format = format;
+  }
 }
 
 public class VmKeyInfo extends EucalyptusData {
@@ -261,6 +270,8 @@ public class VmKeyInfo extends EucalyptusData {
   String name = "";
   String value = "";
   String fingerprint = "";
+
+  def VmKeyInfo() {}
   
   def VmKeyInfo(final name, final value, final fingerprint) {
     this.name = name;
@@ -268,20 +279,11 @@ public class VmKeyInfo extends EucalyptusData {
     this.fingerprint = fingerprint;
   }
   
-  def VmKeyInfo() {
-  }
-  
   @Override
   public String toString( ) {
     return String.format( "VmKeyInfo [fingerprint=%s, name=%s, value=%s]", this.fingerprint, this.name, this.value );
-  }
-  
-  
+  }  
 }
-
-
-
-
 
 public class NodeInfo implements Comparable {
   String iqn;

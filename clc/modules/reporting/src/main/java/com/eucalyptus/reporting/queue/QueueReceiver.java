@@ -9,6 +9,8 @@ public interface QueueReceiver
 
 	public void removeEventListener(EventListener<Event> el);
 	
+	public void removeAllListeners();
+	
 	/**
 	 * @return Null if no event is available
 	 */

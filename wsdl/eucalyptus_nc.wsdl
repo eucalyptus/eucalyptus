@@ -258,6 +258,7 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="instanceId" type="xs:string" />
+	    <xs:element name="force" type="xs:boolean" />
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>

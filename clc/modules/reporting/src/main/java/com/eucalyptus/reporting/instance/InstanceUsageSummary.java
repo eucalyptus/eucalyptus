@@ -81,7 +81,7 @@ public class InstanceUsageSummary
 			throw new IllegalArgumentException("arg can't be null");
 		this.m1SmallNum = m1SmallNum;
 	}
-
+	
 	public Long getM1SmallTimeSecs()
 	{
 		return m1SmallTimeSecs;
@@ -190,18 +190,6 @@ public class InstanceUsageSummary
 		this.c1XLargeTimeSecs = c1XLargeTimeSecs;
 	}
 
-	public Long getNetworkIoMegs()
-	{
-		return networkIoMegs;
-	}
-
-	public void setNetworkIoMegs(Long networkIoMegs)
-	{
-		if (networkIoMegs == null)
-			throw new IllegalArgumentException("arg can't be null");
-		this.networkIoMegs = networkIoMegs;
-	}
-
 	public Long getDiskIoMegs()
 	{
 		return diskIoMegs;
@@ -214,7 +202,104 @@ public class InstanceUsageSummary
 		this.diskIoMegs = diskIoMegs;
 	}
 
-	public void sumFromUsageData(UsageData ud)
+	public Long getNetworkIoMegs()
+	{
+		return networkIoMegs;
+	}
+
+	public void setNetworkIoMegs(Long networkIoMegs)
+	{
+		if (networkIoMegs == null)
+			throw new IllegalArgumentException("arg can't be null");
+		this.networkIoMegs = networkIoMegs;
+	}
+
+	void addM1SmallNum(long addBy)
+	{
+		this.m1SmallNum = new Long(this.m1SmallNum.longValue() + addBy);
+	}
+
+	void addM1SmallTimeSecs(long addBy)
+	{
+		this.m1SmallTimeSecs = new Long(this.m1SmallTimeSecs.longValue() + addBy);
+	}
+
+	void addC1MediumNum(long addBy)
+	{
+		this.c1MediumNum = new Long(this.c1MediumNum.longValue() + addBy);
+	}
+
+	void addC1MediumTimeSecs(long addBy)
+	{
+		this.c1MediumTimeSecs = new Long(this.c1MediumTimeSecs.longValue() + addBy);
+	}
+
+	void addM1LargeNum(long addBy)
+	{
+		this.m1LargeNum = new Long(this.m1LargeNum.longValue() + addBy);
+	}
+
+	void addM1LargeTimeSecs(long addBy)
+	{
+		this.m1LargeTimeSecs = new Long(this.m1LargeTimeSecs.longValue() + addBy);
+	}
+
+	void addM1XLargeNum(long addBy)
+	{
+		this.m1XLargeNum = new Long(this.m1XLargeNum.longValue() + addBy);
+	}
+
+	void addM1XLargeTimeSecs(long addBy)
+	{
+		this.m1XLargeTimeSecs = new Long(this.m1XLargeTimeSecs.longValue() + addBy);
+	}
+
+	void addC1XLargeNum(long addBy)
+	{
+		this.c1XLargeNum = new Long(this.c1XLargeNum.longValue() + addBy);
+	}
+
+	void addC1XLargeTimeSecs(long addBy)
+	{
+		this.c1XLargeTimeSecs = new Long(this.c1XLargeTimeSecs.longValue() + addBy);
+	}
+
+	void addNetworkIoMegs(long addBy)
+	{
+		this.networkIoMegs = new Long(this.networkIoMegs.longValue() + addBy);
+	}
+
+	void addDiskIoMegs(long addBy)
+	{
+		this.diskIoMegs = new Long(this.diskIoMegs.longValue() + addBy);
+	}
+
+	public void addUsage(InstanceUsageSummary summary)
+	{
+		this.diskIoMegs = addLongs(this.diskIoMegs, summary.diskIoMegs);
+		this.networkIoMegs = addLongs(this.networkIoMegs, summary.networkIoMegs);
+		this.m1SmallNum = addLongs(this.m1SmallNum, summary.m1SmallNum);
+		this.c1MediumNum = addLongs(this.c1MediumNum, summary.c1MediumNum);
+		this.m1LargeNum = addLongs(this.m1LargeNum, summary.m1LargeNum);
+		this.m1XLargeNum = addLongs(this.m1XLargeNum, summary.m1XLargeNum);
+		this.c1XLargeNum = addLongs(this.c1XLargeNum, summary.c1XLargeNum);
+		this.m1SmallTimeSecs = addLongs(this.m1SmallTimeSecs, summary.m1SmallTimeSecs);
+		this.c1MediumTimeSecs = addLongs(this.c1MediumTimeSecs, summary.c1MediumTimeSecs);
+		this.m1LargeTimeSecs = addLongs(this.m1LargeTimeSecs, summary.m1LargeTimeSecs);
+		this.m1XLargeTimeSecs = addLongs(this.m1XLargeTimeSecs, summary.m1XLargeTimeSecs);
+		this.c1XLargeTimeSecs = addLongs(this.c1XLargeTimeSecs, summary.c1XLargeTimeSecs);
+	}
+	
+	private static Long addLongs(Long a, Long b)
+	{
+		if (a != null && b != null) {
+			return new Long(a.longValue() + b.longValue());
+		} else {
+			return null;
+		}
+	}
+	
+	public void sumFromUsageData(InstanceUsageData ud)
 	{
 		//Autoboxing should work because I prevented nulls everywhere
 		this.diskIoMegs = this.diskIoMegs + ud.getDiskIoMegs();
