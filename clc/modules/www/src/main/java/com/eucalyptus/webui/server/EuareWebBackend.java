@@ -101,10 +101,10 @@ public class EuareWebBackend {
   static {
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "10%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "35%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "25%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "15%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REGISTRATION, "Registration status", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REGISTRATION, "Registration status", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARN, "ARN", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNTID, "Owner account", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( GROUPS, "Membership groups", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
@@ -241,11 +241,13 @@ public class EuareWebBackend {
       // Optimization for a single account search
       if ( query.hasOnlySingle( ID ) ) {
         Account account = Accounts.lookupAccountById( query.getSingle( ID ).getValue( ) );
-        results.add( serializeAccount( account ) );
+        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+        results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
       } else {
         for ( Account account : Accounts.listAllAccounts( ) ) {
           if ( accountMatchQuery( account, query ) ) {
-            results.add( serializeAccount( account ) );
+            User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+            results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
           }
         }
       }
@@ -257,10 +259,11 @@ public class EuareWebBackend {
     return results;
   }
 
-  private static SearchResultRow serializeAccount( Account account ) throws Exception {
+  private static SearchResultRow serializeAccount( Account account, RegistrationStatus registrationStatus ) throws Exception {
     SearchResultRow result = new SearchResultRow( );
     result.addField( account.getAccountNumber( ) );
     result.addField( account.getName( ) );
+    result.addField( registrationStatus.name( ) );
     // Search links for account fields: users, groups and policies
     result.addField( QueryBuilder.get( ).start( QueryType.user ).add( ACCOUNTID, account.getAccountNumber( ) ).url( ) );
     result.addField( QueryBuilder.get( ).start( QueryType.group ).add( ACCOUNTID, account.getAccountNumber( ) ).url( ) );
