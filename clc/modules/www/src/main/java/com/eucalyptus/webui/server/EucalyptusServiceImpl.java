@@ -50,25 +50,29 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public Session login( String fullname, String password ) throws EucalyptusServiceException {
-    if ( fullname == null || password == null ) {
+  public Session login( String fullName, String password ) throws EucalyptusServiceException {
+    if ( fullName == null || password == null ) {
       throw new EucalyptusServiceException( "Empty user name or password" );
     }
     // Parse userId in the follow forms:
     // 1. "user@account"
     // 2. any of the parts is missing, using the default: "admin" for user and "eucalyptus" for account.
     //    So it could be "test" (test@eucalyptus) or "@test" (admin@test).
-    String[] splits = fullname.split( "@", 2 );
+    String[] splits = fullName.split( "@", 2 );
     String userName = User.ACCOUNT_ADMIN;
     String accountName = Account.SYSTEM_ACCOUNT;
-    if ( !Strings.isNullOrEmpty( splits[0] ) ) {
-      userName = splits[0];
-    }
-    if ( !Strings.isNullOrEmpty( splits[1] ) ) {
-      accountName = splits[1];
+    if ( splits.length < 2 ) {
+      if ( fullName.startsWith( "@" ) ) {
+        accountName = splits[0];
+      } else {
+        userName = splits[0];
+      }
+    } else {
+      accountName = splits[0];
+      userName = splits[1];
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
-    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to login attack.
+    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic login attack.
     return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
