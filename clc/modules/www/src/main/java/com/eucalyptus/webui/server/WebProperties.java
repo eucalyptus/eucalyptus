@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.BaseDirectory;
-import com.google.gwt.thirdparty.guava.common.base.Strings;
+import com.google.common.base.Strings;
 
 public class WebProperties {
   

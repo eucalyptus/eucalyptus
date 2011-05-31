@@ -1246,16 +1246,18 @@ public class EuareWebBackend {
       try {
         Account account = Accounts.lookupAccountByName( accountName );
         User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
-        if ( approve ) {
-          if ( admin.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
+        if ( admin.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
+          if ( approve ) {
             admin.setRegistrationStatus( RegistrationStatus.APPROVED );
             notifyAccountApproval( admin, accountName, backendUrl );
+          } else {
+            notiftyAccountRejection( admin, accountName, backendUrl );
+            Accounts.deleteAccount( accountName, false, true );
           }
+          success.add( accountName );
         } else {
-          notiftyAccountRejection( admin, accountName, backendUrl );
-          Accounts.deleteAccount( accountName, false, true );
+          throw new IllegalArgumentException( "Account " + accountName + " can not be approved or rejected." );
         }
-        success.add( accountName );
       } catch ( Exception e ) {
         LOG.error( "Failed to " + ( approve ? "approve" : "reject" ) + " account " + accountName, e );
         LOG.debug( e, e );
@@ -1294,17 +1296,19 @@ public class EuareWebBackend {
     for ( String userId : userIds ) {
       try {
         User user = Accounts.lookupUserById( userId );
-        if ( approve ) {
-          if ( user.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
+        if ( user.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
+          if ( approve ) {
             user.setRegistrationStatus( RegistrationStatus.APPROVED );
             notifyUserApproval( user, backendUrl );
+          } else {
+            notifyUserRejection( user, backendUrl );
+            Account account = user.getAccount( );
+            account.deleteUser( user.getName( ), false, true );
           }
+          success.add( userId );
         } else {
-          notifyUserRejection( user, backendUrl );
-          Account account = user.getAccount( );
-          account.deleteUser( user.getName( ), false, true );
+          throw new IllegalArgumentException( "User " + user + " can not be approved or rejected." );
         }
-        success.add( userId );
       } catch ( Exception e ) {
         LOG.error( "Failed to " + ( approve ? "approve" : "reject" ) + " user " + userId, e );
         LOG.debug( e, e );
