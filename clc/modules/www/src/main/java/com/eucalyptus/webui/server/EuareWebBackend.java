@@ -175,13 +175,14 @@ public class EuareWebBackend {
   public static LoginUserProfile getLoginUserProfile( User user ) throws EucalyptusServiceException {
     try {
       String userProfileSearch = QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ID, user.getUserId( ) ).query( );
+      String userKeySearch = QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, user.getUserId( ) ).query( );
       LoginAction action = null;
       if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
         action = LoginAction.FIRSTTIME;
       } else if ( user.getPasswordExpires( ) < System.currentTimeMillis( ) ) {
         action = LoginAction.EXPIRATION;
       }
-      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), user.getToken( ), userProfileSearch, action );
+      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), user.getToken( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
       throw new EucalyptusServiceException( "Failed to retrieve user profile" );
     }

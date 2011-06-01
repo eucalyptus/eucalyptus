@@ -30,16 +30,25 @@ public class UserSettingViewImpl extends PopupPanel implements UserSettingView {
   
   @UiHandler( "profileLink" )
   void handleClickOnProfile( ClickEvent e ) {
+    this.hide( );
     this.presenter.onShowProfile( );
+  }
+  
+  @UiHandler( "keyLink" )
+  void handleClickOnKey( ClickEvent e ) {
+    this.hide( );
+    this.presenter.onShowKey( );
   }
   
   @UiHandler( "passwordLink" )
   void handlClickOnPassword( ClickEvent e ) {
+    this.hide( );
     this.presenter.onChangePassword( );
   }
   
   @UiHandler( "credLink" )
   void handleClickOnCredential( ClickEvent e ) {
+    this.hide( );
     this.presenter.onDownloadCredential( );
   }
   

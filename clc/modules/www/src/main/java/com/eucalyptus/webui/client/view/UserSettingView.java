@@ -16,6 +16,8 @@ public interface UserSettingView extends IsWidget {
     void onChangePassword( );
 
     void onDownloadCredential( );
+
+    void onShowKey( );
   }
   
 }

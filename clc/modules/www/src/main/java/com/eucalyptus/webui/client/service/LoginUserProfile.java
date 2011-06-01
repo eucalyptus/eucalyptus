@@ -16,17 +16,19 @@ public class LoginUserProfile implements Serializable {
   private String accountName;
   private String userToken;
   private String userProfileSearch;
+  private String userKeySearch;
   private LoginAction loginAction;
 
   public LoginUserProfile( ) {
   }
   
-  public LoginUserProfile( String userId, String userName, String accountName, String userToken, String userProfileSearch, LoginAction action ) {
+  public LoginUserProfile( String userId, String userName, String accountName, String userToken, String userProfileSearch, String userKeySearch, LoginAction action ) {
     this.setUserId( userId );
     this.setUserName( userName );
     this.setAccountName( accountName );
     this.setUserToken( userToken );
     this.setUserProfileSearch( userProfileSearch );
+    this.setUserKeySearch( userKeySearch );
     this.setLoginAction( action );
   }
 
@@ -80,6 +82,15 @@ public class LoginUserProfile implements Serializable {
 
   public LoginAction getLoginAction( ) {
     return loginAction;
+  }
+
+  public String getUserKeySearch( ) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public void setUserKeySearch( String userKeySearch ) {
+    this.userKeySearch = userKeySearch;
   }
   
 }

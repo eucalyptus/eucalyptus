@@ -454,5 +454,10 @@ public class ShellActivity extends AbstractActivity
                 "_self", "" );
   }
 
+  @Override
+  public void onShowKey( ) {
+    this.search( clientFactory.getSessionData( ).getLoginUser( ).getUserKeySearch( ) );
+  }
+
   
 }
