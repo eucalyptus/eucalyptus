@@ -497,9 +497,9 @@ int diskutil_write2file (const char * file, const char * str)
 int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk)
 {
     int ret = OK;
-    char * output;
-    char * kfile;
-    char * rfile;
+    char * output = NULL;
+    char * kfile = NULL;
+    char * rfile = NULL;
 
     logprintfl (EUCAINFO, "{%u} installing kernel and ramdisk\n", (unsigned int)pthread_self());
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
@@ -535,7 +535,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
     if (!output) {
         logprintfl (EUCAINFO, "{%u} error: failed to copy the kernel to boot directory\n", (unsigned int)pthread_self());
-        return ERROR;
+        ret = ERROR;
+        goto cleanup;
     }
     free (output);
 
@@ -543,7 +544,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
         if (!output) {
             logprintfl (EUCAINFO, "{%u} error: failed to copy the ramdisk to boot directory\n", (unsigned int)pthread_self());
-            return ERROR;
+            ret = ERROR;
+            goto cleanup;
         }
         free (output);
     }
@@ -560,12 +562,20 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     char grub_conf_path [EUCA_MAX_PATH];
     snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
 
-    if (diskutil_write2file (menu_lst_path, buf)!=OK)
-        return ERROR;
-    if (diskutil_write2file (grub_conf_path, buf)!=OK)
-        return ERROR;
+    if (diskutil_write2file (menu_lst_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
+    if (diskutil_write2file (grub_conf_path, buf)!=OK) {
+        ret = ERROR;
+        goto cleanup;
+    }
 
-    return OK;
+ cleanup:        
+    if(kfile) free(kfile);
+    if(rfile) free(rfile);
+
+    return ret;
 }
 
 int diskutil_grub_mbr (const char * path, const int part)
@@ -659,11 +669,19 @@ static char * pruntf (boolean log_error, char *format, ...)
 
     IF=popen(cmd, "r");
     if (!IF) {
-        logprintfl (EUCAERROR, "{%u} error: cannot popen() cmd '%s' for read\n", (unsigned int)pthread_self(), cmd);
-        return(NULL);
+      logprintfl (EUCAERROR, "{%u} error: cannot popen() cmd '%s' for read\n", (unsigned int)pthread_self(), cmd);
+      va_end(ap);
+      return(NULL);
     }
 
     output = malloc(sizeof(char) * outsize);
+    if (output == NULL) {
+        logprintfl (EUCAERROR, "error: failed to allocate mem for output\n");
+        va_end(ap);
+        pclose(IF);
+        return(NULL);
+    }
+
     while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
         output[(outsize-1025)+bytes] = '\0';
         outsize += 1024;
@@ -678,6 +696,7 @@ static char * pruntf (boolean log_error, char *format, ...)
         if (output) free (output);
         output = NULL;
     }
+    va_end(ap);
     return (output);
 }
 
