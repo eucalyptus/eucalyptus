@@ -62,9 +62,10 @@
 set -e
 unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG UP_SAMEVERSION
 unset NEW_EUCA OLD_EUCA NEW_EUCA_VERSION OLD_EUCA_VERSION
-LEGAL_LONG_OPTS="old new conf keys db force copyonly sameversion"
+LEGAL_LONG_OPTS="help old new conf keys db force copyonly sameversion"
 KEYDIR="/var/lib/eucalyptus/keys"
 DBDIR="/var/lib/eucalyptus/db"
+NEW_EUCA="/"
 
 usage() {
 	echo "$0 [options]"
@@ -209,6 +210,7 @@ UP_LOG=${NEW_EUCA}/var/log/eucalyptus/upgrade.log
 if [ "${NEW_EUCA_VERSION}" == "${OLD_EUCA_VERSION}" ]; then SAME_VERSION="true"; fi
 if [ "${NEW_EUCA_VERSION}" == "eee-2.0.1" -a "${OLD_EUCA_VERSION}" == "eee-2.0.0" ]; then SAME_VERSION="true"; fi
 
+if [ ! -d "${NEW_EUCA}/var/lib/eucalyptus" ]; then echo "${NEW_EUCA} does not point to a valid Eucalyptus installation. Aborting." ; exit 1 ; fi
 ## NOTE: Add an externalized v.old -> v.new upgrade-path check.
 log "#                           UPGRADE INFORMATION\n#================================================================================" 
 log "# Old Version:              %-12.12s" "${OLD_EUCA_VERSION}"
@@ -217,7 +219,7 @@ log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_K
 log "# Upgrade configuration:    %-12.12s       using: %-15.15s" "$(boole ${UP_CONF})" ${UP_CONF}
 log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_DB})" ${UP_DB}
 log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
-
+ 
 for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
   log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
   if ! $f; then
