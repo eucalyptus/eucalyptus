@@ -83,7 +83,7 @@ public class ResetPasswordActivity extends AbstractActionActivity implements Inp
   private void doResetPassword( String password ) {
     clientFactory.getActionResultView( ).loading( );
     
-    clientFactory.getBackendService( ).confirmUser( confirmationCode,  new AsyncCallback<Void>( ) {
+    clientFactory.getBackendService( ).resetPassword( confirmationCode, password, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {
