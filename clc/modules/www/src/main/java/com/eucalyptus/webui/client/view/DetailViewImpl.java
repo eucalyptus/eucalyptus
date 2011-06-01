@@ -485,14 +485,23 @@ public class DetailViewImpl extends Composite implements DetailView {
           break;
         } else {
           HasValueWidget widget = getContentWidget( desc.getType( ), desc.getName( ), val, desc.getEditable( ) );
-          if ( widget != null ) {
-            addRow( desc.getName( ), new Label( desc.getTitle( ) ), widget, row++ );
+          Widget label = getLabelWidget( desc.getType( ), desc.getTitle( ), val );
+          if ( label != null && widget != null ) {
+            addRow( desc.getName( ), label , widget, row++ );
             continue;
           }
         }
       }
       // Hidden fields
       addRow( desc != null ? desc.getName( ) : "", null/*keyWidget*/, new HiddenValue( val ), null/*rowIndex*/ );
+    }
+  }
+  
+  private Widget getLabelWidget( Type type, String title, String val ) {
+    if ( Type.LINK.equals( type ) ) {
+      return new Anchor( title, val );
+    } else {
+      return new Label( title );
     }
   }
   
