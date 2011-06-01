@@ -55,50 +55,50 @@ public class StorageUsageLog
 
 	
 	/**
-	 * <p>Find the latest allSnapshot before timestampMs, by iteratively
-	 * querying before the period beginning, moving backward in exponentially
-	 * growing intervals
+	 * <p>Find the latest allSnapshot before timestampMs, or null if none
 	 */
-	long findLatestAllSnapshotBefore(long timestampMs)
+	Long findLatestAllSnapshotBefore(long timestampMs)
 	{
-		long foundTimestampMs = 0l;
+		Long foundTimestampMs = null;
 
-		EntityWrapper<StorageUsageSnapshot> entityWrapper =
-			EntityWrapper.get(StorageUsageSnapshot.class);
-		try {
-
-	    	final long oneHourMs = 60*60*1000;
-			for ( int i=2 ;
-				  (timestampMs - oneHourMs*(long)i) > 0 ;
-				  i=(int)Math.pow(i, 2))
-			{
 				
-				long startingMs = timestampMs - (oneHourMs*i);
-				log.info("Searching for latest timestamp before beginning:" + startingMs);
+		/* Iteratively query before startingMs, moving backward in
+		 * exponentially growing intervals, starting at 3 hrs before
+		 */
+        for (double minsBefore=180; /* 3 hrs */
+        	 System.currentTimeMillis()-(long)(minsBefore*60*1000) > 0;
+        	 minsBefore=Math.pow(minsBefore, 1.1))
+        {
+            long queryStartMs = System.currentTimeMillis()-(long)(minsBefore*60*1000);
+
+            EntityWrapper<StorageUsageSnapshot> entityWrapper =
+    			EntityWrapper.get(StorageUsageSnapshot.class);
+
+			log.info("Searching for latest timestamp before beginning:" + queryStartMs);
+			try {
 				@SuppressWarnings("rawtypes")
-				List list =
-					entityWrapper.createQuery(
-						"from StorageUsageSnapshot as sus"
-						+ " WHERE sus.key.timestampMs > ?"
-						+ " AND sus.key.timestampMs < ?"
-						+ " AND sus.allSnapshot = true")
-						.setLong(0, new Long(startingMs))
-						.setLong(1, new Long(timestampMs))
-						.list();
-				for (Object obj: list) {
+				List list = entityWrapper.createQuery(
+							"from StorageUsageSnapshot as sus"
+							+ " WHERE sus.key.timestampMs > ?"
+							+ " AND sus.key.timestampMs < ?"
+							+ " AND sus.allSnapshot = true")
+							.setLong(0, new Long(queryStartMs))
+							.setLong(1, new Long(timestampMs))
+							.list();
+				for (Object obj : list) {
 					StorageUsageSnapshot snapshot = (StorageUsageSnapshot) obj;
 					foundTimestampMs = snapshot.getSnapshotKey().getTimestampMs();
 				}
-				if (foundTimestampMs != 0l) break;
+				entityWrapper.commit();
+			} catch (Exception ex) {
+				log.error(ex);
+				entityWrapper.rollback();
+				throw new RuntimeException(ex);
 			}
-			log.info("Found latest timestamp before beginning:"
-					+ foundTimestampMs);			
-			entityWrapper.commit();
-		} catch (Exception ex) {
-			log.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
+			if (foundTimestampMs != null) break;
 		}
+		log.info("Found latest timestamp before beginning:"
+				+ foundTimestampMs);			
 		
 		return foundTimestampMs;
 	}
@@ -114,14 +114,14 @@ public class StorageUsageLog
 			EntityWrapper.get(StorageUsageSnapshot.class);
 
     	try {
-			long latestSnapshotBeforeMs =
+			Long latestSnapshotBeforeMs =
 				findLatestAllSnapshotBefore(System.currentTimeMillis());
 			@SuppressWarnings("rawtypes")
 
 			List list = entityWrapper.createQuery(
 					"from StorageUsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?")
-					.setLong(0, new Long(latestSnapshotBeforeMs))
+					.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 					.list();
 			
 			for (Object obj: list) {
@@ -166,7 +166,7 @@ public class StorageUsageLog
 			Map<StorageSummaryKey,StorageDataAccumulator> dataAccumulatorMap =
 				new HashMap<StorageSummaryKey,StorageDataAccumulator>();
 			
-			long latestSnapshotBeforeMs =
+			Long latestSnapshotBeforeMs =
 				findLatestAllSnapshotBefore(period.getBeginningMs());
 
 			@SuppressWarnings("rawtypes")
@@ -174,7 +174,7 @@ public class StorageUsageLog
 					"from StorageUsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
 					+ " AND sus.key.timestampMs < ?")
-					.setLong(0, new Long(latestSnapshotBeforeMs))
+					.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
 			
