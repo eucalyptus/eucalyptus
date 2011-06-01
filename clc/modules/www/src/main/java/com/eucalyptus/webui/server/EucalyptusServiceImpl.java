@@ -58,18 +58,16 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     // 1. "user@account"
     // 2. any of the parts is missing, using the default: "admin" for user and "eucalyptus" for account.
     //    So it could be "test" (test@eucalyptus) or "@test" (admin@test).
-    String[] splits = fullName.split( "@", 2 );
     String userName = User.ACCOUNT_ADMIN;
     String accountName = Account.SYSTEM_ACCOUNT;
-    if ( splits.length < 2 ) {
-      if ( fullName.startsWith( "@" ) ) {
-        accountName = splits[0];
-      } else {
-        userName = splits[0];
-      }
+    int at = fullName.indexOf( '@' );
+    if ( at < 0 ) {
+      userName = fullName;
+    } else if ( at == 0 ) {
+      accountName = fullName.substring( 1 );
     } else {
-      accountName = splits[0];
-      userName = splits[1];
+      userName = fullName.substring( 0, at );
+      accountName = fullName.substring( at + 1 );
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
     try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic login attack.
