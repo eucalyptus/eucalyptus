@@ -1,13 +1,39 @@
+import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+
+import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
+
+// Auth
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import java.security.cert.X509Certificate;
+import com.eucalyptus.auth.util.X509CertHelper;
+
 // DNS
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
-
-// Records
-import com.eucalyptus.records.LogFileRecord;
-import com.eucalyptus.records.BaseRecord;
 
 // Storage
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
@@ -37,6 +63,7 @@ import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
@@ -46,26 +73,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.persistence.Column;
-import javax.persistence.Id;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
@@ -73,12 +80,13 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.util.Counters;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
+import com.eucalyptus.util.Counters;
 
 class upgrade_20_30 extends AbstractUpgradeScript {
 	static final String FROM_VERSION = "2.0.3";
@@ -93,27 +101,28 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
 	@Override
 	public Boolean accepts( String from, String to ) {
-		if(FROM_VERSION.equals(from) && TO_VERSION.equals(to))
+		if(TO_VERSION.equals(to))
 			return true;
 		return false;
 	}
 
 	@Override
 	public void upgrade(File oldEucaHome, File newEucaHome) {
+		if (!upgradeAuth()) {
+			return;
+		} else if (!upgradeNetwork()) {
+			return;
+		}
 		buildEntityMap();
 		def altEntityMap = [ metadata_keypair:'eucalyptus_general',
-				metadata_network_group:'eucalyptus_general',
-				metadata_network_group_has_rules:'eucalyptus_general',
-				metadata_network_rule:'eucalyptus_general',
-				metadata_network_rule_has_ip_range:'eucalyptus_general',
-				metadata_network_rule_has_peer_network:'eucalyptus_general',
-				metadata_network_rule_ip_range:'eucalyptus_general',
-				network_rule_peer_network:'eucalyptus_general',
 				vm_types:'eucalyptus_general' ];
 
 
 		Set<String> entityKeys = entityMap.keySet();
 		for (String entityKey : entityKeys) {
+                        if (entityKey.equals("metadata_network_group")) {
+				continue
+			}
 			String contextName = getContextName(entityKey);
 			Sql conn;
 			if (altEntityMap.containsKey(entityKey)) {
@@ -125,6 +134,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				Map<String, Method> setterMap = buildSetterMap(conn, entityKey);
 				if(setterMap != null)
 					doUpgrade(contextName, conn, entityKey, setterMap);
+			} else {
+				LOG.error("Failed to get connection to " + contextName);
 			}
 		}
 	}
@@ -154,6 +165,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		List<GroovyRowResult> rowResults;
 		try {
 			rowResults = conn.rows("SELECT * FROM " + entityKey);
+                        LOG.info("Got " + rowResults.size().toString() + " results from " + entityKey);
 			EntityWrapper db =  EntityWrapper.get(entityMap.get(entityKey));
                         
 			// def columnsShown = 0;
@@ -210,6 +222,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 	private Map<String, Method> buildSetterMap(Sql conn, String entityKey) {
 		Map<String, Method> setterMap = new HashMap<String, Method>();
 		try {
+                        LOG.warn("grabbing rows from " + entityKey);
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
 			if(firstRow == null) {
 				LOG.warn("Unable to find anything in table: " + entityKey);
@@ -288,8 +301,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
 	private void buildEntityMap() {
                 // Note that this maps new -> old
-		def tableMap = [ metadata_network_rule_peer_network:'network_rule_peer_network',
-				metadata_keypairs:'metadata_keypair',
+		def tableMap = [ metadata_keypairs:'metadata_keypair',
 				cloud_vm_types:'vm_types' ];
 		for (Class entity : entities) {
 			if (entity.isAnnotationPresent(Table.class)) {
@@ -304,6 +316,98 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		}
 	}
 
+	public boolean upgradeAuth() {
+		def conn = StandalonePersistence.getConnection("eucalyptus_auth");
+		def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
+		conn.rows('SELECT * FROM auth_users').each {
+			def account = Accounts.addAccount( it.auth_user_name );
+			def user = account.addUser( it.auth_user_name, "/", true/* skipRegistration */, true/* enabled */, null);
+			user.setPassword( it.auth_user_password );
+			user.setToken(it.auth_user_token );
+			println "added " + account;
+			conn.rows("""SELECT c.* FROM auth_users
+				JOIN auth_user_has_x509 on auth_users.id=auth_user_has_x509.auth_user_id
+				JOIN auth_x509 c on auth_user_has_x509.auth_x509_id=c.id
+				WHERE auth_users.auth_user_name=${ it.auth_user_name }""").each { certificate ->
+                                X509Certificate x509cert = X509CertHelper.toCertificate(certificate.auth_x509_pem_certificate);
+				def cert = user.addCertificate(x509cert);
+				// cert.setRevoked(certificate.auth_x509_revoked);
+			}
+			// The test data I have includes duplicate rows here, so LIMIT 1
+			gen_conn.rows("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }
+					LIMIT 1""").each { uInfo ->
+				Map<String, String> info = new HashMap<String, String>( );
+				// Might want to drop NULLs here
+				info.put("FullName", uInfo.user_real_name);
+				info.put("Email", uInfo.user_email);
+				info.put("Telephone", uInfo.user_telephone_number);
+				info.put("Affiliation", uInfo.user_affiliation);
+				info.put("ProjectDescription", uInfo.user_project_description);
+				info.put("ProjectPI", uInfo.user_project_pi_name);
+				user.setInfo( info );
+			}
+			gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each {
+				def ufn = UserFullName.getInstance(user);
+				
+			}
+		}
+	}
+
+	public boolean upgradeNetwork() {
+		//Network rules
+
+		def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
+                gen_conn.rows('SELECT * FROM metadata_network_group').each {
+                        EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
+                        try {
+				def account = Accounts.lookupAccountByName(it.metadata_user_name);
+                                AccountFullName eucaAfn = new AccountFullName(account);
+				def rulesGroup = new NetworkRulesGroup(eucaAfn, it.metadata_user_name + "_" + it.metadata_display_name, it.metadata_network_group_description);
+                                println "Adding network rules for ${it.metadata_user_name}/${it.metadata_display_name}";
+                                gen_conn.rows("""SELECT r.* 
+                                                 FROM metadata_network_group_has_rules 
+                                      LEFT OUTER JOIN metadata_network_rule r 
+                                                   ON r.metadata_network_rule_id=metadata_network_group_has_rules.metadata_network_rule_id 
+                                                WHERE metadata_network_group_has_rules.id=${ it.id }""").each { rule ->
+                                        NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
+                                                                                     rule.metadata_network_rule_low_port, 
+                                                                                     rule.metadata_network_rule_high_port);
+                                        gen_conn.rows("""SELECT ip.* 
+                                                         FROM metadata_network_rule_has_ip_range 
+                                              LEFT OUTER JOIN metadata_network_rule_ip_range ip
+                                                           ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
+                                                        WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=${ rule.metadata_network_rule_id }""").each { iprange ->
+                                                IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
+						networkRule.getIpRanges().add(ipRange);
+                                                println "IP Range: ${iprange.metadata_network_rule_ip_range_value}";
+                                        }
+                                        gen_conn.rows("""SELECT peer.* 
+                                                           FROM metadata_network_rule_has_peer_network 
+                                                LEFT OUTER JOIN network_rule_peer_network peer
+                                                             ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
+                                                          WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=${ rule.metadata_network_rule_id }""").each { peer ->
+                                                NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
+                                                networkRule.getNetworkPeers().add(networkPeer);
+
+                                                println "Peer: " + networkPeer;
+                                        }
+                                	println "Network rule has ip ranges: " + networkRule.getIpRanges();
+					rulesGroup.getNetworkRules().add(networkRule);
+				} 
+
+                                println "adding rules group: " + rulesGroup;
+				dbGen.add(rulesGroup);
+				dbGen.commit();
+			} catch (Throwable t) {
+                                println "failure!!!!!!!!!";
+				t.printStackTrace();
+				dbGen.rollback();
+				return false;
+			}
+		}
+		return true;
+	}
+
 	static {
 		//this is added by hand because there are special cases/entities that other upgrade scripts will process.
 		//In the future, this should be discovered.
@@ -311,11 +415,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		//entities.add(ObjectInfo.class);
 		//entities.add(GrantInfo.class);
 
-                // eucalyptus_cloud (some from other DBs)
-		entities.add(IpRange.class);
-		entities.add(NetworkPeer.class);
-		entities.add(NetworkRule.class);
-		entities.add(NetworkRulesGroup.class);
 		entities.add(SshKeyPair.class);
 		entities.add(VmType.class);
 
@@ -325,10 +424,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		entities.add(SOARecordInfo.class);
 		entities.add(NSRecordInfo.class);
 		entities.add(ZoneInfo.class);
-
-		// eucalyptus_records
-		entities.add(BaseRecord.class);
-		entities.add(LogFileRecord.class);
 
 		// eucalyptus_storage
 		entities.add(AOEMetaInfo.class);

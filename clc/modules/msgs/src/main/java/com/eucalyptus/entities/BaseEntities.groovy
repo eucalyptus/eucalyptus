@@ -33,6 +33,9 @@ public class AbstractPersistent implements Serializable {
   
   public AbstractPersistent( ) {
     super( );
+    def emc = new ExpandoMetaClass( this.class, false )
+    emc.initialize()
+    this.metaClass = emc
   }
   
   @Override

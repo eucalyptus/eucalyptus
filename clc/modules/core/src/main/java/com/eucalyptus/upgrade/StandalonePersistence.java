@@ -93,6 +93,7 @@ public class StandalonePersistence {
   }
   public static Sql getConnection( String persistenceContext ) throws SQLException {
     Sql newSql = source.getSqlSession( persistenceContext );
+    if ( newSql == null ) { return null; }
     Sql conn = sqlConnections.putIfAbsent( persistenceContext, newSql );
     if ( conn != null ) {
       newSql.close( );
