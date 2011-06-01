@@ -23,7 +23,6 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {

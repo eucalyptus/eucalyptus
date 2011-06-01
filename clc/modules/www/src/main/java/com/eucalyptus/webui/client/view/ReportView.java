@@ -1,13 +1,12 @@
 package com.eucalyptus.webui.client.view;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+
 import com.google.gwt.user.client.ui.IsWidget;
 
 public interface ReportView extends IsWidget {
 
-  void init( Date fromDate, Date toDate, List<String> criteriaList, List<String> groupByList, List<String> typeList );
+  void init( Date fromDate, Date toDate, String[] criteriaList, String[] groupByList, String[] typeList );
   
   void loadReport( String url );
   

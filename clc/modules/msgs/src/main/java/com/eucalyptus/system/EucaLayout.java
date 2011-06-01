@@ -75,7 +75,7 @@ public class EucaLayout extends PatternLayout {
       LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
     } catch ( NumberFormatException e ) {}
   }
-  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(Logs.TRACE?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
+  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(Logs.EXTREME?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
   private String CONTINUATION = "%m%n";
   private PatternLayout continuation = null;
   

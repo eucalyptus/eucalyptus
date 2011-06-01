@@ -51,12 +51,13 @@ class DescribeComponents(AWSQueryRequest):
       
     def cli_formatter(self, data):
         components = getattr(data, 'euca:registered')
-        fmt = 'COMPONENT\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
+        fmt = 'COMPONENT\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s\t%s'
         for c in components:
             if c.get('euca:hostName', None) != 'detail':
                 print fmt % (c.get('euca:partition', None),
                              c.get('euca:name', None),
                              c.get('euca:hostName', None),
+                             c.get('euca:fullName', None),
                              c.get('euca:state', None),
                              c.get('euca:detail', None))
 

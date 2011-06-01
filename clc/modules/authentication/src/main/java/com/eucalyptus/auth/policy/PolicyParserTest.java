@@ -22,6 +22,8 @@ public class PolicyParserTest {
     PolicyEntity parsed = PolicyParser.getInstance( ).parse( policy );
     
     printPolicy( parsed );
+
+    input.close();
   }
   
   private static String readInputAsString( InputStream in ) throws Exception {
@@ -33,7 +35,9 @@ public class PolicyParserTest {
       baos.write( buf, 0, nRead );
     }
     
-    return new String( baos.toByteArray( ), "UTF-8" );
+    String string = new String( baos.toByteArray( ), "UTF-8" );
+    baos.close();
+    return string;
   }
   
   private static void printPolicy( PolicyEntity parsed ) {

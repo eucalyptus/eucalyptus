@@ -191,7 +191,7 @@ class EucaConf(object):
                                help='list registered SCs')
         self.parser.add_option('--no-sync', action='store_true',
                                dest='no_sync', default=False,
-                               help='used only with --register-* to skip syncing keys')
+                               help='used with --register-* to skip syncing keys')
         self.parser.add_option('-d', action='callback', type='string',
                                metavar='<dir>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'EUCALYPTUS'},
@@ -294,12 +294,17 @@ class EucaConf(object):
         if len(self.args) > 0:
             filepath = self.args[0]
         elif filepath is None:
-            euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
+            # use the value passed in with -d option, if present
+            if self.specified_options.has_key('EUCALYPTUS'):
+                euca_dir = self.specified_options['EUCALYPTUS']
+            else:
+                euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
             filepath = os.path.join(euca_dir, DefaultEucaConfPath)
         try:
             self.config = eucadmin.configfile.ConfigFile(filepath)
         except IOError:
             print 'Unable to find config file: %s' % filepath
+            sys.exit(1)
 
     def get_sshkey(self):
         key = None
@@ -362,6 +367,11 @@ class EucaConf(object):
                 if value:
                     opts.append(opt_name)
         for opt in parser.rargs:
+            # If option was specified as foo=bar we get the whole
+            # expression here and need to split it to have only
+            # the option name.
+            if '=' in opt:
+                opt = opt.split('=')[0]
             for reg_opt in RegOptions.values():
                 if opt == reg_opt[0] or opt == reg_opt[1]:
                     opts.append(reg_opt[2])
@@ -642,10 +652,9 @@ class EucaConf(object):
             current_nodes = self.config['NODES'].split()
             for node in nodes_to_add:
                 if node not in current_nodes:
-                    if not self._sync_node(node):
-                        self.print_sync_error()
-                    else:
-                        current_nodes.append(node)
+                    current_nodes.append(node)
+                if not self._sync_node(node):
+                    self.print_sync_error()
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 

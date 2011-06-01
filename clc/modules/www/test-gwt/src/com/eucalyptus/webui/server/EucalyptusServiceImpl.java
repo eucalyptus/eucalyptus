@@ -10,12 +10,14 @@ import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.Session;
+import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -43,26 +45,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
-    ArrayList<CategoryTag> tags = Lists.newArrayList( );
-    ArrayList<CategoryItem> list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Start", "Start guide", "home", "start:" ) );
-    list.add( new CategoryItem( "Configuration", "System configurations", "config", "config:" ) );
-    tags.add( new CategoryTag( "System", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Account", "Accounts", "group", "account:" ) );
-    list.add( new CategoryItem( "Group", "User groups", "group", "group:" ) );
-    list.add( new CategoryItem( "User", "Users", "user", "user:" ) );
-    tags.add( new CategoryTag( "Identity", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Image", "Virtual machine images (EMIs)", "image", "image:" ) );
-    list.add( new CategoryItem( "VmType", "Virtual machine types", "type", "vmtype:" ) );
-    list.add( new CategoryItem( "Report", "Resource usage report", "report", "report:" ) );
-    tags.add( new CategoryTag( "Resource", list ) );
-    list = Lists.newArrayList( );
-    list.add( new CategoryItem( "Extra", "Extra downloads", "down", "extra:" ) );
-    tags.add( new CategoryTag( "Miscs", list ) );    
-    return tags;
+  public List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {    
+    return Categories.getTags( );
   }
 
   private static final List<SearchResultRow> DATA = Arrays.asList( new SearchResultRow( Arrays.asList( "test0", "0" ) ),
@@ -78,7 +62,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
                                                                    new SearchResultRow( Arrays.asList( "testA", "A" ) )
                                                                  );
   private static final List<SearchResultFieldDesc> FIELDS = Arrays.asList( new SearchResultFieldDesc( "Name", true, "40%" ),
-                                                                           new SearchResultFieldDesc( "Id", true, "60%" )
+                                                                           new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, false )
                                                                          );
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
@@ -140,6 +124,42 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void setVmType( Session session, SearchResultRow result ) throws EucalyptusServiceException {
     // TODO Auto-generated method stub
     
+  }
+
+  @Override
+  public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

@@ -3,8 +3,8 @@ package com.eucalyptus.util.fsm;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.async.SubjectRemoteCallbackFactory;
 
@@ -32,7 +32,7 @@ public class FusedCallbackTransition<P extends HasName<P>, S extends Enum<S>, T 
    */
   @Override
   public final void leave( P parent, final Callback.Completion transitionCallback ) {
-    Callbacks.newRequest( msgFactory.newInstance( ) ).then( new Callback.Completion( ) {
+    AsyncRequests.newRequest( msgFactory.newInstance( ) ).then( new Callback.Completion( ) {
       
       @Override
       public void fire( ) {

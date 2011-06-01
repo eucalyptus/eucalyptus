@@ -488,7 +488,7 @@ int main (int argc, char **argv)
         CHECK_PARAM(instance_id, "instance ID");
         
         int shutdownState, previousState;
-        int rc = ncTerminateInstanceStub (stub, &meta, instance_id, &shutdownState, &previousState);
+        int rc = ncTerminateInstanceStub (stub, &meta, instance_id, 0, &shutdownState, &previousState);
         if (rc != 0) {
             printf("ncTerminateInstance() failed: error=%d\n", rc);
             exit(1);

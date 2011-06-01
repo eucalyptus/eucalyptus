@@ -79,8 +79,8 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
   private final String correlationId;
   public ConsoleOutputCallback( GetConsoleOutputType msg ) {
+    super( msg );
     this.correlationId = msg.getCorrelationId( );
-    this.setRequest( msg );
   }
   
   @Override

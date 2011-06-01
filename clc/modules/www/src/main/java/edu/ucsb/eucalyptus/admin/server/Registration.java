@@ -73,11 +73,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.crypto.Hmacs;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class Registration extends HttpServlet {
@@ -92,7 +95,7 @@ public class Registration extends HttpServlet {
   
   private static String getConfigurationString( String uuid ) {
     return "<CloudSchema>\n" + "  <Services type=\"array\">\n" + "    <Service>\n" + "      <Name>ec2</Name>\n" + "      <EndpointUrl>"
-           + SystemConfiguration.getCloudUrl( ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
+           + Eucalyptus.INSTANCE.makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773 ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
            + "          <Name>instances</Name>\n" + "        </Resource>\n" + "        <Resource>\n" + "          <Name>security_groups</Name>\n"
            + "        </Resource>\n" + "        <Resource>\n" + "          <Name>ssh_keys</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
            + "          <Name>images</Name>\n" + "        </Resource>\n" + blockStorageConfiguration( ) + publicAddressConfiguration( )
@@ -130,13 +133,12 @@ public class Registration extends HttpServlet {
   }
   
   private static String getWalrusUrl( ) {
-    String walrusUrl;
-    try {
-      walrusUrl = SystemConfiguration.getWalrusUrl( );
-    } catch ( Throwable e ) {
-      walrusUrl = "NOT REGISTERED.";
+    if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
+      ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+      return walrusConfig.getUri( ).toASCIIString( );
+    } else {
+      return "NOT REGISTERED.";
     }
-    return walrusUrl;
   }
   
   private static String getRegistrationId( ) {

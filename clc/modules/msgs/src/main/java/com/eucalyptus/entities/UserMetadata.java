@@ -99,7 +99,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     } else if( super.owner == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
       this.setOwner( FakePrincipals.NOBODY_USER_ERN );
     } else if( super.owner == null && this.getOwnerUserId( ) != null ) {
-      this.setOwner( Accounts.lookupUserFullNameById( this.ownerUserId ) );
+      this.setOwner( UserFullName.getInstance( this.ownerUserId ) );
     }
     return super.owner;
   }

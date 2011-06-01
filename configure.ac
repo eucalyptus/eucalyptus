@@ -265,7 +265,6 @@ AC_CONFIG_FILES([Makedefs
                  clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
-                 clc/modules/bootstrap/src/main/native/eucalyptus-opts.h:clc/modules/bootstrap/src/main/native/eucalyptus-opts.h.in
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in])

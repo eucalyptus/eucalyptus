@@ -1,19 +1,17 @@
 package com.eucalyptus.reporting.instance;
 
-import java.io.Serializable;
-import javax.persistence.Column;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.*;
+
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.entities.AbstractPersistent;
 
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="reporting_instance")
-public class InstanceAttributes extends AbstractPersistent
-	implements Serializable
+public class InstanceAttributes
+	extends AbstractPersistent
 {
 	@Column(name="uuid")
 	private String uuid;
@@ -62,6 +60,11 @@ public class InstanceAttributes extends AbstractPersistent
 	{
 		return this.uuid;
 	}
+	
+	void setUuid(String uuid)
+	{
+		this.uuid = uuid;
+	}
 
 	public String getInstanceId()
 	{
@@ -93,28 +96,27 @@ public class InstanceAttributes extends AbstractPersistent
 	{
 		return this.availabilityZone;
 	}
-	
+
 	@Override
 	public int hashCode()
 	{
-		return (uuid==null) ? 0 : uuid.hashCode();
+		return (uuid == null) ? 0 : uuid.hashCode();
 	}
 
 	@Override
 	public boolean equals(Object obj)
 	{
 		if (this == obj) return true;
-		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
 		InstanceAttributes other = (InstanceAttributes) obj;
-		if (uuid == null) return false;
-		if (other.uuid != null)	return false;
-		if (!uuid.equals(other.uuid)) return false;
+		if (uuid == null) {
+			if (other.uuid != null)
+				return false;
+		} else if (!uuid.equals(other.uuid))
+			return false;
 		return true;
 	}
 
-  protected void setUuid( String uuid ) {
-    this.uuid = uuid;
-  }
+
 
 }

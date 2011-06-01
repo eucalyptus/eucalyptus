@@ -19,7 +19,7 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -45,7 +45,7 @@ public class DatabaseGroupProxy implements Group {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
@@ -64,7 +64,7 @@ public class DatabaseGroupProxy implements Group {
           t.setName( name );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
       throw new AuthException( e );
     }
@@ -83,7 +83,7 @@ public class DatabaseGroupProxy implements Group {
           t.setPath( path );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
       throw new AuthException( e );
     }
@@ -102,7 +102,7 @@ public class DatabaseGroupProxy implements Group {
           t.setUserGroup( userGroup );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setUserGroup for " + this.delegate );
       throw new AuthException( e );
     }
@@ -170,7 +170,7 @@ public class DatabaseGroupProxy implements Group {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
     }
     return results;
@@ -237,7 +237,7 @@ public class DatabaseGroupProxy implements Group {
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
     }
     return results;
@@ -252,7 +252,7 @@ public class DatabaseGroupProxy implements Group {
           results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
     }
     return results.get( 0 );

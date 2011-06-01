@@ -1,6 +1,5 @@
 package com.eucalyptus.util.fsm;
 
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,12 +10,10 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.fsm.TransitionListener.Phases;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements TransitionAction<P> {
+public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> implements TransitionAction<P>, TransitionHandler<P, S, T>, TransitionRule<S, T> {
   private static Logger                                       LOG       = Logger.getLogger( TransitionImpl.class );
   private final AtomicInteger                                 index     = new AtomicInteger( 0 );
   private final TransitionRule<S, T>                          rule;
@@ -43,20 +40,22 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
    * 
    * @param transitionListener
    */
-  public TransitionImpl<P, S, T> addListener( TransitionListener<P> listener ) {
-    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) );
+  @Override
+  public TransitionHandler<P, S, T> addListener( TransitionListener<P> listener ) {
+    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
   }
   
   private void removeListener( Integer key ) {
     TransitionListener<P> listener = this.listeners.remove( key );
-    if ( Logs.DEBUG ) EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) );
+    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) ) );
   }
   
   /**
    * @see com.eucalyptus.util.fsm.TransitionRule#getName()
    */
+  @Override
   public T getName( ) {
     return this.rule.getName( );
   }
@@ -108,10 +107,9 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
       final TransitionListener<P> tl = entry.getValue( );
-      if ( Logs.TRACE ) {
-        EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ), phase.toString( ),//
-                          entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ).trace( );
-      }
+      Logs.exhaust( ).trace( EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ),
+                                               phase.toString( ),//
+                                               entry.getKey( ).toString( ), tl.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) ) );
       try {
         if ( !pred.apply( entry.getValue( ) ) ) {
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
@@ -217,20 +215,20 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
 //        return arg0.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" );
 //      }
 //    } );
-    return String.format( "Transition name=%s from=%s/%s to=%s/%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
-                          this.getToState( ), this.getToStateMark( ), "" + this.action );
+    return String.format( "Transition name=%s from=%s/%s to=%s/%s error=%s action=%s", this.getName( ), this.getFromState( ), this.getFromStateMark( ),
+                          this.getToState( ), this.getToStateMark( ), this.getErrorState( ), "" + this.action );
   }
   
   /**
    * @return the rule
    */
+  @Override
   public TransitionRule<S, T> getRule( ) {
     return this.rule;
   }
   
   /**
    * @see java.lang.Object#hashCode()
-   * @return
    */
   @Override
   public int hashCode( ) {
@@ -244,8 +242,6 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   
   /**
    * @see java.lang.Object#equals(java.lang.Object)
-   * @param obj
-   * @return
    */
   @Override
   public boolean equals( Object obj ) {
@@ -259,8 +255,17 @@ public class TransitionImpl<P extends HasName<P>, S extends Enum<S>, T extends E
   /**
    * @return the action
    */
+  @Override
   public TransitionAction<P> getAction( ) {
     return this.action;
+  }
+
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( TransitionRule<S, T> that ) {
+    return this.getName( ).compareTo( that.getName( ) );
   }
   
 }

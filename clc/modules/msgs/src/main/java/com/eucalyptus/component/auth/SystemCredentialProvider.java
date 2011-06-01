@@ -96,6 +96,9 @@ public class SystemCredentialProvider extends Bootstrapper {
   private ComponentId                                   componentId;
   private String                                        name;
   
+  public static void initializeSystem() {
+    
+  }
   public SystemCredentialProvider( ) {}
   
   private SystemCredentialProvider( ComponentId componentId ) {

@@ -111,7 +111,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   
   @Override
-  public Boolean isLocal() {
+  public Boolean isVmLocal() {
     return false;
   }
 }

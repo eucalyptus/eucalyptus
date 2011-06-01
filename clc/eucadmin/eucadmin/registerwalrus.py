@@ -53,7 +53,7 @@ class RegisterWalrus(AWSQueryRequest):
                     short_name='p',
                     long_name='port',
                     ptype='integer',
-                    default=8774,
+                    default=8773,
                     optional=True,
                     doc='Port for the walrus')]
     Args = [Param(name='Name',

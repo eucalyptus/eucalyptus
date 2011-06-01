@@ -69,28 +69,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum VmState {
-  PENDING("pending",0),
-  RUNNING("running",16),
-  SHUTTING_DOWN("shutting-down",32),
-  TERMINATED("terminated",48),
-  BURIED("buried",64);
+  PENDING(0),
+  RUNNING(16),
+  SHUTTING_DOWN(32),
+  TERMINATED(48),
+  STOPPING(64),
+  STOPPED(80),
+  BURIED(128);
   private String name;
   private int code;
 
-  VmState( final String name, final int code )
+  VmState( final int code )
   {
-    this.name = name;
+    this.name = this.name().toLowerCase( ).replace( "_", "-" );
     this.code = code;
   }
 
   public String getName()
   {
-    return name;
+    return this.name;
   }
 
   public int getCode()
   {
-    return code;
+    return this.code;
   }
 
 public static class Mapper {

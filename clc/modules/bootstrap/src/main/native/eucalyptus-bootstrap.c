@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
 	gid_t gid = 0;
 	if (arguments(argc, argv, args) != 0)
 		exit(1);
-	debug = args->verbose_flag || args->debug_flag;
+	debug = args->debug_flag;
 	if (args->kill_flag == 1)
 		return stop_child(args);
 	if (checkuser(GETARG(args, user), &uid, &gid) == 0)
@@ -634,6 +634,8 @@ char* java_library_path(euca_opts *args) {
 	}
 	closedir(lib_dir_p);
 	lib_dir_p = opendir(lib_dir);
+	if(!lib_dir_p)
+	   __die(1, "Can't open library directory %s", lib_dir);
 	while ((dir_ent = readdir(lib_dir_p)) != 0) {
 		if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
 				!= 0 && strcmp(dir_ent->d_name, "openjdk-crypto.jar") != 0
@@ -723,7 +725,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 	JVM_ARG(opt[++x], "-Deuca.log.level=%1$s", GETARG(args, log_level));
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
 	if (args->initialize_flag) {
-		JVM_ARG(opt[++x], "-Deuca.initialize");
+		JVM_ARG(opt[++x], "-Deuca.initialize=true");
 	} else {
 		if (args->remote_dns_flag) {
 			JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
@@ -740,14 +742,15 @@ int java_init(euca_opts *args, java_home_t *data) {
 				GETARG(args, debug_port),
 				(args->debug_suspend_flag ? "y" : "n"));
 	}
-	if (args->debug_flag || args->profile_flag) {
+	if (args->jmx_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(
-				args, home));
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
+	}
+	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");
 		JVM_ARG(opt[++x], "-XX:+PrintGCTimeStamps");
 		JVM_ARG(opt[++x], "-XX:+PrintGCDetails");
@@ -766,6 +769,10 @@ int java_init(euca_opts *args, java_home_t *data) {
 		JVM_ARG(opt[++x], "-X%s", args->jvm_args_arg[i]);
 	for (i = 0; i < args->define_given; i++)
 		JVM_ARG(opt[++x], "-D%s", args->define_arg[i]);
+	for (i = 0; i < args->bootstrap_host_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->define_arg[i]);
+	for (i = 0; i < args->bind_addr_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->define_arg[i]);
 
 	opt[++x].optionString = java_class_path;
 	opt[x].extraInfo = NULL;
@@ -790,6 +797,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 		;
 	__die(ret < 0, "Failed to create JVM");
 	java_load_bootstrapper();
+	dlclose(libjvm_handle);
 	return 1;
 }
 

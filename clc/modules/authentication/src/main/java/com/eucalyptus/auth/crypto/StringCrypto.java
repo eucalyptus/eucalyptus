@@ -51,7 +51,7 @@ public class StringCrypto {
 		if (Security.getProvider (this.provider) == null) 
 			throw new RuntimeException("cannot find security provider " + this.provider);
 		keystore = EucaKeyStore.getInstance();
-		if (keystore==null || !keystore.containsEntry("eucalyptus")) 
+		if (keystore==null) 
 			throw new RuntimeException ("cannot load keystore or find the key");
 	}
 
