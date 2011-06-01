@@ -176,7 +176,7 @@ public class EuareWebBackend {
     try {
       String userProfileSearch = QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ID, user.getUserId( ) ).query( );
       LoginAction action = null;
-      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) ) {
+      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
         action = LoginAction.FIRSTTIME;
       } else if ( user.getPasswordExpires( ) < System.currentTimeMillis( ) ) {
         action = LoginAction.EXPIRATION;
