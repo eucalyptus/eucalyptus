@@ -44,7 +44,7 @@ public abstract class AbstractActionActivity extends AbstractActivity implements
     if ( Strings.isNullOrEmpty( keyValue ) ) {
       return null;
     }
-    final String[] parts = keyValue.split( WebAction.ACTION_SEPARATOR, 2 );
+    final String[] parts = keyValue.split( WebAction.KEY_VALUE_SEPARATOR, 2 );
     if ( parts.length < 2 || Strings.isNullOrEmpty( parts[0] ) || Strings.isNullOrEmpty( parts[1] ) ) {
       return null;
     }
