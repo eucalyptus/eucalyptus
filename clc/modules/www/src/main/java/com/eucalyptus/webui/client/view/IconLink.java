@@ -19,7 +19,7 @@ public class IconLink extends Composite {
     String anchor( );
     
     String link( );
-    String cog( );
+    String service( );
     String user( );
     String account( );
     String group( );
@@ -50,7 +50,7 @@ public class IconLink extends Composite {
 
   private String getIcon( String iconName ) {
     if ( "service".equals( iconName ) ) {
-      return typeStyle.cog( );
+      return typeStyle.service( );
     } else if ( "user".equals( iconName ) ) {
       return typeStyle.user( );
     } else if ( "account".equals( iconName ) ) {

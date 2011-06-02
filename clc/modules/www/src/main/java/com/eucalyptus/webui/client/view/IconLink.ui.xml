@@ -16,7 +16,7 @@
     </ui:style>
  
     <ui:style field="typeStyle" type="com.eucalyptus.webui.client.view.IconLink.TypeStyle">
-        .anchor {
+        a.anchor {
             font-size:90%;
             color:#323232;
             display:inline-block;
@@ -27,8 +27,8 @@
         a.anchor span {
         	margin-right:8px;
         }
-        @sprite a.anchor span.cog {
-            gwt-image:'cog';        	
+        @sprite a.anchor span.service {
+            gwt-image:'service';        	
         	display:inline-block;
         	width:12px;
         	height:12px;
@@ -50,7 +50,55 @@
             height:12px;
             background-repeat:no-repeat;
             background-position:center center;                      
-        }        
+        }
+        @sprite a.anchor span.group {
+            gwt-image:'group';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.account {
+            gwt-image:'account';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.key {
+            gwt-image:'key';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.image {
+            gwt-image:'image';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.vmtype {
+            gwt-image:'vmtype';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }          
+        @sprite a.anchor span.report {
+            gwt-image:'report';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }          
     </ui:style>
     
     <g:HTMLPanel>
