@@ -117,7 +117,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 			return;
 		} else if (!upgradeNetwork()) {
 			return;
+		} else if (!upgradeWalrus()) {
+			return;
 		}
+		
 		buildEntityMap();
 		def altEntityMap = [ metadata_keypair:'eucalyptus_general',
 				vm_types:'eucalyptus_general' ];
@@ -227,7 +230,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 	private Map<String, Method> buildSetterMap(Sql conn, String entityKey) {
 		Map<String, Method> setterMap = new HashMap<String, Method>();
 		try {
-                        LOG.warn("grabbing rows from " + entityKey);
 			Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
 			if(firstRow == null) {
 				LOG.warn("Unable to find anything in table: " + entityKey);
@@ -298,9 +300,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 					}
 				}
 			}
-			if(setterMap.containsKey(column)) {
+			/* if(setterMap.containsKey(column)) {
 				LOG.debug(column + " is set by: " + setterMap.get(column).getName());
-			} 
+			} */
 		}
 	}
 
@@ -339,27 +341,27 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				def cert = user.addCertificate(x509cert);
 				// cert.setRevoked(certificate.auth_x509_revoked);
 			}
-			// The test data I have includes duplicate rows here, so LIMIT 1
-			gen_conn.rows("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }
-					LIMIT 1""").each { uInfo ->
-				Map<String, String> info = new HashMap<String, String>( );
-				// Might want to drop NULLs here
-				info.put("FullName", uInfo.user_real_name);
-				info.put("Email", uInfo.user_email);
-				info.put("Telephone", uInfo.user_telephone_number);
-				info.put("Affiliation", uInfo.user_affiliation);
-				info.put("ProjectDescription", uInfo.user_project_description);
-				info.put("ProjectPI", uInfo.user_project_pi_name);
-				user.setInfo( info );
-			}
+			// The test data I have includes duplicate rows here.  Why?
+			def uInfo = gen_conn.firstRow("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }""");
+			Map<String, String> info = new HashMap<String, String>( );
+			// Might want to drop NULLs here
+			info.put("Full Name", uInfo.user_real_name);
+			info.put("Email", uInfo.user_email);
+			info.put("Telephone", uInfo.user_telephone_number);
+			info.put("Affiliation", uInfo.user_affiliation);
+			info.put("ProjectDescription", uInfo.user_project_description);
+			info.put("ProjectPI", uInfo.user_project_pi_name);
+			user.setInfo( info );
+			
 			gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
 				EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
 				def ufn = UserFullName.getInstance(user);
 				println "Adding image ${img.image_name}"
-				def path = img.image_path.split("/"); 
-				def imgSize = walrus_conn.firstRow("""SELECT size FROM ImageCache 
+				def path = img.image_path.split("/");
+				// TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
+				def imgSize = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
 								WHERE bucket_name=${ path[0] }
-								AND manifest_name=${ path[1] }""")[0].toInteger();
+								AND manifest_name=${ path[1] }""").sz.toInteger();
 				def ii = null;
 				switch ( img.image_type ) {
 					case "kernel":
@@ -381,8 +383,101 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				}
 				ii.setImagePublic(img.image_is_public);
 				ii.setImageType(Image.Type.valueOf(img.image_type));
+				ii.setSignature(img.image_signature);
 				dbGen.add(ii);
 				dbGen.commit();
+			}
+		}
+	}
+	
+	public void upgradeWalrus() {
+		def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
+		walrus_conn.rows('SELECT * FROM Buckets').each{
+			println "Adding bucket: ${it.bucket_name}"
+			
+			EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
+			try {
+				BucketInfo b = new BucketInfo(it.owner_id,it.owner_id,it.bucket_name,it.bucket_creation_date);
+				b.setLocation(it.bucket_location);
+				b.setGlobalRead(it.global_read);
+				b.setGlobalWrite(it.global_write);
+				b.setGlobalReadACP(it.global_read_acp);
+				b.setGlobalWriteACP(it.global_write_acp);
+				b.setBucketSize(it.bucket_size);
+				b.setHidden(it.hidden);
+				b.setLoggingEnabled(it.logging_enabled);
+				b.setTargetBucket(it.target_bucket);
+				b.setTargetPrefix(it.target_prefix);
+				walrus_conn.rows("""SELECT g.* FROM bucket_has_grants has_thing 
+				                    LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id
+				                    WHERE has_thing.bucket_id=${ it.bucket_id }""").each{  grant ->
+					println "--> grant: ${it.bucket_id}/${grant.user_id}"
+					GrantInfo grantInfo = new GrantInfo();
+					grantInfo.setUserId(grant.user_id);
+					grantInfo.setGrantGroup(grant.grantGroup);
+					grantInfo.setCanWrite(grant.allow_write);
+					grantInfo.setCanRead(grant.allow_read);
+					grantInfo.setCanReadACP(grant.allow_read_acp);
+					grantInfo.setCanWriteACP(grant.allow_write_acp);
+					b.getGrants().add(grantInfo);
+				}
+				dbBucket.add(b);
+				dbBucket.commit();
+			} catch (Throwable t) {
+				t.printStackTrace();
+				dbBucket.rollback();
+				return false;
+			}
+			return true;
+		}
+		walrus_conn.rows('SELECT * FROM Objects').each{
+			println "Adding object: ${it.bucket_name}/${it.object_name}"
+			EntityWrapper<ObjectInfo> dbObject = EntityWrapper.get(ObjectInfo.class);
+			try {
+				ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
+				objectInfo.setObjectName(it.object_name);
+				objectInfo.setOwnerId(it.owner_id);
+				objectInfo.setGlobalRead(it.global_read);
+				objectInfo.setGlobalWrite(it.global_write);
+				objectInfo.setGlobalReadACP(it.global_read_acp);
+				objectInfo.setGlobalWriteACP(it.global_write_acp);
+				objectInfo.setSize(it.size);
+				objectInfo.setEtag(it.etag);
+				objectInfo.setLastModified(it.last_modified);
+				objectInfo.setStorageClass(it.storage_class);
+				objectInfo.setContentType(it.content_type);
+				objectInfo.setContentDisposition(it.content_disposition);
+				objectInfo.setDeleted(it.is_deleted);
+				objectInfo.setVersionId(it.version_id);
+				objectInfo.setLast(it.is_last);
+				walrus_conn.rows("""SELECT g.* FROM object_has_grants has_thing 
+				                  LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id 
+								  WHERE has_thing.object_id=${ it.object_id }""").each{  grant ->
+					println "--> grant: ${it.object_name}/${grant.user_id}"
+					GrantInfo grantInfo = new GrantInfo();
+					grantInfo.setUserId(grant.user_id);
+					grantInfo.setGrantGroup(grant.grantGroup);
+					grantInfo.setCanWrite(grant.allow_write);
+					grantInfo.setCanRead(grant.allow_read);
+					grantInfo.setCanReadACP(grant.allow_read_acp);
+					grantInfo.setCanWriteACP(grant.allow_write_acp);
+					objectInfo.getGrants().add(grantInfo);
+				}
+				walrus_conn.rows("""SELECT m.* FROM object_has_metadata has_thing 
+				                    LEFT OUTER JOIN MetaData m on m.metadata_id=has_thing.metadata_id 
+				                    WHERE has_thing.object_id=${ it.object_id }""").each{  metadata ->
+					println "--> metadata: ${it.object_name}/${metadata.name}"
+					MetaDataInfo mInfo = new MetaDataInfo();
+					mInfo.setObjectName(it.object_name);
+					mInfo.setName(metadata.name);
+					mInfo.setValue(metadata.value);
+					objectInfo.getMetaData().add(mInfo);
+				}
+				dbObject.add(objectInfo);
+				dbObject.commit();
+			} catch (Throwable t) {
+				t.printStackTrace();
+				dbObject.rollback();
 			}
 		}
 	}
@@ -451,7 +546,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		entities.add(SshKeyPair.class);
 		entities.add(VmType.class);
 
-                // eucalyptus_dns
+        // eucalyptus_dns
 		entities.add(ARecordInfo.class);
 		entities.add(CNAMERecordInfo.class);
 		entities.add(SOARecordInfo.class);
@@ -471,11 +566,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		entities.add(StorageStatsInfo.class);
 
 		// eucalyptus_walrus
-		entities.add(BucketInfo.class);
-		entities.add(GrantInfo.class);
+		// entities.add(BucketInfo.class);
+		// entities.add(GrantInfo.class);
 		entities.add(ImageCacheInfo.class);
-        entities.add(MetaDataInfo.class);
-		entities.add(ObjectInfo.class);
+        // entities.add(MetaDataInfo.class);
+		// entities.add(ObjectInfo.class);
 		entities.add(TorrentInfo.class);
 		entities.add(WalrusInfo.class);
 		entities.add(WalrusSnapshotInfo.class);
