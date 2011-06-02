@@ -26,6 +26,7 @@ public class ConfirmationViewImpl extends DialogBox implements ConfirmationView 
 
   interface GridStyle extends CssResource {
     String grid( );
+    String html( );
   }
   
   @UiField
@@ -89,6 +90,7 @@ public class ConfirmationViewImpl extends DialogBox implements ConfirmationView 
     this.subject.setText( subject );
     
     HTML widget = new HTML( html );
+    widget.setStyleName( gridStyle.html( ) );
     contentPanel.setWidget( widget );
     
     center( );

@@ -65,7 +65,7 @@ public class ShellActivity extends AbstractActivity
   
   private AcceptsOneWidget container;
   
-  private List<CategoryTag> category;
+  private ArrayList<CategoryTag> category;
   
   public ShellActivity( ShellPlace place, ClientFactory clientFactory ) {
     this.place = place;
@@ -184,7 +184,7 @@ public class ShellActivity extends AbstractActivity
   
   private void getCategory( ) {
     this.clientFactory.getBackendService( ).getCategory( this.clientFactory.getLocalSession( ).getSession( ),
-                                                         new AsyncCallback<List<CategoryTag>>( ) {
+                                                         new AsyncCallback<ArrayList<CategoryTag>>( ) {
       
       @Override
       public void onFailure( Throwable caught ) {
@@ -194,7 +194,7 @@ public class ShellActivity extends AbstractActivity
       }
       
       @Override
-      public void onSuccess( List<CategoryTag> result ) {
+      public void onSuccess( ArrayList<CategoryTag> result ) {
         if ( result == null ) {
           LOG.log( Level.WARNING, "Got empty category" );
           clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );          

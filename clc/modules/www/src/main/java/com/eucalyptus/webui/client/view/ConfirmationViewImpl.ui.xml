@@ -30,6 +30,13 @@
     <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
     
     <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.ConfirmationViewImpl.GridStyle">
+        .html {
+        	font-size:90%;
+        	color:#333333;
+        }
+        .html p {
+        	margin:4px;
+        }
         .grid {
             font-size:80%;
             color:#333333;          

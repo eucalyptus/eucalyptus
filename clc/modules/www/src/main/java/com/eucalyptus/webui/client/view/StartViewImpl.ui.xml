@@ -7,40 +7,34 @@
     	width:100%;
     	height:100%;
     }
+    .panel p {
+    	margin-bottom:10px;
+    }
+    @def rad 4px;
+    @def depth 4px;
     .block {
-      	width: 240px;
-     	height: 300px;
-     	/*border: 2px solid #F6C73E;*/
-     	-webkit-box-shadow: 0px 0px 10px #AAAAAA;
-     	-moz-box-shadow: 0px 0px 10px #AAAAAA;
-     	box-shadow: 0px 0px 10px #AAAAAA;
-     	-moz-border-radius: 12px;
-     	border-radius: 12px;
-     	margin:20px;
-     	float:left;
+      	width:90%;
+     	padding:20px;
+     	margin-bottom:10px;
+    }
+    .block a {
+    	cursor:pointer;
+    	cursor:hand;
     }
     .header {
     	width:100%;
-    	height:20px;
-        -moz-border-radius-topleft: 12px;
-        -moz-border-radius-topright: 12px;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-		background: #f7e4af; /* Old browsers */
-		background:literal("-moz-linear-gradient(top, #f7e4af 0%, #f6c73e 100%)"); /* FF3.6+ */
-		background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#f7e4af), color-stop(100%,#f6c73e))"); /* Chrome,Safari4+ */
-		background:literal("-webkit-linear-gradient(top, #f7e4af 0%,#f6c73e 100%)"); /* Chrome10+,Safari5.1+ */
-		background:literal("-o-linear-gradient(top, #f7e4af 0%,#f6c73e 100%)"); /* Opera11.10+ */
-		background:literal("-ms-linear-gradient(top, #f7e4af 0%,#f6c73e 100%)"); /* IE10+ */
-		filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#F7E4AF', endColorstr='#F6C73E',GradientType=0 )"); /* IE6-9 */
-		background:literal("linear-gradient(top, #f7e4af 0%,#f6c73e 100%)"); /* W3C */
+    	height:2em;
+    	border-bottom:1px solid #CCCCCC;
+    	margin-bottom:10px;
+    	font-size:90%;
+    	font-weight:bold;
+    	color:#323232;
+    	text-shadow: 1px 1px 2px #FFFFFF;
     }
     .mainText {
-        font-size:100%;
         color:#414141;
         padding:12px 0px 8px 10px;
         text-align:left;
-        text-shadow: 1px 1px 1px #FFFFFF;
         filter:literal("dropshadow(color=#FFFFFF, offx=1, offy=1)");
     }
     </ui:style>
@@ -48,20 +42,22 @@
     <g:ScrollPanel>
         <g:HTMLPanel addStyleNames="{style.panel}">
             <div class="{style.mainText}">
-                Welcome to your Eucalyptus cloud! Following are some quick guides for you to access your cloud's Web console.
+                <p style="font-size:1.2em;text-align:center;">Welcome to your Eucalyptus cloud</p>
+                <p>&nbsp;</p>
+                <p style="font-size:0.9em;">Following are some quick guides to the things you can do with your cloud's Web dashboard.</p>
             </div>
-            <div class="{style.block}"><div class="{style.header}"/>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="iamHeader">MANAGE IDENTITIES AND YOUR PROFILE</g:Anchor></div>
+                <g:SimplePanel ui:field="iamSnippet"></g:SimplePanel>
+            </div>            
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="serviceHeader">MANAGE CLOUD SERVICES AND RESOURCES</g:Anchor></div>
+                <g:SimplePanel ui:field="serviceSnippet"></g:SimplePanel>
             </div>
-            <div class="{style.block}"><div class="{style.header}"/>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="rightscaleHeader">REGISTER YOUR CLOUD WITH RIGHTSCALE</g:Anchor></div>
+                <g:SimplePanel ui:field="rightscaleSnippet"></g:SimplePanel>
             </div>
-            <div class="{style.block}"><div class="{style.header}"/>
-            </div>
-            <div class="{style.block}"><div class="{style.header}"/>
-            </div>
-            <div class="{style.block}"><div class="{style.header}"/>
-            </div>
-            <div class="{style.block}"><div class="{style.header}"/>
-            </div>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="downloadHeader">DOWNLOAD STOCK IMAGES AND TOOLS FROM EUCALYPTUS</g:Anchor></div>
+                <g:SimplePanel ui:field="downloadSnippet"></g:SimplePanel>
+            </div>            
         </g:HTMLPanel>
     </g:ScrollPanel>
     

@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import com.eucalyptus.webui.client.service.CategoryItem;
 import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.CloudInfo;
+import com.eucalyptus.webui.client.service.DownloadInfo;
+import com.eucalyptus.webui.client.service.GuideItem;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
@@ -18,6 +21,7 @@ import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.Session;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
+import com.eucalyptus.webui.shared.query.QueryType;
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -33,7 +37,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public LoginUserProfile getLoginUserProfile( Session session ) throws EucalyptusServiceException {
-    return new LoginUserProfile( "1234", "admin", "eucalyptus", "123456", "user:id=1234", null );
+    return new LoginUserProfile( "1234", "admin", "eucalyptus", "123456", "user:id=1234", "key:userid=1234", null );
   }
 
   @Override
@@ -45,7 +49,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {    
+  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {    
     return Categories.getTags( );
   }
 
@@ -321,6 +325,103 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+  }
+
+  @Override
+  public void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public ArrayList<String> approveAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ArrayList<String> rejectAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ArrayList<String> approveUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ArrayList<String> rejectUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void confirmUser( String confirmationCode ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void requestPasswordRecovery( String userName, String accountName, String email ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException {
+    CloudInfo cloudInfo = new CloudInfo( );
+    cloudInfo.setCloudId( "CLOUDID1234567890" );
+    cloudInfo.setExternalHostPort( "127.0.0.1:8443" );
+    cloudInfo.setInternalHostPort( "127.0.0.1:8443" );
+    cloudInfo.setServicePath( "/Eucalyptus/services" );
+    return cloudInfo;
+  }
+
+  @Override
+  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException {
+    return new ArrayList<DownloadInfo>( Arrays.asList( new DownloadInfo( "http://localhost", "kernel", "Kernel image" ),
+                                                          new DownloadInfo( "http://localhost", "ramdisk", "Ramdisk image" ),
+                                                          new DownloadInfo( "http://localhost", "root", "Root disk image" ) ) );
+  }
+
+  @Override
+  public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException {
+    return new ArrayList<DownloadInfo>( Arrays.asList( new DownloadInfo( "http://localhost", "euca-tools", "EUCA tools" ),
+                                                          new DownloadInfo( "http://localhost", "boto", "BOTO" ),
+                                                          new DownloadInfo( "http://localhost", "other", "Other stuff" ) ) );
+  }
+
+  @Override
+  public ArrayList<GuideItem> getGuide( Session session, String snippet ) throws EucalyptusServiceException {
+    return new ArrayList<GuideItem>( Arrays.asList( new GuideItem( "View and configure cloud service components",
+                                                                   QueryBuilder.get( ).start( QueryType.config ).url( ),
+                                                                   "cog" ),
+                                                    new GuideItem( "View all the images you can access",
+                                                                   QueryBuilder.get( ).start( QueryType.image ).url( ),
+                                                                   "account" ),
+                                                    new GuideItem( "View and configure virtual machine types",
+                                                                   QueryBuilder.get( ).start( QueryType.vmtype ).url( ),
+                                                                   "group" ),
+                                                    new GuideItem( "View and configure virtual machine types",
+                                                                   QueryBuilder.get( ).start( QueryType.vmtype ).url( ),
+                                                                   "group" ),
+                                                    new GuideItem( "View and configure virtual machine types",
+                                                                   QueryBuilder.get( ).start( QueryType.vmtype ).url( ),
+                                                                   "group" ),
+                                                    new GuideItem( "View and configure virtual machine types",
+                                                                   QueryBuilder.get( ).start( QueryType.vmtype ).url( ),
+                                                                   "group" ),
+                                                    new GuideItem( "Generate cloud resource usage report",
+                                                                   QueryBuilder.get( ).start( QueryType.report ).url( ),
+                                                                   "user" ) ) );
   }
 
 }

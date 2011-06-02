@@ -103,8 +103,8 @@ public class EuareWebBackend {
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "10%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PATH, "Path", true, "25%", TableDisplay.MANDATORY, Type.TEXT, true, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "15%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REGISTRATION, "Registration status", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ENABLED, "Enabled", true, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REGISTRATION, "Registration status", true, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARN, "ARN", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNTID, "Owner account", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     USER_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( GROUPS, "Membership groups", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );

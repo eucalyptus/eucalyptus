@@ -15,6 +15,8 @@ import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
 import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.ConfirmationViewImpl;
+import com.eucalyptus.webui.client.view.DownloadView;
+import com.eucalyptus.webui.client.view.DownloadViewImpl;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
 import com.eucalyptus.webui.client.view.GroupView;
@@ -23,6 +25,8 @@ import com.eucalyptus.webui.client.view.ImageView;
 import com.eucalyptus.webui.client.view.ImageViewImpl;
 import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.InputViewImpl;
+import com.eucalyptus.webui.client.view.ItemView;
+import com.eucalyptus.webui.client.view.ItemViewImpl;
 import com.eucalyptus.webui.client.view.KeyView;
 import com.eucalyptus.webui.client.view.KeyViewImpl;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
@@ -37,6 +41,8 @@ import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.PolicyViewImpl;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ReportViewImpl;
+import com.eucalyptus.webui.client.view.RightScaleView;
+import com.eucalyptus.webui.client.view.RightScaleViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
@@ -96,6 +102,10 @@ public class ClientFactoryImpl implements ClientFactory {
 	// Dialogs
 	private ConfirmationView confirmationView;
 	private InputView inputView;
+	
+	// Snippets
+	private RightScaleView rightscaleView;
+	private DownloadView downloadView;
 	
   @Override
   public LocalSession getLocalSession( ) {
@@ -316,6 +326,27 @@ public class ClientFactoryImpl implements ClientFactory {
       actionResultView = new ActionResultViewImpl( );
     }
     return actionResultView;
+  }
+
+  @Override
+  public RightScaleView getRightScaleView( ) {
+    if ( rightscaleView == null ) {
+      rightscaleView = new RightScaleViewImpl( );
+    }
+    return rightscaleView;
+  }
+
+  @Override
+  public DownloadView getDownloadView( ) {
+    if ( downloadView == null ) {
+      downloadView = new DownloadViewImpl( );
+    }
+    return downloadView;
+  }
+
+  @Override
+  public ItemView createItemView( ) {
+    return new ItemViewImpl( );
   }
   
 }

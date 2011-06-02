@@ -7,8 +7,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.CloudInfo;
+import com.eucalyptus.webui.client.service.DownloadInfo;
 import com.eucalyptus.webui.client.service.EucalyptusService;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
+import com.eucalyptus.webui.client.service.GuideItem;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
@@ -20,6 +23,7 @@ import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
@@ -94,7 +98,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
+  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
     User user = verifySession( session );
     return Categories.getTags( user );
   }
@@ -481,6 +485,42 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
     EuareWebBackend.resetPassword( confirmationCode, password );
+  }
+
+  @Override
+  public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException {
+    verifySession( session );
+    return ConfigurationWebBackend.getCloudInfo( setExternalHostPort );
+  }
+
+  @Override
+  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException {
+    verifySession( session );
+    String version;
+    try {
+      version = UriUtils.encodeQuery( WebProperties.getVersion( ), "UTF-8" );
+    } catch ( Exception e ) {
+      version = WebProperties.getVersion( );
+    }
+    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.IMAGE_DOWNLOAD_URL + version );
+  }
+
+  @Override
+  public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException {
+    verifySession( session );
+    String version;
+    try {
+      version = UriUtils.encodeQuery( WebProperties.getVersion( ), "UTF-8" );
+    } catch ( Exception e ) {
+      version = WebProperties.getVersion( );
+    }
+    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.TOOL_DOWNLOAD_URL + version );
+  }
+
+  @Override
+  public ArrayList<GuideItem> getGuide( Session session, String snippet ) throws EucalyptusServiceException {
+    User user = verifySession( session );
+    return StartGuideWebBackend.getGuide( user, snippet );
   }
     
 }

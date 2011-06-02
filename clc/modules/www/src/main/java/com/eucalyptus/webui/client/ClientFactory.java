@@ -7,10 +7,12 @@ import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.ActionResultView;
 import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.ConfirmationView;
+import com.eucalyptus.webui.client.view.DownloadView;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.GroupView;
 import com.eucalyptus.webui.client.view.ImageView;
 import com.eucalyptus.webui.client.view.InputView;
+import com.eucalyptus.webui.client.view.ItemView;
 import com.eucalyptus.webui.client.view.KeyView;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
@@ -18,6 +20,7 @@ import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.ReportView;
+import com.eucalyptus.webui.client.view.RightScaleView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.UserView;
@@ -122,5 +125,10 @@ public interface ClientFactory {
   InputView getInputView( );
   
   ActionResultView getActionResultView( );
+  
+  RightScaleView getRightScaleView( );
+  DownloadView getDownloadView( );
+  
+  ItemView createItemView( );
   
 }

@@ -15,7 +15,7 @@ public interface EucalyptusServiceAsync {
   
   void getSystemProperties( Session session, AsyncCallback<HashMap<String, String>> callback );
   
-  void getCategory( Session session, AsyncCallback<List<CategoryTag>> callback );
+  void getCategory( Session session, AsyncCallback<ArrayList<CategoryTag>> callback );
   
   void lookupAccount( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
@@ -104,5 +104,13 @@ public interface EucalyptusServiceAsync {
   void requestPasswordRecovery( String userName, String accountName, String email, AsyncCallback<Void> callback );
 
   void resetPassword( String confirmationCode, String password, AsyncCallback<Void> callback );
+
+  void getCloudInfo( Session session, boolean setExternalHostPort, AsyncCallback<CloudInfo> callback );
+
+  void getImageDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
+
+  void getToolDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
+
+  void getGuide( Session session, String snippet, AsyncCallback<ArrayList<GuideItem>> callback );
   
 }

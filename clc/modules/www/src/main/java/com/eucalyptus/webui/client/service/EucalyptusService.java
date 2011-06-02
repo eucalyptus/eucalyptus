@@ -51,7 +51,7 @@ public interface EucalyptusService extends RemoteService {
    * @return
    * @throws EucalyptusServiceException
    */
-  List<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
+  ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException;
  
   /**
    * Search system configurations.
@@ -475,8 +475,53 @@ public interface EucalyptusService extends RemoteService {
    */
   void confirmUser( String confirmationCode ) throws EucalyptusServiceException;
   
+  /**
+   * Request a reset of password.
+   * 
+   * @param userName
+   * @param accountName
+   * @param email
+   * @throws EucalyptusServiceException
+   */
   void requestPasswordRecovery( String userName, String accountName, String email ) throws EucalyptusServiceException;
   
+  /**
+   * Reset the password based on the confirmation code.
+   * 
+   * @param confirmationCode
+   * @param password
+   * @throws EucalyptusServiceException
+   */
   void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException;
+  
+  /**
+   * Get cloud info for RightScale registration.
+   * 
+   * @param session
+   * @param setExternalHostport
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException;
+  
+  /**
+   * Get the list of image downloads.
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException;
+  
+  /**
+   * Get the list of tool downloads.
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException;
+  
+  public ArrayList<GuideItem> getGuide( Session session, String snippet ) throws EucalyptusServiceException;
   
 }

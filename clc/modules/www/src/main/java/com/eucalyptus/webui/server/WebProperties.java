@@ -58,6 +58,9 @@ public class WebProperties {
                                                               "Disregard this message if resetting the password was not your intention, " +
                                                               "but if it was, click the following link to change of password:";
 
+  public static final String RIGHTSCALE_WHOAMI_URL = "rightscale-whoami-url";
+  public static final String RIGHTSCALE_WHOAMI_URL_DEFAULT = "https://my.rightscale.com/whoami?api_version=1.0&cloud=0";
+  
   public static HashMap<String, String> getProperties( ) {
     Properties props = new Properties( );
     FileInputStream input = null;
@@ -83,6 +86,10 @@ public class WebProperties {
       subject = defaultValue;
     }
     return subject;
+  }
+  
+  public static String getVersion( ) {
+    return System.getProperty( EUCA_VERSION );
   }
   
 }
