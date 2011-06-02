@@ -9,12 +9,12 @@ public class CategoryTag implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private String name;
-  private List<CategoryItem> items;
+  private ArrayList<CategoryItem> items;
   
   public CategoryTag( ) {
   }
   
-  public CategoryTag( String name, List<CategoryItem> items ) {
+  public CategoryTag( String name, ArrayList<CategoryItem> items ) {
     this.setName( name );
     this.setItems( items );
   }
@@ -27,7 +27,7 @@ public class CategoryTag implements Serializable {
     return name;
   }
 
-  public void setItems( List<CategoryItem> items ) {
+  public void setItems( ArrayList<CategoryItem> items ) {
     this.items = items;
   }
 

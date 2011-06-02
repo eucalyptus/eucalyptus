@@ -124,7 +124,7 @@ public class DatabaseAccountProxy implements Account {
     UserEntity newUser = new UserEntity( userName );
     newUser.setPath( path );
     newUser.setEnabled( enabled );
-    newUser.setPasswordExpires( System.currentTimeMillis( ) + 1000 * 60 * 60 * 24 * 365L );
+    newUser.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
     if ( skipRegistration ) {
       newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     } else {
@@ -134,7 +134,7 @@ public class DatabaseAccountProxy implements Account {
       newUser.getInfo( ).putAll( info );
     }
     newUser.setToken( Crypto.generateSessionToken( userName ) );
-    newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
+    //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
     GroupEntity newGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( userName ) );
     newGroup.setUserGroup( true );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );

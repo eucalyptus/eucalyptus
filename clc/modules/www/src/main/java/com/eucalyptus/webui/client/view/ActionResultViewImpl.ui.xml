@@ -1,0 +1,77 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="red" src="image/x_12x12_red.png"/>
+    <ui:image field="green" src="image/check_12x12_green.png"/>
+    
+    <ui:style>  
+        .outer {
+            margin-top:3em;
+            margin-left:auto;
+            margin-right:auto;
+            font-size:90%;
+            color:#555555;
+            padding:0px 0px 0px 0px;
+            text-align:center;
+            text-shadow:1px 1px 1px #FFFFFF;
+        }
+        .outer td {
+            vertical-align:middle;
+        }
+    </ui:style>
+    
+    <ui:style field="iconStyle" type="com.eucalyptus.webui.client.view.ActionResultViewImpl.IconStyle">
+        @sprite .red {
+            height:12px;
+            width:12px;
+            gwt-image:'red';
+            background-repeat:no-repeat;
+            background-position:center center;
+            margin:4px;
+            display:inline-block;
+        } 
+        @sprite .green {
+            height:12px;
+            width:12px;
+            gwt-image:'green';
+            background-repeat:no-repeat;
+            background-position:center center;
+            margin:4px;
+            display:inline-block;
+        }
+        .none {
+            height:12px;
+            width:12px;
+            background-color:transparent;
+            margin:4px;
+            display:inline-block;           
+        }    
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <table class="{style.outer}">
+            <tbody>
+                <tr>
+                    <td colspan="2">
+                        <g:Image ui:field="loading" url="themes/active/circleloading.gif"></g:Image>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span ui:field="icon"/>
+                    </td>
+                    <td>
+                        <g:Label ui:field="message"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <g:Button ui:field="button">Return to login</g:Button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 
