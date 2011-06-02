@@ -5,7 +5,7 @@
     <ui:image field="service" src="image/cog_alt_12x12_gray.png"/>
     <ui:image field="link" src="image/link_12x12_gray.png"/>
     <ui:image field="user" src="image/user_12x12_gray.png"/>
-    <ui:image field="group" src="image/user_12x12_gray.png"/>
+    <ui:image field="group" src="image/group_12x12_gray.png"/>
     <ui:image field="account" src="image/dollar_12x11_gray.png"/>
     <ui:image field="key" src="image/key_fill_12x12_gray.png"/>
     <ui:image field="image" src="image/image_12x12_gray.png"/>
