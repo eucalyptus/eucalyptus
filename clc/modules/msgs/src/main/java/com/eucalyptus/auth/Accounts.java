@@ -136,6 +136,10 @@ public class Accounts {
     }
     throw new AuthException( "No active access key for " + user );
   }
+  
+  public static User lookupUserByConfirmationCode( String code ) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
+  }
 
   /**
    * @deprecated TEMPORARY

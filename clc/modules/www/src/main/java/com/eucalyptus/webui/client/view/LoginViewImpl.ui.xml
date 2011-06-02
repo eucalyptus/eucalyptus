@@ -18,6 +18,32 @@
         	text-align:center;
         	margin-bottom:6px;
         }
+        .top {
+            margin-top:6px;
+            padding-bottom:6px;
+            width:100%;
+            border-bottom:1px solid #CCCCCC;
+            text-align:right;            
+        }
+        .top a {
+        	font-size:13px;
+        	color:#333333;
+        	text-shadow:1px 1px 3px #FFFFFF;
+        	cursor:pointer;
+        	cursor:hand;
+        	margin-right:16px;
+        	padding:2px;
+        }
+        .top a:hover, .top a:focus {
+            background: #f1e767;
+            background:literal("-moz-linear-gradient(top, #f1e767 0%, #feb645 100%)");
+            background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#f1e767), color-stop(100%,#feb645))");
+            background:literal("-webkit-linear-gradient(top, #f1e767 0%,#feb645 100%)");
+            background:literal("-o-linear-gradient(top, #f1e767 0%,#feb645 100%)");
+            background:literal("-ms-linear-gradient(top, #f1e767 0%,#feb645 100%)");
+            filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#f1e767', endColorstr='#feb645',GradientType=0 )");
+            background:literal("linear-gradient(top, #f1e767 0%,#feb645 100%)");
+        }
     </ui:style>
     
     <ui:style field="formStyle" type="com.eucalyptus.webui.client.view.LoginViewImpl.LoginFormStyle">
@@ -28,7 +54,7 @@
         .loginBox {
             margin-left:auto;
             margin-right:auto;
-            width:18em;
+            width:20em;
             padding-left:1.5em;
             padding-right:1.5em;
             padding-top:1.5em;
@@ -65,9 +91,7 @@
         }
         .hint {
         	font-size:70%;
-        	font-style:italic;
         	color:#555555;
-        	font-weight:bold;
         	text-align:left;
         	padding-top:3px;
         }
@@ -79,10 +103,21 @@
         }
     </ui:style>
     
-    <g:HTMLPanel styleName="{style.vcenterParent}">
-        <div class="{style.vcenterChild}" ui:field="loginArea" >
-            <g:Label styleName="{style.prompt}" ui:field="prompt"/>
-        </div>
-    </g:HTMLPanel>
+    <g:DockLayoutPanel unit="PX">
+        <g:north size="28">
+            <g:HTMLPanel addStyleNames="{style.top}">
+                <g:Anchor ui:field="accountSignup">Signup Account</g:Anchor>
+                <g:Anchor ui:field="userSignup">Signup User</g:Anchor>
+                <g:Anchor ui:field="recover">Reset Password</g:Anchor>
+            </g:HTMLPanel>   
+        </g:north>
+        <g:center>
+            <g:HTMLPanel addStyleNames="{style.vcenterParent}">
+                <div class="{style.vcenterChild}" ui:field="loginArea" >
+                    <g:Label styleName="{style.prompt}" ui:field="prompt"/>
+                </div>        
+            </g:HTMLPanel>        
+        </g:center>
+    </g:DockLayoutPanel>
     
 </ui:UiBinder>

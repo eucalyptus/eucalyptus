@@ -30,7 +30,7 @@ import com.google.gwt.view.client.SelectionModel;
 
 public class SearchResultTable extends Composite {
   
-  private static final String MULTI_SELECTION_TIP = "Use 'Ctrl' or 'Shift' for multiple selection.";
+  private static final String MULTI_SELECTION_TIP = "Use 'Ctrl' or 'Shift' for multiple selections.";
 
   private static SearchResultTableUiBinder uiBinder = GWT.create( SearchResultTableUiBinder.class );
   
@@ -120,7 +120,7 @@ public class SearchResultTable extends Composite {
     AsyncDataProvider<SearchResultRow> dataProvider = new AsyncDataProvider<SearchResultRow>( ) {
       @Override
       protected void onRangeChanged( HasData<SearchResultRow> display ) {
-        SearchRange sr = new SearchRange( );
+        SearchRange sr = new SearchRange( -1 );
         Range range = display.getVisibleRange( );
         if ( range != null ) {
           sr.setStart( range.getStart( ) );

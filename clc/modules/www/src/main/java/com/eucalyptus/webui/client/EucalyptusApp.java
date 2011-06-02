@@ -1,8 +1,14 @@
 package com.eucalyptus.webui.client;
 
+import com.eucalyptus.webui.client.activity.ActionUtil;
+import com.eucalyptus.webui.client.activity.WebAction;
+import com.eucalyptus.webui.client.place.ConfirmSignupPlace;
 import com.eucalyptus.webui.client.place.LoginPlace;
+import com.eucalyptus.webui.client.place.ResetPasswordPlace;
+import com.eucalyptus.webui.shared.query.QueryType;
 import com.google.gwt.activity.shared.ActivityManager;
 import com.google.gwt.activity.shared.ActivityMapper;
+import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
 /**
@@ -21,6 +27,8 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  */
 public class EucalyptusApp {
   
+  private static final String CONFIRMATIONCODE = "confirmationcode";
+
   private final ClientFactory clientFactory;
   
   private ActivityManager lifecycleActivityManager;
@@ -33,6 +41,25 @@ public class EucalyptusApp {
     ActivityMapper activityMapper = new LifecycleActivityMapper( this.clientFactory );
     lifecycleActivityManager = new ActivityManager( activityMapper, this.clientFactory.getLifecycleEventBus( ) );
     lifecycleActivityManager.setDisplay( container );
+    // First check special action activities
+    checkAction( );
+  }
+  
+  private void checkAction( ) {
+    String token = History.getToken( );
+    if ( token.startsWith( QueryType.confirm.name( ) + WebAction.ACTION_SEPARATOR ) ) {
+      WebAction action = ActionUtil.parseAction( token );
+      if ( action != null ) {
+        this.clientFactory.getLifecyclePlaceController( ).goTo( new ConfirmSignupPlace( action.getValue( CONFIRMATIONCODE ) ) );
+        return;
+      }
+    } else if ( token.startsWith( QueryType.reset.name( ) + WebAction.ACTION_SEPARATOR ) ) {
+      WebAction action = ActionUtil.parseAction( token );
+      if ( action != null ) {
+        this.clientFactory.getLifecyclePlaceController( ).goTo( new ResetPasswordPlace( action.getValue( CONFIRMATIONCODE ) ) );
+        return;
+      }      
+    }
     // Always login first 
     this.clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
   }
