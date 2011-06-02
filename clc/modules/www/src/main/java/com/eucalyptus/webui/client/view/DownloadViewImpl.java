@@ -31,8 +31,8 @@ public class DownloadViewImpl extends Composite implements DownloadView {
     ImageResource download( );
   }
   
-  public static final String ICON_COL_WIDTH = "36px";
-  public static final String NAME_COL_WIDTH = "200px";
+  public static final String ICON_COL_WIDTH = "32px";
+  public static final String NAME_COL_WIDTH = "320px";
   
   @UiField
   GridStyle gridStyle;
