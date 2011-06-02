@@ -165,8 +165,8 @@ public class StandalonePersistence {
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
     boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-    Logs.DEBUG = doDebug;
-    Logs.TRACE = doDebug;
+    // Logs.DEBUG = doDebug;
+    // Logs.TRACE = doDebug;
     StandalonePersistence.LOG = Logger.getLogger( StandalonePersistence.class );
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
