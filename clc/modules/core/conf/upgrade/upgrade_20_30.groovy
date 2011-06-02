@@ -128,7 +128,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
 		Set<String> entityKeys = entityMap.keySet();
 		for (String entityKey : entityKeys) {
-                        if (entityKey.equals("metadata_network_group")) {
+            if (entityKey.equals("metadata_network_group")) {
 				continue
 			}
 			String contextName = getContextName(entityKey);
@@ -390,7 +390,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		}
 	}
 	
-	public void upgradeWalrus() {
+	public boolean upgradeWalrus() {
 		def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
 		walrus_conn.rows('SELECT * FROM Buckets').each{
 			println "Adding bucket: ${it.bucket_name}"
@@ -428,7 +428,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				dbBucket.rollback();
 				return false;
 			}
-			return true;
 		}
 		walrus_conn.rows('SELECT * FROM Objects').each{
 			println "Adding object: ${it.bucket_name}/${it.object_name}"
@@ -478,8 +477,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 			} catch (Throwable t) {
 				t.printStackTrace();
 				dbObject.rollback();
+				return false;
 			}
 		}
+		return true;
 	}
 
 	public boolean upgradeNetwork() {
