@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.client.activity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -10,13 +11,21 @@ import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.view.CertView;
+import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.HasValueWidget;
+import com.eucalyptus.webui.client.view.FooterView.StatusType;
+import com.eucalyptus.webui.client.view.LogView.LogType;
+import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class CertActivity extends AbstractSearchActivity implements CertView.Presenter, DetailView.Presenter {
+public class CertActivity extends AbstractSearchActivity implements CertView.Presenter, ConfirmationView.Presenter {
   
   public static final String TITLE = "X509 CERTIFICATES";
+  
+  public static final String DELETE_CERT_CAPTION = "Delete selected certificate";
+  public static final String DELETE_CERT_SUBJECT = "Are you sure to delete the following selected certificate?";
   
   private static final Logger LOG = Logger.getLogger( CertActivity.class.getName( ) );
   
@@ -60,9 +69,32 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
-    // TODO Auto-generated method stub
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
+    final ArrayList<String> newVals = Lists.newArrayList( );
+    for ( HasValueWidget w : values ) {
+      newVals.add( w.getValue( ) );
+    }
     
+    final String certId = emptyForNull( getField( newVals, 0 ) );
+    
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Modifying certificate " + certId + " ...", 0 );
+    
+    clientFactory.getBackendService( ).modifyCertificate( clientFactory.getLocalSession( ).getSession( ), newVals, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify certificate " + certId  + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Successfully modified certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified certificate " + certId );
+        reloadCurrentRange( );
+      }
+      
+    } );
   }
 
   @Override
@@ -79,6 +111,52 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
       ( ( CertView ) this.view ).clear( );
     }
     ( ( CertView ) this.view ).showSearchResult( result );    
+  }
+
+  @Override
+  public void confirm( String subject ) {
+    if ( DELETE_CERT_SUBJECT.equals( subject ) ) {
+      doDeleteCert( );
+    }
+  }
+
+  private void doDeleteCert( ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      return;
+    }
+    
+    final SearchResultRow cert = currentSelected.toArray( new SearchResultRow[0] )[0];
+    final String certId = emptyForNull( getField( cert.getRow( ), 0 ) );
+    clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Deleting certificate ...", 0 );
+    
+    clientFactory.getBackendService( ).deleteCertificate( clientFactory.getLocalSession( ).getSession( ), cert, new AsyncCallback<Void>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete certificate " + certId + ": " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Certificate deleted", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Certificate " + certId + " deleted" );
+        reloadCurrentRange( );
+      }
+      
+    } );
+  }
+
+
+  @Override
+  public void onDeleteCert( ) {
+    if ( currentSelected == null || currentSelected.size( ) != 1 ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Select one certificate to delete", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+    ConfirmationView dialog = this.clientFactory.getConfirmationView( );
+    dialog.setPresenter( this );
+    dialog.display( DELETE_CERT_CAPTION, DELETE_CERT_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
   }
   
 }

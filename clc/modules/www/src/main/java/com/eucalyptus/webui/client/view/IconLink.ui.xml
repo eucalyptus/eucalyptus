@@ -1,0 +1,108 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="service" src="image/cog_alt_12x12_gray.png"/>
+    <ui:image field="link" src="image/link_12x12_gray.png"/>
+    <ui:image field="user" src="image/user_12x12_gray.png"/>
+    <ui:image field="group" src="image/group_12x12_gray.png"/>
+    <ui:image field="account" src="image/dollar_12x11_gray.png"/>
+    <ui:image field="key" src="image/key_fill_12x12_gray.png"/>
+    <ui:image field="image" src="image/image_12x12_gray.png"/>
+    <ui:image field="vmtype" src="image/tag_stroke_12x12_gray.png"/>
+    <ui:image field="report" src="image/article_12x12_gray.png"/>
+    
+    <ui:style>
+    </ui:style>
+ 
+    <ui:style field="typeStyle" type="com.eucalyptus.webui.client.view.IconLink.TypeStyle">
+        a.anchor {
+            font-size:90%;
+            color:#323232;
+            display:inline-block;
+            cursor:pointer;
+            cursor:hand;
+            margin-top:12px;
+        }
+        a.anchor span {
+        	margin-right:8px;
+        }
+        @sprite a.anchor span.service {
+            gwt-image:'service';        	
+        	display:inline-block;
+        	width:12px;
+        	height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.link {
+            gwt-image:'link';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }        
+        @sprite a.anchor span.user {
+            gwt-image:'user';
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.group {
+            gwt-image:'group';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.account {
+            gwt-image:'account';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.key {
+            gwt-image:'key';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.image {
+            gwt-image:'image';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.anchor span.vmtype {
+            gwt-image:'vmtype';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }          
+        @sprite a.anchor span.report {
+            gwt-image:'report';            
+            display:inline-block;
+            width:12px;
+            height:12px;
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }          
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <g:Anchor styleName="{typeStyle.anchor}" ui:field="anchor"><span ui:field="icon"/><span ui:field="title"/></g:Anchor>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

@@ -21,7 +21,7 @@
     
     <g:HTMLPanel styleName="{style.boundingBox}">
         <div class="{style.vcenter}">
-            <img alt="Loading" class="{style.hcenter}" src="themes/active/loading.gif"/>
+            <img alt="Loading" class="{style.hcenter}" src="themes/active/barloading.gif"/>
         </div>
     </g:HTMLPanel>
     
