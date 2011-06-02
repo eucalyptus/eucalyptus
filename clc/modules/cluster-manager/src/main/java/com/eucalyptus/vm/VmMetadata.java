@@ -66,11 +66,9 @@ package com.eucalyptus.vm;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 
@@ -147,11 +145,11 @@ public class VmMetadata {
         return null;
       }
     } catch ( Throwable ex ) {
-      String errorMsg = "Metadata request failed: " + path + ( LogLevels.DEBUG
+      String errorMsg = "Metadata request failed: " + path + ( Logs.EXTREME
         ? " cause: " + ex.getMessage( )
         : "" );
       LOG.error( errorMsg, ex );
-      return LogLevels.DEBUG
+      return Logs.EXTREME
         ? Exceptions.string( errorMsg, ex ).getBytes( )
         : errorMsg.getBytes( );
     }

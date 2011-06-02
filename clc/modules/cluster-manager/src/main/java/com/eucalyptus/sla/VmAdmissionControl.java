@@ -90,7 +90,7 @@ public class VmAdmissionControl {
     if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
       vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
     }
-    vmAllocInfo.setOwnerId( Contexts.lookup( ).getUserFullName( ).getAccountId( ) );
+    vmAllocInfo.setOwnerFullName( Contexts.lookup( ).getUserFullName( ) );
     vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
     
     byte[] userData = new byte[0];

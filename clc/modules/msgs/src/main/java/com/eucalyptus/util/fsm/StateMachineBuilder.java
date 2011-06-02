@@ -3,10 +3,13 @@ package com.eucalyptus.util.fsm;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -14,53 +17,84 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> {
-  private static Logger                  LOG               = Logger.getLogger( StateMachineBuilder.class );
+public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
+  private static Logger                         LOG               = Logger.getLogger( StateMachineBuilder.class );
   
-  protected P                            parent;
-  protected S                            startState;
-  private ImmutableList<S>               immutableStates;
-  private final Set<Transition<P, S, T>> transitions       = Sets.newHashSet( );
-  private final Multimap<S, Callback<S>> inStateListeners  = ArrayListMultimap.create( );
-  private final Multimap<S, Callback<S>> outStateListeners = ArrayListMultimap.create( );
+  protected P                                   parent;
+  protected S                                   startState;
+  private ImmutableList<S>                      immutableStates;
+  private final Set<TransitionHandler<P, S, T>> transitions       = Sets.newHashSet( );
+  private final Multimap<S, Callback<P>>        inStateListeners  = ArrayListMultimap.create( );
+  private final Multimap<S, Callback<P>>        outStateListeners = ArrayListMultimap.create( );
   
   protected class InStateBuilder {
     S state;
     
-    public void run( Callback<S> callback ) {
+    public InStateBuilder run( Callback<P> callback ) {
       inStateListeners.put( state, callback );
+      return this;
+    }
+    
+    public InStateBuilder run( final Predicate<P> predicate ) {
+      inStateListeners.put( state, new Callback<P>( ) {
+        {}
+        
+        @Override
+        public void fire( P p ) {
+          predicate.apply( p );
+        }
+      } );
+      return this;
     }
   }
   
   protected class OutStateBuilder {
     S state;
     
-    public void run( Callback<S> callback ) {
+    public OutStateBuilder run( Callback<P> callback ) {
       outStateListeners.put( state, callback );
+      return this;
+    }
+    
+    public OutStateBuilder run( final Predicate<P> predicate ) {
+      outStateListeners.put( state, new Callback<P>( ) {
+        {}
+        
+        @Override
+        public void fire( P p ) {
+          predicate.apply( p );
+        }
+      } );
+      return this;
     }
   }
   
   protected class TransitionBuilder {
-    Transition<P, S, T>          transition;
-    T                            name;
-    S                            fromState;
-    S                            toState;
-    S                            errorState;
-    TransitionAction<P>          action;
+    TransitionHandler<P, S, T>  transition;
+    T                           name;
+    S                           fromState;
+    S                           toState;
+    S                           errorState;
+    TransitionAction<P>         action;
     List<TransitionListener<P>> listeners = Lists.newArrayList( );
     
-    TransitionBuilder init( TransitionAction<P> action ) {
+    TransitionBuilder commit( TransitionAction<P> action ) {
       this.action = action;
       this.errorState = ( this.errorState == null )
         ? this.fromState
         : this.errorState;
-      this.transition = Transitions.create( this.name, this.fromState, this.toState, this.errorState, this.action, this.listeners.toArray( new TransitionListener[] {} ) );
-      this.listeners = null;;
+      TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState, errorState );
+      this.transition = new TransitionImpl<P, S, T>( rule, this.action, this.listeners.toArray( new TransitionListener[] {} ) );
+      this.listeners = null;
+      StateMachineBuilder.this.addTransition( transition );
       return this;
     }
     
-    private void commit( ) {
-      StateMachineBuilder.this.addTransition( transition );
+    private void commit( ) {}
+    
+    public TransitionBuilder on( T transitionName ) {
+      this.name = transitionName;
+      return this;
     }
     
     public TransitionBuilder from( S fromState ) {
@@ -78,42 +112,32 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       return this;
     }
     
-    public void outOfBand( ) {
-      this.init( new TransitionAction<P>( ) {
-        public boolean before( P parent ) {
-          return true;
-        }
-        
-        public void leave( P parent, Completion transitionCallback ) {}
-        
-        public void enter( P parent ) {}
-        
-        public void after( P parent ) {}
-        
-        public String toString( ) {
-          return "TransitionAction.outOfBand";
-        }
-      } );
-      this.commit( );
-    }
-
-    public void oob( ) {
-      this.init( TransitionAction.OUTOFBAND );
-      this.commit( );
+    public void run( final Callback<P> callable ) {
+      TransitionAction<P> action = Transitions.callbackAsAction( callable );
+      this.commit( action );
     }
     
-    public void noop( ) {
-      this.init( TransitionAction.NOOP );
-      this.commit( );
+    public void run( Runnable function ) {
+      TransitionAction<P> action = Transitions.runnableAsAction( function );
+      this.commit( action );
+    }
+    
+    public void run( Function<P, TransitionAction<P>> function ) {
+      this.commit( function.apply( parent ) );
     }
     
     public void run( TransitionAction<P> action ) {
-      this.init( action );
-      this.commit( );
+      this.commit( action );
     }
     
-    public TransitionBuilder add( TransitionListener<P> listener ) {
-      if( this.listeners == null ) {
+    public void run( final Predicate<P> predicate ) {
+      TransitionAction<P> action = Transitions.predicateAsAction( predicate );
+      this.commit( action );
+    }
+    
+    public TransitionBuilder addListener( Callback<P> callback ) {
+      TransitionListener<P> listener = Transitions.callbackAsListener( callback );
+      if ( this.listeners == null ) {
         this.transition.addListener( listener );
       } else {
         this.listeners.add( listener );
@@ -121,8 +145,8 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       return this;
     }
     
-    public TransitionBuilder add( TransitionListener<P>... listeners ) {
-      if( this.listeners == null ) {
+    public TransitionBuilder addListener( TransitionListener<P>... listeners ) {
+      if ( this.listeners == null ) {
         for ( TransitionListener<P> l : listeners ) {
           transition.addListener( l );
         }
@@ -133,6 +157,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
       }
       return this;
     }
+    
   }
   
   protected InStateBuilder in( final S input ) {
@@ -159,7 +184,15 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
     };
   }
   
-  protected StateMachineBuilder<P, S, T> addTransition( Transition<P, S, T> transition ) {
+  protected TransitionBuilder from( final S input ) {
+    return new TransitionBuilder( ) {
+      {
+        fromState = input;
+      }
+    };
+  }
+  
+  protected StateMachineBuilder<P, S, T> addTransition( TransitionHandler<P, S, T> transition ) {
     if ( this.transitions.contains( transition ) ) {
       throw new IllegalArgumentException( "Duplicate transition named: " + transition.getName( ) );
     } else {
@@ -168,7 +201,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
     return this;
   }
   
-  public AtomicMarkedState<P, S, T> newAtomicState( ) {
+  public StateMachine<P, S, T> newAtomicMarkedState( ) {
     if ( startState == null || parent == null || transitions == null || transitions.isEmpty( ) ) {
       throw new IllegalStateException( "Call to build() for an ill-formed state machine -- did you finish adding all the transition rules?" );
     }
@@ -177,12 +210,13 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
   }
   
   private void doChecks( ) {
-    this.immutableStates = ImmutableList.of( this.startState.getDeclaringClass( ).getEnumConstants( ) );
+    this.immutableStates = ImmutableList.of( this.startState.asEnum.getEnumConstants( this.startState ) );
     if ( this.transitions.isEmpty( ) ) {
       throw new IllegalStateException( "Started state machine with no registered transitions." );
     }
-    T[] trans = this.transitions.iterator( ).next( ).getName( ).getDeclaringClass( ).getEnumConstants( );
-    Map<String, Transition<P, S, T>> alltransitions = Maps.newHashMap( );
+    T transitionName = this.transitions.iterator( ).next( ).getName( );
+    T[] trans = transitionName.asEnum.getEnumConstants( transitionName );
+    Map<String, TransitionHandler<P, S, T>> alltransitions = Maps.newHashMap( );
     for ( S s1 : this.immutableStates ) {
       for ( S s2 : this.immutableStates ) {
         alltransitions.put( String.format( "%s.%s->%s.%s", s1, false, s2, false ), null );
@@ -195,16 +229,17 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
 //    for ( S s : this.immutableStates ) {
 //      LOG.debug( "fsm " + this.parent.getName( ) + "       state:" + s.name( ) );
 //    }
-    Multimap<T, Transition<P, S, T>> transNames = ArrayListMultimap.create( );
-    for ( Transition<P, S, T> t : this.transitions ) {
+    Multimap<T, TransitionHandler<P, S, T>> transNames = ArrayListMultimap.create( );
+    for ( TransitionHandler<P, S, T> t : this.transitions ) {
       transNames.put( t.getName( ), t );
     }
     for ( T t : trans ) {
 //      LOG.debug( "fsm " + this.parent.getName( ) + " transitions:" + ( transNames.containsKey( t )
 //        ? transNames.get( t )
 //        : t.name( ) + ":NONE" ) );
-      for ( Transition<P, S, T> tr : transNames.get( t ) ) {
-        String trKey = String.format( "%s.%s->%s.%s (err=%s.%s)", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ), tr.getErrorState( ), tr.getErrorStateMark( ) );
+      for ( TransitionHandler<P, S, T> tr : transNames.get( t ) ) {
+        String trKey = String.format( "%s.%s->%s.%s (err=%s.%s)", tr.getFromState( ), tr.getFromStateMark( ), tr.getToState( ), tr.getToStateMark( ),
+                                      tr.getErrorState( ), tr.getErrorStateMark( ) );
         if ( alltransitions.get( trKey ) != null ) {
           LOG.error( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );
           throw new IllegalStateException( "Duplicate transition: " + tr + " AND " + alltransitions.get( trKey ) );
@@ -224,6 +259,87 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Enum<S>, T exte
     super( );
     this.parent = parent;
     this.startState = startState;
+  }
+  
+  static class BasicTransitionRule<S extends Automata.State, T extends Automata.Transition> implements TransitionRule<S, T> {
+    private T             name;
+    private S             fromState;
+    private S             toState;
+    private S             errorState;
+    private final Boolean fromStateMark;
+    private final Boolean toStateMark;
+    private final Boolean errorStateMark;
+    
+    protected BasicTransitionRule( T name, S fromState, S toState ) {
+      this.name = name;
+      this.fromState = fromState;
+      this.toState = toState;
+      this.errorState = fromState;
+      this.fromStateMark = false;
+      this.toStateMark = false;
+      this.errorStateMark = false;
+    }
+    
+    protected BasicTransitionRule( T name, S fromState, S toState, S errorState ) {
+      this.name = name;
+      this.fromState = fromState;
+      this.toState = toState;
+      this.errorState = errorState;
+      this.fromStateMark = false;
+      this.toStateMark = false;
+      this.errorStateMark = false;
+    }
+    
+    protected BasicTransitionRule( T name, S fromState, Boolean fromStateMark, S toState, Boolean toStateMark, S errorState, Boolean errorStateMark ) {
+      this.name = name;
+      this.fromState = fromState;
+      this.toState = toState;
+      this.errorState = errorState;
+      this.fromStateMark = fromStateMark;
+      this.toStateMark = toStateMark;
+      this.errorStateMark = errorStateMark;
+    }
+    
+    @Override
+    public final T getName( ) {
+      return this.name;
+    }
+    
+    @Override
+    public final S getFromState( ) {
+      return this.fromState;
+    }
+    
+    @Override
+    public final S getToState( ) {
+      return this.toState;
+    }
+    
+    @Override
+    public final S getErrorState( ) {
+      return this.errorState;
+    }
+    
+    @Override
+    public final Boolean getFromStateMark( ) {
+      return this.fromStateMark;
+    }
+    
+    @Override
+    public final Boolean getToStateMark( ) {
+      return this.toStateMark;
+    }
+    
+    @Override
+    public final Boolean getErrorStateMark( ) {
+      return this.errorStateMark;
+    }
+    
+    @Override
+    public int compareTo( TransitionRule<S, T> that ) {
+      return this.getName( ).compareTo( that.getName( ) );
+    }
+    
   }
   
 }

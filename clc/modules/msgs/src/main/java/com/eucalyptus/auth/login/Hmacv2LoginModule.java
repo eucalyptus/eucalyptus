@@ -31,7 +31,7 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     SecurityContext.enqueueSignature( sig );
     AccessKey accessKey = Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
     User user = accessKey.getUser( );
-    String secretKey = accessKey.getKey( );
+    String secretKey = accessKey.getSecretKey( );
     String canonicalString = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ) + ":" + credentials.getHeaderPort( ), credentials.getServicePath( ), credentials.getParameters( ) );
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );

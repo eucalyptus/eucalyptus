@@ -92,7 +92,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
@@ -142,7 +142,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   private static AbstractSystemAddressManager getProvider( ) {
-    String provider = "" + edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).isDoDynamicPublicAddresses( )
+    String provider = "" + AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( )
                       + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
                         @Override
                         public boolean apply( Cluster arg0 ) {
@@ -166,11 +166,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static int getSystemReservedAddressCount( ) {
-    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getSystemReservedPublicAddresses( );
+    return AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( );
   }
   
   public static int getUserMaxAddresses( ) {
-    return edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getMaxUserPublicAddresses( );
+    return AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( );
   }
   
   //TODO: add config change event listener ehre.
@@ -207,7 +207,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr + " by " + ctx.getUser( ) );
       }
     }
@@ -218,10 +218,10 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
       }
-      if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }
@@ -246,7 +246,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isAssigned( ) ) {
-        Callbacks.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+        AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
           @Override
           public void fire( ) {
             try {

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,7 +63,6 @@
 
 package com.eucalyptus.entities;
 
-import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -78,8 +77,6 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @NaturalId
   @Column( name = "metadata_display_name" )
   protected String displayName;
-  @Column( name = "metadata_creation_time" )
-  private Date     creationTime;
   
   public AbstractStatefulPersistent( ) {
     super( );
@@ -133,14 +130,6 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
     this.displayName = displayName;
   }
   
-  public Date getCreationTime( ) {
-    return this.creationTime;
-  }
-  
-  public void setCreationTime( Date creationTime ) {
-    this.creationTime = creationTime;
-  }
-
   public final String getName( ) {
     return this.getDisplayName( );
   }

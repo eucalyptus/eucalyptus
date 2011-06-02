@@ -75,11 +75,11 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.WebServicesException;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage( "all" )
@@ -160,9 +160,7 @@ public class BindingHandler extends MessageStackHandler {
         } catch ( BindingException ex ) {
           omElem = BindingManager.getDefaultBinding( ).toOM( httpMessage.getMessage( ) );
         } catch ( Exception ex ) {
-          if ( LogLevels.DEBUG ) {
-            LOG.debug( ex, ex );
-          }
+          Logs.exhaust( ).debug( ex, ex );
           throw ex;
         }
       }

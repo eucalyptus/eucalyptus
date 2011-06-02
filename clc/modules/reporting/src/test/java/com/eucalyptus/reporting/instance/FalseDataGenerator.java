@@ -1,26 +1,22 @@
 package com.eucalyptus.reporting.instance;
 
+import java.io.*;
 import java.util.*;
 
-import com.eucalyptus.reporting.ReportingBootstrapper;
-import com.eucalyptus.reporting.GroupByCriterion;
-import com.eucalyptus.reporting.Period;
-import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.reporting.queue.QueueBroker;
-import com.eucalyptus.reporting.queue.QueueFactory;
-import com.eucalyptus.reporting.queue.QueueSender;
+import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.upgrade.TestDescription;
+import com.eucalyptus.util.ExposedCommand;
 
 /**
  * <p>FalseDataGenerator generates false data about instances. It generates
  * fake starting and ending times, imaginary resource usage, fictitious
  * clusters, and non-existent accounts and users.
  * 
- * <p>FalseDataGenerator is meant to be called from the command-line tool,
- * <pre>clc/tools/runTest.sh</pre>, specifying the class name and a method
- * below.
+ * <p>FalseDataGenerator is meant to be called from the
+ * <code>CommandServlet</code>
  * 
  * <p>False data should be deleted afterward by calling the
  * <pre>deleteFalseData</pre> method.
@@ -29,40 +25,36 @@ import com.eucalyptus.upgrade.TestDescription;
  * professional... False data can cause one to make stupid mistakes..."</i>
  *   - L. Ron Hubbard
  */
-@TestDescription("Generates false reporting data")
 public class FalseDataGenerator
 {
-	private static final int NUM_USAGE = 32;
-	private static final int NUM_INSTANCE = 16;
-	private static final long START_TIME = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final int TIME_USAGE_APART = 100000; //ms
+	private static final int NUM_USAGE    = 2048;
+	private static final int NUM_INSTANCE = 32;
+	private static final long START_TIME  = 1104566400000l; //Jan 1, 2005 12:00AM
+	private static final int TIME_USAGE_APART = 150000; //ms
 	private static final long MAX_MS = ((NUM_USAGE+1) * TIME_USAGE_APART) + START_TIME;
 
-	private static final int NUM_USER       = 32;
-	private static final int NUM_ACCOUNT    = 16;
+	private static final int NUM_USER       = 16;
+	private static final int NUM_ACCOUNT    = 8;
 	private static final int NUM_CLUSTER    = 4;
 	private static final int NUM_AVAIL_ZONE = 2;
 	
-	private static ReportingBootstrapper reportingBootstrapper = null;
-
 	private enum FalseInstanceType
 	{
 		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
 	}
 
+	@ExposedCommand
 	public static void generateFalseData()
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
-		TestEventListener listener = new TestEventListener();
-		listener.setCurrentTimeMillis(START_TIME);
-
-		reportingBootstrapper = new ReportingBootstrapper();
-		reportingBootstrapper.setOverriddenInstanceEventListener(listener);
-		reportingBootstrapper.start();
-
 		QueueSender	queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
 
+		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.INSTANCE);
+		TestEventListener listener = new TestEventListener();
+		listener.setCurrentTimeMillis(START_TIME);
+		queueReceiver.removeAllListeners(); //Remove non-test listeners set up by bootstrapper
+		queueReceiver.addEventListener(listener);
 
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
@@ -103,6 +95,31 @@ public class FalseDataGenerator
 
 	}
 
+	private static final long ERROR_MARGIN_MS = 60*60*1000;
+
+
+	private static boolean isWithinError(long val, long correctVal, long error)
+	{
+		return ((correctVal - error) < val) && (val < (correctVal + error));
+	}
+	
+	
+	@ExposedCommand
+	public static void generateTestReport()
+	{
+		System.out.println(" ----> GENERATING TEST REPORT");
+
+		try {
+			OutputStream os = new FileOutputStream("/tmp/testReport.csv");
+			ReportGenerator.generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
+					ReportingCriterion.USER, null, null, os);
+			os.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@ExposedCommand
 	public static void removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
@@ -110,98 +127,98 @@ public class FalseDataGenerator
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
 	}
 
-	public static void printFalseData()
+	
+	@ExposedCommand
+	public static void removeAllData()
 	{
-		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		System.out.println(" ----> PRINTING FALSE DATA");
-		for (InstanceUsageLog.LogScanResult result: usageLog.scanLog(new Period(0L, MAX_MS))) {
+		System.out.println(" ----> REMOVING ALL DATA");
 
-			InstanceAttributes insAttrs = result.getInstanceAttributes();
-			Period period = result.getPeriod();
-			UsageData usageData = result.getUsageData();
-
-			System.out.printf("instance:%s type:%s user:%s account:%s cluster:%s"
-					+ " zone:%s period:%d-%d netIo:%d diskIo:%d\n",
-					insAttrs.getInstanceId(), insAttrs.getInstanceType(),
-					insAttrs.getUserId(), insAttrs.getAccountId(),
-					insAttrs.getClusterName(), insAttrs.getAvailabilityZone(),
-					period.getBeginningMs(), period.getEndingMs(),
-					usageData.getNetworkIoMegs(), usageData.getDiskIoMegs());
-		}
-	}
-
-	public static void runTest()
-	{
-		try {
-			removeFalseData();
-			printFalseData();
-			Thread.sleep(100000);
-			generateFalseData();
-			Thread.sleep(100000);
-			printFalseData();
-			removeFalseData();
-		} catch (InterruptedException iex) {
-			throw new RuntimeException(iex);
-		}
+		InstanceUsageLog.getInstanceUsageLog().purgeLog(Long.MAX_VALUE);		
 	}
 	
-	private static GroupByCriterion getCriterion(String name)
+	@ExposedCommand
+	public static void setWriteIntervalMs(String writeIntervalMs)
 	{
-		/* throws an IllegalArgument which we allow to percolate up
-		 */
-		return GroupByCriterion.valueOf(name.toUpperCase());
+		System.out.println(" ----> SET WRITE INTERVAL");
+		
+		long writeIntervalMsl = Long.parseLong(writeIntervalMs);
+		ReportingBootstrapper.getInstanceListener().setWriteIntervalMs(writeIntervalMsl);
 	}
+	
 
 	/**
-	 * This method takes a String parameter rather than a GroupByCriterion,
-	 * because it's intended to be called from the command-line test harness.
+	 * <p>containsRecentRows checks if there are recent rows in 
+	 * InstanceUsageSnapshot. This is used for testing: we delete
+	 * all data, then set up volumes, then determine if rows made
+	 * it to the DB.
 	 * 
-	 * @throws IllegalArgumentException if criterion does not match
-	 *   any GroupByCriterion
+	 * @param hasRows Indicates whether there should be any
+	 * rows in InstanceUsageSnapshot. If true, and there are no rows,
+	 * and Exception is thrown; if false, and there are rows, an
+	 * Exception is thrown. If true, rows are checked to verify they
+	 * are relatively recent (within 1 hr). 
 	 */
-	public static void summarizeFalseDataOneCriterion(
-			String criterion)
+	@ExposedCommand
+	public static void containsRecentRows(String hasRows)
 	{
-		GroupByCriterion crit = getCriterion(criterion);
-		System.out.println(" ----> PRINTING FALSE DATA BY " + crit);
-
-		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		Map<String, InstanceUsageSummary> summaryMap = usageLog.scanSummarize(
-				new Period(0L, MAX_MS), crit);
-		for (String critVal: summaryMap.keySet()) {
-			System.out.printf("%s:%s Summary:%s\n", crit, critVal,
-					summaryMap.get(critVal));
-		}
-	}
-
-	/**
-	 * This method takes Strings as parameters rather than GroupByCriterion's,
-	 * because it's intended to be called from the command-line test harness.
-	 * 
-	 * @throws IllegalArgumentException if either criterion does not match
-	 *   any GroupByCriterion
-	 */
-	public static void summarizeFalseDataTwoCriteria(
-			String outerCriterion,
-			String innerCriterion)
-	{
-		GroupByCriterion outerCrit = getCriterion(outerCriterion);
-		GroupByCriterion innerCrit = getCriterion(innerCriterion);
-		System.out.printf(" ----> PRINTING FALSE DATA BY %s,%s\n", outerCrit,
-				innerCrit);
-
-		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
-		Map<String, Map<String, InstanceUsageSummary>> summaryMap =
-			usageLog.scanSummarize(new Period(0L, MAX_MS),
-					outerCrit, innerCrit);
-		for (String outerCritVal: summaryMap.keySet()) {
-			Map<String, InstanceUsageSummary> innerMap = summaryMap.get(outerCritVal);
-			for (String innerCritVal: innerMap.keySet()) {
-				System.out.printf("%s:%s %s:%s Summary:%s\n", outerCrit,
-						outerCritVal, innerCrit, innerCritVal,
-						innerMap.get(innerCritVal));
+		boolean containsRows =
+			(hasRows!=null && hasRows.equalsIgnoreCase("true"));
+		System.out.println(" ----> CONTAINS RECENT ROWS:" + containsRows);
+		
+		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
+			EntityWrapper.get(InstanceUsageSnapshot.class);
+		
+		try {
+			int rowCnt = 0;
+			@SuppressWarnings("rawtypes")
+			Iterator iter =
+				entityWrapper.createQuery(
+					"from InstanceUsageSnapshot as sus")
+					.iterate();
+			while (iter.hasNext()) {
+				if (!containsRows) {
+					throw new RuntimeException("Found >0 rows where 0 expected");
+				}
+				rowCnt++;
+				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) iter.next();
+				long foundTimestampMs = snapshot.getTimestampMs();
+				long nowMs = System.currentTimeMillis();
+				if (!isWithinError(nowMs, foundTimestampMs, ERROR_MARGIN_MS)) {
+					throw new RuntimeException(String.format(
+							"Row outside error margin, expected:%d found:%d",
+							nowMs, foundTimestampMs));
+				}
 			}
+			if (rowCnt==0 && containsRows) {
+				throw new RuntimeException("Found 0 rows where >0 expected");
+			}
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
 		}
+
+	}
+
+	
+	public static void printFalseData()
+	{
+//		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
+//		System.out.println(" ----> PRINTING FALSE DATA");
+//		for (InstanceUsageLog.LogScanResult result: usageLog.scanLog(new Period(0L, MAX_MS))) {
+//
+//			InstanceAttributes insAttrs = result.getInstanceAttributes();
+//			Period period = result.getPeriod();
+//			InstanceUsageData usageData = result.getUsageData();
+//
+//			System.out.printf("instance:%s type:%s user:%s account:%s cluster:%s"
+//					+ " zone:%s period:%d-%d netIo:%d diskIo:%d\n",
+//					insAttrs.getInstanceId(), insAttrs.getInstanceType(),
+//					insAttrs.getUserId(), insAttrs.getAccountId(),
+//					insAttrs.getClusterName(), insAttrs.getAvailabilityZone(),
+//					period.getBeginningMs(), period.getEndingMs(),
+//					usageData.getNetworkIoMegs(), usageData.getDiskIoMegs());
+//		}
 	}
 
 	/**
@@ -219,25 +236,12 @@ public class FalseDataGenerator
 			this.fakeCurrentTimeMillis = currentTimeMillis;
 		}
 		
+		@Override
 		protected long getCurrentTimeMillis()
 		{
+			System.out.println("Fake time millis:" + fakeCurrentTimeMillis);
 			return fakeCurrentTimeMillis;
 		}
 	}
 
-	public static void main(String[] args) throws Exception
-	{
-		String methodName = args[0];
-		Object[] methodArgsArray = new Object[args.length - 1];
-		Class[] paramTypes = new Class[args.length - 1];
-		System.out.println("Executing " + methodName);
-		for (int i = 1; i < args.length; i++) {
-			paramTypes[i - 1] = String.class;
-			methodArgsArray[i - 1] = args[i];
-			System.out.println(" param:" + args[i - 1]);
-		}
-		FalseDataGenerator.class.getDeclaredMethod(methodName, paramTypes)
-				.invoke(null, methodArgsArray);
-	}
-	
 }

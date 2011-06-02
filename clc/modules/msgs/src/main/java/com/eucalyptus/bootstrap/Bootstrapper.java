@@ -94,9 +94,9 @@ import edu.emory.mathcs.backport.java.util.Arrays;
  * @see SystemBootstrapper#start()
  */
 public abstract class Bootstrapper {
-  private static Logger LOG = Logger.getLogger( Bootstrapper.class );
-  private List<ComponentId> dependsLocal  = getDependsLocal();
-  private List<ComponentId> dependsRemote = getDependsRemote();
+  private static Logger     LOG           = Logger.getLogger( Bootstrapper.class );
+  private List<ComponentId> dependsLocal  = getDependsLocal( );
+  private List<ComponentId> dependsRemote = getDependsRemote( );
   
   /**
    * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
@@ -116,27 +116,30 @@ public abstract class Bootstrapper {
    * @return true on successful completion
    * @throws Exception
    */
-
+  
   public abstract boolean start( ) throws Exception;
-
+  
   /**
-   * Perform the enable phase of bootstrap -- this occurs when the service associated with this bootstrapper is made active and should bring the resource to an active operational state.
+   * Perform the enable phase of bootstrap -- this occurs when the service associated with this
+   * bootstrapper is made active and should bring the resource to an active operational state.
+   * 
    * @return
    * @throws Exception
    */
   public abstract boolean enable( ) throws Exception;
   
   /**
-   * Initiate a graceful shutdown 
+   * Initiate a graceful shutdown
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @return true on successful completion
    * @throws Exception
    */
   public abstract boolean stop( ) throws Exception;
-
+  
   /**
-   * Initiate a forced shutdown releasing all used resources and effectively unloading the this bootstrapper.
+   * Initiate a forced shutdown releasing all used resources and effectively unloading the this
+   * bootstrapper.
    * 
    * @note Intended for future use. May become {@code abstract}.
    * @throws Exception
@@ -144,13 +147,13 @@ public abstract class Bootstrapper {
   public abstract void destroy( ) throws Exception;
   
   /**
-   * Enter an idle/passive state. 
+   * Enter an idle/passive state.
    * 
    * @return
    * @throws Exception
    */
   public abstract boolean disable( ) throws Exception;
-
+  
   /**
    * Check the status of the bootstrapped resource.
    * 
@@ -179,16 +182,16 @@ public abstract class Bootstrapper {
         dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
       } else {
         dependsLocal = Lists.newArrayList( );
-        for( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
-          if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+        for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
+          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
           } else {
             try {
               dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
             } catch ( InstantiationException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             } catch ( IllegalAccessException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           }
         }
@@ -216,16 +219,16 @@ public abstract class Bootstrapper {
         dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
       } else {
         dependsRemote = Lists.newArrayList( );
-        for( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
-          if( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+        for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
+          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
             LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
           } else {
             try {
               dependsRemote.add( ( ComponentId ) compIdClass.newInstance( ) );
             } catch ( InstantiationException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             } catch ( IllegalAccessException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           }
         }
@@ -233,6 +236,7 @@ public abstract class Bootstrapper {
       return dependsRemote;
     }
   }
+  
   /**
    * The Bootstrap.Stage during which the bootstrapper executes.
    * 
@@ -273,11 +277,11 @@ public abstract class Bootstrapper {
   public boolean checkLocal( ) {
     for ( ComponentId c : this.getDependsLocal( ) ) {
       try {
-        if ( !Components.lookup( c ).isLocal( ) ) {
+        if ( !Components.lookup( c ).hasLocalService( ) ) {
           return false;
         }
       } catch ( NoSuchElementException ex ) {
-//        return false;
+        return false;
       }
     }
     return true;
@@ -291,11 +295,10 @@ public abstract class Bootstrapper {
   public boolean checkRemote( ) {
     for ( ComponentId c : this.getDependsRemote( ) ) {
       try {
-        if ( Components.lookup( c ).isLocal( ) ) {
+        if ( Components.lookup( c ).hasLocalService( ) ) {
           return false;
         }
       } catch ( NoSuchElementException ex ) {
-//        return false;
       }
     }
     return true;
@@ -324,7 +327,8 @@ public abstract class Bootstrapper {
    */
   @Override
   public String toString( ) {
-    return String.format( "Bootstrapper %s runDuring=%s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.getBootstrapStage( ), this.dependsLocal, this.dependsRemote );
+    return String.format( "Bootstrapper %s runDuring=%s dependsLocal=%s dependsRemote=%s", this.getClass( ).getSimpleName( ), this.getBootstrapStage( ),
+                          this.dependsLocal, this.dependsRemote );
   }
   
 }

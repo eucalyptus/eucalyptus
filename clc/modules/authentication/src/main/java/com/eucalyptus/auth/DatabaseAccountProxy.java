@@ -19,7 +19,7 @@ import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -47,19 +47,19 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
+  public String getAccountNumber( ) {
+    return this.delegate.getAccountNumber( );
   }
 
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( AccountEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<AccountEntity>( ) {
+      Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
         public void fire( AccountEntity t ) throws Throwable {
           t.setName( name );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
       throw new AuthException( e );
     }    
@@ -306,7 +306,7 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getId( );
+    String accountId = this.delegate.getAccountNumber( );
     if ( resourceType == null ) {
       throw new AuthException( "Empty resource type" );
     }
@@ -325,7 +325,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );
@@ -342,7 +342,7 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getId( );
+    String accountId = this.delegate.getAccountNumber( );
     if ( resourceType == null ) {
       throw new AuthException( "Empty resource type" );
     }
@@ -359,7 +359,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "statement" ).setCacheable( true )
           .createCriteria( "policy" ).setCacheable( true )
           .createCriteria( "group" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.idEq( accountId ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
           .list( );
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );

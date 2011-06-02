@@ -3,10 +3,7 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER"/>
-	<classpathentry kind="lib" path="/bzr/grze_eee/clc/lib/groovy-all-1.7.2.jar"/>
-	<classpathentry kind="lib" path="/bzr/grze_eee/clc/target/eucalyptus-msgs-eee-2.0.0.jar"/>
-	<classpathentry kind="lib" path="/bzr/grze_eee/clc/target/eucalyptus-auth-eee-2.0.0.jar"/>
-	<classpathentry kind="lib" path="/bzr/grze_eee/clc/target/eucalyptus-www-eee-2.0.0.jar"/>
-	<classpathentry kind="lib" path="/bzr/grze_eee/clc/lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="/home/wenye/repositories/checkins/eee-ye/clc/lib/guava-r09-gwt.jar"/>
+	<classpathentry kind="lib" path="/home/wenye/repositories/checkins/eee-ye/clc/lib/guava-r09.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

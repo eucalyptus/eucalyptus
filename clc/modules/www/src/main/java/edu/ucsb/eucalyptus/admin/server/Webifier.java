@@ -60,8 +60,8 @@ public class Webifier {
     }
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {
-        uif.setQueryId( k.getId( ) );
-        uif.setSecretKey( k.getKey( ) );
+        uif.setQueryId( k.getAccessKey( ) );
+        uif.setSecretKey( k.getSecretKey( ) );
       }
     }
     return uif;
@@ -73,7 +73,7 @@ public class Webifier {
     if ( !user.getName( ).equals( uif.getUserName( ) ) ) {
       user.setName( uif.getUserName( ) );
     }
-    if ( user.getPasswordExpires( ) != uif.getPasswordExpires( ) ) {
+    if ( !user.getPasswordExpires( ).equals( uif.getPasswordExpires( ) ) ) {
       user.setPasswordExpires( uif.getPasswordExpires( ) );
     }
     Map<String, String> info = Maps.newHashMap( );

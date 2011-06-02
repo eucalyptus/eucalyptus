@@ -92,12 +92,16 @@ public class ServiceBuilderRegistry {
   }
 
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
+    if( !componentBuilders.containsKey( componentId ) ) {
+      Component comp = Components.lookup( componentId );
+      componentBuilders.put( componentId, new DummyServiceBuilder( comp ) );
+    }
     return componentBuilders.get( componentId );
   }  
 
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
     try {
-      return componentBuilders.get( componentIdClass.newInstance( ) );
+      return lookup( componentIdClass.newInstance( ) );
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
       throw new RuntimeException( ex );

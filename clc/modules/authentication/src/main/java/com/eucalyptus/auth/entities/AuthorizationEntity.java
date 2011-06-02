@@ -149,5 +149,17 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   public Set<String> getResources( ) {
     return this.resources;
   }
-  
+
+  /**
+   * NOTE:IMPORTANT: this method has public visibility (rather than public) only for the sake of
+   * supporting currently hand-coded proxy classes. Don't share this value with the user.
+   * 
+   * TODO: remove this if possible.
+   * 
+   * @return
+   * @see {@link AbstractPersistent#getId()}
+   */
+  public String getAuthorizationId( ) {
+    return this.getId( );
+  }
 }

@@ -79,7 +79,7 @@ int      ncStubDestroy (ncStub * stub);
 int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
 int ncGetConsoleOutputStub (ncStub *stub, ncMetadata *meta, char *instanceId, char **consoleOutput);
 int ncRebootInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
-int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
+int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState);
 int ncDescribeInstancesStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
 int ncDescribeResourceStub  (ncStub *stub, ncMetadata *meta, char *resourceType, ncResource **outRes);
 int ncStartNetworkStub  (ncStub *stub, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
@@ -87,6 +87,7 @@ int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *
 int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
 int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 
 int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);

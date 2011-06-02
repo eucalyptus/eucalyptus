@@ -107,5 +107,14 @@ public class InstanceEvent
 	{
 		return false;
 	}
+	
+	public String toString()
+	{
+		return String.format("[uuid:%s,instanceId:%s,instanceType:%s,userId:%s"
+				+ ",accountId:%s,cluster:%s,zone:%s,net:%d,disk:%d]",
+					uuid, instanceId, instanceType, userId, accountId,
+					clusterName, availabilityZone, cumulativeNetworkIoMegs,
+					cumulativeDiskIoMegs);
+	}
 
 }

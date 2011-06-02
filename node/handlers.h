@@ -77,6 +77,7 @@ permission notice:
 struct nc_state_t {
 	struct handlers *H;             // selected handler
 	struct handlers *D;             // default  handler
+    hypervisorCapabilityType capability;
 	vnetConfig *vnetconfig;		// network config
 	// globals
 	int  config_network_port;
@@ -156,6 +157,7 @@ struct handlers {
     int (*doTerminateInstance)	(struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId,
+				int force,
 				int *shutdownState,
 				int *previousState);
     int (*doRebootInstance)	(struct nc_state_t *nc,
@@ -220,7 +222,7 @@ int doAssignAddress		(ncMetadata *meta, char *instanceId, char *publicIp);
 int doPowerDown			(ncMetadata *meta);
 int doDescribeInstances		(ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
 int doRunInstance		(ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst);
-int doTerminateInstance		(ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState);
+int doTerminateInstance		(ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState);
 int doRebootInstance		(ncMetadata *meta, char *instanceId);
 int doGetConsoleOutput		(ncMetadata *meta, char *instanceId, char **consoleOutput);
 int doDescribeResource		(ncMetadata *meta, char *resourceType, ncResource **outRes);
@@ -230,7 +232,6 @@ int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *r
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
-
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 
 #endif /* HANDLERS_FANOUT */
@@ -272,7 +273,7 @@ void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
 int check_iscsi(char* dev_string);
-void parse_target(char *dev_string);
+//void parse_target(char *dev_string);
 char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
 int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
 char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);

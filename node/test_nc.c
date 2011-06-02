@@ -64,6 +64,7 @@ permission notice:
 #include <libvirt/virterror.h>
 #include "misc.h"
 #include "eucalyptus.h"
+#include "diskutil.h"
 
 #define MAXDOMS 1024
 
@@ -84,7 +85,7 @@ int main (int argc, char * argv[] )
   char *hypervisor, hypervisorURL[32], cmd[1024];
   char *eucahome=NULL;
   
-  logfile (NULL, EUCAFATAL); /* suppress all messages */
+  //  logfile (NULL, EUCAFATAL); // suppress all messages
  
   if (argc != 2) {
       fprintf (stderr, "error: test_nc expects one parameter (name of hypervisor)\n");
@@ -117,7 +118,11 @@ int main (int argc, char * argv[] )
   } else {
     eucahome = strdup(eucahome);
   }
-  
+
+  add_euca_to_path (eucahome);
+  if (diskutil_init())
+      exit (1);
+
   if (!strcmp(hypervisor, "kvm")) {
     snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info", eucahome, eucahome);
   } else {

@@ -6,7 +6,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -24,11 +24,6 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   }
   
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
-  }
-  
-  @Override
   public Boolean isActive( ) {
     return this.delegate.isActive( );
   }
@@ -36,31 +31,31 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           t.setActive( active );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
       throw new AuthException( e );
     }
   }
   
   @Override
-  public String getKey( ) {
-    return this.delegate.getKey( );
+  public String getSecretKey( ) {
+    return this.delegate.getSecretKey( );
   }
   
-  @Override
-  public void setKey( final String key ) throws AuthException {
+//  @Override
+  public void setSecretKey( final String key ) throws AuthException {
     try {
-      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
-          t.setKey( key );
+          t.setSecretKey( key );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
       throw new AuthException( e );
     }
@@ -74,12 +69,12 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
-      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           t.setCreateDate( createDate );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setCreateDate for " + this.delegate );
       throw new AuthException( e );
     } 
@@ -89,16 +84,21 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   public User getUser( ) throws AuthException {
     final List<User> results = Lists.newArrayList( );
     try {
-      Transactions.one( AccessKeyEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AccessKeyEntity>( ) {
+      Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) throws Throwable {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
       throw new AuthException( e );
     }
     return results.get( 0 );
+  }
+
+  @Override
+  public String getAccessKey( ) {
+    return this.delegate.getAccessKey( );
   }
   
 }

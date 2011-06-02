@@ -78,16 +78,6 @@
     <param name="MaxBackupIndex" value="10" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
-  <appender name="logexhaust" class="org.apache.log4j.RollingFileAppender">
-    <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
-    <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="10" />
-    <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
-      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    -->
-    </layout>
-  </appender>
   <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
     <param name="MaxFileSize" value="10MB" />
@@ -110,7 +100,7 @@
   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="10" />
+    <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.log.level}" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
@@ -119,7 +109,7 @@
   <appender name="cloud-exhaust" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="10" />
+    <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.exhaust.level}" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
@@ -153,7 +143,7 @@
     ~ NOTE: The following suppress very verbose but potentially useful output. ~ Consider removing or changing these if
     you are having unexplained failures.
   -->
-  <category name="Configs" additivity="false">
+  <category name="EXHAUST" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
@@ -169,12 +159,24 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
   </category>
+  <category name="com.eucalyptus.context.Context" additivity="false">
+    <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.ws.util.PipelineRegistry" additivity="false">
+    <priority value="${euca.log.exhaustive.user}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.vm.MetadataRequest" additivity="false">
+    <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
@@ -265,6 +267,10 @@
   </category>
   <category name="org.jgroups" additivity="false">
     <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jgroups.protocol.UDP" additivity="false">
+    <priority value="FATAL" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="edu.ucsb.eucalyptus.cloud.ws.WalrusStatistics" additivity="true">

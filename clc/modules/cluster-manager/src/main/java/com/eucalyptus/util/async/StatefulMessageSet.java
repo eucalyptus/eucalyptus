@@ -63,11 +63,13 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
           public CheckedListenableFuture apply( Cluster c ) {
             EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ).info( );
-            return Callbacks.newRequest( callback.newInstance( ).regardingUserRequest( callback.getRequest( ) ) ).dispatch( c.getServiceEndpoint( ) );
+            Request request = AsyncRequests.newRequest( callback.newInstance( ) );
+            request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
+            return request.dispatch( c.getConfiguration( ) );
           }
         } ) );
       } else {
-        this.pendingEvents.add( event.dispatch( cluster.getServiceEndpoint( ) ) );
+        this.pendingEvents.add( event.dispatch( cluster.getConfiguration( ) ) );
         EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ).info( );
       }
     }

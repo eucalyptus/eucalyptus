@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,19 +67,21 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import com.eucalyptus.auth.principal.UserFullName;
 
 public class ResourceToken implements Comparable {
-  private final String             cluster;
-  private final String             correlationId;
-  private final UserFullName       userFullName;
+  private final String       cluster;
+  private final String       correlationId;
+  private final UserFullName userFullName;
   private List<String>       instanceIds   = new ArrayList<String>( );
+  private List<String>       instanceUuids = new ArrayList<String>( );
   private List<String>       addresses     = new ArrayList<String>( );
   private List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
-  private final Integer            amount;
-  private final String             vmType;
-  private final Date               creationTime;
-  private final Integer            sequenceNumber;
+  private final Integer      amount;
+  private final String       vmType;
+  private final Date         creationTime;
+  private final Integer      sequenceNumber;
   
   public ResourceToken( final UserFullName userFullName, final String correlationId, final String cluster, final int amount, final int sequenceNumber,
                         final String vmType ) {
@@ -87,6 +89,9 @@ public class ResourceToken implements Comparable {
     this.correlationId = correlationId;
     this.userFullName = userFullName;
     this.amount = amount;
+    for( int i = 0; i < amount; i ++ ) {
+      this.instanceUuids.add( UUID.randomUUID( ).toString( ) );
+    }
     this.sequenceNumber = sequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
     this.vmType = vmType;
@@ -166,6 +171,10 @@ public class ResourceToken implements Comparable {
   public int compareTo( final Object o ) {
     ResourceToken that = ( ResourceToken ) o;
     return this.sequenceNumber - that.sequenceNumber;
+  }
+  
+  public List<String> getInstanceUuids( ) {
+    return this.instanceUuids;
   }
   
 }

@@ -71,9 +71,9 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Logs;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );
@@ -100,7 +100,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     try {
       this.addHandlers( pipeline );
       this.addSystemHandlers( pipeline );
-      if ( LogLevels.TRACE ) {
+      if ( Logs.EXTREME ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
         }

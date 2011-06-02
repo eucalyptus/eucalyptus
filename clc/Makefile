@@ -48,14 +48,15 @@ build: deps extras
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
 	@make -C modules/storage-controller/native
 	@make -C modules/storage-san/native
 	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 build-test: deps extras
 	@# we need JAVA_HOME
@@ -63,14 +64,15 @@ build-test: deps extras
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-test
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
 	#HACK!
-	bash -c 'ulimit -n 4096;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
+	bash -c 'ulimit -n 8192;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
 	@make -C modules/storage-controller/native
 	@make -C modules/storage-san/native
 	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 build-test: deps extras
 	@# we need JAVA_HOME
@@ -85,35 +87,41 @@ build-test: deps extras
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C modules/storage-controller/native
 	@make -C modules/bootstrap/src/main/native
+	@make -C eucadmin
 
 clean:
 	$(ANT) clean
 	make -C modules/bootstrap/src/main/native clean
 	make -C modules/storage-controller/native clean
 	make -C modules/storage-san/native clean
+	make -C eucadmin clean
 
 distclean: clean
 	$(ANT) distclean
 	make -C modules/bootstrap/src/main/native distclean
 	make -C modules/storage-controller/native distclean
 	make -C modules/storage-san/native distclean
+	make -C eucadmin distclean
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
 	@make -C modules/storage-controller/native install
 	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 install: build
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
 	@make -C modules/storage-controller/native install
 	@make -C modules/storage-san/native install
 	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) install
 	@make -C modules/storage-controller/native install
 	@make -C modules/storage-san/native install
 	@make -C modules/bootstrap/src/main/native install
+	@make -C eucadmin install
 
 
 deploy: install
@@ -122,6 +130,14 @@ uninstall:
 	make -C modules/storage-controller/native uninstall
 	make -C modules/storage-san/native uninstall
 	make -C modules/bootstrap/src/main/native uninstall
+	make -C eucadmin uninstall
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
 	$(RM) -rf $(DESTDIR)$(vardir)/eucalyptus/webapps
+
+# cleaning up after run-test currently requires a few iterations of:
+#   dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
+run-test:
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.EucaImagerTest
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.BrokerInterfaceTest
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointTest -Dvsphere.url=$(VSPHERE_URL) -Dvsphere.login=$(VSPHERE_LOGIN) -Dvsphere.password=$(VSPHERE_PASSWORD)

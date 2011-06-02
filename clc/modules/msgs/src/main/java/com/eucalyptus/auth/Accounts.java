@@ -14,6 +14,38 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.util.FullName;
 
+/**
+ * <h2>Eucalyptus/AWS IDs & Access Keys:</h2>
+ * <p>
+ * <strong>NOTE:IMPORTANT: It SHOULD NOT be the @Id of the underlying entity as this value is not
+ * guaranteed to be fixed in the future (e.g., disrupted by upgrade, version changes,
+ * etc.).</strong>
+ * </p>
+ * <ol>
+ * <li>- AWS Account Number: Public ID for an ACCOUNT.</li>
+ * <ul>
+ * <li>- "globally" unique 12-digit number associated with the Eucalyptus account.</li>
+ * <li>- is a shared value; other users may need it or discover it during normal operation of the
+ * system</li>
+ * <li>- _MUST_ be a 12-digit number. User commands require this value as input in certain cases and
+ * enforce the length of the ID.</li>
+ * </ul>
+ * </li>
+ * <li>AWS Access Key: Identifier value corresponding to the AWS Secret Access Key used to sign
+ * requests.</li>
+ * <ul>
+ * <li>- "globally" unique 20 alpha-numeric characters
+ * <li>
+ * <li>- is a shared value; other users may need it or discover it during normal operation of the
+ * system
+ * <li>
+ * <li>- _MUST_ be 20-alphanum characters; per the specification (e.g.,
+ * s3.amazonaws.com/awsdocs/ImportExport/latest/AWSImportExport-dg.pdf). User commands require this
+ * value as input in certain cases and enforce the length of the ID.
+ * <li>
+ * </ul>
+ * </ol>
+ */
 public class Accounts {
   private static final Logger LOG = Logger.getLogger( Accounts.class );
   
@@ -99,34 +131,12 @@ public class Accounts {
   public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {
-        return k.getId( );
+        return k.getAccessKey( );
       }
     }
     throw new AuthException( "No active access key for " + user );
   }
 
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static UserFullName lookupUserFullNameById( String userId ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static UserFullName lookupUserFullNameByName( String userName ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userName ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with name " + userName + " something has gone seriously wrong.", ex );
-    }
-  }
   /**
    * @deprecated TEMPORARY
    */
@@ -142,17 +152,6 @@ public class Accounts {
    * @deprecated TEMPORARY
    */
   @Deprecated
-  public static AccountFullName lookupAccountFullNameByUserName( String userName ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupUserByName( userName ).getAccount( ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userName + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
   public static AccountFullName lookupAccountFullNameById( String accountId ) {
     try {
       return AccountFullName.getInstance( Accounts.lookupAccountById( accountId ) );
@@ -160,20 +159,4 @@ public class Accounts {
       throw new RuntimeException( "Failed to identify user with id " + accountId + " something has gone seriously wrong.", ex );
     }
   }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static Account lookupAccount( User user ) {
-    if( FakePrincipals.NOBODY_USER.equals( user ) ) {
-      return FakePrincipals.NOBODY_ACCOUNT;
-    } else {
-      try {
-        return user.getAccount( );
-      } catch ( AuthException ex ) {
-        return FakePrincipals.NOBODY_ACCOUNT;
-      }
-    }
-  }
-  
 }

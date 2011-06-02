@@ -96,6 +96,9 @@ public class SystemCredentialProvider extends Bootstrapper {
   private ComponentId                                   componentId;
   private String                                        name;
   
+  public static void initializeSystem() {
+    
+  }
   public SystemCredentialProvider( ) {}
   
   private SystemCredentialProvider( ComponentId componentId ) {
@@ -147,7 +150,7 @@ public class SystemCredentialProvider extends Bootstrapper {
           LOG.fatal( e, e );
           throw e;
         }
-      } else if ( Components.lookup( Eucalyptus.class ).isLocal( ) ) {
+      } else if ( Components.lookup( Eucalyptus.class ).isAvailableLocally( ) ) {
         this.createSystemCredentialProviderKey( this.name );
         return;
       }

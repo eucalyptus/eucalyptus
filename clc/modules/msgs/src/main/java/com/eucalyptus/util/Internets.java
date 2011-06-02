@@ -77,6 +77,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -86,19 +87,54 @@ import com.google.common.collect.Lists;
 public class Internets {
   private static Logger       LOG     = Logger.getLogger( Internets.class );
   private static final String localId = localhostIdentifier( );
-  private static final InetAddress localHostAddr = localhostAddress( );
-  private static final String localHost = localhost( );
+  private static final InetAddress localHostAddr = determineLocalAddress( );
+  private static final List<InetAddress> localHostAddrList = Lists.newArrayList( );
+
+  public static List<InetAddress> localAddresses( ) {
+    return localHostAddrList;
+  }
+  private static InetAddress determineLocalAddress( ) {
+    InetAddress laddr = null;
+    if( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
+      List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
+      boolean err = false;
+      for( String addrStr : Bootstrap.parseBindAddrs( ) ) {
+        try {
+          InetAddress next = InetAddress.getByName( addrStr );
+          laddr = ( laddr == null ) ? next : laddr;
+          NetworkInterface iface = NetworkInterface.getByInetAddress( next );
+          if( locallyBoundAddrs.contains( locallyBoundAddrs ) ) {
+            localHostAddrList.add( next );
+            LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) ); 
+          } else {
+            LOG.error( "Ignoring --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: " + Joiner.on( ", " ).join( locallyBoundAddrs ) ); 
+          }
+        } catch ( UnknownHostException ex ) {
+          LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
+          LOG.debug( ex, ex );
+          err = true;
+        } catch ( SocketException ex ) {
+          LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
+          LOG.debug( ex, ex );
+          err = true;
+        }
+        if( err ) {
+          System.exit( 1 );
+        }
+      }
+    }
+    if( laddr == null ) {
+      laddr = Internets.getAllInetAddresses( ).get( 0 );
+    }
+    return laddr;
+  }
   
-  public static InetAddress localhostAddress( ) {
-    return localHostAddr != null
-      ? localHostAddr
-      : Internets.getAllInetAddresses( ).get( 0 );
+  public static InetAddress localHostInetAddress( ) {
+    return localHostAddr;
   }
 
-  public static String localhost( ) {
-    return localHost != null
-      ? localHost
-      : Internets.getAllInetAddresses( ).get( 0 ).getCanonicalHostName( );
+  public static String localHostAddress( ) {
+    return localHostInetAddress( ).getHostAddress( );
   }
 
   public static String localhostIdentifier( ) {

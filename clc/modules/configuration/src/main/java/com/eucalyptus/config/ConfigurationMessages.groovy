@@ -63,11 +63,11 @@
  */
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.util.HasSideEffect;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.util.ArrayList
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.util.HasSideEffect
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 @ComponentMessage(ConfigurationService.class)
 public class ConfigurationMessage extends BaseMessage {
@@ -77,26 +77,14 @@ public class ConfigurationMessage extends BaseMessage {
   }
 }
 public class ComponentInfoType extends EucalyptusData {
+  String type;
   String partition;
   String name;
   String hostName;
+  String fullName;
   String state;//really an enum
-  String detail;//TODO: remove me.
+  String detail;
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String host, String state, List<String> details){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = details.toString( );
-  }
-  public ComponentInfoType(String partition, String name, String host, String state, String detail){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = detail;
-  }
 }
 
 public class NodeComponentInfoType extends EucalyptusData {
@@ -130,7 +118,9 @@ public class DeregisterComponentType extends ConfigurationMessage {
 }
 public class DeregisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
 
-public class DescribeComponentsType extends ConfigurationMessage {}
+public class DescribeComponentsType extends ConfigurationMessage {
+  Boolean verbose = Boolean.FALSE;
+}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }
@@ -149,53 +139,7 @@ public class RegisterClusterType extends RegisterComponentType {
   }  
 }
 
-public class RegisterClusterResponseType extends RegisterComponentResponseType {}
-public class DeregisterClusterType extends DeregisterComponentType {}
-public class DeregisterClusterResponseType extends DeregisterComponentResponseType {}
-public class ModifyClusterAttributeType extends ModifyComponentAttributeType{}
-public class ModifyClusterAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeClustersType extends DescribeComponentsType {}
-public class DescribeClustersResponseType extends DescribeComponentsResponseType {}
-public class DescribeNodesType extends ConfigurationMessage  {}
-public class DescribeNodesResponseType extends ConfigurationMessage {
-  ArrayList<NodeComponentInfoType> registered = new ArrayList<NodeComponentInfoType>();
-}
-
-public class RegisterStorageControllerType extends RegisterComponentType {}
-public class RegisterStorageControllerResponseType extends RegisterComponentResponseType {}
-public class DeregisterStorageControllerType extends DeregisterComponentType {}
-public class DeregisterStorageControllerResponseType extends DeregisterComponentResponseType {}
-public class ModifyStorageControllerAttributeType extends ModifyComponentAttributeType{}
-public class ModifyStorageControllerAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeStorageControllersType extends DescribeComponentsType {}
-public class DescribeStorageControllersResponseType extends DescribeComponentsResponseType {}
-
-public class RegisterWalrusType extends RegisterComponentType {}
-public class RegisterWalrusResponseType extends RegisterComponentResponseType {}
-public class DeregisterWalrusType extends DeregisterComponentType {}
-public class DeregisterWalrusResponseType extends DeregisterComponentResponseType {}
-public class ModifyWalrusAttributeType extends ModifyComponentAttributeType{}
-public class ModifyWalrusAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeWalrusesType extends DescribeComponentsType {}
-public class DescribeWalrusesResponseType extends DescribeComponentsResponseType {}
 
 public class GetComponentLogsType extends DescribeComponentsType {}
 public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}
 
-public class RegisterVMwareBrokerType extends RegisterComponentType {}
-public class RegisterVMwareBrokerResponseType extends RegisterComponentResponseType {}
-public class DeregisterVMwareBrokerType extends DeregisterComponentType {}
-public class DeregisterVMwareBrokerResponseType extends DeregisterComponentResponseType {}
-public class ModifyVMwareBrokerAttributeType extends ModifyComponentAttributeType{}
-public class ModifyVMwareBrokerAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeVMwareBrokersType extends DescribeComponentsType {}
-public class DescribeVMwareBrokersResponseType extends DescribeComponentsResponseType {}
-
-public class RegisterArbitratorType extends RegisterComponentType {}
-public class RegisterArbitratorResponseType extends RegisterComponentResponseType {}
-public class DeregisterArbitratorType extends DeregisterComponentType {}
-public class DeregisterArbitratorResponseType extends DeregisterComponentResponseType {}
-public class ModifyArbitratorAttributeType extends ModifyComponentAttributeType{}
-public class ModifyArbitratorAttributeResponseType extends ModifyComponentAttributeResponseType {}
-public class DescribeArbitratorsType extends DescribeComponentsType {}
-public class DescribeArbitratorsResponseType extends DescribeComponentsResponseType {}

@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -58,9 +61,9 @@ permission notice:
   ANY SUCH LICENSES OR RIGHTS.
 */
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
+#define __USE_GNU /* strnlen */
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU /* strnlen */
 #include <string.h> /* strlen, strcpy */
 #include <time.h>
 #include <limits.h> /* INT_MAX */
@@ -74,20 +77,21 @@ permission notice:
 #include <pthread.h>
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
+#include <libvirt/libvirt.h>
+#include <libvirt/virterror.h>
 
 #include "ipc.h"
 #include "misc.h"
-#include <handlers.h>
-#include <storage.h>
-#include <eucalyptus.h>
-#include <libvirt/libvirt.h>
-#include <libvirt/virterror.h>
-#include <vnetwork.h>
-#include <euca_auth.h>
+#include "handlers.h"
+#include "backing.h"
+#include "eucalyptus.h"
+#include "vnetwork.h"
+#include "euca_auth.h"
+#include "vbr.h"
 
-#include <windows-bundle.h>
+#include "windows-bundle.h"
 
-/* coming from handlers.c */
+// coming from handlers.c
 extern sem * hyp_sem;
 extern sem * inst_sem;
 extern bunchOfInstances * global_instances;
@@ -96,23 +100,6 @@ static int
 doInitialize (struct nc_state_t *nc) 
 {
 	return OK;
-}
-
-static int
-prep_location (virtualBootRecord * vbr, ncMetadata * meta, const char * typeName)
-{
-    int i;
-    
-    for (i=0; i<meta->servicesLen; i++) {
-        serviceInfoType * service = &(meta->services[i]);
-        if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
-            char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
-            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
-            return OK;
-        }
-    }
-    logprintfl (EUCAERROR, "failed to find service '%s' in eucalyptusMessage\n", typeName);
-    return ERROR;
 }
 
 static int
@@ -135,20 +122,19 @@ doRunInstance(	struct nc_state_t *nc,
     * outInst = NULL;
     pid_t pid;
     netConfig ncnet;
-    int error = OK;
 
     memcpy(&ncnet, netparams, sizeof(netConfig));
 
-    /* check as much as possible before forking off and returning */
+    // check as much as possible before forking off and returning
     sem_p (inst_sem);
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAFATAL, "Error: instance %s already running\n", instanceId);
+        logprintfl (EUCAFATAL, "[%s] error: instance already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
     if (!(instance = allocate_instance (uuid,
-					instanceId, 
+                                        instanceId, 
                                         reservationId,
                                         params, 
                                         instance_state_names[PENDING], 
@@ -156,196 +142,29 @@ doRunInstance(	struct nc_state_t *nc,
                                         meta->userId, 
                                         &ncnet, keyName,
                                         userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
-        logprintfl (EUCAFATAL, "Error: could not allocate instance struct\n");
+        logprintfl (EUCAFATAL, "[%s] error: could not allocate instance struct\n", instanceId);
         return ERROR;
     }
     instance->launchTime = time (NULL);
 
     // parse and sanity-check the virtual boot record
-    int i, j;
-    char parts [6][EUCA_MAX_VBRS]; // record partitions seen
-    for (i=0, j=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
-        virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
-        // get the type (the only mandatory field)
-        if (strstr (vbr->typeName, "machine") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_IMAGE; 
-            instance->params.image = vbr;
-        } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_KERNEL; 
-            instance->params.kernel = vbr;
-        } else if (strstr (vbr->typeName, "ramdisk") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_RAMDISK; 
-            instance->params.ramdisk = vbr;
-        } else if (strstr (vbr->typeName, "ephemeral") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_EPHEMERAL; 
-            if (strstr (vbr->typeName, "ephemeral0") == vbr->typeName) {
-                instance->params.ephemeral0 = vbr;
-            }
-        } else if (strstr (vbr->typeName, "swap") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_SWAP; 
-            instance->params.swap = vbr;
-        } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
-            vbr->type = NC_RESOURCE_EBS;
-        } else {
-            logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-	    goto error;
-        }
-        
-        // identify the type of resource location from location string
-        if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
-            vbr->locationType = NC_LOCATION_URL;
-            strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-        } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation) {
-            vbr->locationType = NC_LOCATION_IQN;
-            // TODO: prep iqn location?
-        } else if (strcasestr (vbr->resourceLocation, "aoe://") == vbr->resourceLocation) {
-            vbr->locationType = NC_LOCATION_AOE;
-            // TODO: prep aoe location?
-        } else if (strcasestr (vbr->resourceLocation, "walrus://") == vbr->resourceLocation) {
-            vbr->locationType = NC_LOCATION_WALRUS;
-            error = prep_location (vbr, meta, "walrus");
-        } else if (strcasestr (vbr->resourceLocation, "cloud://") == vbr->resourceLocation) {
-            vbr->locationType = NC_LOCATION_CLC;
-            error = prep_location (vbr, meta, "cloud");
-        } else if (strcasestr (vbr->resourceLocation, "sc://") == vbr->resourceLocation) {//'sc' should be 'storage'
-            vbr->locationType = NC_LOCATION_SC;
-            error = prep_location (vbr, meta, "sc");
-        } else if (strcasestr (vbr->resourceLocation, "none") == vbr->resourceLocation) { 
-            if (vbr->type!=NC_RESOURCE_EPHEMERAL && vbr->type!=NC_RESOURCE_SWAP) {
-                logprintfl (EUCAERROR, "Error: resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
-                goto error;
-            }            
-            vbr->locationType = NC_LOCATION_NONE;
-        } else {
-            logprintfl (EUCAERROR, "Error: failed to parse resource location '%s'\n", vbr->resourceLocation);
-	    goto error;
-        }
-        if (error!=OK) {
-            logprintfl (EUCAERROR, "Error: URL for resourceLocation '%s' is not in the message\n", vbr->resourceLocation);
+    if (vbr_parse (&(instance->params), meta) != OK)
             goto error;
-        }
-
-        // device can be 'none' only for kernel and ramdisk types
-        if (!strcmp (vbr->guestDeviceName, "none")) {
-            if (vbr->type!=NC_RESOURCE_KERNEL &&
-                vbr->type!=NC_RESOURCE_RAMDISK) {
-                logprintfl (EUCAERROR, "Error: guestDeviceName not specified for resource '%s'\n", vbr->resourceLocation);
-                goto error;
-            }
-
-        } else { // should be a valid device
-            // trim off "/dev/" prefix, if present, and verify the rest
-            if (strstr (vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
-                logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
-                char buf [10];
-                strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
-                strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
-            }
-            if (strlen (vbr->guestDeviceName)<3) {
-                logprintfl (EUCAERROR, "Error: invalid guestDeviceName '%s'\n", vbr->guestDeviceName);
-                goto error;
-            }
-            {
-                char t = vbr->guestDeviceName [0];
-                char d = vbr->guestDeviceName [1];
-                char n = vbr->guestDeviceName [2];
-                long long int p = 0;
-                if (strlen (vbr->guestDeviceName)>3) {
-                    errno = 0;
-                    p = strtoll (vbr->guestDeviceName + 3, NULL, 10);
-                    if (errno!=0) { 
-                        logprintfl (EUCAERROR, "Error: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
-                        goto error; 
-                    } 
-                    if (p<1 || p>99) {
-                        logprintfl (EUCAERROR, "Error: unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
-                        goto error;
-                    }
-                }
-                if (t!='h' && t!='s' && t!='f' && t!='v') {
-                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    goto error; 
-                }
-                if (d!='d') {
-                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    goto error; 
-                }
-                if (!(n>='a' && n<='z')) {
-                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    goto error; 
-                }
-                snprintf (parts[j++], 6, "%c%c%c%0lld", t, d, n, p);
-            }
-        }
-
-        // parse ID
-        if (strlen (vbr->id)<4) {
-            logprintfl (EUCAERROR, "Error: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
-            goto error;
-        }
-
-        // parse disk formatting instructions (none = do not format)
-        if (strstr (vbr->formatName, "none") == vbr->formatName) { vbr->format = NC_FORMAT_NONE;
-        } else if (strstr (vbr->formatName, "ext2") == vbr->formatName) { vbr->format = NC_FORMAT_EXT2;
-        } else if (strstr (vbr->formatName, "ext3") == vbr->formatName) { vbr->format = NC_FORMAT_EXT3;
-        } else if (strstr (vbr->formatName, "ntfs") == vbr->formatName) { vbr->format = NC_FORMAT_NTFS;
-        } else if (strstr (vbr->formatName, "swap") == vbr->formatName) { vbr->format = NC_FORMAT_SWAP;
-        } else {
-            logprintfl (EUCAERROR, "Error: failed to parse resource format '%s'\n", vbr->formatName);
-            goto error;
-        }
-        if (vbr->type==NC_RESOURCE_EPHEMERAL || vbr->type==NC_RESOURCE_SWAP) { // TODO: should we allow ephemeral/swap that reside remotely?
-            if (vbr->size<1) {
-                logprintfl (EUCAERROR, "Error: invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
-                goto error;
-            }
-        } else {
-	    //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { // TODO: dan check with dmitrii
-	    if (vbr->format!=NC_FORMAT_NONE) {
-                logprintfl (EUCAERROR, "Error: invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
-                goto error;
-            }
-        }
-    }
-    // run through partitions seen and look for gaps
-    qsort (parts, j, 6, (int(*)(const void *, const void *))strcmp);
-    int k;
-    for (k=0; k<j; k++) {
-        logprintfl (EUCADEBUG, "Found partition %s\n", parts [k]); // TODO: verify no gaps in partitions
-    }
-
-    /*
-    // TODO: dan ask dmitrii
-    for (i=0; i<EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
-      virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
-      logprintfl(EUCADEBUG, "VBR(%d): %s %s %s\n", i, vbr->resourceLocation, vbr->formatName, vbr->typeName);
-      if (vbr->type == NC_RESOURCE_KERNEL && vbr->locationType == NC_LOCATION_URL) {
-	instance->params.kernel = vbr;
-	logprintfl(EUCADEBUG, "DAN: kernel info: %s %s\n", instance->params.kernel->resourceLocation, instance->params.kernel->preparedResourceLocation);
-      } else if (vbr->type == NC_RESOURCE_RAMDISK && vbr->locationType == NC_LOCATION_URL) {
-	instance->params.ramdisk = vbr;
-	logprintfl(EUCADEBUG, "DAN: ramdisk info: %s %s\n", instance->params.ramdisk->resourceLocation, instance->params.ramdisk->preparedResourceLocation);
-      } else if (vbr->type == NC_RESOURCE_IMAGE && vbr->locationType == NC_LOCATION_URL) {
-	instance->params.image = vbr;
-	logprintfl(EUCADEBUG, "DAN: image info: %s %s\n", instance->params.image->resourceLocation, instance->params.image->preparedResourceLocation);
-      }
-    }
-    */
 
     change_state(instance, STAGING);
 
     sem_p (inst_sem); 
-    error = add_instance (&global_instances, instance);
+    int error = add_instance (&global_instances, instance);
     sem_v (inst_sem);
     if ( error ) {
-        logprintfl (EUCAFATAL, "Error: could not save instance struct\n");
+        logprintfl (EUCAFATAL, "[%s] error: could not save instance struct\n", instanceId);
         goto error;
     }
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
-        logprintfl (EUCAFATAL, "Error: out of memory\n");
+        logprintfl (EUCAFATAL, "[%s] error: out of memory\n", instanceId);
         goto error;
     }
     pthread_attr_init(attr);
@@ -353,7 +172,7 @@ doRunInstance(	struct nc_state_t *nc,
     
     if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
         pthread_attr_destroy(attr);
-        logprintfl (EUCAFATAL, "failed to spawn a VM startup thread\n");
+        logprintfl (EUCAFATAL, "[%s] failed to spawn a VM startup thread\n", instanceId);
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
@@ -364,7 +183,7 @@ doRunInstance(	struct nc_state_t *nc,
     if (attr) free(attr);
 
     * outInst = instance;
-    return 0;
+    return OK;
 
  error:
     free_instance (&instance);
@@ -374,17 +193,17 @@ doRunInstance(	struct nc_state_t *nc,
 static int
 doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId) 
 {    
-	logprintfl(EUCAERROR, "no default for doRebootInstance!\n");
+	logprintfl(EUCAERROR, "[%s] internal error: no default for doRebootInstance!\n", instanceId);
 	return ERROR_FATAL;
 }
 
 static int
 doGetConsoleOutput(	struct nc_state_t *nc, 
-			ncMetadata *meta,
-			char *instanceId,
-			char **consoleOutput)
+                    ncMetadata *meta,
+                    char *instanceId,
+                    char **consoleOutput)
 {
-	logprintfl(EUCAERROR, "no default for doGetConsoleOutput!\n");
+	logprintfl(EUCAERROR, "[%s] internal error: no default for doGetConsoleOutput!\n", instanceId);
 	return ERROR_FATAL;
 }
 
@@ -392,183 +211,185 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 // NOTE: this must be called with inst_sem semaphore held
 static int 
 find_and_terminate_instance ( 
-        struct nc_state_t *nc_state,
-        ncMetadata *meta,
-	char *instanceId, 
-	ncInstance **instance_p,
-	char destroy)
+                             struct nc_state_t *nc_state,
+                             ncMetadata *meta,
+                             char *instanceId, 
+                             int force,
+                             ncInstance **instance_p,
+                             char destroy)
 {
 	ncInstance *instance;
 	virConnectPtr *conn;
 	int err;
 	int i;
-
+    
 	instance = find_instance(&global_instances, instanceId);
 	if (instance == NULL) 
 		return NOT_FOUND;
 	* instance_p = instance;
 
-        /* detach all attached volumes */
-        for (i=0 ; i < instance->volumesSize; ++i) {
-	int ret = OK;
+    // detach all attached volumes
+    for (i=0 ; i < instance->volumesSize; ++i) {
+        int ret = OK;
         ncVolume *volume = &instance->volumes[i];
-	logprintfl (EUCAINFO, "Detaching volume on terminate: %s\n", volume->volumeId);
-	if (nc_state->H->doDetachVolume) 
-		ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-	else
-		ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-	if(ret != OK)
-		return ret;
+        logprintfl (EUCAINFO, "[%s, force=%d] on termination detaching volume %s\n", instanceId, force, volume->volumeId);
+        if (nc_state->H->doDetachVolume) 
+            ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
+        else
+            ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
+        if((ret != OK) && (force == 0))
+            return ret;
 	}
 
-	/* try stopping the domain */
+	// try stopping the domain
 	conn = check_hypervisor_conn();
 	if (conn) {
-	        sem_p(hyp_sem);
-	        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+        sem_p(hyp_sem);
+        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
 		sem_v(hyp_sem);
 		if (dom) {
-			/* also protect 'destroy' commands, just in case */
+			// protect 'destroy' commands as we do with 'create', just in case
 			sem_p (hyp_sem);
 			if (destroy)
-			  err = virDomainDestroy (dom);
+                err = virDomainDestroy (dom);
 			else 
-			  err = virDomainShutdown (dom);
+                err = virDomainShutdown (dom);
 			sem_v (hyp_sem);
 			if (err==0) {
                 if (destroy)
-                    logprintfl (EUCAINFO, "destroyed domain for instance %s\n", instanceId);
+                    logprintfl (EUCAINFO, "[%s] destroying instance\n", instanceId);
                 else
-                    logprintfl (EUCAINFO, "shutting down domain for instance %s\n", instanceId);
+                    logprintfl (EUCAINFO, "[%s] shutting down instance\n", instanceId);
 			}
 			sem_p(hyp_sem);
-			virDomainFree(dom); /* necessary? */
+			virDomainFree(dom); // TODO: necessary?
 			sem_v(hyp_sem);
 		} else {
 			if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
-				logprintfl (EUCAWARN, "warning: domain %s to be terminated not running on hypervisor\n", instanceId);
+				logprintfl (EUCAWARN, "[%s] warning: instance to be terminated not running on hypervisor\n", instanceId);
 		}
 	} 
 	return OK;
 }
 
 static int
-doTerminateInstance(	struct nc_state_t *nc,
-			ncMetadata *meta,
-			char *instanceId,
-			int *shutdownState,
-			int *previousState)
+doTerminateInstance( struct nc_state_t *nc,
+                     ncMetadata *meta,
+                     char *instanceId,
+                     int force,
+                     int *shutdownState,
+                     int *previousState)
 {
 	ncInstance *instance;
 	int err;
-
+    
 	sem_p (inst_sem);
-        err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	err = find_and_terminate_instance (nc, meta, instanceId, force, &instance, 1);
 	if (err!=OK) {
 		sem_v(inst_sem);
 		return err;
 	}
-
-	err = vnetStopInstanceNetwork(nc->vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
-	if (err) {
-	  logprintfl(EUCAFATAL, "stop instance network failed for instance %s, terminating it\n", instance->instanceId);
-	}
-	
+    
 	// change the state and let the monitoring_thread clean up state
 	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
-	  if (instance->state==STAGING) {
-	    change_state (instance, CANCELED);
-	  } else {
-	    change_state (instance, SHUTOFF);
-	  }
+        if (instance->state==STAGING) {
+            change_state (instance, CANCELED);
+        } else {
+            change_state (instance, SHUTOFF);
+        }
 	}
     sem_v (inst_sem);
-
+    
 	*previousState = instance->stateCode;
 	*shutdownState = instance->stateCode;
-
+    
 	return OK;
 }
 
 static int
-doDescribeInstances(	struct nc_state_t *nc,
-			ncMetadata *meta,
-			char **instIds,
-			int instIdsLen,
-			ncInstance ***outInsts,
-			int *outInstsLen)
+doDescribeInstances( struct nc_state_t *nc,
+                     ncMetadata *meta,
+                     char **instIds,
+                     int instIdsLen,
+                     ncInstance ***outInsts,
+                     int *outInstsLen)
 {
 	ncInstance *instance, *tmp;
 	int total, i, j, k;
-
-	logprintfl(EUCADEBUG, "doDescribeInstances: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(meta->userId), SP(meta->correlationId), meta->epoch, SP(meta->services[0].name), SP(meta->services[0].type), SP(meta->services[0].uris[0])); 
-
+    
+	logprintfl(EUCADEBUG, "doDescribeInstances: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", 
+               SP(meta->userId), 
+               SP(meta->correlationId), 
+               meta->epoch, 
+               SP(meta->services[0].name), 
+               SP(meta->services[0].type), 
+               SP(meta->services[0].uris[0])); 
+    
 	*outInstsLen = 0;
 	*outInsts = NULL;
-
+    
 	sem_p (inst_sem);
-	if (instIdsLen == 0) /* describe all instances */
+	if (instIdsLen == 0) // describe all instances
 		total = total_instances (&global_instances);
 	else 
 		total = instIdsLen;
-
+    
 	*outInsts = malloc(sizeof(ncInstance *)*total);
 	if ((*outInsts) == NULL) {
 		sem_v (inst_sem);
 		return OUT_OF_MEMORY;
 	}
-
+    
 	k = 0;
 	for (i=0; (instance = get_instance(&global_instances)) != NULL; i++) {
-		/* only pick ones the user (or admin)  is allowed to see */
+		// only pick ones the user (or admin) is allowed to see
 		if (strcmp(meta->userId, nc->admin_user_id) 
-				&& strcmp(meta->userId, instance->userId))
+            && strcmp(meta->userId, instance->userId))
 			continue;
-
+        
 		if (instIdsLen > 0) {
 			for (j=0; j < instIdsLen; j++)
 				if (!strcmp(instance->instanceId, instIds[j]))
 					break;
-
+            
 			if (j >= instIdsLen)
-				/* instance of not relavance right now */
+				// instance of no relevance right now
 				continue;
 		}
-		//(* outInsts)[k++] = instance;
+		// (* outInsts)[k++] = instance;
 		tmp = (ncInstance *)malloc(sizeof(ncInstance));
-    memcpy(tmp, instance, sizeof(ncInstance));
-    (* outInsts)[k++] = tmp;
+        memcpy(tmp, instance, sizeof(ncInstance));
+        (* outInsts)[k++] = tmp;
 	}
 	*outInstsLen = k;
 	sem_v (inst_sem);
-
+    
 	return OK;
 }
 
 static int
 doDescribeResource(	struct nc_state_t *nc,
-			ncMetadata *meta,
-			char *resourceType,
-			ncResource **outRes)
+                    ncMetadata *meta,
+                    char *resourceType,
+                    ncResource **outRes)
 {
     ncResource * res;
     ncInstance * inst;
-
-    /* stats to re-calculate now */
+    
+    // stats to re-calculate now
     long long mem_free;
     long long disk_free;
     int cores_free;
 
-    /* intermediate sums */
-    long long sum_mem = 0;  /* for known domains: sum of requested memory */
-    long long sum_disk = 0; /* for known domains: sum of requested disk sizes */
-    int sum_cores = 0;      /* for known domains: sum of requested cores */
-
-
+    // intermediate sums 
+    long long sum_mem = 0;  // for known domains: sum of requested memory
+    long long sum_disk = 0; // for known domains: sum of requested disk sizes
+    int sum_cores = 0;      // for known domains: sum of requested cores
+    
     *outRes = NULL;
     sem_p (inst_sem); 
     while ((inst=get_instance(&global_instances))!=NULL) {
-        if (inst->state == TEARDOWN) continue; /* they don't take up resources */
+        if (inst->state == TEARDOWN) continue; // they don't take up resources
         sum_mem += inst->params.mem;
         sum_disk += (inst->params.disk + SWAP_SIZE);
         sum_cores += inst->params.cores;
@@ -576,15 +397,15 @@ doDescribeResource(	struct nc_state_t *nc,
     sem_v (inst_sem);
     
     disk_free = nc->disk_max - sum_disk;
-    if ( disk_free < 0 ) disk_free = 0; /* should not happen */
+    if ( disk_free < 0 ) disk_free = 0; // should not happen
     
     mem_free = nc->mem_max - sum_mem;
-    if ( mem_free < 0 ) mem_free = 0; /* should not happen */
+    if ( mem_free < 0 ) mem_free = 0; // should not happen
 
-    cores_free = nc->cores_max - sum_cores; /* TODO: should we -1 for dom0? */
-    if ( cores_free < 0 ) cores_free = 0; /* due to timesharing */
-
-    /* check for potential overflow - should not happen */
+    cores_free = nc->cores_max - sum_cores; // TODO: should we -1 for dom0?
+    if ( cores_free < 0 ) cores_free = 0; // due to timesharing 
+    
+    // check for potential overflow - should not happen
     if (nc->mem_max > INT_MAX ||
         mem_free > INT_MAX ||
         nc->disk_max > INT_MAX ||
@@ -599,117 +420,122 @@ doDescribeResource(	struct nc_state_t *nc,
     
     res = allocate_resource ("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
     if (res == NULL) {
-        logprintfl (EUCAERROR, "Out of memory\n");
+        logprintfl (EUCAERROR, "error: doDescribeResouce: out of memory\n");
         return 1;
     }
     *outRes = res;
+	logprintfl(EUCADEBUG, "doDescribeResource: cores=%d/%d mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
+               cores_free, nc->cores_max,
+               mem_free, nc->mem_max,
+               disk_free, nc->disk_max,
+               nc->iqn);
 
     return OK;
 }
 
 static int
-doAssignAddress(struct nc_state_t *nc,
-		ncMetadata *ccMeta,
-		char *instanceId,
-		char *publicIp)
+doAssignAddress( struct nc_state_t *nc,
+                 ncMetadata *ccMeta,
+                 char *instanceId,
+                 char *publicIp)
 {
-  int ret = OK;
-  ncInstance *instance=NULL;
-
-  if (instanceId == NULL || publicIp == NULL) {
-    logprintfl(EUCAERROR, "doAssignAddress(): bad input params\n");
-    return(ERROR);
-  }
-
-  sem_p (inst_sem); 
-  instance = find_instance(&global_instances, instanceId);
-  if ( instance ) {
-    snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
-  }
-  sem_v (inst_sem);
-  
-  return ret;
+    int ret = OK;
+    ncInstance *instance=NULL;
+    
+    if (instanceId == NULL || publicIp == NULL) {
+        logprintfl(EUCAERROR, "[%s] error: doAssignAddress: bad input params\n", instanceId);
+        return(ERROR);
+    }
+    
+    sem_p (inst_sem); 
+    instance = find_instance(&global_instances, instanceId);
+    if ( instance ) {
+        snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
+    }
+    sem_v (inst_sem);
+    
+    return ret;
 }
 
 static int
-doPowerDown(	struct nc_state_t *nc,
-		ncMetadata *ccMeta)
+doPowerDown( struct nc_state_t *nc,
+             ncMetadata *ccMeta)
 {
 	char cmd[MAX_PATH];
 	int rc;
-
+    
 	snprintf(cmd, MAX_PATH, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
 	logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
 	rc = system(cmd);
 	rc = rc>>8;
 	if (rc)
 		logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
-  
+    
 	return OK;
 }
 
 static int
 doStartNetwork(	struct nc_state_t *nc,
-		ncMetadata *ccMeta, 
-		char *uuid,
-		char **remoteHosts, 
-		int remoteHostsLen, 
-		int port, 
-		int vlan) {
+                ncMetadata *ccMeta, 
+                char *uuid,
+                char **remoteHosts, 
+                int remoteHostsLen, 
+                int port, 
+                int vlan) 
+{
 	int rc, ret, i, status;
 	char *brname;
-
+    
 	rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
 	if (rc) {
 		ret = 1;
-		logprintfl (EUCAERROR, "StartNetwork(): ERROR return from vnetStartNetwork %d\n", rc);
+		logprintfl (EUCAERROR, "StartNetwork: ERROR return from vnetStartNetwork return=%d\n", rc);
 	} else {
 		ret = 0;
-		logprintfl (EUCAINFO, "StartNetwork(): SUCCESS return from vnetStartNetwork %d\n", rc);
+		logprintfl (EUCAINFO, "StartNetwork: SUCCESS return from vnetStartNetwork\n");
 		if (brname) free(brname);
 	}
-	logprintfl (EUCAINFO, "StartNetwork(): done\n");
-
+    
 	return (ret);
 }
 
 static int
 doAttachVolume(	struct nc_state_t *nc,
-		ncMetadata *meta,
-		char *instanceId,
-		char *volumeId,
-		char *remoteDev,
-		char *localDev)
+                ncMetadata *meta,
+                char *instanceId,
+                char *volumeId,
+                char *remoteDev,
+                char *localDev)
 {
-	logprintfl(EUCAERROR, "no default for doAttachVolume!\n");
+	logprintfl (EUCAERROR, "[%s] no default for doAttachVolume!\n", instanceId);
 	return ERROR_FATAL;
 }
 
 static int
 doDetachVolume(	struct nc_state_t *nc,
-		ncMetadata *meta,
-		char *instanceId,
-		char *volumeId,
-		char *remoteDev,
-		char *localDev,
+                ncMetadata *meta,
+                char *instanceId,
+                char *volumeId,
+                char *remoteDev,
+                char *localDev,
                 int force,
-                        int grab_inst_sem)
+                int grab_inst_sem)
 {
-	logprintfl(EUCAERROR, "no default for doDetachVolume!\n");
+	logprintfl(EUCAERROR, "[%s] no default for doDetachVolume!\n", instanceId);
 	return ERROR_FATAL;
 }
 
 // helper for changing bundling task state and stateName together                                                              
 static void change_createImage_state (ncInstance * instance, createImage_progress state)
 {
-  instance->createImageTaskState = state;
-  strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
+    instance->createImageTaskState = state;
+    strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
 // helper for cleaning up 
 static int cleanup_createImage_task (ncInstance * instance, struct createImage_params_t * params, instance_states state, createImage_progress result)
 {
-        char cmd[MAX_PATH];
+    char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 	int rc;
 	logprintfl (EUCAINFO, "cleanup_createImage_task: instance %s createImage task result=%s\n", instance->instanceId, createImage_progress_names [result]);
@@ -718,13 +544,15 @@ static int cleanup_createImage_task (ncInstance * instance, struct createImage_p
 	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
 		change_state (instance, state);
 	sem_v (inst_sem);
-
+    
 	if (params) {
-	        // if the result was failed or cancelled, clean up walrus state
-	        if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
+        // if the result was failed or cancelled, clean up walrus state
+        if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
 		}
 		if (params->workPath) {
-			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+            /***
+                free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+            ***/
 			free (params->workPath);
 		}
 		if (params->volumeId) free (params->volumeId);
@@ -733,7 +561,7 @@ static int cleanup_createImage_task (ncInstance * instance, struct createImage_p
 		if (params->eucalyptusHomePath) free (params->eucalyptusHomePath);
 		free (params);
 	}
-
+    
 	return (result==CREATEIMAGE_SUCCESS)?OK:ERROR;
 }
 
@@ -744,34 +572,34 @@ static void * createImage_thread (void *arg)
 	char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 	int rc;
-
+    
 	logprintfl (EUCAINFO, "createImage_thread: waiting for instance %s to shut down\n", instance->instanceId);
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
-	  if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
-	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s\n", instance->instanceId);
-	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
-	  } else {
-	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s\n", instance->instanceId);
-	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
-	  }
-	  return NULL;
+        if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
+            logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s\n", instance->instanceId);
+            cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+        } else {
+            logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s\n", instance->instanceId);
+            cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+        }
+        return NULL;
 	}
-
+    
 	logprintfl (EUCAINFO, "createImage_thread: started createImage instance %s\n", instance->instanceId);
 	{
-	  rc = 0;
-	  if (rc==0) {
-	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_SUCCESS);
-	    logprintfl (EUCAINFO, "createImage_thread: finished createImage instance %s\n", instance->instanceId);
-	  } else if (rc == -1) {
-	    // bundler child was cancelled (killed)
-	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
-	    logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
-	  } else {
-	    cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
-	    logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
-	  }
+        rc = 0;
+        if (rc==0) {
+            cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_SUCCESS);
+            logprintfl (EUCAINFO, "createImage_thread: finished createImage instance %s\n", instance->instanceId);
+        } else if (rc == -1) {
+            // bundler child was cancelled (killed)
+            cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
+            logprintfl (EUCAINFO, "createImage_thread: cancelled while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+        } else {
+            cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
+            logprintfl (EUCAINFO, "createImage_thread: failed while createImage instance %s (rc=%d)\n", instance->instanceId, rc);
+        }
 	}
 	
 	return NULL;
@@ -779,58 +607,60 @@ static void * createImage_thread (void *arg)
 
 static int
 doCreateImage(	struct nc_state_t *nc,
-		ncMetadata *meta,
-		char *instanceId,
-		char *volumeId,
-		char *remoteDev)
+                ncMetadata *meta,
+                char *instanceId,
+                char *volumeId,
+                char *remoteDev)
 {
 	logprintfl (EUCAINFO, "CreateImage(): invoked\n");
-
+    
 	// sanity checking
 	if (instanceId==NULL
 	    || remoteDev==NULL) {
-	  logprintfl (EUCAERROR, "CreateImage: called with invalid parameters\n");
-	  return ERROR;
+        logprintfl (EUCAERROR, "CreateImage: called with invalid parameters\n");
+        return ERROR;
 	}
-
+    
 	// find the instance
 	ncInstance * instance = find_instance(&global_instances, instanceId);
 	if (instance==NULL) {
 		logprintfl (EUCAERROR, "CreateImage: instance %s not found\n", instanceId);
 		return ERROR;
 	}
-
+    
 	// "marshall" thread parameters
 	struct createImage_params_t * params = malloc (sizeof (struct createImage_params_t));
 	if (params==NULL) 
 		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
-
+    
 	bzero (params, sizeof (struct createImage_params_t));
 	params->instance = instance;
 	params->volumeId = strdup (volumeId);
 	params->remoteDev = strdup (remoteDev);
-
-	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
-	if (params->sizeMb<1)
+    
+    /***
+        params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
+        if (params->sizeMb<1)
 		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
-	params->workPath = alloc_work_path (instanceId, instance->userId, params->sizeMb); // reserve work disk space for bundling
-	if (params->workPath==NULL)
+        params->workPath = alloc_work_path (instanceId, instance->userId, params->sizeMb); // reserve work disk space for bundling
+        if (params->workPath==NULL)
 		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
-	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
-	if (params->diskPath==NULL)
+        params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
+        if (params->diskPath==NULL)
 		return cleanup_createImage_task (instance, params, NO_STATE, CREATEIMAGE_FAILED);
-
+    ***/
+    
 	// terminate the instance
 	sem_p (inst_sem);
 	instance->createImageTime = time (NULL);
 	change_state (instance, CREATEIMAGE_SHUTDOWN);
 	change_createImage_state (instance, CREATEIMAGE_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
-	  sem_v (inst_sem);
-	  if (params) free(params);
-	  return err;
+        sem_v (inst_sem);
+        if (params) free(params);
+        return err;
 	}
 	sem_v (inst_sem);
 	
@@ -843,7 +673,7 @@ doCreateImage(	struct nc_state_t *nc,
 		logprintfl (EUCAERROR, "CreateImage: failed to start VM createImage thread\n");
 		return cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_FAILED);
 	}
-
+    
 	return OK;
 }
 
@@ -950,7 +780,9 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 		  }
 		}
 		if (params->workPath) {
+                        /***
 			free_work_path (instance->instanceId, instance->userId, params->sizeMb);
+                        ***/
 			free (params->workPath);
 		}
 		if (params->bucketName) free (params->bucketName);
@@ -990,7 +822,7 @@ static void * bundling_thread (void *arg)
 
 	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
 	char dstDiskPath[MAX_PATH];
-	snprintf(dstDiskPath, MAX_PATH, "%s/%s/%s/%s", scGetInstancePath(), params->instance->userId, params->instance->instanceId, params->filePrefix);
+	snprintf(dstDiskPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
 
 	int rc = rename(params->diskPath, dstDiskPath); // rename disk file to match input 'filePrefix'
 	if (rc) {
@@ -1110,6 +942,7 @@ doBundleInstance(
 	params->ncCheckBucketCmd = strdup (nc->ncCheckBucketCmd);
 	params->ncDeleteBundleCmd = strdup (nc->ncDeleteBundleCmd);
 
+        /***
 	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
 	if (params->sizeMb<1)
 		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
@@ -1119,6 +952,7 @@ doBundleInstance(
 	params->diskPath = get_disk_path (instanceId, instance->userId); // path of the disk to bundle
 	if (params->diskPath==NULL)
 		return cleanup_bundling_task (instance, params, NO_STATE, BUNDLING_FAILED);
+        ***/
 
 	// terminate the instance
 	sem_p (inst_sem);
@@ -1126,7 +960,7 @@ doBundleInstance(
 	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
 	
-	int err = find_and_terminate_instance (nc, meta, instanceId, &instance, 1);
+	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
 	  sem_v (inst_sem);
 	  if (params) free(params);

@@ -1,26 +1,25 @@
 package com.eucalyptus.config;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DatabaseServiceBuilder;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 
 
 @DiscoverableServiceBuilder( Storage.class )
 @Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, StorageControllerConfiguration.class, ModifyStorageControllerAttributeType.class } )
-public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageControllerConfiguration> {
+public class StorageControllerBuilder extends AbstractServiceBuilder<StorageControllerConfiguration> {
   private static Logger LOG = Logger.getLogger( StorageControllerBuilder.class );
 
   @Override
@@ -40,16 +39,11 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    try {
-      ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, partition );
-    } catch ( PersistenceException ex ) {
-      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-                                              + "  An error occurred while trying to lookup the partition: " + name );
-    } catch ( NoSuchElementException ex ) {
-      throw new ServiceRegistrationException( "Storage controllers may only be registered with a corresponding Cluster of the same name."
-                                              + "  No cluster found within the partition: " + name );
+    if ( !Partitions.testPartitionCredentialsDirectory( name ) ) {
+      throw new ServiceRegistrationException( "Storage Controller registration failed because the key directory cannot be created." );
+    } else {
+      return super.checkAdd( partition, name, host, port );
     }
-    return super.checkAdd( partition, name, host, port );
   }
 
   @Override
@@ -67,18 +61,43 @@ public class StorageControllerBuilder extends DatabaseServiceBuilder<StorageCont
   }
 
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    super.fireStop( config );
-  }
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isLocal( ) ) {
+    if ( config.isVmLocal( ) ) {
       java.lang.System.setProperty( "euca.storage.name", config.getName( ) );
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }
-    super.fireStart( config );
   }
+
+  @Override
+  public StorageControllerConfiguration add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    StorageControllerConfiguration config = this.newInstance( partition, name, host, port );
+    try {
+      Partition part = Partitions.lookup( config );
+      ServiceConfigurations.getInstance( ).store( config );
+      part.syncKeysToDisk( );
+    } catch ( ServiceRegistrationException ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      throw ex;
+    } catch ( Throwable ex ) {
+      Partitions.maybeRemove( config.getPartition( ) );
+      LOG.error( ex, ex );
+      throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
+                                                             partition, name, host, port ), ex );
+    }
+    return config;
+  }
+
+  @Override
+  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
 }

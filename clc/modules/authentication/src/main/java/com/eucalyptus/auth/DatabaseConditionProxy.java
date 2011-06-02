@@ -4,7 +4,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.principal.Condition;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Sets;
@@ -35,12 +35,12 @@ public class DatabaseConditionProxy implements Condition {
   public Set<String> getValues( ) throws AuthException {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<ConditionEntity>( ) {
+      Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getConditionId( ) ), new Tx<ConditionEntity>( ) {
         public void fire( ConditionEntity t ) throws Throwable {
           results.addAll( t.getValues( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getValues for " + this.delegate );
       throw new AuthException( e );
     }
@@ -51,12 +51,12 @@ public class DatabaseConditionProxy implements Condition {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getId( ) ), new Tx<ConditionEntity>( ) {
+      Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getConditionId( ) ), new Tx<ConditionEntity>( ) {
         public void fire( ConditionEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );

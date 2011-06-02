@@ -19,7 +19,7 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -40,22 +40,17 @@ public class DatabaseGroupProxy implements Group {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
   }
 
-  @Override
-  public String getId( ) {
-    return this.delegate.getId( );
-  }
-  
   @Override
   public String getName( ) {
     return this.delegate.getName( );
@@ -64,12 +59,12 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           t.setName( name );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
       throw new AuthException( e );
     }
@@ -83,12 +78,12 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void setPath( final String path ) throws AuthException {
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           t.setPath( path );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
       throw new AuthException( e );
     }
@@ -102,12 +97,12 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void setUserGroup( final Boolean userGroup ) throws AuthException {
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           t.setUserGroup( userGroup );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setUserGroup for " + this.delegate );
       throw new AuthException( e );
     }
@@ -117,7 +112,7 @@ public class DatabaseGroupProxy implements Group {
   public void addUserByName( String userName ) throws AuthException {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithId( this.delegate.getId( ) ) );
+      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db, userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).add( userEntity );
       //userEntity.addGroup( groupEntity );
@@ -133,7 +128,7 @@ public class DatabaseGroupProxy implements Group {
   public void removeUserByName( String userName ) throws AuthException {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithId( this.delegate.getId( ) ) );
+      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db, userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).remove( userEntity );
       //userEntity.getGroups( ).remove( groupEntity );
@@ -153,7 +148,7 @@ public class DatabaseGroupProxy implements Group {
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.idEq( this.delegate.getId( ) ) )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "groupId", this.delegate.getGroupId( ) ) )
           .list( );
       db.commit( );
       return users.size( ) > 0;
@@ -168,14 +163,14 @@ public class DatabaseGroupProxy implements Group {
   public List<Policy> getPolicies( ) {
     final List<Policy> results = Lists.newArrayList( );
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           for ( PolicyEntity p : t.getPolicies( ) ) {
             results.add( new DatabasePolicyProxy( p ) );
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
     }
     return results;
@@ -187,7 +182,7 @@ public class DatabaseGroupProxy implements Group {
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithId( this.delegate.getId( ) ) );
+      GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       db.recast( PolicyEntity.class ).add( parsedPolicy );
       parsedPolicy.setGroup( groupEntity );
       for ( StatementEntity statement : parsedPolicy.getStatements( ) ) {
@@ -218,7 +213,7 @@ public class DatabaseGroupProxy implements Group {
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity group = db.getUnique( GroupEntity.newInstanceWithId( this.delegate.getId() ) );
+      GroupEntity group = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ) );
       PolicyEntity policy = DatabaseAuthUtils.removeGroupPolicy( group, name );
       if ( policy != null ) {
         db.recast( PolicyEntity.class ).delete( policy );
@@ -235,14 +230,14 @@ public class DatabaseGroupProxy implements Group {
   public List<User> getUsers( ) {
     final List<User> results = Lists.newArrayList( );
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           for ( UserEntity u : t.getUsers( ) ) {
             results.add( new DatabaseUserProxy( u ) );
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
     }
     return results;
@@ -252,15 +247,20 @@ public class DatabaseGroupProxy implements Group {
   public Account getAccount( ) {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
-      Transactions.one( GroupEntity.newInstanceWithId( this.delegate.getId() ), new Tx<GroupEntity>( ) {
+      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) throws Throwable {
           results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
     }
     return results.get( 0 );
+  }
+
+  @Override
+  public String getGroupId( ) {
+    return this.delegate.getGroupId( );
   }
   
 }

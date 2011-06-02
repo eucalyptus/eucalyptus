@@ -63,33 +63,34 @@
 
 package com.eucalyptus.config;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.google.common.collect.Lists;
 
 public class PropertiesService extends ComponentId.Unpartioned {
-
   
   public PropertiesService( ) {
     super( "Properties" );
   }
   
-  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://PropertiesInternal";
   }
-
-
+  
   @Override
   public Boolean hasDispatcher( ) {
     return true;
   }
-
+  
   @Override
-  public List<Class<Eucalyptus>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class );
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList<Class<? extends ComponentId>>( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
   
 }

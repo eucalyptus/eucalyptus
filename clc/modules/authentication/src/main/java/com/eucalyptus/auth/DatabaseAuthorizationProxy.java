@@ -8,7 +8,7 @@ import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -35,14 +35,14 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public List<Condition> getConditions( ) {
     final List<Condition> results = Lists.newArrayList( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           for ( ConditionEntity c : t.getStatement( ).getConditions( ) ) {
             results.add( new DatabaseConditionProxy( c ) );
           }
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getConditions for " + this.delegate );
     }
     return results;
@@ -52,12 +52,12 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
@@ -82,12 +82,12 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Set<String> getActions( ) {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.addAll( t.getActions( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getActions for " + this.delegate );
     }
     return results;
@@ -97,12 +97,12 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Set<String> getResources( ) {
     final Set<String> results = Sets.newHashSet( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.addAll( t.getResources( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getResources for " + this.delegate );
     }
     return results;
@@ -112,12 +112,12 @@ public class DatabaseAuthorizationProxy implements Authorization {
   public Group getGroup( ) {
     final List<Group> results = Lists.newArrayList( );
     try {
-      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getId() ), new Tx<AuthorizationEntity>( ) {
+      Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
         public void fire( AuthorizationEntity t ) throws Throwable {
           results.add( new DatabaseGroupProxy( t.getStatement( ).getPolicy( ).getGroup( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
     }
     return results.get( 0 );

@@ -1,0 +1,44 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        .box {
+        	position:relative;
+        	width:15em;
+        	height:1.2em;
+        	border:1px solid #666666;
+        }
+        .bar {
+        	width:50%;
+        	height:100%;
+			background:#f1e767; /* Old browsers */
+			background:literal("-moz-linear-gradient(top, #f1e767 0%, #feb645 100%)"); /* FF3.6+ */
+			background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#f1e767), color-stop(100%,#feb645))"); /* Chrome,Safari4+ */
+			background:literal("-webkit-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* Chrome10+,Safari5.1+ */
+			background:literal("-o-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* Opera11.10+ */
+			background:literal("-ms-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* IE10+ */
+			filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#f1e767', endColorstr='#feb645',GradientType=0 )"); /* IE6-9 */
+			background:literal("linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* W3C */
+        }
+        .text {
+        	position:absolute;
+        	top:0;
+        	left:0;
+            text-align:center;
+            font-size:80%;
+            width:100%;
+            padding-top:2px;
+            color:#555555;
+        }
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <div class="{style.box}">
+            <div class="{style.bar}" ui:field="bar">
+                <div class="{style.text}" ui:field="text">1%</div>
+            </div>
+        </div>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

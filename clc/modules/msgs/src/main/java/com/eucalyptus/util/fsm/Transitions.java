@@ -4,118 +4,150 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
+import com.google.common.util.concurrent.Callables;
 
 public class Transitions {
-  private static Logger                        LOG  = Logger.getLogger( Transitions.class );
-                                                    
-  public static <P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> Transition<P, S, T> create( T name, S fromState, S toState, S errorState, TransitionAction<P> action, TransitionListener<P>... listeners ) {
-    TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState, errorState );
-    return new Transition<P, S, T>( rule, action, listeners );
+  private static Logger LOG = Logger.getLogger( Transitions.class );
+  
+  private static TransitionException exceptionOnCondition( String message, Predicate p ) {
+    return new TransitionException( "Transition rejected because constraint check is false: " + message + " for class " + p.getClass( ).getCanonicalName( ) );
   }
   
-  static class BasicTransitionRule<S extends Enum<S>, T extends Enum<T>> implements TransitionRule<S, T> {
-    private T             name;
-    private S             fromState;
-    private S             toState;
-    private S             errorState;
-    private final Boolean fromStateMark;
-    private final Boolean toStateMark;
-    private final Boolean errorStateMark;
-    
-    protected BasicTransitionRule( T name, S fromState, S toState ) {
-      this.name = name;
-      this.fromState = fromState;
-      this.toState = toState;
-      this.errorState = fromState;
-      this.fromStateMark = false;
-      this.toStateMark = false;
-      this.errorStateMark = false;
-    }
-
-    protected BasicTransitionRule( T name, S fromState, S toState, S errorState ) {
-      this.name = name;
-      this.fromState = fromState;
-      this.toState = toState;
-      this.errorState = errorState;
-      this.fromStateMark = false;
-      this.toStateMark = false;
-      this.errorStateMark = false;
-    }
-    
-    protected BasicTransitionRule( T name, S fromState, Boolean fromStateMark, S toState, Boolean toStateMark, S errorState, Boolean errorStateMark ) {
-      this.name = name;
-      this.fromState = fromState;
-      this.toState = toState;
-      this.errorState = errorState;
-      this.fromStateMark = fromStateMark;
-      this.toStateMark = toStateMark;
-      this.errorStateMark = errorStateMark;
-    }
-    
-    @Override
-    public final T getName( ) {
-      return this.name;
-    }
-    
-    @Override
-    public final S getFromState( ) {
-      return this.fromState;
-    }
-    
-    @Override
-    public final S getToState( ) {
-      return this.toState;
-    }
-    
-    @Override
-    public final S getErrorState( ) {
-      return this.errorState;
-    }
-    
-    @Override
-    public final Boolean getFromStateMark( ) {
-      return this.fromStateMark;
-    }
-    
-    @Override
-    public final Boolean getToStateMark( ) {
-      return this.toStateMark;
-    }
-    
-    @Override
-    public final Boolean getErrorStateMark( ) {
-      return this.errorStateMark;
-    }
-    
-    @Override
-    public int compareTo( TransitionRule<S, T> that ) {
-      return this.getName( ).compareTo( that.getName( ) );
-    }
-
-  }
-  
-  public static <P extends HasName<P>> TransitionListener<P> createListener( final Predicate<P> p ) {
-    return new TransitionListener<P>() {
-
+  public static <P extends HasName<P>> TransitionListener<P> callbackAsListener( final Callback<P> p ) {
+    return new TransitionListener<P>( ) {
+      
       @Override
       public boolean before( P parent ) {
         return true;
       }
-
+      
       @Override
       public void leave( P parent ) {
         try {
-          p.apply( parent );
+          p.fire( parent );
         } catch ( Throwable ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
-
+      
       @Override
       public void enter( P parent ) {}
-
+      
       @Override
-      public void after( P parent ) {}};
+      public void after( P parent ) {}
+    };
+  }
+  
+  private enum SimpleTransitions implements TransitionAction {
+    NOOP {
+      public void leave( HasName parent, Completion transitionCallback ) {
+        transitionCallback.fire( );
+      }
+      
+      public String toString( ) {
+        return "TransitionAction.noop";
+      }
+      
+      @Override
+      public boolean before( HasName parent ) {
+        return true;
+      }
+      
+      @Override
+      public void enter( HasName parent ) {}
+      
+      @Override
+      public void after( HasName parent ) {}
+    },
+    OUTOFBAND {
+      @Override
+      public void leave( HasName parent, Completion transitionCallback ) {}
+      
+      public String toString( ) {
+        return "TransitionAction.OUTOFBAND";
+      }
+      
+      @Override
+      public boolean before( HasName parent ) {
+        return true;
+      }
+      
+      @Override
+      public void enter( HasName parent ) {}
+      
+      @Override
+      public void after( HasName parent ) {}
+      
+    };
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> noop( ) {
+    return SimpleTransitions.NOOP;
+  }
+  
+  public static <P extends HasName<P>> TransitionListener<P> predicateAsBeforeListener( final Predicate<P> predicate ) {
+    TransitionListener<P> listener = new TransitionListener<P>( ) {
+      @Override
+      public boolean before( P parent ) {
+        return predicate.apply( parent );
+      }
+      
+      @Override
+      public void leave( P parent ) {}
+      
+      @Override
+      public void enter( P parent ) {}
+      
+      @Override
+      public void after( P parent ) {}
+    };
+    return listener;
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> callbackAsAction( final Callback<P> callback ) {
+    TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
+      @Override
+      public void leave( P parent, Callback.Completion transitionCallback ) {
+        try {
+          callback.fire( parent );
+          transitionCallback.fire( );
+        } catch ( Throwable ex ) {
+          LOG.error( ex );
+          transitionCallback.fireException( ex );
+        }
+      }
+    };
+    return action;
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> callableAsAction( final Callable<P> callable ) {
+    return callbackAsAction( Callbacks.forCallable( callable ) );
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> runnableAsAction( final Runnable runnable ) {
+    return callbackAsAction( Callbacks.forRunnable( runnable ) );
+  }
+  
+  public static <P extends HasName<P>> TransitionAction<P> predicateAsAction( final Predicate<P> predicate ) {
+    TransitionAction<P> action = new AbstractTransitionAction<P>( ) {
+      @Override
+      public void leave( P parent, Callback.Completion transitionCallback ) {
+        try {
+          if ( !predicate.apply( parent ) ) {
+            transitionCallback.fireException( Transitions.exceptionOnCondition( "Transition condition failed for " + parent + " on condition ", predicate ) );
+          } else {
+            transitionCallback.fire( );
+          }
+        } catch ( Throwable ex ) {
+          LOG.error( ex );
+          transitionCallback.fireException( ex );
+        }
+      }
+    };
+    return action;
   }
 }

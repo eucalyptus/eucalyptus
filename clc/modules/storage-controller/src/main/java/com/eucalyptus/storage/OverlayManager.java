@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -82,6 +82,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerBuilder;
@@ -90,7 +91,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExecutionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 
@@ -597,6 +598,64 @@ public class OverlayManager implements LogicalStorageManager {
 		return size;
 	}
 
+	public void cloneVolume(String volumeId, String parentVolumeId)
+	throws EucalyptusCloudException {
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
+		if(foundVolumeInfo != null) {
+			String vgName = "vg-" + Hashes.getRandom(4);
+			String lvName = "lv-" + Hashes.getRandom(4);
+			String parentVgName = foundVolumeInfo.getVgName();
+			String parentLvName = foundVolumeInfo.getLvName();
+			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
+			int size = foundVolumeInfo.getSize();
+			volumeManager.finish();
+			try {
+				String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
+				//create file and attach to loopback device
+				File parentVolumeFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + parentVolumeId);
+				assert(parentVolumeFile.exists());
+				long absoluteSize = parentVolumeFile.length();
+
+				String loDevName = createLoopback(rawFileName, absoluteSize);
+				//create physical volume, volume group and logical volume
+				createLogicalVolume(loDevName, vgName, lvName);
+				//duplicate snapshot volume
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				String absoluteParentLVName = lvmRootDirectory + PATH_SEPARATOR + parentVgName + PATH_SEPARATOR + parentLvName;
+				duplicateLogicalVolume(absoluteParentLVName, absoluteLVName);
+				//export logical volume
+				try {
+					volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
+				} catch(EucalyptusCloudException ex) {
+					String returnValue = removeLogicalVolume(absoluteLVName);
+					returnValue = removeVolumeGroup(vgName);
+					returnValue = removePhysicalVolume(loDevName);
+					removeLoopback(loDevName);
+					throw ex;
+				}
+				lvmVolumeInfo.setVolumeId(volumeId);
+				lvmVolumeInfo.setLoDevName(loDevName);
+				lvmVolumeInfo.setPvName(loDevName);
+				lvmVolumeInfo.setVgName(vgName);
+				lvmVolumeInfo.setLvName(lvName);
+				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+				lvmVolumeInfo.setSize(size);
+				volumeManager = new VolumeEntityWrapperManager();
+				volumeManager.add(lvmVolumeInfo);
+				volumeManager.finish();
+			}  catch(ExecutionException ex) {
+				volumeManager.abort();
+				String error = "Unable to run command: " + ex.getMessage();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
+			}			
+		} else {
+			volumeManager.abort();
+			throw new EucalyptusCloudException("Unable to find volume: " + parentVolumeId);
+		}
+	}
+
 	public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
 		String snapshotRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
 		File snapshotFile = new File(snapshotRawFileName);
@@ -1099,9 +1158,9 @@ public class OverlayManager implements LogicalStorageManager {
 
 		private String encryptTargetPassword(String password) throws EucalyptusCloudException {
 			try {
-        List<ClusterConfiguration> partitionConfigs = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
-        ClusterConfiguration clusterConfig = partitionConfigs.get( 0 );
-				PublicKey ncPublicKey = X509CertHelper.toCertificate(clusterConfig.getNodeCertificate()).getPublicKey();
+				List<ClusterConfiguration> partitionConfigs = ServiceConfigurations.getPartitionConfigurations( ClusterConfiguration.class, StorageProperties.NAME );
+				ClusterConfiguration clusterConfig = partitionConfigs.get( 0 );
+				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
@@ -1340,18 +1399,18 @@ public class OverlayManager implements LogicalStorageManager {
 	@Override
 	public void stop() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void disable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
-		
+
 	}
 }

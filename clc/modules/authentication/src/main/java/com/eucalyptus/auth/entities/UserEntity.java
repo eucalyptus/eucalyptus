@@ -15,11 +15,13 @@ import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -39,6 +41,10 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @Transient
   private static final long serialVersionUID = 1L;
   
+  // The User ID the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_user_id_external" )
+  String userId;
+
   // User name
   @Column( name = "auth_user_name" )
   String name;
@@ -92,6 +98,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<GroupEntity> groups;
+
   
   public UserEntity( ) {
     this.keys = Lists.newArrayList( );
@@ -110,9 +117,16 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     this.enabled = enabled;
   }
   
-  public static UserEntity newInstanceWithId( final String id ) {
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.userId == null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
+      this.userId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );//NOTE: here we use the key 
+    }
+  }
+  
+  public static UserEntity newInstanceWithUserId( final String userId ) {
     UserEntity u = new UserEntity( );
-    u.setId( id );
+    u.userId = userId;
     return u;
   }
   
@@ -132,6 +146,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     StringBuilder sb = new StringBuilder( );
     sb.append( "User(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "UserID=" ).append( this.getUserId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
     sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
@@ -219,6 +234,10 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   
   public List<GroupEntity> getGroups( ) {
     return this.groups;
+  }
+
+  public String getUserId( ) {
+    return this.userId;
   }
   
 }

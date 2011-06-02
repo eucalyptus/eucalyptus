@@ -78,8 +78,8 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
@@ -131,13 +131,13 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      if ( !FakePrincipals.NOBODY_USER_ERN.getUserName( ).equals( address.getOwnerAccountId( ) ) ) {
+      if ( !FakePrincipals.NOBODY_ACCOUNT.getAccountNumber( ).equals( address.getOwnerAccountId( ) ) ) {
         try {
         addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
         } catch ( AuthException e ) {}
       }
       if ( addrAccount != null
-           && ( isAdmin || Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
+           && ( isAdmin || Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
         reply.getAddressesSet( ).add( isAdmin
             ? address.getAdminDescription( )
             : address.getDescription( ) );
@@ -171,7 +171,7 @@ public class AddressManager {
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
-        Callbacks.newRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
+        AsyncRequests.newRequest( address.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
           public void fire( BaseMessage response ) {
             vm.updatePublicAddress( address.getName( ) );
           }
@@ -185,14 +185,14 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          Callbacks.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
+          AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
         } else {
           assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
     } else {
       unassignBystander.fire( );
     }
@@ -236,7 +236,7 @@ public class AddressManager {
     } else {
       try {
         if ( address.isSystemOwned( ) ) {
-          Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
               try {
                 Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
@@ -246,7 +246,7 @@ public class AddressManager {
             }
           } ).dispatch( address.getCluster( ) );
         } else {
-          Callbacks.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+          AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             @Override
             public void fire( ) {
               try {

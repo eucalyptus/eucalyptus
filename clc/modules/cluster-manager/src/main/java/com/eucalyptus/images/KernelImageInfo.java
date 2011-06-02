@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -80,7 +80,7 @@ import com.eucalyptus.cloud.Image;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "kernel" )
-public class KernelImageInfo extends ImageInfo {
+public class KernelImageInfo extends PutGetImageInfo {
 
   public KernelImageInfo( ) {
     super( );
@@ -92,9 +92,14 @@ public class KernelImageInfo extends ImageInfo {
     this.setImageType( Image.Type.kernel );
   }
 
-  public KernelImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
+  public KernelImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Long imageSize, Long imageBundleSize, Architecture arch, Platform platform ) {
+    super( userFullName, imageId, imageName, imageDescription, imageLocation, imageSize, imageBundleSize, arch, platform );
     this.setImageType( Image.Type.kernel );
+  }
+
+  @Override
+  public String getImageLocation( ) {
+    return super.getImageLocation( );
   }
 
 }

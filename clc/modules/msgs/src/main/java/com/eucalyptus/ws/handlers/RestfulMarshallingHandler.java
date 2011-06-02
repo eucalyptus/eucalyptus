@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
 import java.util.MissingFormatArgumentException;
-import org.apache.axiom.om.OMElement;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -79,11 +78,10 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -185,9 +183,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
             }
           } catch ( Exception e ) {
             LOG.debug( e );
-            if ( LogLevels.DEBUG ) {
-              LOG.error( e, e );
-            }
+            Logs.exhaust( ).error( e, e );
             throw e;
           }
         }
@@ -214,6 +210,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
    */
   public Binding getBinding( ) {
     return this.binding;
+  }
+
+  public Binding getDefaultBinding( ) {
+    return this.defaultBinding;
   }
   
 }

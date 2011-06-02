@@ -75,7 +75,7 @@ import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.id.*;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.config.EphemeralConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.empyrean.Empyrean;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -111,7 +111,7 @@ public class ComponentType extends EucalyptusData {
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
     final ComponentId c = ComponentId.lookup( component );
-    return new EphemeralConfiguration( name, c, realUri );
+    return ServiceConfigurations.createEphemeral( name, c, realUri );
   }
 }
 public class ComponentProperty extends EucalyptusData {
@@ -266,6 +266,7 @@ public class EucalyptusData implements BaseData {
   public Object clone(){
     return super.clone();
   }
+
 }
 /** *******************************************************************************/
 public class DescribeResourcesType extends EucalyptusMessage {
@@ -318,6 +319,10 @@ public class VmTypeInfo extends EucalyptusData {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
+  public void setEbsRoot( String imageId, String iqn, Long sizeKb ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+  }
+
   public void setRoot( String imageId, String location, Long sizeKb ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
@@ -341,7 +346,9 @@ public class VmTypeInfo extends EucalyptusData {
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
-      throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+      if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "/dev/sda1" || vbr.guestDeviceName == "xvda" ) })==null ) {
+        throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
+      }
     } else {
       return ret;
     }
@@ -578,69 +585,6 @@ public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Se
   
 }
 
-public class VmBundleMessage extends EucalyptusMessage {
-}
-
-public class BundleInstanceType extends VmBundleMessage {
-  String instanceId;
-  @HttpParameterMapping(parameter="Storage.S3.Bucket")
-  String bucket;
-  @HttpParameterMapping(parameter="Storage.S3.Prefix")
-  String prefix;
-  @HttpParameterMapping(parameter="Storage.S3.AWSAccessKeyId")
-  String awsAccessKeyId;
-  @HttpParameterMapping(parameter="Storage.S3.UploadPolicy")
-  String uploadPolicy;  
-  @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
-  String uploadPolicySignature;  
-  String url;
-  String userKey;
-}
-public class BundleInstanceResponseType extends VmBundleMessage {
-  BundleTask task;
-}
-public class CancelBundleTaskType extends VmBundleMessage {
-  String bundleId;
-  String instanceId;
-}
-public class CancelBundleTaskResponseType extends VmBundleMessage {
-  BundleTask task;
-}
-public class BundleTaskState extends EucalyptusData {
-  String instanceId;
-  String state;
-}
-public class BundleTask extends EucalyptusData {
-  String instanceId;
-  String bundleId;
-  String state;
-  Date startTime;
-  Date updateTime;
-  String progress;
-  String bucket;
-  String prefix;
-  String errorMessage;
-  String errorCode;
-  public BundleTask() {}
-  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
-    this.bundleId = bundleId;
-    this.instanceId = instanceId;
-    this.bucket = bucket;
-    this.prefix = prefix;
-    this.state = "pending";
-    this.startTime = new Date();
-    this.updateTime = new Date();
-    this.progress = "0%";
-  }
-}
-public class DescribeBundleTasksType extends VmBundleMessage {
-  @HttpParameterMapping (parameter = "BundleId")
-  ArrayList<String> bundleIds = new ArrayList<String>();
-}
-public class DescribeBundleTasksResponseType extends VmBundleMessage {
-  ArrayList<BundleTask> bundleTasks = new ArrayList<BundleTask>();
-  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
-}
 
 
 public class StatEventRecord extends EucalyptusMessage {

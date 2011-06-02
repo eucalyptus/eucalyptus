@@ -63,23 +63,18 @@
  */
 package com.eucalyptus.address;
 
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.VmInstance;
@@ -87,8 +82,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.Cluster;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
@@ -97,9 +91,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.TypeMapping;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
@@ -606,7 +597,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( Cluster.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
                                                                                                                                                this.getName( ) );
   }
   

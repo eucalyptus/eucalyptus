@@ -63,14 +63,13 @@
  */
 package com.eucalyptus.blockstorage;
 
-import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.SnapshotMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -79,15 +78,20 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Column( name = "parentvolume" )
+  @Column( name = "metadata_snapshot_vol_size" )
+  private Integer  volumeSize;
+  @Column( name = "metadata_snapshot_parentvolume", updatable=false )
   private String   parentVolume;
-  @Column( name = "cluster" )
-  private String   cluster;
+  @Column( name = "metadata_snapshot_vol_sc", updatable=false )
+  private String   volumeSc;
+  @Column( name = "metadata_snapshot_vol_partition", updatable=false )
+  private String   volumePartition;
   @Transient
   private FullName fullName;
   
@@ -99,11 +103,12 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( userFullName, displayName );
   }
   
-  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume ) {
+  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
     this( userFullName, displayName );
     this.parentVolume = parentVolume;
+    this.volumeSc = volumeSc;
+    this.volumePartition = volumePartition;
     super.setState( State.NIHIL );
-    super.setCreationTime( new Date( ) );
   }
   
   public Snapshot( final String accountId, final String displayName ) {
@@ -111,19 +116,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.setDisplayName( displayName );
   }
   
-  public static Snapshot named( final String snapshotId ) {
-    return new Snapshot( ) {
-      {
-        setDisplayName( snapshotId );
-      }
-    };
-  }
-  
   public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
     //return new Snapshot( userFullName, snapshotId );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Snapshot v = new Snapshot( accountId, snapshotId );
     return v;
@@ -133,7 +130,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     //return new Snapshot( userFullName, null );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getAccountNumber( );
     }
     Snapshot v = new Snapshot( accountId, null );
     return v;
@@ -165,7 +162,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
     snap.setSnapshotId( this.getDisplayName( ) );
     snap.setStatus( this.mapState( ) );
-    snap.setStartTime( this.getCreationTime( ) );
+    snap.setStartTime( this.getCreationTimestamp( ) );
     snap.setVolumeId( this.getParentVolume( ) );
     snap.setProgress( this.getState( ).equals( State.EXTANT )
       ? "100%"
@@ -177,21 +174,13 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     return parentVolume;
   }
   
-  public void setParentVolume( final String parentVolume ) {
+  protected void setParentVolume( final String parentVolume ) {
     this.parentVolume = parentVolume;
-  }
-  
-  public String getCluster( ) {
-    return cluster;
-  }
-  
-  public void setCluster( String cluster ) {
-    this.cluster = cluster;
   }
   
   @Override
   public String getPartition( ) {
-    return ComponentIds.lookup( Eucalyptus.class ).name( );
+    return this.volumePartition;
   }
   
   @Override
@@ -207,6 +196,38 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
                                        .namespace( this.getOwnerAccountId( ) )
                                        .relativeId( "snapshot", this.getDisplayName( ) )
       : this.fullName;
+  }
+  
+  public Integer getVolumeSize( ) {
+    return this.volumeSize;
+  }
+  
+  public void setVolumeSize( Integer integer ) {
+    this.volumeSize = integer;
+  }
+  
+  public void setPartition( String partition ) {
+    this.volumePartition = partition;
+  }
+  
+  public String getVolumeCluster( ) {
+    return this.volumeSc;
+  }
+  
+  public void setVolumeCluster( String volumeCluster ) {
+    this.volumeSc = volumeCluster;
+  }
+  
+  public String getVolumePartition( ) {
+    return this.volumePartition;
+  }
+  
+  public void setVolumePartition( String volumePartition ) {
+    this.volumePartition = volumePartition;
+  }
+
+  public String getVolumeSc( ) {
+    return this.volumeSc;
   }
   
 }

@@ -64,6 +64,7 @@
 package com.eucalyptus.util;
 
 import java.io.Serializable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
@@ -155,8 +156,8 @@ public class Counters extends AbstractPersistent implements Serializable {
               t.setMessageId( idStart );
             }
           } );
-        } catch ( EucalyptusCloudException e ) {
-          LOG.debug( e, e );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex , ex );
         }
         lastSave.set( idStart );
       }

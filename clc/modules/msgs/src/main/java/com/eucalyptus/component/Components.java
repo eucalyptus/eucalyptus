@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
@@ -88,40 +89,19 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Components {
-  private static Logger                           LOG                  = Logger
+  private static Logger                    LOG                  = Logger
                                                                                                                                       .getLogger( Components.class );
-  private static ConcurrentMap<Class, Map>        componentInformation = new ConcurrentHashMap<Class, Map>( ) {
-                                                                         {
-                                                                           put( Service.class, new ConcurrentHashMap<String, Service>( ) );
-                                                                           put( Component.class, new ConcurrentHashMap<String, Component>( ) );
-                                                                           put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
-                                                                         }
-                                                                       };
-  
-  private static Function<Component, ComponentId> TO_ID                = new Function<Component, ComponentId>( ) {
-                                                                         
-                                                                         @Override
-                                                                         public ComponentId apply( Component input ) {
-                                                                           return input.getComponentId( );
-                                                                         }
-                                                                       };
+  private static ConcurrentMap<Class, Map> componentInformation = new ConcurrentHashMap<Class, Map>( ) {
+                                                                  {
+                                                                    put( MessagableService.class, new ConcurrentHashMap<String, MessagableService>( ) );
+                                                                    put( Component.class, new ConcurrentHashMap<String, Component>( ) );
+                                                                    put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
+                                                                  }
+                                                                };
   
   public static List<ComponentId> toIds( List<Component> components ) {
-    return Lists.transform( components, TO_ID );
+    return Lists.transform( components, Functions.COMPONENT_TO_COMPONENTID );
   }
-  
-  private static Predicate<Component> BOOTSTRAP_LOCALS = new Predicate<Component>( ) {
-                                                         
-                                                         @Override
-                                                         public boolean apply( Component c ) {
-                                                           boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
-                                                           boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-                                                           EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO,
-                                                                                               c.getName( ), "cloud-local", cloudLocal, "always-local",
-                                                                                               alwaysLocal ).debug( );
-                                                           return cloudLocal || alwaysLocal;
-                                                         }
-                                                       };
   
   /**
    * Components which are staticly determined as ones to load. This determination is made
@@ -131,39 +111,17 @@ public class Components {
    * @return
    */
   public static List<Component> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), BOOTSTRAP_LOCALS ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.shouldBootstrapLocally( ) ) );
   }
-  
-  private static Predicate<Component> ARE_ENABLED_LOCAL = new Predicate<Component>( ) {
-                                                          
-                                                          @Override
-                                                          public boolean apply( Component c ) {
-                                                            boolean cloudLocal = Bootstrap.isCloudLocal( ) && c.getComponentId( ).isCloudLocal( );
-                                                            boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-                                                            boolean runningLocal = c.hasServiceEnabled( );
-                                                            EventRecord.caller( SystemBootstrapper.class, EventType.COMPONENT_INFO, c.getName( ),
-                                                                                "cloud-local",
-                                                                                cloudLocal, "always-local", alwaysLocal, "running-locally", runningLocal ).debug( );
-                                                            return cloudLocal || alwaysLocal || runningLocal;
-                                                          }
-                                                        };
   
   /**
    * Component has a service instance which is present locally, independent of the service's state.
    * 
    * @return
    */
-  public static List<Component> whichAreLocal( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED_LOCAL ) );
+  public static List<Component> whichAreEnabledLocally( ) {
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.areEnabledLocally( ) ) );
   }
-  
-  private static Predicate<Component> ARE_ENABLED = new Predicate<Component>( ) {
-                                                    
-                                                    @Override
-                                                    public boolean apply( Component c ) {
-                                                      return c.hasServiceEnabled( );
-                                                    }
-                                                  };
   
   /**
    * Component has a service instance which is present locally and the service is ENABLED.
@@ -171,11 +129,11 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabled( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), ARE_ENABLED ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.Predicates.areEnabled( ) ) );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static List<Component> list( ) {
+  public static List<Component> list( ) {//TODO:GRZE:ASAP: review all usage of this and replace with Components.whichAre...
     return new ArrayList( Components.lookupMap( Component.class ).values( ) );
   }
   
@@ -281,115 +239,142 @@ public class Components {
     return c;
   }
   
-  private final static Function<Component, String> componentToString = componentToString( );
-  
-  public static Function<Component, String> componentToString( ) {
-    if ( componentToString != null ) {
-      return componentToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Component, String>( ) {
-          
-          @Override
-          public String apply( Component comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( LogUtil.header( comp.getName( ) + " component configuration" ) ).append( "\n" );
-            buf.append( "-> Enabled/Local:      " + comp.isAvailableLocally( ) + "/" + comp.isLocal( ) ).append( "\n" );
-            buf.append( "-> State/Running:      " + comp.getState( ) + "/" + comp.isRunningLocally( ) ).append( "\n" );
-            buf.append( "-> Builder:            "
-                        + comp.getBuilder( ).getClass( ).getSimpleName( ) ).append( "\n" );
-            buf.append( "-> Disable/Remote cli: "
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".disable" )
-                        + "/"
-                        + System.getProperty( "euca." + comp.getComponentId( ).name( ) + ".remote" ) ).append( "\n" );
-            for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
-              buf.append( "-> " + b.toString( ) ).append( "\n" );
-            }
-            buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-            for ( Service s : comp.lookupServices( ) ) {
-              buf.append( "->  Service:          " + s.getName( ) + " " + s.getUri( ) ).append( "\n" );
-              buf.append( "|-> Dispatcher:       " + s.getDispatcher( ).getName( ) + " for "
-                          + s.getDispatcher( ).getAddress( ) ).append( "\n" );
-              buf.append( "|-> Service Endpoint: " + s.getEndpoint( ) ).append( "\n" );
-              buf.append( "|-> Service config:   "
-                          + LogUtil.dumpObject( s.getServiceConfiguration( ) ) ).append( "\n" );
-              //TODO: restore this.          destinationBuffer.append( "|-> Credential DN:    " + s.getKeys( ).getCertificate( ).getSubjectDN( ).toString( ) );
-            }
-            return buf.toString( );
-          }
-        };
-      }
-    }
-  }
-  
   public static Component oneWhichHandles( Class c ) {
     return ServiceBuilderRegistry.handles( c ).getComponent( );
   }
   
-  private static final Callback.Success<Component> componentPrinter = componentPrinter( );
-  
-  public static Callback.Success<Component> componentPrinter( ) {
-    if ( componentPrinter != null ) {
-      return componentPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Component>( ) {
-          
-          @Override
-          public void fire( Component comp ) {
-            LOG.info( componentToString.apply( comp ) );
-          }
-        };
+  public static class Functions {
+    public static Function<Component, ComponentId> COMPONENT_TO_COMPONENTID = new Function<Component, ComponentId>( ) {
+                                                                              
+                                                                              @Override
+                                                                              public ComponentId apply( Component input ) {
+                                                                                return input.getComponentId( );
+                                                                              }
+                                                                            };
+    
+    public static Function<Component, ComponentId> componentToId( ) {
+      return COMPONENT_TO_COMPONENTID;
+    }
+    
+    public static Function<Component, String> componentToString = componentToString( );
+    
+    public static Function<Component, String> componentToString( ) {
+      if ( componentToString != null ) {
+        return componentToString;
+      } else {
+        synchronized ( Components.class ) {
+          return new Function<Component, String>( ) {
+            
+            @Override
+            public String apply( Component comp ) {
+              final StringBuilder buf = new StringBuilder( );
+              buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
+              for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
+                buf.append( "-> " + b.toString( ) ).append( "\n" );
+              }
+              buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
+              for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+                try {
+                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getUri( ) ).append( "\n" );
+                  buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
+                }
+              }
+              return buf.toString( );
+            }
+          };
+        }
       }
     }
+    
+    public static Function<Service, ServiceConfiguration> serviceToServiceConfiguration( ) {
+      return new Function<Service, ServiceConfiguration>( ) {
+        
+        @Override
+        public ServiceConfiguration apply( Service input ) {
+          return input.getServiceConfiguration( );
+        }
+      };
+    }
+    
+    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
+      return new Function<ServiceId, ServiceConfiguration>( ) {
+        
+        @Override
+        public ServiceConfiguration apply( ServiceId serviceId ) {
+          try {
+            Component comp = Components.lookup( serviceId.getType( ) );
+            return comp.lookupServiceConfiguration( serviceId.getName( ) );
+          } catch ( NoSuchElementException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          }
+        }
+      };
+    }
+    
   }
   
-  private static final Function<Dispatcher, String> dispatcherToString = dispatcherToString( );
-  
-  public static Function<Dispatcher, String> dispatcherToString( ) {
-    if ( dispatcherToString != null ) {
-      return dispatcherToString;
-    } else {
-      synchronized ( Components.class ) {
-        return new Function<Dispatcher, String>( ) {
-          
-          @Override
-          public String apply( Dispatcher comp ) {
-            final StringBuilder buf = new StringBuilder( );
-            buf.append( "-> Dispatcher key=" ).append( comp.getName( ) ).append( " entry=" ).append( comp );
-            return buf.toString( );
-          }
-        };
-      }
+  public static class Predicates {
+    public static final Predicate<ServiceConfiguration> enabledService( ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        
+        @Override
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return Component.State.ENABLED.isIn( arg0 );
+        }
+      };
+    }
+    
+    public static Predicate<ServiceConfiguration> serviceInPartition( final String partitionName ) {
+      return new Predicate<ServiceConfiguration>( ) {
+        
+        @Override
+        public boolean apply( ServiceConfiguration arg0 ) {
+          return partitionName.equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
+        }
+      };
+    }
+    
+    private static Predicate<Component> BOOTSTRAP_LOCALS = new Predicate<Component>( ) {
+                                                           
+                                                           @Override
+                                                           public boolean apply( Component c ) {
+                                                             return ComponentIds.shouldBootstrapLocally( c.getComponentId( ) );
+                                                           }
+                                                         };
+    
+    public static Predicate<Component> shouldBootstrapLocally( ) {
+      return BOOTSTRAP_LOCALS;
+    }
+    
+    private static Predicate<Component> ARE_ENABLED_LOCAL = new Predicate<Component>( ) {
+                                                            
+                                                            @Override
+                                                            public boolean apply( Component c ) {
+                                                              boolean cloudLocal = Bootstrap.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
+                                                              boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
+                                                              boolean runningLocal = c.isEnabledLocally( );
+                                                              return cloudLocal || alwaysLocal || runningLocal;
+                                                            }
+                                                          };
+    
+    public static Predicate<Component> areEnabledLocally( ) {
+      return ARE_ENABLED_LOCAL;
+    }
+    
+    private static Predicate<Component> ARE_ENABLED = new Predicate<Component>( ) {
+                                                      
+                                                      @Override
+                                                      public boolean apply( Component c ) {
+                                                        return c.isEnabledLocally( );
+                                                      }
+                                                    };
+    
+    public static Predicate<Component> areEnabled( ) {
+      return ARE_ENABLED;
     }
   }
-  
-  private static final Callback.Success<Dispatcher> dispatcherPrinter = dispatcherPrinter( );
-  
-  public static Callback.Success<Dispatcher> dispatcherPrinter( ) {
-    if ( dispatcherPrinter != null ) {
-      return dispatcherPrinter;
-    } else {
-      synchronized ( Components.class ) {
-        return new Callback.Success<Dispatcher>( ) {
-          
-          @Override
-          public void fire( Dispatcher arg0 ) {
-            LOG.info( dispatcherToString.apply( arg0 ) );
-          }
-        };
-      }
-    }
-  }
-  
-  private static final Function<Bootstrapper, String> bootstrapperToString = new Function<Bootstrapper, String>( ) {
-                                                                             @Override
-                                                                             public String apply( Bootstrapper b ) {
-                                                                               return b.getClass( ).getName( )
-                                                                                       + " provides=" + b.getProvides( )
-                                                                                       + " deplocal=" + b.getDependsLocal( )
-                                                                                       + " depremote=" + b.getDependsRemote( );
-                                                                             }
-                                                                           };
   
 }

@@ -70,21 +70,17 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -116,50 +112,14 @@ public class SystemBootstrapper {
   public SystemBootstrapper( ) {}
   
   public boolean init( ) throws Exception {
+    Logs.init( );
+    Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      LogLevels.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      LogLevels.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.EXTREME;
-      LogLevels.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || LogLevels.TRACE;
-      if ( LogLevels.EXTREME ) {
-        System.setProperty( "euca.log.level", "TRACE" );
-        System.setProperty( "euca.exhaust.level", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+      Bootstrap.init( );
+      if( !Bootstrap.isInitializeSystem( ) ) {
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        stage.load( );
       }
-      
-      System.setOut( new PrintStream( System.out ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + string );
-          }
-        }
-      }
-
-      );
-      
-      System.setErr( new PrintStream( System.err ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + string );
-          }
-        }
-      }
-            );
-      
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( LogLevels.class.getDeclaredFields( ) ) ) );
-      Security.addProvider( new BouncyCastleProvider( ) );
-      System.setProperty( "euca.ws.port", "8773" );
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      System.exit( 1 );
-    }
-    try {
-      Bootstrap.initialize( );
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      stage.load( );
       return true;
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
@@ -171,26 +131,41 @@ public class SystemBootstrapper {
       return false;
     }
   }
+
+  private static void initializeSystem( ) {
+    try {
+      GroovyUtil.exec( "com.eucalyptus.component.auth.SystemCredentialProvider.initializeCredentials( );" );
+      GroovyUtil.exec( "com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper.initializeDatabase( );" );
+      System.exit( 0 );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      System.exit( 1 );
+    }
+  }
   
   public boolean load( ) throws Throwable {
-    try {
-      // TODO: validation-api
-      /** @NotNull */
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      do {
-        stage.load( );
-      } while ( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      LOG.fatal( t, t );
-      System.exit( 1 );
-      throw t;
-    }
-    for( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.LOADING );
+    if( Bootstrap.isInitializeSystem( ) ) {
+      SystemBootstrapper.initializeSystem( );
+    } else {
+      try {
+        // TODO: validation-api
+        /** @NotNull */
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        do {
+          stage.load( );
+        } while ( ( stage = Bootstrap.transition( ) ) != null );
+      } catch ( BootstrapException e ) {
+        e.printStackTrace( );
+        throw e;
+      } catch ( Throwable t ) {
+        t.printStackTrace( );
+        LOG.fatal( t, t );
+        System.exit( 1 );
+        throw t;
+      }
+      for ( Component c : Components.whichCanLoad( ) ) {
+        Bootstrap.applyTransition( c, Component.Transition.LOADING );
+      }
     }
     return true;
   }
@@ -243,8 +218,8 @@ public class SystemBootstrapper {
   
   public boolean stop( ) throws Exception {
     LOG.warn( "Shutting down Eucalyptus." );
-    EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     ServiceContextManager.shutdown( );
+    EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     return true;
   }
   
@@ -346,7 +321,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) && c.isLocal( ) ) {
+      if ( c.isAvailableLocally( ) ) {
         for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
           banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
         }
@@ -354,15 +329,12 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
-        banner += prefix + c.getName( ) + SEP + c.getBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + c.getState( ).toString( );
-        for ( Service s : c.lookupServices( ) ) {
-          if ( s.getServiceConfiguration( ).isLocal( ) ) {
-            banner += prefix + c.getName( ) + SEP + s.toString( );
-          }
-        }
+      if ( c.hasLocalService( ) ) {
+        ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
+        banner += prefix + c.getName( ) + SEP + localConfig.toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupStateMachine( ).getState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;

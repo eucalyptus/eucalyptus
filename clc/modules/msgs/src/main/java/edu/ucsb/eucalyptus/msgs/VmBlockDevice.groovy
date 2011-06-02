@@ -93,6 +93,8 @@ public class DescribeVolumesType extends BlockVolumeMessage {
 
   @HttpParameterMapping (parameter = "VolumeId")
   ArrayList<String> volumeSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeVolumesResponseType extends BlockVolumeMessage {
 
@@ -149,6 +151,8 @@ public class DescribeSnapshotsType extends BlockSnapshotMessage {
   ArrayList<String> ownersSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "RestorableBy")
   ArrayList<String> restorableBySet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "FilterSet")
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeSnapshotsResponseType extends BlockSnapshotMessage {
 

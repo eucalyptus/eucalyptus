@@ -109,7 +109,7 @@ public class WalrusProperties {
 	public static int IMAGE_CACHE_RETRY_LIMIT = 3;
 	public static long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String walrusServicePath = "/services/Walrus";
-	public static int WALRUS_PORT = Integer.parseInt( System.getProperty("euca.ws.port") );
+	public static int WALRUS_PORT = 8773;
 	public static final String NAMESPACE_VERSION = "2006-03-01";
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";

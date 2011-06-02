@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -128,7 +128,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     this.account = owner;
     this.fullName = new FQDN( owner );
     this.networkName = networkName;
-    this.name = this.account.getAccountId( ) + "-" + this.networkName;
+    this.name = this.account.getAccountNumber( ) + "-" + this.networkName;
     this.networkIndexes = new ConcurrentSkipListMap<Integer, NetworkIndexState>( ) {
       {
         for ( int i = MIN_ADDR; i < MAX_ADDR; i++ ) {
@@ -172,7 +172,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     return this.account;
   }
   public String getAccountId( ) {
-    return this.account.getAccountId( );
+    return this.account.getAccountNumber( );
   }
 
   public ConcurrentNavigableMap<Integer, NetworkIndexState> getNetworkIndexes( ) {
@@ -180,7 +180,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
 
   private NetworkToken getClusterToken( String cluster ) {
-    NetworkToken newToken = new NetworkToken( cluster, this.fullName.getAccountId( ), this.networkName, this.uuid, this.vlan.get( ) );
+    NetworkToken newToken = new NetworkToken( cluster, this.fullName.getAccountNumber( ), this.networkName, this.uuid, this.vlan.get( ) );
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, newToken );
     if ( token == null ) {
       return newToken;
@@ -281,8 +281,10 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   public boolean isPeer( String peerName, String peerNetworkName ) {
     VmNetworkPeer peer = new VmNetworkPeer( peerName, peerNetworkName );
     for( PacketFilterRule pf : this.rules ) {
-      if( pf.getPeers( ).contains( peer ) ) {
-        return true;
+      if( pf.getPeers( ) != null) {
+        if( pf.getPeers( ).contains( peer ) ) {
+          return true;
+        }
       }
     }
     return false;
@@ -325,7 +327,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
   @Override
   public String getOwnerAccountId( ) {
-    return this.account.getAccountId( );
+    return this.account.getAccountNumber( );
   }
 
 }

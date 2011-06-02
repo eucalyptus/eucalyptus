@@ -4,8 +4,8 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -39,8 +39,8 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   }
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
-    final Address addr = this.allocateSystemAddresses( vm.getPlacement( ), 1 ).get( 0 );
-    Callbacks.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
+    final Address addr = this.allocateSystemAddresses( vm.getClusterName( ), 1 ).get( 0 );
+    AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }

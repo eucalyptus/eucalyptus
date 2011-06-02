@@ -8,7 +8,7 @@ import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -29,20 +29,20 @@ public class DatabaseCertificateProxy implements Certificate {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
   }
   
   @Override
-  public String getId( ) {
-    return this.delegate.getId( );
+  public String getCertificateId( ) {
+    return this.delegate.getCertificateId( );
   }
   
   @Override
@@ -53,12 +53,12 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           t.setActive( active );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
       throw new AuthException( e );
     }
@@ -72,12 +72,12 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setRevoked( final Boolean revoked ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           t.setRevoked( revoked );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setRevoked for " + this.delegate );
       throw new AuthException( e );
     }
@@ -91,12 +91,12 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           t.setCreateDate( createDate );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setCreateDate for " + this.delegate );
       throw new AuthException( e );
     }
@@ -106,12 +106,12 @@ public class DatabaseCertificateProxy implements Certificate {
   public User getUser( ) throws AuthException {
     final List<User> results = Lists.newArrayList( );
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
       throw new AuthException( e );
     }
@@ -126,12 +126,12 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setX509Certificate( final X509Certificate x509 ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getId() ), new Tx<CertificateEntity>( ) {
+      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) throws Throwable {
           t.setPem( X509CertHelper.fromCertificate( x509 ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setX509Certificate for " + this.delegate );
       throw new AuthException( e );
     }
@@ -141,5 +141,6 @@ public class DatabaseCertificateProxy implements Certificate {
   public String getPem( ) {
     return this.delegate.getPem( );
   }
+
   
 }

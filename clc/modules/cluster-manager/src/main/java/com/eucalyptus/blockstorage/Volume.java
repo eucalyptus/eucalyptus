@@ -65,13 +65,13 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -87,8 +87,10 @@ import com.eucalyptus.util.StorageProperties;
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
-  @Column( name = "metadata_volume_cluster" )
-  private String   cluster;
+  @Column( name = "metadata_volume_sc_name" )
+  private String scName;
+  @Column( name = "metadata_volume_partition" )
+  private String   partition;//TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
   @Lob
@@ -98,18 +100,19 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   localDevice;
   @Transient
   private FullName fullName;
-  
+
   public Volume( ) {
     super( );
   }
   
-  public Volume( final UserFullName userFullName, final String displayName, final Integer size, final String cluster, final String parentSnapshot ) {
+  public Volume( final UserFullName userFullName, final String displayName, final Integer size, final String scName, final String partitionName, final String parentSnapshot ) {
     super( userFullName, displayName );
     this.size = size;
-    this.cluster = cluster;
+    this.scName = scName;
+    this.partition = partitionName;
     this.parentSnapshot = parentSnapshot;
     super.setState( State.NIHIL );
-    super.setCreationTime( new Date( ) );
+    super.setCreationTimestamp( new Date( ) );
   }
   
   public Volume( final UserFullName userFullName, String displayName ) {
@@ -121,21 +124,25 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     this.setDisplayName( displayName );
   }
   
-  public static Volume named( final UserFullName userFullName, String volumeId ) {
+  public static Volume named( String volumeId ) {
+    return named( null, volumeId );
+  }
+  
+  public static Volume named( final FullName fullName, String volumeId ) {
     //Volume v = new Volume( userFullName, volumeId );
     String accountId = null;
-    if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+    if ( fullName != null ) {
+      accountId = fullName.getNamespace( );
     }
     Volume v = new Volume( accountId, volumeId );
     return v;
   }
   
-  public static Volume ownedBy( final UserFullName userFullName ) {
+  public static Volume ownedBy( final FullName userFullName ) {
     //Volume v = new Volume( userFullName, null );
     String accountId = null;
     if ( userFullName != null ) {
-      accountId = userFullName.getAccountId( );
+      accountId = userFullName.getNamespace( );
     }
     Volume v = new Volume( accountId, null );
     return v;
@@ -173,8 +180,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
-    vol.setAvailabilityZone( this.getCluster( ) );
-    vol.setCreateTime( this.getCreationTime( ) );
+    vol.setAvailabilityZone( this.getPartition( ) );
+    vol.setCreateTime( this.getCreationTimestamp( ) );
     vol.setVolumeId( this.getDisplayName( ) );
     vol.setSnapshotId( this.getParentSnapshot( ) );
     vol.setStatus( this.mapState( ) );
@@ -188,20 +195,20 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     return size;
   }
   
-  public String getCluster( ) {
-    return cluster;
+  public String getScName( ) {
+    return this.scName;
   }
   
   public void setSize( final Integer size ) {
     this.size = size;
   }
   
-  public void setCluster( final String cluster ) {
-    this.cluster = cluster;
+  protected void setScName( final String scName ) {
+    this.scName = scName;
   }
   
   public String getParentSnapshot( ) {
-    return parentSnapshot;
+    return this.parentSnapshot;
   }
   
   public void setParentSnapshot( final String parentSnapshot ) {
@@ -209,7 +216,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public String getRemoteDevice( ) {
-    return remoteDevice;
+    return this.remoteDevice;
   }
   
   public void setRemoteDevice( final String remoteDevice ) {
@@ -217,7 +224,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public String getLocalDevice( ) {
-    return localDevice;
+    return this.localDevice;
   }
   
   public void setLocalDevice( final String localDevice ) {
@@ -230,7 +237,11 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   
   @Override
   public String getPartition( ) {
-    return this.getCluster( );//TODO:GRZE:ASAP this is almost certianly wrong
+    return this.partition;
+  }
+
+  protected void setPartition( String partition ) {
+    this.partition = partition;
   }
   
   @Override

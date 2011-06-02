@@ -63,7 +63,9 @@ permission notice:
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h> // ssize_t
+#include <sys/types.h> // mode_t
 #include <linux/limits.h>
+#include <stdint.h> // uint32_t
 
 typedef unsigned char boolean;
 #define TRUE 1
@@ -148,7 +150,8 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 int logfile(char *file, int in_loglevel);
 int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
-int check_file(char *file);
+int check_file (const char *file);
+int check_path (const char *path);
 int check_file_newer_than(char *file, time_t mtime);
 
 // argument checker
@@ -191,9 +194,11 @@ int write2file(const char *path, char *str);
 char * str2str (const char * str, const char * begin, const char * end);
 long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
+int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
+int add_euca_to_path (const char * euca_home_supplied);
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
 int maxint(int a, int b);
 int minint(int a, int b);
@@ -205,6 +210,11 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int hash_b64enc_string(const char *in, char **out);
 char * strdupcat (char * original, char * new);
+int str2md5str (char * buf, unsigned int buf_size, const char * str);
+uint32_t jenkins (const char * key, size_t len);
+int hexjenkins (char * buf, unsigned int buf_size, const char * str);
 char * file2md5str (const char *path);
+int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
+long long time_usec (void);
 
 #endif

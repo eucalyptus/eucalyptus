@@ -73,7 +73,9 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -92,8 +94,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
   private final AttachedVolume attachedVolume;
   private static Logger LOG = Logger.getLogger( VolumeAttachCallback.class );
   public VolumeAttachCallback( AttachVolumeType request, AttachedVolume attachVol ) {
+    super( request );
     this.attachedVolume = attachVol;
-    this.setRequest( request );
   }
   
 
@@ -134,8 +136,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType,Attac
         AttachedVolume volume = vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
         LOG.debug( "Found volume attachment info in async error path: " + volume );
         try {
-          Cluster cluster = Clusters.getInstance( ).lookup( vm.getPlacement( ) );
-          ServiceConfiguration sc = StorageUtil.getActiveSc( cluster.getName( ) ).getServiceConfiguration( );
+          Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+          ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
           Dispatcher dispatcher = ServiceDispatcher.lookup( sc );
           String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
           LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher=" + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );

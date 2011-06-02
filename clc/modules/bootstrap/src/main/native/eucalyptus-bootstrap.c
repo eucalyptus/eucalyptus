@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
 	gid_t gid = 0;
 	if (arguments(argc, argv, args) != 0)
 		exit(1);
-	debug = args->verbose_flag || args->debug_flag;
+	debug = args->debug_flag;
 	if (args->kill_flag == 1)
 		return stop_child(args);
 	if (checkuser(GETARG(args, user), &uid, &gid) == 0)
@@ -722,23 +722,15 @@ int java_init(euca_opts *args, java_home_t *data) {
 	JVM_ARG(opt[++x], "-Deuca.version=%1$s", ARGUMENTS_VERSION);
 	JVM_ARG(opt[++x], "-Deuca.log.level=%1$s", GETARG(args, log_level));
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
-	int parentNum = -1;
-	if (args->child_flag) {
-		for (parentNum = 0; parentNum < args->parent_given; parentNum++) {
-			JVM_ARG(opt[++x], "-Deuca.parent.%1$d=%2$s", parentNum, args->parent_arg[parentNum]);
-		}
-		JVM_ARG(opt[++x], "-Deuca.child=%d",parentNum);//euca.child gives the number of parent's supplied to bootstrap this child.  euca.child < 0 means parent.
-		if (args->merge_db_flag) {
-			JVM_ARG(opt[++x], "-Deuca.merge.db");//implies Eucalyptus component isLocal
-		}
+	if (args->initialize_flag) {
+		JVM_ARG(opt[++x], "-Deuca.initialize=true");
 	} else {
-		JVM_ARG(opt[++x], "-Deuca.child=-1");
-	}
-	if (args->remote_dns_flag) {
-		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
-	}
-	if (args->disable_iscsi_flag) {
-		JVM_ARG(opt[++x], "-Deuca.disable.iscsi=true");
+		if (args->remote_dns_flag) {
+			JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
+		}
+		if (args->disable_iscsi_flag) {
+			JVM_ARG(opt[++x], "-Deuca.disable.iscsi=true");
+		}
 	}
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-Xdebug");
@@ -748,14 +740,15 @@ int java_init(euca_opts *args, java_home_t *data) {
 				GETARG(args, debug_port),
 				(args->debug_suspend_flag ? "y" : "n"));
 	}
-	if (args->debug_flag || args->profile_flag) {
+	if (args->jmx_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(
-				args, home));
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
+	}
+	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");
 		JVM_ARG(opt[++x], "-XX:+PrintGCTimeStamps");
 		JVM_ARG(opt[++x], "-XX:+PrintGCDetails");
@@ -774,6 +767,10 @@ int java_init(euca_opts *args, java_home_t *data) {
 		JVM_ARG(opt[++x], "-X%s", args->jvm_args_arg[i]);
 	for (i = 0; i < args->define_given; i++)
 		JVM_ARG(opt[++x], "-D%s", args->define_arg[i]);
+	for (i = 0; i < args->bootstrap_host_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->define_arg[i]);
+	for (i = 0; i < args->bind_addr_given; i++)
+		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->define_arg[i]);
 
 	opt[++x].optionString = java_class_path;
 	opt[x].extraInfo = NULL;

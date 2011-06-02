@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -89,10 +89,10 @@ public class FakePrincipals {
   }
   public static final Account  NOBODY_ACCOUNT  = new Account( ) {
                                                  @Override
-                                                 public String getId( ) {
-                                                   return NOBODY_ID;
+                                                 public String getAccountNumber( ) {
+                                                   return String.format( "%012d", NOBODY_ACCOUNT_ID );
                                                  }
-                                                 
+
                                                  @Override
                                                  public String getName( ) {
                                                    return NOBODY_ACCOUNT;
@@ -154,10 +154,10 @@ public class FakePrincipals {
   
   public static final Account  SYSTEM_ACCOUNT  = new Account( ) {
                                                  @Override
-                                                 public String getId( ) {
-                                                   return SYSTEM_ID;
+                                                 public String getAccountNumber( ) {
+                                                   return String.format( "%012d", SYSTEM_ACCOUNT_ID );
                                                  }
-                                                 
+
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.SYSTEM_ACCOUNT;
@@ -220,11 +220,6 @@ public class FakePrincipals {
   public static final User     SYSTEM_USER     = new User( ) {
                                                  private final Certificate       cert  = new Certificate( ) {
                                                                                          @Override
-                                                                                         public String getId( ) {
-                                                                                           return Account.SYSTEM_ACCOUNT;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
                                                                                          public Boolean isActive( ) {
                                                                                            return true;
                                                                                          }
@@ -265,6 +260,11 @@ public class FakePrincipals {
                                                                                          public User getUser( ) throws AuthException {
                                                                                            return FakePrincipals.SYSTEM_USER;
                                                                                          }
+
+                                                                                        @Override
+                                                                                        public String getCertificateId( ) {
+                                                                                          return SYSTEM_ID;
+                                                                                        }
                                                                                        };
                                                  private final List<Certificate> certs = new ArrayList<Certificate>( ) {
                                                                                          {
@@ -273,18 +273,13 @@ public class FakePrincipals {
                                                                                        };
                                                  
                                                  @Override
-                                                 public String getId( ) {
+                                                 public String getUserId( ) {
                                                    return Account.SYSTEM_ACCOUNT;
                                                  }
                                                  
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public BigInteger getNumber( ) {
-                                                   return BigInteger.ZERO;
                                                  }
                                                  
                                                  @Override
@@ -339,11 +334,6 @@ public class FakePrincipals {
                                                  
                                                  @Override
                                                  public AccessKey getKey( String keyId ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey addKey( String key ) throws AuthException {
                                                    return null;
                                                  }
                                                  
@@ -463,10 +453,6 @@ public class FakePrincipals {
   
   public static final User     NOBODY_USER     = new User( ) {
                                                  private final Certificate       cert  = new Certificate( ) {
-                                                                                         @Override
-                                                                                         public String getId( ) {
-                                                                                           return FakePrincipals.NOBODY_ID;
-                                                                                         }
                                                                                          
                                                                                          @Override
                                                                                          public Boolean isActive( ) {
@@ -509,6 +495,11 @@ public class FakePrincipals {
                                                                                          public User getUser( ) throws AuthException {
                                                                                            return FakePrincipals.NOBODY_USER;
                                                                                          }
+
+                                                                                        @Override
+                                                                                        public String getCertificateId( ) {
+                                                                                          return FakePrincipals.NOBODY_ID;
+                                                                                        }
                                                                                        };
                                                  private final List<Certificate> certs = new ArrayList<Certificate>( ) {
                                                                                          {
@@ -517,18 +508,13 @@ public class FakePrincipals {
                                                                                        };
                                                  
                                                  @Override
-                                                 public String getId( ) {
+                                                 public String getUserId( ) {
                                                    return Account.NOBODY_ACCOUNT;
                                                  }
                                                  
                                                  @Override
                                                  public String getName( ) {
                                                    return Account.NOBODY_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public BigInteger getNumber( ) {
-                                                   return BigInteger.ONE;
                                                  }
                                                  
                                                  @Override
@@ -583,11 +569,6 @@ public class FakePrincipals {
                                                  
                                                  @Override
                                                  public AccessKey getKey( String keyId ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey addKey( String key ) throws AuthException {
                                                    return null;
                                                  }
                                                  

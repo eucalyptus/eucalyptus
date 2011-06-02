@@ -124,46 +124,6 @@ static configEntry configKeysNoRestart[] = {
   {NULL, NULL}
 };
 
-/*
-static char *configKeysRestart[] = {
-  "DISABLE_TUNNELING",
-  "ENABLE_WS_SECURITY",
-  "EUCALYPTUS",
-  "NC_FANOUT",
-  "NC_PORT",
-  "NC_SERVICE",
-  "SCHEDPOLICY",
-  "VNET_ADDRSPERNET",
-  "VNET_BRIDGE",
-  "VNET_BROADCAST",
-  "VNET_CLOUDIP",
-  "VNET_DHCPDAEMON",
-  "VNET_DHCPUSER",
-  "VNET_DNS",
-  "VNET_LOCALIP",
-  "VNET_MACMAP",
-  "VNET_MODE",
-  "VNET_NETMASK",
-  "VNET_PRIVINTERFACE",
-  "VNET_PUBINTERFACE",
-  "VNET_PUBLICIPS",
-  "VNET_ROUTER",
-  "VNET_SUBNET",
-  "POWER_IDLETHRESH",
-  "POWER_WAKETHRESH",
-  "CC_IMAGE_PROXY",
-  "CC_IMAGE_PROXY_CACHE_SIZE",
-  "CC_IMAGE_PROXY_PATH",
-  "LOGLEVEL",
-  NULL
-};
-static char *configKeysNoRestart[] = {
-  "NODES",
-  "NC_POLLING_FREQUENCY",
-  "CLC_POLLING_FREQUENCY",
-  NULL
-};
-*/
 static char *configValuesRestart[256], *configValuesNoRestart[256];
 static int configRestartLen=0, configNoRestartLen=0;
 
@@ -293,7 +253,7 @@ int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInst
 int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
-int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
+int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int force, int **outStatus);
 
 int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource **outNodes, int *outNodesLen);
@@ -346,7 +306,6 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
 int sem_mywait(int lockno);
 int sem_mypost(int lockno);
 
-int timeread(int fd, void *buf, size_t bytes, int timeout);
 int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 
 int syncNetworkState();

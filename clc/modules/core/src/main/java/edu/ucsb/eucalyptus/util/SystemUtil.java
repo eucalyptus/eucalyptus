@@ -66,7 +66,7 @@ package edu.ucsb.eucalyptus.util;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ExecutionException;
+import java.util.concurrent.ExecutionException;
 
 public class SystemUtil {
 	private static Logger LOG = Logger.getLogger(SystemUtil.class);
@@ -88,7 +88,7 @@ public class SystemUtil {
 			int returnValue = proc.waitFor();
 			output.join();
 			if(returnValue != 0)
-				throw new ExecutionException(commandString + " error: " + error.getReturnValue());
+				throw new ExecutionException(commandString + " error: " + error.getReturnValue()) {{}};
 			return output.getReturnValue();
 		} catch (Throwable t) {
 			LOG.error(t, t);

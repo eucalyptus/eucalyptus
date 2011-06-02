@@ -12,13 +12,14 @@
 #include <time.h> // time
 #include <errno.h> // errno
 #include <sys/types.h> // *dir, etc
+#include <limits.h>
 #include <dirent.h>
 #include "cache.h"
 #include "eucalyptus.h"
 #include "imager.h"
 #include "misc.h"
 
-#define EUCA_SIZE_UNLIMITED -1L
+#define EUCA_SIZE_UNLIMITED LLONG_MAX
 
 /////////// TODO: locks
 
@@ -47,7 +48,7 @@ int unlock_disk_item (disk_item * di)
 static disk_item * cache_head = NULL;
 static long long cache_used = 0L;
 static long long cache_limit = EUCA_SIZE_UNLIMITED; // size limit for cache space
-static char cache_path [EUCA_MAX_PATH] = "./euca-imager-cache"; // default cache dir
+static char cache_path [EUCA_MAX_PATH] = "./euca_imager_cache"; // default cache dir
 
 int set_cache_limit (long long size)
 {

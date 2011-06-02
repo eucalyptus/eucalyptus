@@ -63,19 +63,24 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
 
 public class Notifications extends ComponentId.Unpartioned {
-  
+  public static Notifications INSTANCE = new Notifications( );
   @Override
   public Boolean hasDispatcher( ) {
     return true;
   }
   
   @Override
-  public List<Class<Eucalyptus>> serviceDependencies( ) {
-    return Lists.newArrayList( Eucalyptus.class );
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
+  
 }

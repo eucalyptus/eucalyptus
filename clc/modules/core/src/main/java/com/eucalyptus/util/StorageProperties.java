@@ -67,23 +67,16 @@ package com.eucalyptus.util;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.UUID;
 import javax.persistence.PersistenceException;
-
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.component.ComponentState;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
-
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
-import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class StorageProperties {
 
@@ -93,7 +86,7 @@ public class StorageProperties {
 	public static final String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
 	public static final String EUCALYPTUS_HEADER = "EucaHeader";
-	public static final String storageRootDirectory = BaseDirectory.VAR.toString() + "/volumes";
+	public static final String storageRootDirectory = BaseDirectory.VAR.getChildPath( "volumes" );
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
@@ -109,13 +102,13 @@ public class StorageProperties {
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
-	public static String WALRUS_URL = "http://localhost:"+System.getProperty("euca.ws.port")+"/services/Walrus";
+	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
 	public static String NAME = "unregistered";
 	public static Integer ISCSI_LUN = 1;
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
-	public static String eucaHome = System.getProperty("euca.home");
+	public static String eucaHome = BaseDirectory.HOME.toString( );
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String blockSize = "1M";
 	public static String SAN_HOST = "sanHost";
@@ -134,7 +127,7 @@ public class StorageProperties {
 
 	public static void updateName() {
 	  try {
-      StorageProperties.NAME = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getPartition( );
+      StorageProperties.NAME = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getPartition( );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
       LOG.error( "Failed to configure Storage Controller NAME." );
@@ -144,7 +137,7 @@ public class StorageProperties {
 
 	public static void updateStorageHost() {
     try {
-      STORAGE_HOST = Components.lookup( Storage.class ).getLocalService( ).getServiceConfiguration( ).getHostName( );
+      STORAGE_HOST = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getHostName( );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex , ex );
       LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
@@ -161,7 +154,7 @@ public class StorageProperties {
 			walrusConfigs = ServiceConfigurations.getConfigurations( WalrusConfiguration.class );
 			if(walrusConfigs.size() > 0) {
 				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
-				WALRUS_URL = walrusConfig.getUri();
+				WALRUS_URL = walrusConfig.getUri().toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
 			} else {

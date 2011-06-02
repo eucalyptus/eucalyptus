@@ -90,10 +90,6 @@
       <bridge-component/>
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="ShortBusWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.DescribeRegionsType" />
-        </filtering-router>
-        <filtering-router>
           <outbound-endpoint ref="StartVerifyWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType" />
         </filtering-router>
@@ -103,7 +99,7 @@
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="VmControlWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmBundleMessage" />
+          <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="ClusterEndpointWS" />

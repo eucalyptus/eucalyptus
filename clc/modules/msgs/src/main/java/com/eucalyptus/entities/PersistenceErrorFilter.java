@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -89,13 +89,13 @@ import org.hibernate.TransientObjectException;
 import org.hibernate.TypeMismatchException;
 import org.hibernate.UnresolvableObjectException;
 import org.hibernate.WrongClassException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.JDBCConnectionException;
 import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
-import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Logs;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -137,19 +137,13 @@ public class PersistenceErrorFilter {
       @Override
       public RuntimeException handleException( RuntimeException e ) {
         String msg = this.getMessage( e );
-        if( !LogLevels.DEBUG ) {
-          LOG.error( msg, e );
-        }
+        Logs.exhaust( ).error( msg, e );
         return e;
       }
     };
     protected String getMessage( RuntimeException e ) {
       String msg = new StringBuilder( ).append( "[" ).append( this.name( ) ).append( "] Persistence error occurred because of: " + e.getMessage( ) ).toString( );
-      if ( LogLevels.DEBUG ) {
-        LOG.error( msg, e );
-      } else {
-        LOG.error( msg );
-      }
+      Logs.exhaust( ).error( msg, e );
       return msg;
     }
     

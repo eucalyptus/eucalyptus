@@ -61,10 +61,7 @@
 package com.eucalyptus.blockstorage;
 
 import java.io.ByteArrayInputStream;
-import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import javax.crypto.Cipher;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.log4j.Logger;
@@ -72,30 +69,21 @@ import org.w3c.dom.Document;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.ImageUtil;
-import com.eucalyptus.images.Images;
-import com.eucalyptus.images.NoSuchImageException;
-import com.eucalyptus.system.LogLevels;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
-import edu.ucsb.eucalyptus.msgs.CheckImageType;
 import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
@@ -107,7 +95,7 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
-  public static void triggerCaching( ImageInfo imgInfo ) {
+  public static void triggerCaching( Image.StaticDiskImage imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
@@ -115,10 +103,10 @@ public class WalrusUtil {
     ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
   }
   
-  public static void invalidate( ImageInfo imgInfo ) {
+  public static void invalidate( Image.StaticDiskImage imgInfo ) {
     String[] parts = imgInfo.getImageLocation( ).split( "/" );
     try {
-      ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
+      ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
   }
   
@@ -132,7 +120,7 @@ public class WalrusUtil {
       msg.regarding( );
       msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
       
-      reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
+      reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( msg );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }
@@ -151,7 +139,7 @@ public class WalrusUtil {
     GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( ).regarding( request );
     if ( getBukkitInfo != null ) {
       getBukkitInfo.setBucket( imagePathParts[0] );
-      GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( getBukkitInfo );
+      GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( getBukkitInfo );
       return reply;
     }
     return null;
@@ -167,10 +155,8 @@ public class WalrusUtil {
       if ( reply == null || reply.getBase64Data( ) == null ) {
         throw new EucalyptusCloudException( "No data: " + imageLocation );
       } else {
-        if ( LogLevels.DEBUG ) {
-          LOG.debug( "Got the manifest to verify: " );
-          LOG.debug( Hashes.base64decode( reply.getBase64Data( ) ) );
-        }
+        Logs.exhaust( ).debug( "Got the manifest to verify: " );
+        Logs.exhaust( ).debug( Hashes.base64decode( reply.getBase64Data( ) ) );
         if( checkManifest( user, reply.getBase64Data( ) ) ) {
           return;
         } else {

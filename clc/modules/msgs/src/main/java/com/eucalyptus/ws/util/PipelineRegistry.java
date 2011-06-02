@@ -75,7 +75,7 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
@@ -120,7 +120,7 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
-      if ( LogLevels.DEBUG && request instanceof MappingHttpMessage ) {
+      if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
         ((MappingHttpMessage)request).logMessage( );
         for( FilteredPipeline p : this.pipelines ) {
           LOG.debug( "PIPELINE: " + p );
@@ -128,7 +128,7 @@ public class PipelineRegistry {
       }
       throw new NoAcceptingPipelineException( ); 
     }
-    if ( LogLevels.TRACE ) {
+    if ( Logs.EXTREME ) {
       EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
     }
     return candidate;

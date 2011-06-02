@@ -78,7 +78,6 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.mule.module.client.RemoteDispatcher;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -106,10 +105,11 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -203,7 +203,6 @@ public class SystemState {
     long splitTime = vm.getSplitTime( );
     VmState oldState = vm.getState( );
     vm.setServiceTag( runVm.getServiceTag( ) );
-    vm.setUuid( runVm.getUuid( ) );
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
@@ -211,8 +210,9 @@ public class SystemState {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-    } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-      if( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+    } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+      if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
         vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
       }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
@@ -220,10 +220,11 @@ public class SystemState {
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        network.extantNetworkIndex( vm.getPlacement( ), vm.getNetworkIndex( ) );
+        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }
+  
   public static ArrayList<String> getAncestors( BaseMessage parentMsg, String manifestPath ) {
     ArrayList<String> ancestorIds = Lists.newArrayList( );
     try {
@@ -233,21 +234,19 @@ public class SystemState {
       GetObjectResponseType reply = null;
       try {
         GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true ).regardingUserRequest( parentMsg );
-
-        reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup("walrus") ).send( msg );
-      }
-      catch ( Exception e ) {
+        
+        reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
+      } catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
       }
       Document inputSource = null;
       try {
-        DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode(reply.getBase64Data() ).getBytes() ));
-      }
-      catch ( Exception e ) {
+        DocumentBuilder builder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
+        inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode( reply.getBase64Data( ) ).getBytes( ) ) );
+      } catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
       }
-
+      
       XPath xpath = XPathFactory.newInstance( ).newXPath( );
       NodeList ancestors = null;
       try {
@@ -261,22 +260,23 @@ public class SystemState {
       } catch ( XPathExpressionException e ) {
         LOG.error( e, e );
       }
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( EucalyptusCloudException e ) { 
       LOG.error( e, e );
     } catch ( DOMException e ) {
       LOG.error( e, e );
     }
     return ancestorIds;
   }
-
+  
   private static void restoreInstance( final String cluster, final VmInfo runVm ) {
     try {
+      String instanceUuid = runVm.getUuid( );
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      UserFullName ownerId = Accounts.lookupUserFullNameById( runVm.getOwnerId( ) );
+      UserFullName ownerId = UserFullName.getInstance( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
-      if( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
+      if ( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
         userData = Base64.decode( runVm.getUserData( ) );
       }
       Integer launchIndex = 0;
@@ -310,7 +310,8 @@ public class SystemState {
           notwork = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + netName );
           networks.add( notwork );
           try {
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+                                                                                                                          notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
           } catch ( NetworkAlreadyExistsException e ) {
@@ -319,15 +320,15 @@ public class SystemState {
           notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
         } catch ( NoSuchElementException e1 ) {
           try {
-          //TODO:GRZE:RESTORE
-//            try {
-//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), netName );
-//            } catch ( Exception ex ) {
-//              LOG.error( ex );
-//              notwork = SystemState.getUserNetwork( runVm.getOwnerId( ), "default" );
-//            }
+            //TODO:GRZE:RESTORE
+            try {
+              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), netName ).getVmNetwork( );
+            } catch ( Exception e ) {
+              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), "default" ).getVmNetwork( );
+            }
             networks.add( notwork );
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName, notwork.getUuid( ),
+            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
+                                                                                                                          notwork.getUuid( ),
                                                                                                                           runVm.getNetParams( ).getVlan( ) );
             notwork.addTokenIfAbsent( netToken );
             Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
@@ -340,7 +341,8 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( reservationId, launchIndex, instanceId, ownerId, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ), networks,
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
+                                      networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.setLaunchTime( runVm.getLaunchTime( ) );
@@ -349,14 +351,14 @@ public class SystemState {
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+      AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Throwable t ) {
       LOG.error( t, t );
     }
   }
-    
+  
   public static ArrayList<ReservationInfoType> handle( DescribeInstancesType request ) throws Exception {
-    Context ctx = Contexts.lookup();
+    Context ctx = Contexts.lookup( );
     boolean isAdmin = ctx.hasAdministrativePrivileges( );
     ArrayList<String> instancesSet = request.getInstancesSet( );
     String action = PolicySpec.requestToAction( request );
@@ -369,9 +371,9 @@ public class SystemState {
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( ( !isAdmin && 
-             !Permissions.isAuthorized( PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
-          || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
+      if ( ( !isAdmin &&
+             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
+           || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
         continue;
       }
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {
@@ -393,27 +395,18 @@ public class SystemState {
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }
-
-//TODO:GRZE:RESTORE
-//  public static Network getUserNetwork( String userId, String networkName ) throws EucalyptusCloudException {
-//    try {
-//      return NetworkGroupUtil.getUserNetworkRulesGroup( AccountFullName.get, networkName ).getVmNetwork( );
-//    } catch ( Exception e ) {
-//      throw new EucalyptusCloudException( "Failed to find network: " + userId + "-" + networkName );
-//    }
-//  }
   
   public static Long countByAccount( String accountId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getId( ).equals( accountId ) ) {
+      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getAccountNumber( ).equals( accountId ) ) {
         vmNum++;
       }
     }
     return vmNum;
   }
-
-  public static long countByUser( String userId ) throws AuthException {
+  
+  public static Long countByUser( String userId ) throws AuthException {
     long vmNum = 0;
     for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
       if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {
@@ -422,5 +415,5 @@ public class SystemState {
     }
     return vmNum;
   }
-
+  
 }

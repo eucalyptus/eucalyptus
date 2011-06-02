@@ -75,7 +75,6 @@ import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import com.eucalyptus.bootstrap.HostManager;
-import com.eucalyptus.config.EphemeralConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
@@ -138,8 +137,8 @@ public class Hosts {
           if( !empyrean.hasService( ephemeralConfig ) ) {
             try {
               empyrean.loadService( ephemeralConfig ).get();
-              ServiceEndpoint endpoint = empyrean.lookupService( ephemeralConfig ).getEndpoint( );
-              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), endpoint );
+              ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
+              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
               Mbeans.register( entry );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex , ex );

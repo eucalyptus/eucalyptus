@@ -69,33 +69,36 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.Column;
+import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cluster.callback.BundleCallback;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.cluster.callback.BundleCallback;
-import com.eucalyptus.records.EventClass;
+import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
@@ -105,21 +108,25 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.BundleTask;
-import edu.ucsb.eucalyptus.msgs.EbsInstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
+@Entity @javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_instances" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_INSTANCE )
-public class VmInstance implements HasName<VmInstance> {
+public class VmInstance extends UserMetadata<VmState> implements HasName<VmInstance> {
+  @Transient
   private static Logger LOG          = Logger.getLogger( VmInstance.class );
+  @Transient
   public static String  DEFAULT_IP   = "0.0.0.0";
+  @Transient
   public static String  DEFAULT_TYPE = "m1.small";
   
   public enum BundleState {
@@ -134,52 +141,76 @@ public class VmInstance implements HasName<VmInstance> {
       return this.mappedState;
     }
   }
-  
-  private String                                      uuid;
+  @Column( name="instances_reservation_id" )
   private final String                                reservationId;
   private final int                                   launchIndex;
   private final String                                instanceId;
+  private final String                                instanceUuid;
+  private int           stateCounter        = 0;
+  private static String SEND_USER_TERMINATE = "SIGTERM";
+  @Transient
   private final FullName                              owner;
-  private final String                                placement;
+  private final String                                clusterName;
   private final String                                partition;
   private final byte[]                                userData;
+  @Transient
   private final List<Network>                         networks      = Lists.newArrayList( );
+  @Transient
   private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
+  @Transient
   private String                                      platform;
+  @Transient
   private VmKeyInfo                                   keyInfo;
+  @Transient
   private VmTypeInfo                                  vmTypeInfo;
   
+  @Transient
   private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
+  @Transient
   private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  @Transient
   private final StopWatch                             stopWatch     = new StopWatch( );
+  @Transient
   private final StopWatch                             updateWatch   = new StopWatch( );
   
   private Date                                        launchTime    = new Date( );
   private String                                      serviceTag;
+  @Transient
   private SystemState.Reason                          reason;
+  @Transient
   private final List<String>                          reasonDetails = Lists.newArrayList( );
+  @Transient
   private StringBuffer                                consoleOutput = new StringBuffer( );
   private String                                      passwordData;
+  @Transient
   private Boolean                                     privateNetwork;
   private Long                                        blockBytes    = 0l;
   private Long                                        networkBytes  = 0l;
   
-  public VmInstance( final String reservationId, final int launchIndex, final String instanceId, final FullName owner, final String placement,
-                     final byte[] userData, final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, final String platform, final List<Network> networks,
-                     final String networkIndex ) {
+  public VmInstance( final UserFullName owner, 
+                     final String instanceId, final String instanceUuid, 
+                     final String reservationId, final int launchIndex, 
+                     final String placement,
+                     final byte[] userData, 
+                     final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, 
+                     final String platform, 
+                     final List<Network> networks, final String networkIndex ) {
+    super( owner, instanceId );
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.owner = owner;
-    this.placement = placement;
+    this.clusterName = placement;
     String p = null;
     try {
-      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.placement ).getPartition( );
+      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.clusterName ).getPartition( );
     } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/
-      LOG.debug( "Failed to find cluster configuration named: " + this.placement + " using that as the partition name." );
+      LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
     }
     this.partition = p;
     this.userData = userData;
@@ -267,8 +298,6 @@ public class VmInstance implements HasName<VmInstance> {
       : "" );
   }
   
-  private int           stateCounter        = 0;
-  private static String SEND_USER_TERMINATE = "SIGTERM";
   
   private void addReasonDetail( String... extra ) {
     for ( String s : extra ) {
@@ -339,9 +368,9 @@ public class VmInstance implements HasName<VmInstance> {
   
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.uuid, this.instanceId, this.vmTypeInfo.getName( ),
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
-                                                                    this.placement, this.partition, this.networkBytes, this.blockBytes ) );
+                                                                    this.clusterName, this.partition, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
@@ -358,7 +387,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   private Map<String, String> getMetadataMap( ) {
-    boolean dns = Components.lookup( "dns" ).isLocal( );
+    boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
@@ -403,7 +432,7 @@ public class VmInstance implements HasName<VmInstance> {
     m.put( "public-keys/0/openssh-key", this.getKeyInfo( ).getValue( ) );
     
     m.put( "placement/", "availability-zone" );
-    m.put( "placement/availability-zone", this.getPlacement( ) );
+    m.put( "placement/availability-zone", this.getPartition( ) );
     String dir = "";
     for ( String entry : m.keySet( ) ) {
       if ( ( entry.contains( "/" ) && !entry.endsWith( "/" ) ) ) {
@@ -530,7 +559,7 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
-    boolean dns = Components.lookup( Dns.class ).isLocal( );
+    boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
     runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
@@ -593,7 +622,7 @@ public class VmInstance implements HasName<VmInstance> {
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.placement );
+    runningInstance.setPlacement( this.partition );
     
     runningInstance.setLaunchTime( this.launchTime );
 
@@ -617,11 +646,7 @@ public class VmInstance implements HasName<VmInstance> {
     NetworkConfigType conf = getNetworkConfig( );
     return conf != null && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
-  
-  public String getName( ) {
-    return this.instanceId;
-  }
-  
+
   public void setLaunchTime( final Date launchTime ) {
     this.launchTime = launchTime;
   }
@@ -631,19 +656,19 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   public String getInstanceId( ) {
-    return instanceId;
-  }
-  
-  public FullName getOwner( ) {
-    return owner;
+    return super.getDisplayName( );
   }
   
   public int getLaunchIndex( ) {
     return launchIndex;
   }
   
+  public String getClusterName( ) {
+    return clusterName;
+  }
+
   public String getPlacement( ) {
-    return placement;
+    return clusterName;
   }
   
   public Date getLaunchTime( ) {
@@ -833,7 +858,7 @@ public class VmInstance implements HasName<VmInstance> {
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
-                          this.placement, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
                           this.volumes );
   }
   
@@ -863,20 +888,6 @@ public class VmInstance implements HasName<VmInstance> {
   }
   
   /**
-   * @return the uuid
-   */
-  public String getUuid( ) {
-    return this.uuid;
-  }
-  
-  /**
-   * @param uuid the uuid to set
-   */
-  public void setUuid( String uuid ) {
-    this.uuid = uuid;
-  }
-  
-  /**
    * @return the networkBytes
    */
   public Long getNetworkBytes( ) {
@@ -902,6 +913,14 @@ public class VmInstance implements HasName<VmInstance> {
    */
   public void setBlockBytes( Long blockBytes ) {
     this.blockBytes = blockBytes;
+  }
+
+  public String getPartition( ) {
+    return this.partition;
+  }
+
+  public String getInstanceUuid( ) {
+    return this.instanceUuid;
   }
   
 }

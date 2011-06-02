@@ -81,6 +81,22 @@ import com.eucalyptus.util.async.RemoteCallback;
  */
 public abstract class StateUpdateMessageCallback<P, Q extends BaseMessage, R extends BaseMessage> extends SubjectMessageCallback<P, Q, R> {
   
+  public StateUpdateMessageCallback( ) {
+    super( );
+  }
+
+  public StateUpdateMessageCallback( P subject, Q request ) {
+    super( subject, request );
+  }
+
+  public StateUpdateMessageCallback( P subject ) {
+    super( subject );
+  }
+
+  public StateUpdateMessageCallback( Q request ) {
+    super( request );
+  }
+
   /**
    * NOTE: Empty implementation as there are no preconditions for this type of
    * message: suppress the warning.

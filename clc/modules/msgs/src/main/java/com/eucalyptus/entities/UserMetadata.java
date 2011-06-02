@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -99,7 +99,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     } else if( super.owner == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
       this.setOwner( FakePrincipals.NOBODY_USER_ERN );
     } else if( super.owner == null && this.getOwnerUserId( ) != null ) {
-      this.setOwner( Accounts.lookupUserFullNameById( this.ownerUserId ) );
+      this.setOwner( UserFullName.getInstance( this.ownerUserId ) );
     }
     return super.owner;
   }

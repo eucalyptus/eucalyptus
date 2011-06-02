@@ -71,13 +71,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
+import edu.ucsb.eucalyptus.msgs.BaseData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
@@ -130,7 +133,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   @Override
   public Object bind( final MappingHttpRequest httpRequest ) throws BindingException {
     final String operationName = this.extractOperationName( httpRequest );
-    
+    final String operationNameType = operationName + "Type";
     for ( T op : this.possibleParams )
       httpRequest.getParameters( ).remove( op.name( ) );
     final Map<String, String> params = httpRequest.getParameters( );
@@ -138,11 +141,33 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     BaseMessage eucaMsg = null;
     Map<String, String> fieldMap = null;
     Class<?> targetType = null;
+    Binding currentBinding = null;
     try {
-      try {
-        targetType = this.getBinding( ).getElementClass( operationName + "Type" );
-      } catch ( BindingException ex ) {
-        targetType = this.getBinding( ).getElementClass( operationName );
+      if( this.getBinding( ).hasElementClass( operationName ) ) {
+        currentBinding = this.getBinding( );
+        targetType = currentBinding.getElementClass( operationName );
+      } else if( this.getBinding( ).hasElementClass( operationNameType ) ) {
+        currentBinding = this.getBinding( );
+        targetType = currentBinding.getElementClass( operationNameType );
+      } else if( this.getDefaultBinding( ).hasElementClass( operationName ) ) {
+        currentBinding = this.getDefaultBinding( );
+        targetType = currentBinding.getElementClass( operationName );
+      } else if( this.getDefaultBinding( ).hasElementClass( operationNameType ) ) {
+        currentBinding = this.getDefaultBinding( );
+        targetType = currentBinding.getElementClass( operationNameType );
+      } else if( BindingManager.getDefaultBinding( ).hasElementClass( operationName ) ) {
+        currentBinding = BindingManager.getDefaultBinding( );
+        targetType = currentBinding.getElementClass( operationName );
+      } else if( BindingManager.getDefaultBinding( ).hasElementClass( operationNameType ) ) {
+        currentBinding = BindingManager.getDefaultBinding( );
+        targetType = currentBinding.getElementClass( operationNameType );
+      } else {//this will necessarily fault.
+        try {
+          targetType = this.getBinding( ).getElementClass( operationName );
+        } catch ( BindingException ex ) {
+          LOG.error( ex , ex );
+          throw ex;
+        }
       }
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( BaseMessage ) targetType.newInstance( );
@@ -164,12 +189,19 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         errMsg.append( f.getKey( ) ).append( " = " ).append( f.getValue( ) ).append( '\n' );
       throw new BindingException( errMsg.toString( ) );
     }
+    
 //TODO:GRZE:REVIEW    
-//    try {
-//      BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
-//    } catch ( RuntimeException e ) {
-//      throw new BindingException( "Failed to build a valid message: " + e.getMessage( ) );
-//    }
+    try {
+      currentBinding.toOM( eucaMsg, this.getNamespace( ) );
+    } catch ( RuntimeException e ) {
+      LOG.error( "Falling back to default (unvalidated) binding for: " + operationName + " with params=" + params );
+      LOG.error( "Failed to build a valid message: " + e.getMessage( ), e );
+      try {
+        BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
+      } catch ( RuntimeException ex ) {
+        throw new BindingException( "Default binding failed to build a valid message: " + ex.getMessage( ), ex );
+      }
+    }
     return eucaMsg;
   }
   
@@ -298,7 +330,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   
   private Map<String, String> buildFieldMap( Class<?> targetType ) {
     Map<String, String> fieldMap = new HashMap<String, String>( );
-    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) ) {
+    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType ) && !BaseData.class.equals( targetType ) ) {
       Field[] fields = targetType.getDeclaredFields( );
       for ( Field f : fields ) {
         if ( Modifier.isStatic( f.getModifiers( ) ) )

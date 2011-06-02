@@ -2,6 +2,7 @@ package com.eucalyptus.ws.client;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -36,27 +38,17 @@ public abstract class ServiceDispatcher implements Dispatcher {
   
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
     try {
-      Service first = c.getServices( ).first( );
-      if ( !Component.State.ENABLED.equals( c.getServices( ).first( ).getState( ) ) ) {
+      ServiceConfiguration first = c.lookupServiceConfigurations( ).first( );
+      if ( !Component.State.ENABLED.isIn( first ) ) {
         LOG.error( "Failed to find service dispatcher for component=" + c );
-        throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: " + c.getServices( ) );
+        throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: " + c.lookupServiceConfigurations( ) );
       } else {
-        return first.getDispatcher( );
+        return first.lookupService( ).getDispatcher( );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( "Failed to find service dispatcher for component=" + c, ex );
       throw new NoSuchElementException( "Failed to find service for component=" + c );
     }
-  }
-  
-  public static Iterable<Dispatcher> lookupMany( Component c ) {
-    return Iterables.transform( c.enabledServices( ), new Function<Service, Dispatcher>( ) {
-      
-      @Override
-      public Dispatcher apply( Service arg0 ) {
-        return arg0.getDispatcher( );
-      }
-    } );
   }
   
   public static Dispatcher lookup( ServiceConfiguration config ) {
@@ -68,7 +60,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
   
   public static Dispatcher makeRemote( ServiceConfiguration configuration ) {
-    return new RemoteDispatcher( configuration, configuration.getComponentId( ).makeRemoteUri( configuration.getHostName( ), configuration.getPort( ) ) );
+    return new RemoteDispatcher( configuration, configuration.getComponentId( ).makeInternalRemoteUri( configuration.getHostName( ), configuration.getPort( ) ) );
   }
   
   public static Dispatcher makeLocal( ServiceConfiguration configuration ) {

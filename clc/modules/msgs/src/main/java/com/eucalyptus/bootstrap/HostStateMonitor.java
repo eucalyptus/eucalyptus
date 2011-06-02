@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -76,7 +76,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.SubjectMessageCallback;
@@ -107,13 +107,13 @@ public class HostStateMonitor implements EventListener<Event> {
         @Override
         public Request apply( final Host target ) {
           try {
-            if( target.getEndpoint( ) != null ) { 
-              final Request req = Callbacks.newRequest( new ServiceCallback( target ) );
+            if( target.getServiceConfiguration( ) != null ) { 
+              final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
               Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
                 
                 @Override
                 public void run( ) {
-                  req.dispatch( target.getEndpoint( ) );
+                  req.dispatch( target.getServiceConfiguration( ) );
                 }
               } );
               return req;

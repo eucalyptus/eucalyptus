@@ -132,14 +132,15 @@
   </mapping>
 
   <mapping name="ModifySnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
     <structure name="createVolumePermission" usage="optional">
       <collection name="add" field="addVolumePermission" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.VolumePermissionType" />
       </collection>
-      <collection name="remove" field="removeVolumePermission" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <collection name="remove" field="removeVolumePermission" usage="optional"
+        factory="org.jibx.runtime.Utility.arrayListFactory">
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.VolumePermissionType" />
       </collection>
     </structure>
@@ -149,27 +150,27 @@
     <value name="group" field="group" usage="optional" />
   </mapping>
   <mapping name="ModifySnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="ResetSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
   </mapping>
   <mapping name="ResetSnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
   <mapping name="DescribeSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
   </mapping>
   <mapping name="DescribeSnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType"
-      extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
     <collection name="createVolumePermission" field="createVolumePermission" usage="optional"

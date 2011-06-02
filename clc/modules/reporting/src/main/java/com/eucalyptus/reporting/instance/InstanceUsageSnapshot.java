@@ -1,12 +1,9 @@
 package com.eucalyptus.reporting.instance;
 
-import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.*;
+
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -20,16 +17,17 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
-class InstanceUsageSnapshot extends AbstractPersistent 
+class InstanceUsageSnapshot
+	extends AbstractPersistent 
 {
 	@Column(name="uuid", nullable=false)
-	protected final String uuid;
+	protected String uuid;
 	@Column(name="timestamp_ms", nullable=false)
-	protected final Long timestampMs;
+	protected Long timestampMs;
 	@Column(name="total_network_io_megs", nullable=true)
-	protected final Long networkIoMegs;
+	protected Long networkIoMegs;
 	@Column(name="total_disk_io_megs", nullable=true)
-	protected final Long diskIoMegs;
+	protected Long diskIoMegs;
 
 
 	protected InstanceUsageSnapshot()
@@ -77,5 +75,52 @@ class InstanceUsageSnapshot extends AbstractPersistent
 	{
 		return diskIoMegs;
 	}
+
+
+	@Override
+	public int hashCode()
+	{
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result
+				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
+		result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		InstanceUsageSnapshot other = (InstanceUsageSnapshot) obj;
+		if (timestampMs == null) {
+			if (other.timestampMs != null)
+				return false;
+		} else if (!timestampMs.equals(other.timestampMs))
+			return false;
+		if (uuid == null) {
+			if (other.uuid != null)
+				return false;
+		} else if (!uuid.equals(other.uuid))
+			return false;
+		return true;
+	}
+
+  /**
+   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
+   * supporting currently hand-coded proxy classes. Don't share this value with the user.
+   * 
+   * TODO: remove this if possible.
+   * @return
+   * @see {@link AbstractPersistent#getId()}
+   */
+  public String getEntityId( ) {
+    return this.getId( );
+  }
 
 }

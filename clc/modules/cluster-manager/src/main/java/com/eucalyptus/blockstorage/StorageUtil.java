@@ -67,16 +67,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.component.Service;
+import com.eucalyptus.component.NoSuchComponentException;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
@@ -96,77 +95,73 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
-  
-  public static Service getActiveSc( String partition ) throws NoSuchElementException {
-    Service sc;
-    NavigableSet<Service> partScs = Components.lookup( Storage.class ).lookupServices( partition );
-    sc = partScs.first( );
-    if( !Component.State.ENABLED.equals( sc.getState( ) ) ) {
-      throw new NoSuchElementException( "Failed to find the storage controller to service request for partition: " + partition + ".  This was best candidate: " + sc );
-    }
-    return sc;
-  }
-  
+    
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( Service service : Components.lookup(Storage.class).enabledServices( ) ) {
-      service.getDispatcher( ).dispatch( message );
+    for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
+      service.lookupService( ).getDispatcher( ).dispatch( message );
     }
   }
 
   public static ArrayList<edu.ucsb.eucalyptus.msgs.Volume> getVolumeReply( Map<String, AttachedVolume> attachedVolumes, List<Volume> volumes ) throws EucalyptusCloudException {
-    Multimap<String,Volume> clusterVolumeMap = HashMultimap.create( );
+    Multimap<String,Volume> partitionVolumeMap = HashMultimap.create( );
     Map<String,StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
     for( Volume v : volumes ) {
-      clusterVolumeMap.put( v.getCluster( ), v );
+      partitionVolumeMap.put( v.getPartition( ), v );
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
-    for( String cluster : clusterVolumeMap.keySet( ) ) {
-      ServiceConfiguration scConfig = getActiveSc( cluster ).getServiceConfiguration( );
-      Iterator<String> volumeNames = Iterators.transform( clusterVolumeMap.get( cluster ).iterator( ), new Function<Volume,String>() {
-        @Override
-        public String apply( Volume arg0 ) {
-          return arg0.getDisplayName( );
+    for( String partition : partitionVolumeMap.keySet( ) ) {
+      try {
+        ServiceConfiguration scConfig = Partitions.lookupService( Storage.class, partition );
+        Iterator<String> volumeNames = Iterators.transform( partitionVolumeMap.get( partition ).iterator( ), new Function<Volume,String>() {
+          @Override
+          public String apply( Volume arg0 ) {
+            return arg0.getDisplayName( );
+          }
+        } );
+        DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
+        Dispatcher sc = ServiceDispatcher.lookup( scConfig );
+        DescribeStorageVolumesResponseType volState = sc.send( descVols );    
+        for ( StorageVolume vol : volState.getVolumeSet( ) ) {
+          idStorageVolumeMap.put( vol.getVolumeId( ), vol );
         }
-      } );
-      DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-      Dispatcher sc = ServiceDispatcher.lookup( scConfig );
-      DescribeStorageVolumesResponseType volState = sc.send( descVols );    
-      for ( StorageVolume vol : volState.getVolumeSet( ) ) {
-        idStorageVolumeMap.put( vol.getVolumeId( ), vol );
-      }
-      for( Volume v : volumes ) {
-        if( !cluster.equals( v.getCluster( ) ) ) continue;
-        String status = null;
-        Integer size = 0;
-        String actualDeviceName = "unknown";
-        if( idStorageVolumeMap.containsKey( v.getDisplayName( ) ) ) {
-          StorageVolume vol = idStorageVolumeMap.get( v.getDisplayName( ) );
-          status = vol.getStatus( );
-          size = Integer.parseInt( vol.getSize( ) );
-          actualDeviceName = vol.getActualDeviceName( );
-        } else {
-          v.setState( State.ANNIHILATED );
+        for( Volume v : volumes ) {
+          if( !partition.equals( v.getPartition( ) ) ) continue;
+          String status = null;
+          Integer size = 0;
+          String actualDeviceName = "unknown";
+          if( idStorageVolumeMap.containsKey( v.getDisplayName( ) ) ) {
+            StorageVolume vol = idStorageVolumeMap.get( v.getDisplayName( ) );
+            status = vol.getStatus( );
+            size = Integer.parseInt( vol.getSize( ) );
+            actualDeviceName = vol.getActualDeviceName( );
+          } else {
+            v.setState( State.ANNIHILATED );
+          }
+          if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+            v.setState( State.BUSY );
+          } else if( status != null ) {
+            v.setMappedState( status );
+          }
+          if( v.getSize() <= 0 ) {
+            v.setSize( new Integer( size ) );
+          }
+          if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
+            v.setRemoteDevice( actualDeviceName );
+          }
+          edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
+          if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
+            aVolume.setStatus( v.mapState( ) );
+            aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+          }
+          if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
+            aVolume.setStatus( "creating" );
+          }
+          reply.add( aVolume );
         }
-        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-          v.setState( State.BUSY );
-        } else if( status != null ) {
-          v.setMappedState( status );
-        }
-        if( v.getSize() <= 0 ) {
-          v.setSize( new Integer( size ) );
-        }
-        if( "invalid".equals ( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
-          v.setRemoteDevice( actualDeviceName );
-        }
-        edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume() );
-        if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-          aVolume.setStatus( v.mapState( ) );
-          aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
-        }
-        if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
-          aVolume.setStatus( "creating" );
-        }
-        reply.add( aVolume );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      } catch ( NumberFormatException ex ) {
+        LOG.error( ex , ex );
       }
     }
     return reply;

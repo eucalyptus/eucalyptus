@@ -63,10 +63,13 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -74,9 +77,13 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.system.LogLevels;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.WebServicesException;
 
@@ -84,20 +91,20 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   private final Logger LOG = Logger.getLogger( this.getClass() );
 
   @Override
-  public void handleDownstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    if( LogLevels.EXTREME ) {
+  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
+    if( Logs.EXTREME ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     try {
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
         if( msgEvent.getMessage() != null ) {
-          this.outgoingMessage( channelHandlerContext, msgEvent );
+          this.outgoingMessage( ctx, msgEvent );
         } else {
           LOG.warn( "==> Outbound message is null!: " + LogUtil.dumpObject( channelEvent ) );
         }
       }
-      channelHandlerContext.sendDownstream( channelEvent );
+      ctx.sendDownstream( channelEvent );
     } catch ( Throwable e ) {
       LOG.error( e, e );
       throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
@@ -121,24 +128,46 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   }
 
   @Override
-  public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
-    if( LogLevels.EXTREME ) {
+  public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
+    if( Logs.EXTREME ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
       try {
-        this.incomingMessage( channelHandlerContext, msgEvent );
-        channelHandlerContext.sendUpstream( channelEvent );
+        this.incomingMessage( ctx, msgEvent );
+        ctx.sendUpstream( channelEvent );
       } catch ( LoginException e ) {
         LOG.error( e, e );
-        throw new WebServicesException( e.getMessage( ), HttpResponseStatus.FORBIDDEN );
+        if( msgEvent.getMessage( ) instanceof MappingHttpRequest ) {
+          MappingHttpResponse httpMessage = new MappingHttpResponse( ((HttpRequest) msgEvent.getMessage( )).getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) ;
+          ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+	  ChannelBuffer buffer = null;
+
+	  if(httpMessage.getSoapEnvelope() != null) {
+	      httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: does this need fixing for xml brokeness?
+	      buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
+	  } else {
+	  // TODO:GRZE it's needed for propagating replay detection messages in case on non-SOAP reqs
+	  // but the whole logic here needs checking, I think
+	  // also, a correct response should be in XML format
+	      buffer = ChannelBuffers.wrappedBuffer( e.getMessage().getBytes() );
+	  }
+
+          httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
+          httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
+          httpMessage.setContent( buffer );
+          Channels.write( ctx.getChannel( ), e );
+          throw e;
+        } else {
+          throw new WebServicesException( e.getMessage( ), HttpResponseStatus.FORBIDDEN );
+        }
       } catch ( Throwable e ) {
         LOG.error( e, e );
         throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
       } 
     } else {
-      channelHandlerContext.sendUpstream( channelEvent );
+      ctx.sendUpstream( channelEvent );
     }
   }
 }

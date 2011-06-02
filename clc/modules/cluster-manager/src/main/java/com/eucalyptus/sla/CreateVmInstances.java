@@ -99,15 +99,15 @@ public class CreateVmInstances {
     }
     User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
-    vmAllocInfo.setOwnerId( userFullName.getAccountId( ) );
+    vmAllocInfo.setOwnerFullName( userFullName );
     String action = PolicySpec.requestToAction( request );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances
-    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
+    if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
     }
     // Allocate vm instances
-    if ( !Permissions.canAllocate( PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
+    if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
     String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
@@ -144,11 +144,8 @@ public class CreateVmInstances {
   }
   
   private VmInstance getVmInstance( UserFullName userFullName, VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmInstance vmInst = new VmInstance( reservationId,
-                                        index - 1,
-                                        VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ),
-                                        userFullName,
-                                        token.getCluster( ),
+    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index - 1 ), reservationId, 
+                                        index - 1, token.getCluster( ),
                                         vmAllocInfo.getUserData( ),
                                         vmAllocInfo.getKeyInfo( ),
                                         vmAllocInfo.getVmTypeInfo( ),

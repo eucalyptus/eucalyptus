@@ -108,12 +108,12 @@
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder" />
 		<ant dir="modules/notifications" inheritall="false" target="builder" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder" />
+		<ant dir="modules/reporting" inheritall="false" target="builder" />
 		<ant dir="modules/walrus" inheritall="false" target="builder" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder" />
 		<ant dir="modules/storage-san" inheritall="false" target="builder" />
 		<ant dir="modules/dns" inheritall="false" target="builder" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder" />
-		<ant dir="modules/reporting" inheritall="false" target="builder" />
 	</target>
 	<target name="build-www">
 		<ant dir="modules/www" inheritall="false" target="builder" />
@@ -139,13 +139,13 @@
 		<ant dir="modules/cluster-manager" inheritall="false" target="builder-test" />
 		<ant dir="modules/notifications" inheritall="false" target="builder-test" />
 		<ant dir="modules/storage-common" inheritall="false" target="builder-test" />
+		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
 		<ant dir="modules/walrus" inheritall="false" target="builder-test" />
 		<ant dir="modules/storage-controller" inheritall="false" target="builder-test" />
 		<ant dir="modules/storage-san" inheritall="false" target="builder-test" />
 		<ant dir="modules/dns" inheritall="false" target="builder-test" />
 		<ant dir="modules/www" inheritall="false" target="builder-test" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="builder-test" />
-		<ant dir="modules/reporting" inheritall="false" target="builder-test" />
 	</target>
 	<target name="build-test-gwt">
 		<ant dir="modules/www" inheritall="false" target="builder-test" />
@@ -237,7 +237,7 @@
 	</target>
 
 	<!--================================== clean targets ==================================-->
-	<target name="clean">
+	<target name="clean-nowww">
 		<delete file="${bind.timestamp}" />
 		<ant dir="modules/msgs" inheritall="false" target="clean" />
 		<ant dir="modules/euare-common" inheritall="false" target="clean" />
@@ -258,9 +258,11 @@
 		<ant dir="modules/storage-san" inheritall="false" target="clean" />
 		<ant dir="modules/dns" inheritall="false" target="clean" />
 		<ant dir="modules/vmware-broker" inheritall="false" target="clean" />
-		<ant dir="modules/www" inheritall="false" target="clean" />
 		<ant dir="modules/reporting" inheritall="false" target="clean" />
 		<delete dir="${target.dir}" />
+	</target>
+	<target name="clean" depends="clean-nowww">
+	   <ant dir="modules/www" inheritall="false" target="clean" />
 	</target>
 	<target name="distclean" depends="clean">
 		<delete dir="${deps.dir}" />
@@ -284,15 +286,10 @@
 				<exclude name="**/gwt-dev-*.jar" />
 				<exclude name="**/gwt-soyc-vis-*.jar" />
 				<exclude name="**/gwt-user-*.jar" />
+				<exclude name="**/gwt-servlet-deps-*.jar" />
 			</fileset>
 		</copy>
-		<!--copy admin tools -->
 		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
-		<copy todir="${DESTDIR}${euca.bin.dir}" overwrite="true">
-			<fileset dir="${tools.dir}">
-				<include name="**/*" />
-			</fileset>
-		</copy>
 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
 			<include name="**/euca-*" />
 		</chmod>

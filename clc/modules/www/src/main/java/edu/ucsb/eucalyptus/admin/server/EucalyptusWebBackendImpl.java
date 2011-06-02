@@ -1219,7 +1219,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
     for( Component c : Components.list( ) ) {
-      for( Service s : c.getServices( ) ) {
+      for( ServiceConfiguration s : c.lookupServiceConfigurations( ) ) {
         reports.addAll( EucalyptusWebBackendImpl.getServiceLogInfo( s ) );
       }
     }
@@ -1255,16 +1255,15 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   }
 
   private static String SERVICE_GROUP = "service";
-  public static List<ReportInfo> getServiceLogInfo( Service s ) {
+  public static List<ReportInfo> getServiceLogInfo( ServiceConfiguration conf ) {
     List<ReportInfo> reports = new ArrayList<ReportInfo>();
-    ServiceConfiguration conf = s.getServiceConfiguration( );
     ComponentId compId = conf.getComponentId( );
     if( compId instanceof Walrus ) {
       String serviceFq = "Walrus @ "+conf.getHostName( );
       reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
-    } else if( compId  instanceof com.eucalyptus.component.id.Cluster ) {
+    } else if( compId  instanceof com.eucalyptus.component.id.ClusterController ) {
       reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
-      Cluster cluster = Clusters.getInstance( ).lookup( s.getServiceConfiguration( ).getName( ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( conf.getName( ) );
       for( String nodeTag : cluster.getNodeTags( ) ) {
         URI uri = URI.create( nodeTag );
         reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );

@@ -65,80 +65,91 @@
 
 <binding force-classes="true" add-constructors="true">
     <!--2008-05-05-->
-    <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Volume" ordered="false">
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="size" field="size" usage="optional"/>
-        <value name="snapshotId" field="snapshotId" usage="optional"/>
-        <value name="availabilityZone" field="availabilityZone" usage="required"/>
-        <value name="status" field="status" usage="required"/>
-        <value name="createTime" field="createTime" usage="required"/>
-        <collection name="attachmentSet" field="attachmentSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume"/>
-        </collection>
-    </mapping>
-    <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.AttachedVolume"  ordered="false">
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="device" field="device" usage="required"/>
-        <value name="status" field="status" usage="required"/>
-        <value name="attachTime" field="attachTime" usage="required"/>
-    </mapping>
+  <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.Volume" ordered="false">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="size" field="size" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="createTime" field="createTime" usage="required" />
+    <collection name="attachmentSet" field="attachmentSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume" />
+    </collection>
+  </mapping>
+  <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.AttachedVolume" ordered="false">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="device" field="device" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="attachTime" field="attachTime" usage="required" />
+  </mapping>
 
-    <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
-        <value name="size" field="size" usage="optional"/>
-        <value name="availabilityZone" field="availabilityZone" usage="required"/>
-        <value name="snapshotId" field="snapshotId" usage="optional"/>
-    </mapping>
-    <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
-        <value name="volumeId" field="volumeId" usage="required"/>
-    </mapping>
-    <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="device" field="device" usage="required"/>
-    </mapping>
-    <mapping name="DescribeVolumes" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
-        <collection name="volumeSet" field="volumeSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
-            <structure name="item">
-                <value name="volumeId"/>
-            </structure>
-        </collection>
-    </mapping>
-    <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" ordered="false" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional"/>
-        <value name="volumeId" field="volumeId" usage="required"/>
-        <value name="instanceId" field="instanceId" usage="required"/>
-        <value name="device" field="device" usage="required"/>
-        <value name="force" field="force" usage="required"/>
-    </mapping>
+  <mapping name="CreateVolume" class="edu.ucsb.eucalyptus.msgs.CreateVolumeType" ordered="false"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
+    <value name="size" field="size" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <value name="snapshotId" field="snapshotId" usage="optional" />
+  </mapping>
+  <mapping name="DeleteVolume" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeType" ordered="false"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+  </mapping>
+  <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" ordered="false"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="device" field="device" usage="optional" />
+  </mapping>
+  <mapping name="DescribeVolumes" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesType" ordered="false"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
+    <collection name="volumeSet" field="volumeSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="volumeId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" ordered="false"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="device" field="device" usage="optional" />
+    <value name="force" field="force" usage="optional" />
+  </mapping>
 
-    <mapping name="CreateVolumeResponse" class="edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure field="volume" map-as="edu.ucsb.eucalyptus.msgs.Volume"/>
-    </mapping>
+  <mapping name="CreateVolumeResponse" class="edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    ordered="false">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure field="volume" map-as="edu.ucsb.eucalyptus.msgs.Volume" />
+  </mapping>
 
-    <mapping name="DeleteVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
-    </mapping>
-    <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure field="attachedVolume" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume"/>
-    </mapping>
+  <mapping name="DeleteVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    ordered="false">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+  <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    ordered="false">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure field="attachedVolume" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume" />
+  </mapping>
 
-    <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <structure field="detachedVolume" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume"/>
-    </mapping>
+  <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    ordered="false">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure field="detachedVolume" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume" />
+  </mapping>
 
-    <mapping name="DescribeVolumesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
-        <collection name="volumeSet" field="volumeSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
-            <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Volume"/>
-        </collection>
-    </mapping>
+  <mapping name="DescribeVolumesResponse" class="edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
+    ordered="false">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <collection name="volumeSet" field="volumeSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.Volume" />
+    </collection>
+  </mapping>
 </binding>

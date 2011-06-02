@@ -2,9 +2,9 @@ package com.eucalyptus.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.system.LogLevels;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -21,7 +21,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return LogLevels.DEBUG ? string( ex ) : ex.getMessage( ); 
+    return Logs.EXTREME ? string( ex ) : ex.getMessage( ); 
   }
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null ? new RuntimeException() : ex );
@@ -29,8 +29,16 @@ public class Exceptions {
     PrintWriter p = new PrintWriter( os );
     t.printStackTrace( p );
     p.flush( );
+    for( Throwable cause = t.getCause( ); cause != null; cause = cause.getCause( ) ) {
+      p.print( "Caused by: " );
+      cause.printStackTrace( p );
+    }
     p.close( );
     return os.toString( );
+  }
+  
+  public static <T extends Throwable> UndeclaredThrowableException undeclared( String message, T ex ) {
+    return new UndeclaredThrowableException( ex, message );
   }
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
