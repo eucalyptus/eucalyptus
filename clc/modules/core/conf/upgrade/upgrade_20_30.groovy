@@ -83,6 +83,11 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.ImageUtil;
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
@@ -319,6 +324,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 	public boolean upgradeAuth() {
 		def conn = StandalonePersistence.getConnection("eucalyptus_auth");
 		def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
+		def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
 		conn.rows('SELECT * FROM auth_users').each {
 			def account = Accounts.addAccount( it.auth_user_name );
 			def user = account.addUser( it.auth_user_name, "/", true/* skipRegistration */, true/* enabled */, null);
@@ -346,9 +352,37 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				info.put("ProjectPI", uInfo.user_project_pi_name);
 				user.setInfo( info );
 			}
-			gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each {
+			gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
+				EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
 				def ufn = UserFullName.getInstance(user);
-				
+				println "Adding image ${img.image_name}"
+				def path = img.image_path.split("/"); 
+				def imgSize = walrus_conn.firstRow("""SELECT size FROM ImageCache 
+								WHERE bucket_name=${ path[0] }
+								AND manifest_name=${ path[1] }""")[0].toInteger();
+				def ii = null;
+				switch ( img.image_type ) {
+					case "kernel":
+					  ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
+												 "No Description", img.image_path, imgSize, 1,
+												 Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform) );
+					  break;
+					case "ramdisk":
+					  ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
+												  "No Description", img.image_path, imgSize, 1,
+												  Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform) );
+					  break;
+					case "machine":
+					  ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
+												  "No Description", img.image_path, imgSize, 1,
+												  Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform),
+												  img.image_kernel_id, img.image_ramdisk_id );
+					  break;
+				}
+				ii.setImagePublic(img.image_is_public);
+				ii.setImageType(Image.Type.valueOf(img.image_type));
+				dbGen.add(ii);
+				dbGen.commit();
 			}
 		}
 	}
@@ -391,15 +425,14 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
                                                 println "Peer: " + networkPeer;
                                         }
-                                	println "Network rule has ip ranges: " + networkRule.getIpRanges();
+                    println "Network rule has ip ranges: " + networkRule.getIpRanges();
 					rulesGroup.getNetworkRules().add(networkRule);
 				} 
 
-                                println "adding rules group: " + rulesGroup;
+                println "adding rules group: " + rulesGroup;
 				dbGen.add(rulesGroup);
 				dbGen.commit();
 			} catch (Throwable t) {
-                                println "failure!!!!!!!!!";
 				t.printStackTrace();
 				dbGen.rollback();
 				return false;
@@ -429,7 +462,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		entities.add(AOEMetaInfo.class);
 		entities.add(AOEVolumeInfo.class);
 		entities.add(CHAPUserInfo.class);
-                entities.add(ISCSIMetaInfo.class);
+        entities.add(ISCSIMetaInfo.class);
 		entities.add(ISCSIVolumeInfo.class);
 		entities.add(SnapshotInfo.class);
 		entities.add(VolumeInfo.class);
@@ -441,7 +474,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 		entities.add(BucketInfo.class);
 		entities.add(GrantInfo.class);
 		entities.add(ImageCacheInfo.class);
-                entities.add(MetaDataInfo.class);
+        entities.add(MetaDataInfo.class);
 		entities.add(ObjectInfo.class);
 		entities.add(TorrentInfo.class);
 		entities.add(WalrusInfo.class);
