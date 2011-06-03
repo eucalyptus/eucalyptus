@@ -63,42 +63,76 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.entities.EntityWrapper;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
-
-  private static Logger LOG = Logger.getLogger( AbstractConfigurableProperty.class );
-  private final String entrySetName;
-  private final String fieldName;
-  private final String qualifiedName;
-  private final String description;
-  private final PropertyTypeParser typeParser;
-  private final String defaultValue;
-  private final Class definingClass;
-  private final Constructor noArgConstructor;
-  private final Boolean readOnly;
-  private final String displayName;
-  private final ConfigurableFieldType widgetType;
-  private final String alias;
-  private final PropertyChangeListener changeListener;
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-    this( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, NoopEventListener.NOOP );
+  private static Logger                LOG = Logger.getLogger( AbstractConfigurableProperty.class );
+  private final String                 baseMethodName;
+  private final String                 entrySetName;
+  private final String                 fieldName;
+  private final String                 qualifiedName;
+  private final String                 description;
+  private final PropertyTypeParser     typeParser;
+  private final String                 defaultValue;
+  private final Class                  definingClass;
+  private final Constructor            noArgConstructor;
+  private final Boolean                readOnly;
+  private final String                 displayName;
+  private final ConfigurableFieldType  widgetType;
+  private final String                 alias;
+  private final PropertyChangeListener changeListener;
+  private final Field                  field;
+  private final Method                 get;
+  private final Method                 set;
+  private final Class[]                setArgs;
+  
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String propertyName, String defaultValue, String description,
+                                       PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
+    this( definingClass, entrySetName, field, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias,
+          NoopEventListener.NOOP );
   }
-
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
+  
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String propertyName, String defaultValue, String description,
+                                       PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
+                                       PropertyChangeListener changeListener ) {
     this.definingClass = definingClass;
+    this.field = field;
     try {
       this.noArgConstructor = this.definingClass.getConstructor( new Class[] {} );
+      this.noArgConstructor.setAccessible( true );
     } catch ( Exception ex ) {
       LOG.debug( "Known declared constructors: " + this.getDefiningClass( ).getDeclaredConstructors( ) );
       LOG.debug( "Known constructors: " + this.getDefiningClass( ).getConstructors( ) );
-      LOG.debug( ex , ex );
+      LOG.debug( ex, ex );
       throw new RuntimeException( ex );
+    }
+    this.setArgs = new Class[] { this.field.getType( ) };
+    try {
+      this.get = definingClass.getDeclaredMethod( "get" + this.baseMethodName );
+      this.get.setAccessible( true );
+    } catch ( Exception e ) {
+      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
+      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
+      LOG.debug( e, e );
+      throw new RuntimeException( e );
+    }
+    try {
+      this.set = definingClass.getDeclaredMethod( "set" + this.baseMethodName, this.setArgs );
+      this.set.setAccessible( true );
+    } catch ( Exception e ) {
+      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
+      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
+      LOG.debug( e, e );
+      throw new RuntimeException( e );
     }
     this.entrySetName = entrySetName.toLowerCase( );
     this.fieldName = propertyName.toLowerCase( );
+    this.baseMethodName = this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
     this.qualifiedName = this.entrySetName + "." + this.fieldName;
     this.description = description;
     this.typeParser = typeParser;
@@ -109,39 +143,83 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.alias = alias;
     this.changeListener = changeListener;
   }
-
+  
+  protected abstract Object getQueryObject( ) throws Exception;
+  
+  protected Method getSetter( ) {
+    return this.set;
+  }
+  
+  protected Method getGetter( ) {
+    return this.get;
+  }
+  
   public String getFieldName( ) {
     return this.fieldName;
   }
-
+  
   public String getEntrySetName( ) {
     return this.entrySetName;
   }
-
+  
   public String getQualifiedName( ) {
     return this.qualifiedName;
   }
-
+  
   public String getDescription( ) {
     return this.description;
   }
-
+  
   public PropertyTypeParser getTypeParser( ) {
     return this.typeParser;
   }
-
+  
   public String getDefaultValue( ) {
     return this.defaultValue;
   }
-
-  public abstract String getValue( );
-
-  public abstract String setValue( String s );
-
+  
+  public String getValue( ) {
+    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
+    try {
+      Object o = db.getUnique( this.getQueryObject( ) );
+      Method getter = this.getGetter( );
+      Object prop = null;
+      if ( getter != null ) {
+        prop = getter.invoke( o );
+      }
+      String result = prop != null
+        ? prop.toString( )
+        : "null";
+      db.commit( );
+      return result;
+    } catch ( Exception e ) {
+      db.rollback( );
+      return "Error: " + e.getMessage( );
+    }
+  }
+  
+  public String setValue( String s ) {
+    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
+    try {
+      Object o = db.getUnique( this.getQueryObject( ) );
+      Object prop = this.getTypeParser( ).parse( s );
+      this.fireChange( prop );
+      Method setter = this.getSetter( );
+      if ( setter != null ) {
+        setter.invoke( o, prop );
+      }
+      db.commit( );
+      return s;
+    } catch ( Exception e ) {
+      db.rollback( );
+      return "Error: " + e.getMessage( );
+    }
+  }
+  
   public void resetValue( ) {
     this.setValue( this.defaultValue );
   }
-
+  
   public Class getDefiningClass( ) {
     return this.definingClass;
   }
@@ -151,19 +229,19 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   public String getDisplayName( ) {
-	return this.displayName;
+    return this.displayName;
   }
   
   public ConfigurableFieldType getWidgetType( ) {
-	return this.widgetType;
+    return this.widgetType;
   }
   
-  public String getAlias() {
-	return this.alias;
+  public String getAlias( ) {
+    return this.alias;
   }
   
   protected void fireChange( Object newValue ) throws ConfigurablePropertyException {
-    if( !NoopEventListener.class.equals( this.changeListener.getClass( ) ) ) {
+    if ( !NoopEventListener.class.equals( this.changeListener.getClass( ) ) ) {
       this.changeListener.fireChange( this, newValue );
     }
   }

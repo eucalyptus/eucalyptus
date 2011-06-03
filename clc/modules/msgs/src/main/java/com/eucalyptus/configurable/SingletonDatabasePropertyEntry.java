@@ -1,103 +1,24 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.entities.EntityWrapper;
 
 public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( SingletonDatabasePropertyEntry.class );
-  private String        baseMethodName;
-  private final Method  get;
-  private final Method  set;
-  private String        persistenceContext;
-  private Class[]       setArgs;
   
   public SingletonDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue,
                                          PropertyTypeParser typeParser,
                                          Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
-    this.baseMethodName = field.getName( ).substring( 0, 1 ).toUpperCase( ) + field.getName( ).substring( 1 );
-    this.persistenceContext = ( ( PersistenceContext ) definingClass.getAnnotation( PersistenceContext.class ) ).name( );
-    this.setArgs = new Class[] { field.getType( ) };
-    try {
-      this.get = definingClass.getDeclaredMethod( "get" + this.baseMethodName );
-      this.get.setAccessible( true );
-    } catch ( Exception e ) {
-      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
-      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
-      LOG.debug( e, e );
-      throw new RuntimeException( e );
-    }
-    try {
-      this.set = definingClass.getDeclaredMethod( "set" + this.baseMethodName, this.setArgs );
-      this.set.setAccessible( true );
-    } catch ( Exception e ) {
-      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
-      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
-      LOG.debug( e, e );
-      throw new RuntimeException( e );
-    }
-  }
-  
-  private Method getSetter( ) {
-    return this.set;
-  }
-  
-  private Method getGetter( ) {
-    return this.get;
-  }
-  
-  private Object getQueryObject( ) throws Exception {
-    return super.getDefiningClass( ).newInstance( );
+    super( definingClass, entrySetName, field, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
   }
   
   @Override
-  public String getValue( ) {
-    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
-    try {
-      Object o = db.getUnique( this.getQueryObject( ) );
-      Method getter = this.getGetter( );
-      Object prop = null;
-      if ( getter != null ) {
-        prop = getter.invoke( o );
-      }
-      String result = prop != null
-        ? prop.toString( )
-        : "null";
-      db.commit( );
-      return result;
-    } catch ( Exception e ) {
-      db.rollback( );
-      return "Error: " + e.getMessage( );
-    }
+  protected Object getQueryObject( ) throws Exception {
+    return this.getNoArgConstructor( ).newInstance( );
   }
-  
-  @Override
-  public String setValue( String s ) {
-    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
-    try {
-      Object o = db.getUnique( this.getQueryObject( ) );
-      Object prop = this.getTypeParser( ).parse( s );
-      this.fireChange( prop );
-      Method setter = this.getSetter( );
-      if ( setter != null ) {
-        setter.invoke( o, prop );
-      }
-      db.commit( );
-      return s;
-    } catch ( Exception e ) {
-      db.rollback( );
-      return "Error: " + e.getMessage( );
-    }
-  }
-  
-  @Override
-  public void resetValue( ) {}
   
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
     private static Logger LOG = Logger.getLogger( SingletonDatabasePropertyEntry.DatabasePropertyBuilder.class );
