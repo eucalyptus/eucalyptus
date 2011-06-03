@@ -65,6 +65,7 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.EntityWrapper;
@@ -72,7 +73,6 @@ import com.eucalyptus.entities.EntityWrapper;
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
   
   private static Logger                LOG = Logger.getLogger( AbstractConfigurableProperty.class );
-  private final String                 baseMethodName;
   private final String                 entrySetName;
   private final String                 fieldName;
   private final String                 qualifiedName;
@@ -87,8 +87,8 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   private final String                 alias;
   private final PropertyChangeListener changeListener;
   private final Field                  field;
-  private final Method                 get;
-  private final Method                 set;
+  private final Method                 getter;
+  private final Method                 setter;
   private final Class[]                setArgs;
   
   public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String defaultValue, String description,
@@ -104,7 +104,6 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.field = field;
     this.fieldName = this.field.getName( ).toLowerCase( );
     this.entrySetName = entrySetName.toLowerCase( );
-    this.baseMethodName = this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
     this.qualifiedName = this.entrySetName + "." + this.fieldName;
     this.description = description;
     this.typeParser = typeParser;
@@ -124,32 +123,27 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       throw new RuntimeException( ex );
     }
     this.setArgs = new Class[] { this.field.getType( ) };
-    this.get = this.getReflectedMethod( "get" + this.baseMethodName );
-    this.set = this.getReflectedMethod( "set" + this.baseMethodName, this.setArgs );
+    this.getter = this.getReflectedMethod( "get", this.field );
+    this.setter = this.getReflectedMethod( "set", this.field, this.setArgs );
   }
-
-  private Method getReflectedMethod( String name, Class... setArgs2 ) {
+  
+  private Method getReflectedMethod( String namePrefix, Field field, Class... setArgs2 ) {
     try {
+      String name = namePrefix + this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
       Method m = definingClass.getDeclaredMethod( name, setArgs2 );
       m.setAccessible( true );
       return m;
     } catch ( Exception e ) {
-      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
-      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
-      LOG.debug( e, e );
+      if( !Modifier.isStatic( field.getModifiers( ) ) ) {
+        LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
+        LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
+        LOG.debug( e, e );
+      }
       return null;
     }
   }
   
   protected abstract Object getQueryObject( ) throws Exception;
-  
-  protected Method getSetter( ) {
-    return this.set;
-  }
-  
-  protected Method getGetter( ) {
-    return this.get;
-  }
   
   public String getFieldName( ) {
     return this.fieldName;
@@ -179,11 +173,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
     try {
       Object o = db.getUnique( this.getQueryObject( ) );
-      Method getter = this.getGetter( );
-      Object prop = null;
-      if ( getter != null ) {
-        prop = getter.invoke( o );
-      }
+      Object prop = this.getter.invoke( o );
       String result = prop != null
         ? prop.toString( )
         : "null";
@@ -201,10 +191,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       Object o = db.getUnique( this.getQueryObject( ) );
       Object prop = this.getTypeParser( ).parse( s );
       this.fireChange( prop );
-      Method setter = this.getSetter( );
-      if ( setter != null ) {
-        setter.invoke( o, prop );
-      }
+      this.setter.invoke( o, prop );
       db.commit( );
       return s;
     } catch ( Exception e ) {
@@ -242,15 +229,15 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       this.changeListener.fireChange( this, newValue );
     }
   }
-
+  
   public Boolean getReadOnly( ) {
     return this.readOnly;
   }
-
+  
   public PropertyChangeListener getChangeListener( ) {
     return this.changeListener;
   }
-
+  
   public Field getField( ) {
     return this.field;
   }
