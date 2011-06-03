@@ -140,4 +140,5 @@ uninstall:
 run-test:
 	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.EucaImagerTest
 	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.BrokerInterfaceTest
-	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointTest -Dvsphere.url=$(VSPHERE_URL) -Dvsphere.login=$(VSPHERE_LOGIN) -Dvsphere.password=$(VSPHERE_PASSWORD)
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointAsyncTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}
