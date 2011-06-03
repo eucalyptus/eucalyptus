@@ -47,7 +47,7 @@ except ImportError:
 def euca_except_hook(debugger_flag, debug_flag):
     def excepthook(typ, value, tb):
         if typ is bdb.BdbQuit:
-            sys.exit(1) 
+            sys.exit(1)
         sys.excepthook = sys.__excepthook__
 
         if debugger_flag and sys.stdout.isatty() and sys.stdin.isatty():
@@ -122,13 +122,13 @@ class EucaConf(object):
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
-        self.parser.add_option('--register-cluster', 
+        self.parser.add_option('--register-cluster',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name',
                                                            'host_name']},
                                help='add new cluster to EUCALYPTUS')
-        self.parser.add_option('--deregister-cluster', 
+        self.parser.add_option('--deregister-cluster',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name']},
@@ -250,17 +250,17 @@ class EucaConf(object):
                                dest='do_setup', default=False,
                                help='perform initial setup')
         self.parser.add_option('--enable {cloud|sc|walrus|vmwarebroker}',
-                               action='store', type='choice',
+                               action='append', type='choice',
                                choices=['cloud', 'sc', 'walrus',
                                         'vmwarebroker'],
-                               dest='enable_what', metavar='<service>',
+                               dest='enable_whats', metavar='<service>',
                                help='enable service at next start}')
         self.parser.add_option('--disable {cloud|sc|walrus|vmwarebroker',
-                               action='store', type='choice',
+                               action='append', type='choice',
                                choices=['cloud', 'sc', 'walrus',
                                         'vmwarebroker'],
-                               dest='disable_what', metavar='<service>',
-                               help='disable service at next start')
+                               dest='disable_whats', metavar='<service>',
+                               help='disable service at next start}')
         self.parser.add_option('--check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}',
                                action='store', type='choice',
                                choices=['nc', 'cc', 'cloud', 'sc',
@@ -350,7 +350,7 @@ class EucaConf(object):
         considered an error.
 
         The explicit options take precedence over positional args.
-        
+
         Any options supplied prior to the --register-* option
         can be found by looking in the parser.values data
         for the appropriate variable name
@@ -446,22 +446,24 @@ class EucaConf(object):
             sys.exit(req.status)
 
     def do_enable(self):
-        if self.options.enable_what:
-            if self.options.enable_what not in EnableableServices:
-                print 'enable requires one of %s' % EnableableServices
-                sys.exit(1)
-            cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.enable_what, True)
-            req.main()
+        if (self.options.enable_whats):
+            for enable_what in self.options.enable_whats:
+                if enable_what not in EnableableServices:
+                    print 'enable requires one of %s' % EnableableServices
+                    sys.exit(1)
+                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
+                req = cls(self.config, enable_what, True)
+                req.main()
 
     def do_disable(self):
-        if self.options.disable_what:
-            if self.options.disable_what not in EnableableServices:
-                print 'disable requires one of %s' % EnableableServices
-                sys.exit(1)
-            cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.disable_what, False)
-            req.main()
+        if (self.options.disable_whats):
+            for disable_what in self.options.disable_whats:
+                if disable_what not in EnableableServices:
+                    print 'disable requires one of %s' % EnableableServices
+                    sys.exit(1)
+                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
+                req = cls(self.config, disable_what, False)
+                req.main()
 
     def do_heartbeat(self):
         if self.options.heartbeat:
@@ -648,13 +650,15 @@ class EucaConf(object):
             msg = 'INFO: We expect all nodes to have eucalyptus'
             msg += ' installed in $EUCALYPTUS for key synchronization.'
             print msg
-            nodes_to_add = self.options.reg_nodes
             current_nodes = self.config['NODES'].split()
-            for node in nodes_to_add:
-                if node not in current_nodes:
-                    current_nodes.append(node)
-                if not self._sync_node(node):
-                    self.print_sync_error()
+
+            for node_string in self.options.reg_nodes:
+                nodes_to_add = node_string.split()
+                for node in nodes_to_add:
+                    if node not in current_nodes:
+                        current_nodes.append(node)
+                    if not self._sync_node(node):
+                        self.print_sync_error()
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
