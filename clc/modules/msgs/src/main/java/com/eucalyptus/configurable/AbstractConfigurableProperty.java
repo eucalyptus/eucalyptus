@@ -124,23 +124,20 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       throw new RuntimeException( ex );
     }
     this.setArgs = new Class[] { this.field.getType( ) };
+    this.get = this.getReflectedMethod( "get" + this.baseMethodName );
+    this.set = this.getReflectedMethod( "set" + this.baseMethodName, this.setArgs );
+  }
+
+  private Method getReflectedMethod( String name, Class... setArgs2 ) {
     try {
-      this.get = definingClass.getDeclaredMethod( "get" + this.baseMethodName );
-      this.get.setAccessible( true );
+      Method m = definingClass.getDeclaredMethod( name, setArgs2 );
+      m.setAccessible( true );
+      return m;
     } catch ( Exception e ) {
       LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
       LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
       LOG.debug( e, e );
-//      throw new RuntimeException( e );
-    }
-    try {
-      this.set = definingClass.getDeclaredMethod( "set" + this.baseMethodName, this.setArgs );
-      this.set.setAccessible( true );
-    } catch ( Exception e ) {
-      LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
-      LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
-      LOG.debug( e, e );
-//      throw new RuntimeException( e );
+      return null;
     }
   }
   
