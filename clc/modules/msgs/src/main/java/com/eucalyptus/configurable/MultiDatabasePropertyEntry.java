@@ -9,16 +9,14 @@ import org.hibernate.annotations.Entity;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
-  protected String      baseMethodName;
   protected Method      setIdentifier;
-  protected Field       field;
   protected Field       identifierField;
   protected String      identifierValue;
   
   public MultiDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, Field identifierField, String description, String defaultValue,
                                      PropertyTypeParser typeParser,
                                      Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, String identifierValue ) {
-    super( definingClass, entrySetName, field, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
     this.identifierField = identifierField;
     String identifiedMethodName = identifierField.getName( ).substring( 0, 1 ).toUpperCase( ) + identifierField.getName( ).substring( 1 );
     this.identifierValue = identifierValue;
@@ -82,8 +80,8 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   @Override
   public String getEntrySetName( ) {
     if ( identifierValue != null )
-      return identifierValue + "." + this.getEntrySetName( );
-    else return this.getEntrySetName( );
+      return identifierValue + "." + super.getEntrySetName( );
+    else return super.getEntrySetName( );
   }
   
   @Override
@@ -94,7 +92,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   }
   
   public MultiDatabasePropertyEntry getClone( String identifierValue ) {
-    return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), field, identifierField, this.getDescription( ), this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ), 
+    return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), this.getField( ), identifierField, this.getDescription( ), this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ), 
                                            this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), identifierValue );
   }
 }

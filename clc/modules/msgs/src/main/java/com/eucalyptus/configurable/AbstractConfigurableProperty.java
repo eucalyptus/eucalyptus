@@ -91,19 +91,19 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   private final Method                 set;
   private final Class[]                setArgs;
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String propertyName, String defaultValue, String description,
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String defaultValue, String description,
                                        PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-    this( definingClass, entrySetName, field, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias,
+    this( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias,
           NoopEventListener.NOOP );
   }
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String propertyName, String defaultValue, String description,
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String defaultValue, String description,
                                        PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
                                        PropertyChangeListener changeListener ) {
     this.definingClass = definingClass;
     this.field = field;
+    this.fieldName = this.field.getName( ).toLowerCase( );
     this.entrySetName = entrySetName.toLowerCase( );
-    this.fieldName = propertyName.toLowerCase( );
     this.baseMethodName = this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
     this.qualifiedName = this.entrySetName + "." + this.fieldName;
     this.description = description;
@@ -249,5 +249,9 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 
   public PropertyChangeListener getChangeListener( ) {
     return this.changeListener;
+  }
+
+  public Field getField( ) {
+    return this.field;
   }
 }

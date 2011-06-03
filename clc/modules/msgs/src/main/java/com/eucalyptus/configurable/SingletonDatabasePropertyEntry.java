@@ -12,7 +12,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   public SingletonDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue,
                                          PropertyTypeParser typeParser,
                                          Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-    super( definingClass, entrySetName, field, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
   }
   
   @Override
