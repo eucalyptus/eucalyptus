@@ -4,11 +4,13 @@ import java.util.*;
 
 import org.mortbay.log.Log;
 
+import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.units.Units;
 
 public class S3ReportLineGenerator
+	implements ReportLineGenerator<S3ReportLine>
 {
 	private static S3ReportLineGenerator instance;
 	

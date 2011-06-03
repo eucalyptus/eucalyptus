@@ -5,10 +5,12 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.units.Units;
 
 public class InstanceReportLineGenerator
+	implements ReportLineGenerator<InstanceReportLine>
 {
 	private static Logger log = Logger.getLogger( InstanceReportLineGenerator.class );
 
