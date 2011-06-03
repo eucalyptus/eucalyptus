@@ -52,15 +52,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 			+ "&criterion=" + criteria
 			+ "&groupByCriterion=" + groupBy;
 
-	  Timer t = new Timer( ) {
 
-	      @Override
-	      public void run( ) {
-	        clientFactory.getReportView( ).loadReport( reportUrl );
-	      }
-	      
-	    };
-	    t.schedule( 2000 );
+	  clientFactory.getReportView( ).loadReport( reportUrl );
   }
   
   @Override
@@ -103,15 +96,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 		+ "&criterion=" + criteria
 		+ "&groupByCriterion=" + groupBy;
   	
-	  Timer t = new Timer( ) {
-
-      @Override
-      public void run( ) {
-        clientFactory.getReportView( ).loadReport( reportUrl );
-      }
-      
-    };
-    t.schedule( 2000 );
+    clientFactory.getReportView( ).loadReport( reportUrl );
 
     this.sessionId = sessionId;
     this.fromDate = fromDate;
