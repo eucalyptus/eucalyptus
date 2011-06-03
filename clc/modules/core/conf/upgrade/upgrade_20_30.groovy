@@ -35,6 +35,16 @@ import edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
 
+// Images
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.LaunchPermission;
+import com.eucalyptus.images.ProductCode;
+import com.eucalyptus.images.ImageUtil;
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
+import com.eucalyptus.cloud.Image;
+
 // Storage
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
@@ -72,7 +82,6 @@ import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
-
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
@@ -82,12 +91,6 @@ import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ImageUtil;
-import com.eucalyptus.images.KernelImageInfo;
-import com.eucalyptus.images.MachineImageInfo;
-import com.eucalyptus.images.RamdiskImageInfo;
-import com.eucalyptus.cloud.Image;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
@@ -361,6 +364,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				println "Adding image ${img.image_name}"
 				def path = img.image_path.split("/");
 				// TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
+                // Do I have to actually fetch and read the manifest?
 				def imgSize = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
 								WHERE bucket_name=${ path[0] }
 								AND manifest_name=${ path[1] }""").sz.toInteger();
@@ -386,10 +390,24 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				ii.setImagePublic(img.image_is_public);
 				ii.setImageType(Image.Type.valueOf(img.image_type));
 				ii.setSignature(img.image_signature);
-				dbGen.add(ii);
-				dbGen.commit();
+                dbGen.add(ii);
+                dbGen.commit();
+                gen_conn.rows("""SELECT image_product_code_value FROM image_product_code
+                                 JOIN image_has_product_codes USING (image_product_code_id)
+                                 WHERE image_id=${ img.image_id }""").each { prodCode ->
+                    EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
+                    dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
+                    dbPC.commit();
+                }
+                gen_conn.rows("""SELECT * FROM image_authorization
+                                 JOIN image_has_user_auth USING (image_auth_id)
+                                 WHERE image_id=${ img.image_id }""").each { imgAuth ->
+                    EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
+                    dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
+                    dbLP.commit();
+                }
 			}
-            
+
             image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
                 EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
                 def vol_meta = stor_conn.firstRow("""SELECT * FROM Volumes WHERE volume_name=${ vol.displayname }""");
