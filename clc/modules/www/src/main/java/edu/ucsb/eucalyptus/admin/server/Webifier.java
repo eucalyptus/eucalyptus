@@ -73,7 +73,7 @@ public class Webifier {
     if ( !user.getName( ).equals( uif.getUserName( ) ) ) {
       user.setName( uif.getUserName( ) );
     }
-    if ( user.getPasswordExpires( ) != uif.getPasswordExpires( ) ) {
+    if ( !user.getPasswordExpires( ).equals( uif.getPasswordExpires( ) ) ) {
       user.setPasswordExpires( uif.getPasswordExpires( ) );
     }
     Map<String, String> info = Maps.newHashMap( );

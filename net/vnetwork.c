@@ -679,6 +679,9 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
       runcount++;
     }
   }
+
+  if(hashChain)
+     free(hashChain);
   
   return(0);
 }
@@ -833,6 +836,7 @@ int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName) {
   char cmd[256];
   int rc;
   char *hashChain=NULL, userNetString[MAX_PATH];
+  int ret = 1;
   
   snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
   rc = hash_b64enc_string(userNetString, &hashChain);
@@ -843,10 +847,13 @@ int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName) {
 
   if ((userName && netName) && !check_chain(vnetconfig, userName, netName)) {
     snprintf(cmd, 256, "-F %s", hashChain);
-    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-    return(rc);
+    ret = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
   }
-  return(1);
+
+  if(hashChain)
+     free(hashChain);
+
+  return ret;
 }
 
 int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
@@ -931,6 +938,8 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
   destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
   if (destVlan < 0) {
     logprintfl(EUCAERROR,"vnetTableRule(): no vlans associated with active network %s/%s\n", destUserName, destName);
+    if(hashChain)
+       free(hashChain);
     return(1);
   }
   
@@ -943,6 +952,8 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
     srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
     if (srcVlan < 0) {
       logprintfl(EUCAWARN,"vnetTableRule(): cannot locate active source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
+      if(hashChain)
+	 free(hashChain);
       return(0);
     } else {
       tmp = hex2dot(vnetconfig->networks[srcVlan].nw);
@@ -962,6 +973,8 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
     //    snprintf(rule, 1024, "iptables -D %s-%s", destUserName, destName);
   }
   
+  free(hashChain);
+
   snprintf(newrule, 1024, "%s -s %s -d %s", rule, srcNet, dstNet);
   strcpy(rule, newrule);
   
@@ -995,6 +1008,7 @@ int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *
       return(1);
     }
   }
+
   return(0);
 }
 
@@ -1031,6 +1045,7 @@ int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, i
 
   if (!vnetconfig || !outusers || !outnets || !len) {
     logprintfl(EUCAERROR, "vnetGetAllVlans(): bad input parameters\n");
+    return(1);
   }
   
   *outusers = malloc(sizeof (char *) * vnetconfig->max_vlan);
@@ -1069,6 +1084,7 @@ int vnetGetAllVlans(vnetConfig *vnetconfig, char ***outusers, char ***outnets, i
 	}
 	if (net) free(net);
       }
+      if(chain) free(chain);
     }
   }
 
@@ -2260,12 +2276,14 @@ int vnetAddPublicIP(vnetConfig *vnetconfig, char *inip) {
 	  char *theipstr=NULL, *themacstr=NULL;
 	  theipstr = hex2dot(theip);
 	  //	  themacstr = ipdot2macdot(theipstr, "D0:0D");
-	  themacstr = ipdot2macdot(theipstr, vnetconfig->macPrefix);
+	  if(theipstr)
+	     themacstr = ipdot2macdot(theipstr, vnetconfig->macPrefix);
+
 	  if (theipstr && themacstr) {
 	    vnetRefreshHost(vnetconfig, themacstr, theipstr, 0, -1);
-	    free(themacstr);
-	    free(theipstr);
 	  }
+	  if(themacstr) free(themacstr);
+	  if(theipstr) free(theipstr);
 	} else {
 	  vnetconfig->publicips[found].ip = theip;
 	}
@@ -2394,11 +2412,15 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
   // determine if reassign must happen
   if (isallocated) {
     rc = vnetUnassignAddress(vnetconfig, src, currdst);
-    if (currdst) free(currdst);
+    //if (currdst) free(currdst);
     if (rc) {
-      return(1);
+       if (currdst) free(currdst);
+       return(1);
     }
   }
+
+  // not used anymore
+  if (currdst) free(currdst);
 
   // do the (re)assign
   if (!dst || !strcmp(dst, "0.0.0.0")) {
@@ -2770,6 +2792,8 @@ int check_chain(vnetConfig *vnetconfig, char *userName, char *netName) {
 
   snprintf(cmd, MAX_PATH, "-L %s -n", hashChain);
   rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+
+  free(hashChain);
   return(rc);
 }
 

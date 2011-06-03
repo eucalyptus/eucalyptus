@@ -68,6 +68,8 @@ import java.io.InputStreamReader;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Date;
+import java.util.Vector;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -75,36 +77,42 @@ import org.apache.log4j.Logger;
 import org.apache.ws.security.SOAPConstants;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSSConfig;
+import org.apache.ws.security.WSSecurityEngineResult;
 import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.message.EnvelopeIdResolver;
 import org.apache.ws.security.message.token.BinarySecurity;
 import org.apache.ws.security.message.token.Reference;
 import org.apache.ws.security.message.token.SecurityTokenReference;
+import org.apache.ws.security.message.token.Timestamp;
 import org.apache.ws.security.message.token.X509Security;
+import org.apache.ws.security.processor.TimestampProcessor;
 import org.apache.ws.security.util.WSSecurityUtil;
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.keys.KeyInfo;
+import org.apache.xml.security.signature.SignedInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
+import org.apache.xml.security.signature.XMLSignatureInput;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
-import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
+
 
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
   private static CertificateFactory factory;
+ 
   static {
     org.apache.xml.security.Init.init( );
     WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
     WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
     WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
   }
-  
+   
   public static CertificateFactory getCertificateFactory( ) {
     if ( factory == null ) {
       try {
@@ -119,8 +127,10 @@ public class WSSecurity {
   }
   
   private static boolean useBc = false;
+ 
   
-  public static X509Certificate verifySignature( final Element securityNode, final XMLSignature sig ) throws WSSecurityException, XMLSignatureException {
+  public static X509Certificate verifySignature( final Element securityNode, final XMLSignature sig ) 
+  	throws WSSecurityException, XMLSignatureException, XMLSecurityException {
     final SecurityTokenReference secRef = WSSecurity.getSecurityTokenReference( sig.getKeyInfo( ) );
     final Reference tokenRef = secRef.getReference( );
     Element bstDirect = WSSecurityUtil.getElementByWsuId( securityNode.getOwnerDocument( ), tokenRef.getURI( ) );
@@ -156,8 +166,131 @@ public class WSSecurity {
     }
     if ( !sig.checkSignatureValue( cert ) ) {
       throw new WSSecurityException( WSSecurityException.FAILED_CHECK );
-    }
+    } 
+    
+    verifyReferences(sig);
     return cert;
+  }
+  
+  /**
+   * Verifies that signed Timestamp is not expired and that signed Body
+   * is subelement of root SOAP element (that's what expected by
+   * subsequent request processing logic)
+   *  
+   * @param sig
+   * @return
+   * @throws WSSecurityException
+   * @throws XMLSignatureException
+   */
+  private static boolean verifyReferences(XMLSignature sig) 
+  	throws WSSecurityException, XMLSignatureException, XMLSecurityException {
+	  
+	  if ( sig.getSignedInfo() == null ) throw new WSSecurityException( WSSecurityException.SECURITY_TOKEN_UNAVAILABLE, "SignedInfo" );
+	  SignedInfo si = sig.getSignedInfo();
+
+	  boolean tsSigned = false;
+	  boolean bdSigned = false;
+	  
+	  for(int i = 0; i < si.getLength(); i++) {
+
+		  org.apache.xml.security.signature.Reference ref = si.item(i);
+		  String uri = ref.getURI();
+		 
+		  if("".compareTo(uri) == 0) {
+			  throw new XMLSignatureException("signature.Transform.NotYetImplemented", new Object[]{"XPath"});
+			 
+		  }
+
+		  XMLSignatureInput xmlInput = ref.getContentsBeforeTransformation();		  
+
+		  if(xmlInput.isElement()) {
+			  Node subNode = xmlInput.getSubNode();
+			  String name = subNode.getLocalName();
+			  LOG.debug("Reference: name = " + subNode.getNodeName() + ", type = " + subNode.getNodeType());
+
+			  if(WSConstants.TIMESTAMP_TOKEN_LN.compareTo(name) == 0) {
+			          verifyTimestamp(subNode);
+				  tsSigned = true;
+			  } else if(WSConstants.ELEM_BODY.compareTo(name) == 0) {
+				  verifyBodyLocation(subNode);
+				  bdSigned = true;
+			  }
+
+		  } else {
+			  throw new XMLSignatureException("generic.NotYetImplemented",
+					  new Object[]{"References to multiple elements"});
+		  }
+
+	  }
+	  
+	  if(!tsSigned)
+		  throw new WSSecurityException(WSSecurityException.FAILED_CHECK, 
+				  "requiredElementNotSigned",
+				  new Object[]{WSConstants.TIMESTAMP_TOKEN_LN});
+	  if(!bdSigned)
+		  throw new WSSecurityException(WSSecurityException.FAILED_CHECK, 
+				  "requiredElementNotSigned",
+				  new Object[]{WSConstants.ELEM_BODY});
+
+	  return true;
+  }
+  
+  private static void verifyTimestamp(Node node) throws WSSecurityException {
+	  TimestampProcessor tsProc = new TimestampProcessor();
+	 
+	  LOG.debug("Timestamp: " + node);
+	  
+	  // can't call handleTimestamp() directly because 
+	  // the config will not be set in that case
+	  // all null-params are not used by handleToken()
+	  Vector retResults = new Vector();
+	  tsProc.handleToken((Element)node, null, null, null, null, retResults, WSSConfig.getDefaultWSConfig());
+	  
+	  // need to make sure that the timestamp's valid period
+	  // is at least as long as the request caching time
+	  Timestamp ts = (Timestamp)((WSSecurityEngineResult)retResults.get(0)).get(WSSecurityEngineResult.TAG_TIMESTAMP);
+	  LOG.debug("timestamp: " + ts);
+	 
+	  Date expires = ts.getExpires().getTime();
+	 
+	  // TODO: GRZE throw an exception that will result in 
+	  // an error response sent back to the user
+	  if(!SecurityContext.validateTimestampPeriod(expires))
+		  throw new WSSecurityException("Timestamp expiration is too far in the future");
+	  
+  }
+  
+  /**
+   * Checks that Body element is located inside 
+   * the main <soap:Envelope> element
+   * 
+   * @param node
+   * @throws WSSecurityException
+   */
+  private static void verifyBodyLocation(Node node) throws WSSecurityException {
+	 
+	  Node parent = node.getParentNode();
+	  LOG.debug("processing " + node.getNodeName() + ", parent = " + parent.getNodeName());
+	  
+	  if(parent == null || (WSConstants.ELEM_ENVELOPE.compareTo(parent.getLocalName()) != 0))
+	      throw new WSSecurityException("Unexpected parent element for signed <Body>");
+	      /*
+		  throw new WSSecurityException(WSSecurityException.FAILED_CHECK, 
+				  "badElement",  
+						new Object[] {WSConstants.ELEM_ENVELOPE, parent.getNodeName()});
+	      */
+	  int depth = 0;
+	  while(parent != null) {
+		  depth++;
+		  parent = parent.getParentNode();
+	  }
+	  
+	  if(depth != 2) {
+	      LOG.debug("depth of " + node.getNodeName() + " is " + depth);
+	      throw new WSSecurityException("Unexpected location of signed <Body>");
+	  }
+		  /*throw new WSSecurityException(WSSecurityException.FAILED_CHECK, "badElement",
+		    new Object[]{"<Body> at depth 2", "<Body> at depth " + depth});*/
   }
   
   public static XMLSignature getXmlSignature( final Element signatureNode ) throws WSSecurityException {
@@ -205,6 +338,7 @@ public class WSSecurity {
   }
   
   public static Element getSecurityElement( SOAPEnvelope envelope ) {
+	 // get security header 
     final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), envelope.getXMLStreamReader( ) );
     final OMElement elem = doomBuilder.getDocumentElement( );
     elem.build( );

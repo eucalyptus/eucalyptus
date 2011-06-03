@@ -333,7 +333,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   
   @Override
   public boolean shareSameAccount( String userId1, String userId2 ) {
-    if ( userId1 == userId2 ) {
+    if ( userId1.equals( userId2 ) ) {
       return true;
     }
     if ( userId1 == null || userId2 == null ) {
@@ -424,6 +424,25 @@ public class DatabaseAuthProvider implements AccountProvider {
       Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
       throw new AuthException( "Failed to find access key", e );      
     }
+  }
+
+  @Override
+  public User lookupUserByConfirmationCode( String code ) throws AuthException {
+    if ( code == null ) {
+      throw new AuthException( "Empty confirmation code to search" );
+    }
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    UserEntity example = new UserEntity( );
+    example.setConfirmationCode( code );
+    try {
+      UserEntity user = db.getUnique( example );
+      db.commit( );
+      return new DatabaseUserProxy( user );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
+    }   
   }
   
 }

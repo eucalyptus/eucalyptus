@@ -543,12 +543,7 @@ void *startup_thread (void * arg)
         change_state (instance, SHUTOFF);
         goto free;
     }
-    error = vnetStartInstanceNetwork(nc_state.vnetconfig, instance->ncnet.vlan, instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac);
-    if (error) {
-        logprintfl(EUCAFATAL, "[%s] start instance network failed for instance, terminating it\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
-    }
+
     strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
     if (nc_state.config_use_virtio_net) {
         instance->params.nicType = NIC_TYPE_VIRTIO;
@@ -1129,7 +1124,7 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
     return ret;
 }
 
-int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState, int *previousState)
+int doTerminateInstance (ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
 	int ret; 
 
@@ -1139,9 +1134,9 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int *shutdownState,
 	logprintfl (EUCAINFO, "[%s] doTerminateInstance: invoked\n", instanceId);
     
 	if (nc_state.H->doTerminateInstance) 
-		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
+		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, force, shutdownState, previousState);
 	else 
-		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, shutdownState, previousState);
+		ret = nc_state.D->doTerminateInstance(&nc_state, meta, instanceId, force, shutdownState, previousState);
     
 	return ret;
 }

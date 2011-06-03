@@ -634,6 +634,8 @@ char* java_library_path(euca_opts *args) {
 	}
 	closedir(lib_dir_p);
 	lib_dir_p = opendir(lib_dir);
+	if(!lib_dir_p)
+	   __die(1, "Can't open library directory %s", lib_dir);
 	while ((dir_ent = readdir(lib_dir_p)) != 0) {
 		if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
 				!= 0 && strcmp(dir_ent->d_name, "openjdk-crypto.jar") != 0
@@ -795,6 +797,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 		;
 	__die(ret < 0, "Failed to create JVM");
 	java_load_bootstrapper();
+	dlclose(libjvm_handle);
 	return 1;
 }
 

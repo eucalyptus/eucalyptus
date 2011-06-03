@@ -8,7 +8,7 @@ public class SearchResultCache {
 
   private static final Logger LOG = Logger.getLogger( SearchResultCache.class.getName( ) );
   
-  private static final SearchRange NULL_SORT = new SearchRange( -1, 0, -1, true );
+  private static final SearchRange NULL_SORT = new SearchRange( -1, 0, -999, true );
   
   private SearchRange sort = NULL_SORT;
   private int totalSize = 0;
@@ -54,11 +54,12 @@ public class SearchResultCache {
       LOG.log( Level.INFO, "Not the same sort: " + this.sort + " vs. " + range );
       return null;
     }
-    if ( range.getStart( ) + range.getLength( ) > this.rows.size( ) ) {
+    int realSize = Math.min( range.getLength( ), this.totalSize - range.getStart( ) );
+    if ( range.getStart( ) + realSize > this.rows.size( ) ) {
       LOG.log( Level.INFO, "Outside of range: cache size=" + this.rows.size( ) );
       return null;
     }
-    for ( int i = 0; i < range.getLength( ); i++ ) {
+    for ( int i = 0; i < realSize; i++ ) {
       if ( this.rows.get( i + range.getStart( ) ) == null ) {
         LOG.log( Level.INFO, "Hole at " + ( i + range.getStart( ) ) );
         return null;
@@ -66,7 +67,7 @@ public class SearchResultCache {
     }
     SearchResult result = new SearchResult( this.totalSize, range );
     result.setDescs( this.descs );
-    result.addRows( this.rows.subList( range.getStart( ), range.getStart( ) + range.getLength( ) ) );
+    result.addRows( this.rows.subList( range.getStart( ), range.getStart( ) + realSize ) );
     return result;
   }
 
@@ -83,6 +84,7 @@ public class SearchResultCache {
       this.sort = newResult.getRange( );
       this.totalSize = newResult.getTotalSize( );
       this.descs.addAll( newResult.getDescs( ) );
+      LOG.log( Level.INFO, "After restart: " + this.getDescs( ) );
     }
   }
   

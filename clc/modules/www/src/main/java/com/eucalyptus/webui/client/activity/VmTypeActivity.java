@@ -14,7 +14,7 @@ import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.VmTypeView;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class VmTypeActivity extends AbstractSearchResultActivity implements VmTypeView.Presenter, DetailView.Presenter {
+public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView.Presenter, DetailView.Presenter {
 
   public static final String TITLE = "VIRTUAL MACHINE TYPES";
   
@@ -47,7 +47,7 @@ public class VmTypeActivity extends AbstractSearchResultActivity implements VmTy
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
       LOG.log( Level.WARNING, "No valid values or empty selection" );
     }
@@ -107,5 +107,4 @@ public class VmTypeActivity extends AbstractSearchResultActivity implements VmTy
     ( ( VmTypeView ) this.view ).showSearchResult( result );
   }
 
-  
 }

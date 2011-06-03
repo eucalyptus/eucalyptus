@@ -177,8 +177,12 @@ public class WalrusControl {
 
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-		storageManager = BackendStorageManagerFactory.getStorageManager();
-		storageManager.setRootDirectory(walrusInfo.getStorageDir());
+                try {
+			storageManager = BackendStorageManagerFactory.getStorageManager();
+			storageManager.setRootDirectory(walrusInfo.getStorageDir());
+		} catch (Exception ex) {
+			LOG.error (ex);
+		}
 		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
 		walrusManager = new WalrusManager(storageManager, walrusImageManager);
 		WalrusManager.configure();
@@ -198,7 +202,9 @@ public class WalrusControl {
 			WalrusProperties.enableVirtualHosting = false;
 		}
 		try {
-			storageManager.start();
+			if (storageManager != null) {
+				storageManager.start();
+			}
 		} catch(EucalyptusCloudException ex) {
 			LOG.error("Error starting storage backend: " + ex);			
 		}

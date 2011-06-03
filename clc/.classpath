@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
     <classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
+    <classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
     <classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
     <classpathentry kind="src" path="modules/cluster-manager/conf/scripts"/>
     <classpathentry kind="src" output="modules/component/build" path="modules/component/src/main/java"/>

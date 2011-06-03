@@ -43,6 +43,7 @@ diskfile * df_create (const char * path, const long long limit_bytes, boolean ze
 
     if (limit_bytes < MIN_DF_BYTES) {
         logprintfl (EUCAERROR, "error: disk file must be at least %d bytes\n", MIN_DF_BYTES);
+        free(df);
         return NULL;
     }
 
@@ -79,6 +80,7 @@ diskfile * df_open (const char * path)
     df->limit_bytes = round_down_sec (file_size (path));
     if (df->limit_bytes < MIN_DF_BYTES) {
         logprintfl (EUCAERROR, "error: disk file must be at least %d bytes\n", MIN_DF_BYTES);
+        free(df);
         return NULL;
     }
 

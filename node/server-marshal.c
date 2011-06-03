@@ -606,6 +606,13 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncTerminateInstanceType_get_instanceId(input, env);
+    axis2_bool_t forceBool = adb_ncTerminateInstanceType_get_force(input, env);
+    int force=0;
+    if (forceBool == AXIS2_TRUE) {
+      force = 1;
+    } else {
+      force = 0;
+    }
 
     //    eventlog("NC", userId, correlationId, "TerminateInstance", "begin");
     { // do it
@@ -614,7 +621,7 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
 	EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
         int shutdownState, previousState;
 
-        int error = doTerminateInstance (&meta, instanceId, &shutdownState, &previousState);
+        int error = doTerminateInstance (&meta, instanceId, force, &shutdownState, &previousState);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doTerminateInstance() failed error=%d\n", error);
