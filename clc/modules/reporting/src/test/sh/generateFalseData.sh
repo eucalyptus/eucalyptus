@@ -3,6 +3,9 @@
 #
 # Generates fake reporting data
 #
+# Be sure to build the test classes and install them before running this as it
+#  relies upon them. From /clc, execute ant build-test install
+#
 # Author: Tom Werges
 #
 
