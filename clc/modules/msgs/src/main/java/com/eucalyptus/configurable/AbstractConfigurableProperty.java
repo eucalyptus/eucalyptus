@@ -102,6 +102,18 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
                                        PropertyChangeListener changeListener ) {
     this.definingClass = definingClass;
     this.field = field;
+    this.entrySetName = entrySetName.toLowerCase( );
+    this.fieldName = propertyName.toLowerCase( );
+    this.baseMethodName = this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
+    this.qualifiedName = this.entrySetName + "." + this.fieldName;
+    this.description = description;
+    this.typeParser = typeParser;
+    this.defaultValue = defaultValue;
+    this.readOnly = readOnly;
+    this.displayName = displayName;
+    this.widgetType = widgetType;
+    this.alias = alias;
+    this.changeListener = changeListener;
     try {
       this.noArgConstructor = this.definingClass.getConstructor( new Class[] {} );
       this.noArgConstructor.setAccessible( true );
@@ -130,18 +142,6 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       LOG.debug( e, e );
       throw new RuntimeException( e );
     }
-    this.entrySetName = entrySetName.toLowerCase( );
-    this.fieldName = propertyName.toLowerCase( );
-    this.baseMethodName = this.field.getName( ).substring( 0, 1 ).toUpperCase( ) + this.field.getName( ).substring( 1 );
-    this.qualifiedName = this.entrySetName + "." + this.fieldName;
-    this.description = description;
-    this.typeParser = typeParser;
-    this.defaultValue = defaultValue;
-    this.readOnly = readOnly;
-    this.displayName = displayName;
-    this.widgetType = widgetType;
-    this.alias = alias;
-    this.changeListener = changeListener;
   }
   
   protected abstract Object getQueryObject( ) throws Exception;
