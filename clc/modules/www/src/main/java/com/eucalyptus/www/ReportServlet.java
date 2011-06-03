@@ -67,8 +67,9 @@ public class ReportServlet
 		
 		/* Generate the report and send it thru the OutputStream
 		 */
-		ReportGenerator.generateReport(reportType, format, period, criterion,
-				groupByCriterion, displayUnits,	res.getOutputStream());
+		ReportGenerator.getInstance().generateReport(reportType, format,
+				period, criterion, groupByCriterion, displayUnits,
+				res.getOutputStream());
 	  
 	}
 
