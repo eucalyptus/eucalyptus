@@ -24,7 +24,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     this.identifierValue = identifierValue;
   }
   
-  private Object getQueryObject( ) throws Exception {
+  protected Object getQueryObject( ) throws Exception {
     Object queryObject = super.getDefiningClass( ).newInstance( );
     setIdentifier.invoke( queryObject, identifierValue );
     return queryObject;
