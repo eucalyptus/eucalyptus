@@ -131,7 +131,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
       LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
       LOG.debug( e, e );
-      throw new RuntimeException( e );
+//      throw new RuntimeException( e );
     }
     try {
       this.set = definingClass.getDeclaredMethod( "set" + this.baseMethodName, this.setArgs );
@@ -140,7 +140,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       LOG.debug( "Known declared methods: " + this.getDefiningClass( ).getDeclaredMethods( ) );
       LOG.debug( "Known methods: " + this.getDefiningClass( ).getMethods( ) );
       LOG.debug( e, e );
-      throw new RuntimeException( e );
+//      throw new RuntimeException( e );
     }
   }
   
