@@ -100,7 +100,7 @@ public class ImageConfiguration extends AbstractPersistent {
   @Column( name = "config_image_default_ramdisk_id" )
   private String        defaultRamdiskId;
   
-  protected ImageConfiguration( ) {
+  public ImageConfiguration( ) {
     super( );
   }
   
