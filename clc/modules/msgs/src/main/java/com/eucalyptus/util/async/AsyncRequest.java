@@ -1,16 +1,20 @@
 package com.eucalyptus.util.async;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
-  private static Logger LOG = Logger.getLogger( AsyncRequest.class );
+  private static Logger                     LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> callback;
   private final CheckedListenableFuture<R>  requestResult;
   private final CheckedListenableFuture<R>  result;
@@ -25,27 +29,27 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     this.handler = new AsyncRequestHandler<Q, R>( this.requestResult );
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.callback = new TwiceChecked<Q, R>( ) {
-
+      
       @Override
       public void fireException( Throwable t ) {
         try {
           cb.fireException( t );
           AsyncRequest.this.result.setException( t );
         } catch ( Throwable ex ) {
-          AsyncRequest.this.result.setException( ex );
-          LOG.error( ex , ex );
+          AsyncRequest.this.result.setException( t );
+          LOG.error( ex, ex );
         }
         try {
           AsyncRequest.this.callbackSequence.fireException( t );
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
-
+      
       @Override
       public void fire( R r ) {
         try {
-          if( Logs.EXTREME ) { 
+          if ( Logs.EXTREME ) {
             LOG.debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
@@ -54,7 +58,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
             AsyncRequest.this.callbackSequence.fire( r );
           } catch ( Throwable ex ) {
             AsyncRequest.this.result.setException( ex );
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         } catch ( RuntimeException ex ) {
           LOG.error( ex, ex );
@@ -65,10 +69,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
       }
-
+      
       @Override
       public void initialize( Q request ) throws Exception {
-        if( Logs.EXTREME ) { 
+        if ( Logs.EXTREME ) {
           LOG.debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
       }
@@ -87,23 +91,34 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     return this.dispatch( serviceConfig );
   }
   
+//  @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
+  public static Integer NUM_WORKERS = 8;
+  
   /**
    * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
    * @param cluster
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceConfig ) {
-//    serviceConfig.lookupService( ).enqueue( this );
-    CheckedListenableFuture<R> ret = this.execute( serviceConfig ).getResponse( );
+  public CheckedListenableFuture<R> dispatch( final ServiceConfiguration serviceConfig ) {
+    Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
+                                                                                                                                    
+                                                                                                                                    @Override
+                                                                                                                                    public CheckedListenableFuture<R> call( ) throws Exception {
+                                                                                                                                      return AsyncRequest.this.execute( serviceConfig ).getResponse( );
+                                                                                                                                    }
+                                                                                                                                  } );
     try {
-      ret.get( );
+      res.get( ).get( );
+      return res.get( );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
+      return Futures.predestinedFailedFuture( ex );
     } catch ( InterruptedException ex ) {
-      LOG.error( ex , ex );
+      Thread.currentThread( ).interrupt( );
+      LOG.error( ex, ex );
+      return Futures.predestinedFailedFuture( ex );
     }
-    return ret;//this.getResponse( );
   }
   
   /**
@@ -166,16 +181,16 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           this.result.set( this.requestResult.get( ) );
         } catch ( ExecutionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           this.result.setException( ex.getCause( ) );
         } catch ( InterruptedException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           Thread.currentThread( ).interrupt( );
           this.result.setException( ex );
         }
       }
     } catch ( RuntimeException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       this.result.setException( ex );
       throw ex;
     }
@@ -256,11 +271,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   protected void setRequest( Q request ) {
     this.request = request;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "AsyncRequest:callback=%s", this.callback );
   }
-  
   
 }
