@@ -385,7 +385,7 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
-            logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%d format=%s %s\n", 
+            logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n", 
                         instanceId, i, vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
             if (!strcmp(vbr->typeName, "machine")) 
                 found_image = 1;

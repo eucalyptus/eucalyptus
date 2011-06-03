@@ -69,6 +69,12 @@ permission notice:
                               wsu:Id="CertId-469">[..snip..]</wsse:BinarySecurityToken>
       [..snip..]
       <ds:Signature>
+        <ds:SignedInfo>
+	  <!-- <ref-id> points to a signed element. Body, Timestamp, To, Action, and MessageId element are expected to be signed-->
+	  <ds:Reference URI="#<ref-id>>
+	  [..snip..]
+	  </ds:Reference>
+	</ds:SignedInfo>
         <ds:KeyInfo Id="KeyId-374652">
           <wsse:SecurityTokenReference xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" wsu:Id="STRId-22112351">
             <!-- this thing points to the wsse:BinarySecurityToken above -->
@@ -90,6 +96,10 @@ permission notice:
 #include "rampart_error.h"
 #include "axis2_op_ctx.h"
 #include "rampart_context.h"
+#include "rampart_constants.h"
+#include "axis2_addr.h"
+#include "axiom_util.h"
+#include "rampart_timestamp_token.h"
 
 #include <neethi_policy.h>
 #include <neethi_util.h>
@@ -220,6 +230,10 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," ---------------------------------------------------" );
       NO_U_FAIL("The certificate specified is invalid!");
     }
+    if(verify_references(sig_node, env, out_msg_ctx, soap_envelope) == AXIS2_FAILURE) {
+      return AXIS2_FAILURE;
+  }
+
   }
   else 
   {
@@ -228,9 +242,196 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
   }
   oxs_x509_cert_free(_cert, env);
   oxs_x509_cert_free(recv_cert, env);
+
   return AXIS2_SUCCESS;
 
 }
+
+/**
+ * Verifes that Body, Timestamp, To, Action, and MessageId elements are signed and located
+ * where expected by the application logic. Timestamp is checked for expiration regardless
+ * of its actual location.
+ */
+axis2_status_t verify_references(axiom_node_t *sig_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, axiom_soap_envelope_t *envelope) {
+  axiom_node_t *si_node = NULL;
+  axiom_node_t *ref_node = NULL;
+  axis2_status_t status = AXIS2_SUCCESS;
+
+  si_node = oxs_axiom_get_first_child_node_by_name(env,sig_node, OXS_NODE_SIGNEDINFO, OXS_DSIG_NS, OXS_DS);
+
+  if(!si_node) {
+    axis2_char_t *tmp = axiom_node_to_string(sig_node, env);
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart]sig = %s", tmp);
+    NO_U_FAIL("Couldn't find SignedInfo!");
+  }
+
+  axutil_qname_t *qname = NULL;
+  axiom_element_t *parent_elem = NULL; 
+  axiom_children_qname_iterator_t *qname_iter = NULL; 
+
+  parent_elem = axiom_node_get_data_element(si_node, env);  
+  if(!parent_elem)                                                                                                                          
+    {                                                                                                                                        
+       NO_U_FAIL("Could not get Reference elem");                                                                                                                           
+    }     
+
+  axis2_char_t *ref = NULL;
+  axis2_char_t *ref_id = NULL;
+  axiom_node_t *signed_node = NULL;
+  axiom_node_t *envelope_node = NULL;
+
+  short signed_elems[5] = {0,0,0,0,0};
+
+  envelope_node = axiom_soap_envelope_get_base_node(envelope, env);
+
+  qname = axutil_qname_create(env, OXS_NODE_REFERENCE, OXS_DSIG_NS, NULL);                                                                            
+  qname_iter = axiom_element_get_children_with_qname(parent_elem, env, qname, si_node); 
+  while (axiom_children_qname_iterator_has_next(qname_iter , env)) {
+      ref_node = axiom_children_qname_iterator_next(qname_iter, env);     
+      axis2_char_t *txt = axiom_node_to_string(ref_node, env); 
+
+      /* get reference to a signed element */
+      ref = oxs_token_get_reference(env, ref_node);
+      if(ref == NULL || strlen(ref) == 0 || ref[0] != '#') {
+	oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unsupported reference ID in %s", txt);
+	status = AXIS2_FAILURE;
+	break;
+      }
+
+      AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] %s, ref = %s", txt, ref); 
+  
+      /* get rid of '#' */
+      ref_id = axutil_string_substring_starting_at(axutil_strdup(env, ref), 1);
+      signed_node = oxs_axiom_get_node_by_id(env, envelope_node, OXS_ATTR_ID, ref_id, OXS_WSU_XMLNS);
+      if(!signed_node) {
+	  oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Error retrieving elementwith ID=%s", ref_id);
+	  status = AXIS2_FAILURE;
+	  break;
+      }
+      if(verify_node(signed_node, env, msg_ctx, ref, signed_elems)) {
+	status = AXIS2_FAILURE;
+	break;
+      }
+    }         
+
+  
+  axutil_qname_free(qname, env);                                                                                                           
+  qname = NULL;                   
+  
+  if(status == AXIS2_FAILURE) {
+    NO_U_FAIL("Failed to verify location of signed elements!");
+  }
+
+  /* This is needed to make sure that all security-critical elements are signed */
+  for(int i = 0; i < 5; i++) {
+    if(signed_elems[i] == 0) {
+      NO_U_FAIL("Not all required elements are signed");
+    }
+  }
+
+  return status;
+
+}
+
+/**
+ * Verifies XPath location of signed elements.
+ */ 
+int verify_node(axiom_node_t *signed_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, axis2_char_t *ref, short *signed_elems) {
+
+  if(!axutil_strcmp(OXS_NODE_BODY, axiom_util_get_localname(signed_node, env))) {
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is Body", ref); 
+    signed_elems[0] = 1;
+
+    axiom_node_t *parent = axiom_node_get_parent(signed_node,env);
+    if(axutil_strcmp(OXS_NODE_ENVELOPE, axiom_util_get_localname(parent, env))) {
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unexpected parent element for Body with ID = %s", ref);
+       return 1;
+    }
+
+     parent = axiom_node_get_parent(parent,env);
+     if(parent) {
+       AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] parent of Envelope = %s", axiom_node_to_string(parent, env));
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unexpected location of signed Body with ID = %s", ref);
+       return 1;
+     }
+
+  } else if(!axutil_strcmp(RAMPART_SECURITY_TIMESTAMP, axiom_util_get_localname(signed_node, env))) {
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is Timestamp", ref); 
+    signed_elems[1] = 1;
+
+    /* Regardless of the location of the Timestamp, verify the one that is signed */
+    if(AXIS2_FAILURE == rampart_timestamp_token_validate(env, msg_ctx, signed_node, 20)) {
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for Timestamp with ID = %s", ref);
+      return 1;
+    }
+
+  } else if(!axutil_strcmp(AXIS2_WSA_ACTION, axiom_util_get_localname(signed_node, env))) {
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is Action", ref); 
+    signed_elems[2] = 1;
+
+    if(verify_addr_hdr_elem_loc(signed_node, env, ref)) {
+	oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for Action with ID = %s", ref);
+	return 1;
+      }
+
+  } else if(!axutil_strcmp(AXIS2_WSA_TO, axiom_util_get_localname(signed_node, env))) {
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is To", ref); 
+    signed_elems[3] = 1;
+ 
+    if(verify_addr_hdr_elem_loc(signed_node, env, ref)) {
+	oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for To with ID = %s", ref);
+	return 1;
+      }
+
+
+  } else if(!axutil_strcmp(AXIS2_WSA_MESSAGE_ID, axiom_util_get_localname(signed_node, env))) {
+    AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is MessageId", ref); 
+    signed_elems[4] = 1;
+
+    if(verify_addr_hdr_elem_loc(signed_node, env, ref)) {
+	oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for MessageId with ID = %s", ref);
+	return 1;
+      }
+
+  } else {
+    AXIS2_LOG_WARNING(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is UNKNOWN", ref); 
+  }
+
+    return 0;
+}
+
+/**
+ * Verify that an addressing element is located in <Envelope>/<Header>
+ */
+int verify_addr_hdr_elem_loc(axiom_node_t *signed_node, const axutil_env_t *env, axis2_char_t *ref) {
+
+    axiom_node_t *parent = axiom_node_get_parent(signed_node,env);
+
+    if(axutil_strcmp(OXS_NODE_HEADER, axiom_util_get_localname(parent, env))) {
+       AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] parent of addressing elem is %s", axiom_node_to_string(parent, env));
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unexpected location of signed addressing elem with ID = %s", ref);
+       return 1;
+
+    }
+     parent = axiom_node_get_parent(parent,env);
+
+    if(axutil_strcmp(OXS_NODE_ENVELOPE, axiom_util_get_localname(parent, env))) {
+       AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] second parent of addressing elem is %s", axiom_node_to_string(parent, env));
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unexpected location of signed addressing elem with ID = %s", ref);
+       return 1;
+
+    }
+
+     parent = axiom_node_get_parent(parent,env);
+     if(parent) {
+       AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] parent of Envelope = %s", axiom_node_to_string(parent, env));
+       oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Unexpected location of signed Body with ID = %s", ref);
+       return 1;
+     }
+
+     return 0;
+}
+
 
 int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile) {
   axis2_svc_client_t *svc_client = NULL;

@@ -52,6 +52,9 @@
                                 <g:Anchor styleName="{style.links}" ui:field="profileLink">View/change profile</g:Anchor>
                             </div>
                             <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="keyLink">View access key</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
                                 <g:Anchor styleName="{style.links}" ui:field="passwordLink">Change password</g:Anchor>
                             </div>
                             <div style="margin-bottom:8px;">

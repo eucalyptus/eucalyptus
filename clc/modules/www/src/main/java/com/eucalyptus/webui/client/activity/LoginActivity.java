@@ -3,6 +3,8 @@ package com.eucalyptus.webui.client.activity;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
+import com.eucalyptus.webui.client.place.ApplyPlace;
+import com.eucalyptus.webui.client.place.ApplyPlace.ApplyType;
 import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
 import com.eucalyptus.webui.client.service.Session;
@@ -78,6 +80,21 @@ public class LoginActivity extends AbstractActivity implements LoginView.Present
     } else {
       this.clientFactory.getLifecyclePlaceController( ).goTo( new ShellPlace( session ) );
     }
+  }
+
+  @Override
+  public void onAccountSignup( ) {
+    this.clientFactory.getLifecyclePlaceController( ).goTo( new ApplyPlace( ApplyType.ACCOUNT ) );
+  }
+
+  @Override
+  public void onUserSignup( ) {
+    this.clientFactory.getLifecyclePlaceController( ).goTo( new ApplyPlace( ApplyType.USER ) );
+  }
+
+  @Override
+  public void onRecoverPassword( ) {
+    this.clientFactory.getLifecyclePlaceController( ).goTo( new ApplyPlace( ApplyType.PASSWORD_RESET ) );
   }
 
 }
