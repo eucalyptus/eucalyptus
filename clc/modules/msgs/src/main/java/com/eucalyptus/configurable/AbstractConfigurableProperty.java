@@ -62,31 +62,41 @@
  */
 package com.eucalyptus.configurable;
 
+import java.lang.reflect.Constructor;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
 
   private static Logger LOG = Logger.getLogger( AbstractConfigurableProperty.class );
-  protected String entrySetName;
-  private String fieldName;
-  protected String qualifiedName;
-  protected String description;
-  protected PropertyTypeParser typeParser;
-  protected String defaultValue;
-  protected Class definingClass;
-  protected Boolean readOnly;
-  protected String displayName;
-  protected ConfigurableFieldType widgetType;
-  protected String alias;
-  private PropertyChangeListener changeListener;
+  private final String entrySetName;
+  private final String fieldName;
+  private final String qualifiedName;
+  private final String description;
+  private final PropertyTypeParser typeParser;
+  private final String defaultValue;
+  private final Class definingClass;
+  private final Constructor noArgConstructor;
+  private final Boolean readOnly;
+  private final String displayName;
+  private final ConfigurableFieldType widgetType;
+  private final String alias;
+  private final PropertyChangeListener changeListener;
   
-  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
-    this( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
-    this.changeListener = changeListener;
-  }
   public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
+    this( definingClass, entrySetName, propertyName, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, NoopEventListener.NOOP );
+  }
+
+  public AbstractConfigurableProperty( Class definingClass, String entrySetName, String propertyName, String defaultValue, String description, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
     this.definingClass = definingClass;
+    try {
+      this.noArgConstructor = this.definingClass.getConstructor( new Class[] {} );
+    } catch ( Exception ex ) {
+      LOG.debug( "Known declared constructors: " + this.getDefiningClass( ).getDeclaredConstructors( ) );
+      LOG.debug( "Known constructors: " + this.getDefiningClass( ).getConstructors( ) );
+      LOG.debug( ex , ex );
+      throw new RuntimeException( ex );
+    }
     this.entrySetName = entrySetName.toLowerCase( );
     this.fieldName = propertyName.toLowerCase( );
     this.qualifiedName = this.entrySetName + "." + this.fieldName;
@@ -97,7 +107,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.displayName = displayName;
     this.widgetType = widgetType;
     this.alias = alias;
-    this.changeListener = NoopEventListener.NOOP;
+    this.changeListener = changeListener;
   }
 
   public String getFieldName( ) {
@@ -134,6 +144,10 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 
   public Class getDefiningClass( ) {
     return this.definingClass;
+  }
+  
+  public Constructor getNoArgConstructor( ) {
+    return this.noArgConstructor;
   }
   
   public String getDisplayName( ) {
