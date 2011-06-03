@@ -326,6 +326,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 	public boolean upgradeAuth() {
 		def conn = StandalonePersistence.getConnection("eucalyptus_auth");
 		def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
+        def image_conn = StandalonePersistence.getConnection("eucalyptus_images");
+        def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
 		def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
 		conn.rows('SELECT * FROM auth_users').each {
 			def account = Accounts.addAccount( it.auth_user_name );
@@ -352,10 +354,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 			info.put("ProjectDescription", uInfo.user_project_description);
 			info.put("ProjectPI", uInfo.user_project_pi_name);
 			user.setInfo( info );
-			
+            def ufn = UserFullName.getInstance(user);
+            
 			gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
 				EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
-				def ufn = UserFullName.getInstance(user);
 				println "Adding image ${img.image_name}"
 				def path = img.image_path.split("/");
 				// TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
@@ -387,9 +389,29 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 				dbGen.add(ii);
 				dbGen.commit();
 			}
+            
+            image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
+                EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
+                def vol_meta = stor_conn.firstRow("""SELECT * FROM Volumes WHERE volume_name=${ vol.displayname }""");
+                Volume v = new Volume( ufn, vol.displayname, vol.size, vol_meta.sc_name, vol.cluster, vol.parentsnapshot );
+                v.setMappedState(vol.state);
+                v.setLocalDevice(vol.localdevice);
+                v.setRemoteDevice(vol.remotedevice);
+                dbVol.add(v);
+                dbVol.commit();
+            }
+            image_conn.rows("""SELECT * FROM Snapshot WHERE username=${ it.auth_user_name }""").each { snap ->
+                EntityWrapper<Snapshot> dbSnap = EntityWrapper.get(Snapshot.class);
+                def snap_meta = stor_conn.firstRow("""SELECT * FROM Snapshots WHERE snapshot_name=${ snap.displayname }""");
+                def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
+                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, snap.cluster);
+                dbSnap.add(s);
+                dbSnap.commit();
+            }
 		}
+        return true;
 	}
-	
+
 	public boolean upgradeWalrus() {
 		def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
 		walrus_conn.rows('SELECT * FROM Buckets').each{
