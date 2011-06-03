@@ -43,14 +43,39 @@ public class AccountViewImpl extends Composite implements AccountView {
 
   @UiHandler( "newButton" )
   void handleNewButtonClick( ClickEvent e ) {
-    
+    this.presenter.onCreateAccount( );
   }
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteAccounts( );
   }
   
+  @UiHandler( "addUsersButton" )
+  void handleAddUsersButtonClick( ClickEvent e ) {
+    this.presenter.onCreateUsers( );
+  }
+
+  @UiHandler( "addGroupsButton" )
+  void handleAddGroupsButtonClick( ClickEvent e ) {
+    this.presenter.onCreateGroups( );
+  }
+
+  @UiHandler( "addPolicyButton" )
+  void handleAddPolicyButtonClick( ClickEvent e ) {
+    this.presenter.onAddPolicy( );
+  }
+
+  @UiHandler( "approveButton" )
+  void handleApproveButtonClick( ClickEvent e ) {
+    this.presenter.onApprove( );
+  }
+
+  @UiHandler( "rejectButton" )
+  void handleRejectButtonClick( ClickEvent e ) {
+    this.presenter.onReject( );
+  }
+
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );

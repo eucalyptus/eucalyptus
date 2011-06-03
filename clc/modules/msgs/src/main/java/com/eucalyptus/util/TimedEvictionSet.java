@@ -15,7 +15,8 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   private static Logger LOG = Logger.getLogger( TimedEvictionSet.class );
   private NavigableSet<E> entries = new ConcurrentSkipListSet<E>();
   private NavigableSet<TimestampedElement> timestamps = new ConcurrentSkipListSet<TimestampedElement>();
-  private Long evictionMillis = 15*1000*60l;
+  //private Long evictionMillis = 15*1000*60l;
+  private Long evictionNanos = 15*1000*60*1000*1000l;
   private AtomicBoolean busy = new AtomicBoolean( false );
   
   class TimestampedElement implements Comparable<TimestampedElement> {
@@ -58,8 +59,9 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
         return this.timeNanos.compareTo( that.timeNanos );
       }
     }
+   
     public boolean isExpired( ) {
-      return System.nanoTime( ) > ( this.timeNanos + TimedEvictionSet.this.evictionMillis );
+      return System.nanoTime( ) > ( this.timeNanos + TimedEvictionSet.this.evictionNanos);
     }
     public E get( ) {
       return this.element;
@@ -70,6 +72,7 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   }
   private boolean timestamp( E e ) {
     this.scavenge( );
+  
     if( this.entries.add( e ) ) {
       TimestampedElement elem = new TimestampedElement( e );
       this.timestamps.add( elem );
@@ -83,9 +86,10 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       }
     }
   }
+  
   public TimedEvictionSet( Long evictionMillis ) {
     super( );
-    this.evictionMillis = evictionMillis;
+    this.evictionNanos = evictionMillis * 1000 * 1000;
   }
   
   private void scavenge() {
@@ -99,6 +103,11 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
         this.busy.lazySet( false );
       }
     }
+  }
+  
+  
+  public Long getEvictionNanos() {
+	  return evictionNanos;
   }
   
   public boolean add( E e ) {

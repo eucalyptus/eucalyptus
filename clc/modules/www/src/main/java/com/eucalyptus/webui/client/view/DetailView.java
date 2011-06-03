@@ -17,6 +17,7 @@ public interface DetailView extends IsWidget, Clearable {
   void setController( Controller controller );
   
   public interface Presenter extends ValueSaveHandler {
+    void onAction( String key );
   }
   
   public interface Controller {

@@ -1,12 +1,21 @@
 package com.eucalyptus.webui.server;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.ProxyHost;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
+import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -25,6 +34,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.webui.client.service.CloudInfo;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -475,6 +485,70 @@ public class ConfigurationWebBackend {
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to set Walrus configuration", e );
     }
+  }
+
+  private static String getExternalIpAddress ( ) {
+    String ipAddr = null;
+    HttpClient httpClient = new HttpClient( );
+    //support for http proxy
+    if( HttpServerBootstrapper.httpProxyHost != null && ( HttpServerBootstrapper.httpProxyHost.length( ) > 0 ) ) {
+      String proxyHost = HttpServerBootstrapper.httpProxyHost;
+      if( HttpServerBootstrapper.httpProxyPort != null && ( HttpServerBootstrapper.httpProxyPort.length( ) > 0 ) ) {
+        int proxyPort = Integer.parseInt( HttpServerBootstrapper.httpProxyPort );
+        httpClient.getHostConfiguration( ).setProxy( proxyHost, proxyPort );
+      } else {
+        httpClient.getHostConfiguration( ).setProxyHost( new ProxyHost( proxyHost ) );
+      }
+    }
+    // Use Rightscale's "whoami" service
+    String whoamiUrl = WebProperties.getProperty( WebProperties.RIGHTSCALE_WHOAMI_URL, WebProperties.RIGHTSCALE_WHOAMI_URL_DEFAULT );
+    GetMethod method = new GetMethod( whoamiUrl );
+    Integer timeoutMs = new Integer( 3 * 1000 ); // TODO: is this working?
+    method.getParams( ).setSoTimeout( timeoutMs );
+    
+    try {
+      httpClient.executeMethod( method );
+      String str = "";
+      InputStream in = method.getResponseBodyAsStream( );
+      byte[] readBytes = new byte[1024];
+      int bytesRead = -1;
+      while ( ( bytesRead = in.read( readBytes ) ) > 0) {
+        str += new String( readBytes, 0, bytesRead );
+      }
+      Matcher matcher = Pattern.compile( ".*your ip is (.*)" ).matcher( str );
+      if ( matcher.find( ) ) {
+        ipAddr = matcher.group( 1 );
+      }
+      
+    } catch ( MalformedURLException e ) {
+      LOG.warn( "Malformed URL exception: " + e.getMessage( ) );
+      LOG.debug( e, e );
+    } catch ( IOException e ) {
+      LOG.warn( "I/O exception: " + e.getMessage( ) );
+      LOG.debug( e, e );
+    } finally {
+      method.releaseConnection( );
+    }
+    
+    return ipAddr;
+  }
+  
+  public static final String CLOUD_PORT = "8443";
+  
+  public static CloudInfo getCloudInfo( boolean setExternalHostPort ) throws EucalyptusServiceException {
+    String cloudRegisterId = null;
+    cloudRegisterId = SystemConfiguration.getSystemConfiguration().getRegistrationId( );
+    CloudInfo cloudInfo = new CloudInfo( );
+    cloudInfo.setInternalHostPort (Internets.localHostInetAddress( ).getHostAddress( ) + ":" + CLOUD_PORT );
+    if ( setExternalHostPort ) {
+      String ipAddr = getExternalIpAddress( );
+      if ( ipAddr != null ) {
+        cloudInfo.setExternalHostPort ( ipAddr + ":" + CLOUD_PORT );
+      }
+    }
+    cloudInfo.setServicePath( "/register" ); // TODO: what is the actual cloud registration service?
+    cloudInfo.setCloudId( cloudRegisterId ); // TODO: what is the actual cloud registration ID?
+    return cloudInfo;
   }
   
 }

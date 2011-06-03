@@ -37,17 +37,47 @@ public class UserViewImpl extends Composite implements UserView {
   public UserViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
-
-  @UiHandler( "newButton" )
-  void handleNewButtonClick( ClickEvent e ) {
-    
-  }
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteUsers( );
   }
   
+  @UiHandler( "addToGroupsButton" )
+  void handleAddToGroupButtonClick( ClickEvent e ) {
+    this.presenter.onAddGroups( );
+  }
+  
+  @UiHandler( "removeFromGroupsButton" )
+  void handleRemoveFromGroupButtonClick( ClickEvent e ) {
+    this.presenter.onRemoveGroups( );
+  }
+  
+  @UiHandler( "addPolicyButton" )
+  void handleAddPolicyButtonClick( ClickEvent e ) {
+    this.presenter.onAddPolicy( );
+  }
+
+  @UiHandler( "addKeyButton" )
+  void handleAddKeyButtonClick( ClickEvent e ) {
+    this.presenter.onAddKey( );
+  }
+
+  @UiHandler( "addCertButton" )
+  void handleAddCertButtonClick( ClickEvent e ) {
+    this.presenter.onAddCert( );
+  }
+
+  @UiHandler( "approveButton" )
+  void handleApproveButtonClick( ClickEvent e ) {
+    this.presenter.onApprove( );
+  }
+
+  @UiHandler( "rejectButton" )
+  void handleRejectButtonClick( ClickEvent e ) {
+    this.presenter.onReject( );
+  }
+
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
     final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );

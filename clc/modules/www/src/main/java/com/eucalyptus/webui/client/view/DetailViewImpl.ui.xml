@@ -41,10 +41,10 @@
     
     <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.DetailViewImpl.GridStyle">
         .grid {
-        	width:100%;
             font-size:80%;
             font-style:italic;
-            color:#333333;
+            color:#333333;          
+        	width:100%;
         }
         .grid td {
         	padding-top:4px;
@@ -52,6 +52,7 @@
             vertical-align:middle;
         }
         .grid input[type='text'], .grid input[type='password'], .grid textarea {
+        	color:#222222;
             width:98%;
             background-color:#DDDDDD;
             border-style: solid;

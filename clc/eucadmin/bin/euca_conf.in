@@ -367,6 +367,11 @@ class EucaConf(object):
                 if value:
                     opts.append(opt_name)
         for opt in parser.rargs:
+            # If option was specified as foo=bar we get the whole
+            # expression here and need to split it to have only
+            # the option name.
+            if '=' in opt:
+                opt = opt.split('=')[0]
             for reg_opt in RegOptions.values():
                 if opt == reg_opt[0] or opt == reg_opt[1]:
                     opts.append(reg_opt[2])

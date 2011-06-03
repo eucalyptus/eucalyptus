@@ -207,7 +207,7 @@ static void set_path (char * path, unsigned int path_size, const ncInstance * in
     }
 }
 
-static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, int allow_block_dev)
+static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, int allow_block_dev) // TODO: remove this obsolete function
 {
     logprintfl (EUCAINFO, "[%s] preparing backing of type %s (pulled from '%s')...\n", instance->instanceId, vbr->typeName, vbr->resourceLocation);
     int ret = ERROR;
@@ -523,7 +523,7 @@ static void set_disk_dev (virtualBootRecord * vbr)
     snprintf (vbr->guestDeviceName, sizeof (vbr->guestDeviceName), "%sd%c%s", type, disk, part);
 }
 
-static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtualBootRecord ** parts, int partitions)
+static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtualBootRecord ** parts, int partitions) // remove this obsolete function
 {
     logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
@@ -533,6 +533,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     blockblob * pbbs [EUCA_MAX_PARTITIONS];
     blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
 
+    bzero(pbbs, sizeof(blockblob *) * EUCA_MAX_PARTITIONS);
     // run through partitions, add their sizes, populate the map
     for (int i=0; i<partitions; i++) {
         virtualBootRecord * p = * (parts + i);
@@ -633,7 +634,7 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     return ret;
 }
 
-int create_instance_backing1 (ncInstance * instance)
+int create_instance_backing1 (ncInstance * instance) // remove this obsolete function
 {
     int ret = ERROR;
     int total_prereqs = 0;
@@ -709,7 +710,7 @@ int create_instance_backing1 (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing1 (ncInstance * instance, int destroy_files)
+int destroy_instance_backing1 (ncInstance * instance, int destroy_files) // TODO: remove this obsolete function
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -859,7 +860,8 @@ ncInstance * load_instance_struct (const char * instanceId)
     if ((fd = open(checkpoint_path, O_RDONLY)) < 0 
         || read (fd, instance, meta_size) < meta_size) {
         logprintfl(EUCADEBUG, "load_instance_struct: failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror (errno));
-        close (fd);
+        if(fd >= 0)
+            close (fd);
         goto free;
     }
     close (fd);

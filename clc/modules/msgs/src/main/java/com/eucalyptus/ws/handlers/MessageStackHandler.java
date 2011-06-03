@@ -142,8 +142,18 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
         if( msgEvent.getMessage( ) instanceof MappingHttpRequest ) {
           MappingHttpResponse httpMessage = new MappingHttpResponse( ((HttpRequest) msgEvent.getMessage( )).getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) ;
           ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-          httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: does this need fixing for xml brokeness?
-          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
+	  ChannelBuffer buffer = null;
+
+	  if(httpMessage.getSoapEnvelope() != null) {
+	      httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: does this need fixing for xml brokeness?
+	      buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
+	  } else {
+	  // TODO:GRZE it's needed for propagating replay detection messages in case on non-SOAP reqs
+	  // but the whole logic here needs checking, I think
+	  // also, a correct response should be in XML format
+	      buffer = ChannelBuffers.wrappedBuffer( e.getMessage().getBytes() );
+	  }
+
           httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
           httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
           httpMessage.setContent( buffer );

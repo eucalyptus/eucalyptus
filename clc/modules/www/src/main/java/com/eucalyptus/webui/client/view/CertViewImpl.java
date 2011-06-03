@@ -40,7 +40,7 @@ public class CertViewImpl extends Composite implements CertView {
 
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteCert( );
   }
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {

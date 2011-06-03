@@ -1,0 +1,15 @@
+include ../../Makedefs
+
+GENERATEDOBJS := $(patsubst %.c,%.o,$(wildcard *.c))
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+
+all: $(GENERATEDOBJS)
+
+build: all
+
+buildall: all
+
+
+
