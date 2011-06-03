@@ -245,4 +245,12 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       this.changeListener.fireChange( this, newValue );
     }
   }
+
+  public Boolean getReadOnly( ) {
+    return this.readOnly;
+  }
+
+  public PropertyChangeListener getChangeListener( ) {
+    return this.changeListener;
+  }
 }

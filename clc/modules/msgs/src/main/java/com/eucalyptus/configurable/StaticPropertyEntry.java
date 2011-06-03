@@ -71,7 +71,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
   private Field         field;
   public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
-    super( definingClass, entrySetName, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
+    super( definingClass, entrySetName, field, field.getName( ), defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.field = field;
   }
   public Field getField( ) {
@@ -138,5 +138,13 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       } 
       return null;
     }
+  }
+
+  /**
+   * @see com.eucalyptus.configurable.AbstractConfigurableProperty#getQueryObject()
+   */
+  @Override
+  protected Object getQueryObject( ) throws Exception {
+    return null;
   }
 }

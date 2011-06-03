@@ -82,19 +82,19 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   @Override
   public String getEntrySetName( ) {
     if ( identifierValue != null )
-      return identifierValue + "." + this.entrySetName;
-    else return this.entrySetName;
+      return identifierValue + "." + this.getEntrySetName( );
+    else return this.getEntrySetName( );
   }
   
   @Override
   public String getQualifiedName( ) {
     if ( identifierValue != null )
-      return identifierValue + "." + this.qualifiedName;
-    else return this.qualifiedName;
+      return identifierValue + "." + this.getQualifiedName( );
+    else return this.getQualifiedName( );
   }
   
   public MultiDatabasePropertyEntry getClone( String identifierValue ) {
-    return new MultiDatabasePropertyEntry( definingClass, entrySetName, field, identifierField, description, defaultValue, typeParser, readOnly, displayName,
-                                           widgetType, alias, identifierValue );
+    return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), field, identifierField, this.getDescription( ), this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ), 
+                                           this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), identifierValue );
   }
 }
