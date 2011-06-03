@@ -43,7 +43,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 	  if (this.sessionId == null) return;
 
 	  final String reportUrl =
-		    "https://localhost:8443/reportservlet"
+		    "/reportservlet"
 			+ "?session=" + sessionId
 			+ "&type=" + type
 			+ "&format=" + format
@@ -87,7 +87,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
 
 	String sessionId = clientFactory.getLocalSession().getSession().getId();
-	final String reportUrl = "https://localhost:8443/reportservlet"
+	final String reportUrl =
+		"/reportservlet"
 		+ "?session=" + sessionId
 		+ "&type=" + type
 		+ "&format=HTML" 
