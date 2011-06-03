@@ -89,8 +89,8 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   @Override
   public String getQualifiedName( ) {
     if ( identifierValue != null )
-      return identifierValue + "." + this.getQualifiedName( );
-    else return this.getQualifiedName( );
+      return identifierValue + "." + super.getQualifiedName( );
+    else return super.getQualifiedName( );
   }
   
   public MultiDatabasePropertyEntry getClone( String identifierValue ) {
