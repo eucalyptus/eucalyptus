@@ -120,6 +120,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
         from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.STOPPED ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.TransitionActions.DESTROY );
+        from( State.BROKEN ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.RELOADING ).run( noop );
       }
     }.newAtomicMarkedState( );
   }
