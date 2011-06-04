@@ -83,23 +83,20 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   private String ramdiskId;
   
   public MachineImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.machine );
+    super( Image.Type.machine );
   }
 
   public MachineImageInfo( final String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.machine );
+    super( Image.Type.machine, imageId );
   }
 
-  public MachineImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
-                           final Architecture arch, final Platform platform, 
+  public MachineImageInfo( final UserFullName userFullName, final String imageId, 
+                           final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform, 
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
                            final String kernelId, final String ramdiskId ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
+    super( userFullName, imageId, Image.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
-    this.setImageType( Image.Type.machine );
   }
 
   @Override

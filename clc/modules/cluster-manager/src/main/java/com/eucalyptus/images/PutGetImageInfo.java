@@ -73,7 +73,7 @@ import com.eucalyptus.cloud.Image;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
-  @Column( name = "metadata_image_manifest_path", nullable=false )
+  @Column( name = "metadata_image_manifest_path", nullable = false )
   private String manifestLocation;
   
   @Lob
@@ -89,10 +89,11 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   @Column( name = "metadata_image_bundle_size" )
   private Long   bundleSizeBytes;
   
-  protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
-                             final Long imageSizeBytes, final Image.Architecture arch, final Image.Platform platform,
+  protected PutGetImageInfo( final UserFullName userFullName, final String imageId,
+                             final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                             final Image.Architecture arch, final Image.Platform platform,
                              final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform );
+    super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform );
     assertThat( manifestLocation, notNullValue( ) );
     this.manifestLocation = manifestLocation;
     this.bundleSizeBytes = imageBundleSizeBytes;
@@ -100,12 +101,12 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
     this.checksumType = imageChecksumType;
   }
   
-  protected PutGetImageInfo( ) {
-    super( );
+  protected PutGetImageInfo( final Image.Type imageType ) {
+    super( imageType );
   }
   
-  protected PutGetImageInfo( final String imageId ) {
-    super( imageId );
+  protected PutGetImageInfo( final Image.Type imageType, final String imageId ) {
+    super( imageType, imageId );
   }
   
   @Override
@@ -133,19 +134,19 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   public void setBundleSizeBytes( final Long bundleSizeBytes ) {
     this.bundleSizeBytes = bundleSizeBytes;
   }
-
+  
   public String getChecksum( ) {
     return this.checksum;
   }
-
+  
   public void setChecksum( String checksum ) {
     this.checksum = checksum;
   }
-
+  
   public String getChecksumType( ) {
     return this.checksumType;
   }
-
+  
   public void setChecksumType( String checksumType ) {
     this.checksumType = checksumType;
   }

@@ -79,20 +79,17 @@ import com.eucalyptus.cloud.Image;
 public class KernelImageInfo extends PutGetImageInfo {
   
   public KernelImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.kernel );
+    super( Image.Type.kernel );
   }
   
   public KernelImageInfo( final String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.kernel );
+    super( Image.Type.kernel, imageId );
   }
   
   public KernelImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
                           final Architecture arch, final Platform platform, 
                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
-    this.setImageType( Image.Type.kernel );
+    super( userFullName, imageId, Image.Type.kernel, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
   }
   
   @Override

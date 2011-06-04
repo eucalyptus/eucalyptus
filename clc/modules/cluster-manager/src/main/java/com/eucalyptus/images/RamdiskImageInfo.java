@@ -79,20 +79,18 @@ import com.eucalyptus.cloud.Image;
 public class RamdiskImageInfo extends PutGetImageInfo {
   
   public RamdiskImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.ramdisk );
+    super( Image.Type.ramdisk );
   }
   
   public RamdiskImageInfo( final String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.ramdisk );
+    super( Image.Type.ramdisk, imageId );
   }
   
-  public RamdiskImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes,
+  public RamdiskImageInfo( final UserFullName userFullName, final String imageId, 
+                           final String imageName, final String imageDescription, final Long imageSizeBytes,
                            final Architecture arch, final Platform platform,
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
-    this.setImageType( Image.Type.ramdisk );
+    super( userFullName, imageId, Image.Type.ramdisk, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
   }
   
   @Override
