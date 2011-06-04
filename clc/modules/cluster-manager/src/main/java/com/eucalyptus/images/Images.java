@@ -108,6 +108,40 @@ public class Images {
   }
   
   @TypeMapper
+  public enum BlockStorageImageDetails implements TypeMapping<BlockStorageImageInfo, ImageDetails> {
+    INSTANCE;
+    
+    @Override
+    public ImageDetails apply( BlockStorageImageInfo arg0 ) {
+      ImageDetails i = new ImageDetails( );
+      i.setName( arg0.getImageName( ) );
+      i.setDescription( arg0.getDescription( ) );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      i.setRootDeviceName( "/dev/sda1" );
+      i.setRootDeviceType( "ebs" );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getOwnerAccountId( ) + "/" + arg0.getImageName( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setKernelId( arg0.getKernelId( ) );
+      i.setRamdiskId( arg0.getRamdiskId( ) );
+      i.setPlatform( arg0.getPlatform( ).toString( ) );
+      i.setPlatform( Image.Platform.linux.toString( ) );
+      i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
+//      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
+//      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
+//      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
+//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
+//      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      return i;
+    }
+  }
+
+  
+  @TypeMapper
   public enum MachineImageDetails implements TypeMapping<MachineImageInfo, ImageDetails> {
     INSTANCE;
     

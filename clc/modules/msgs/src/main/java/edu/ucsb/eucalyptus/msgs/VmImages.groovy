@@ -63,9 +63,8 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.auth.policy.PolicyAction
+import com.eucalyptus.binding.HttpParameterMapping
 
 public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
@@ -191,6 +190,7 @@ public class ResetImageAttributeType extends VmImageMessage {
 public class ImageDetails extends EucalyptusData {
 
   String imageId;
+  String imageName;
   String imageLocation;
   String imageState;
   String imageOwnerId;
