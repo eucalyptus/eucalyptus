@@ -116,6 +116,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_ENABLE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
         from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.NOTREADY ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING_NOTREADY ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
         from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
         from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
