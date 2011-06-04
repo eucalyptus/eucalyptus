@@ -194,11 +194,12 @@ public class EuareWebBackend {
     }
   }
   
-  public static void changeUserPassword( String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+  public static void changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
-      if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
-        throw new EucalyptusServiceException( "Old password does not match" );
+      // Anyone want to change some other people's password must authenticate himself first
+      if ( !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
+        throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
       String newEncrypted = Crypto.generateHashedPassword( newPass );
       if ( user.getPassword( ).equals( newEncrypted ) ) {

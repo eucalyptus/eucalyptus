@@ -10,8 +10,11 @@ import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.VmTypeView;
+import com.eucalyptus.webui.client.view.FooterView.StatusType;
+import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView.Presenter, DetailView.Presenter {
@@ -52,20 +55,25 @@ public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView
       LOG.log( Level.WARNING, "No valid values or empty selection" );
     }
     LOG.log( Level.INFO, "Saving: " + values );
-    SearchResultRow result = new SearchResultRow( );
+    final SearchResultRow result = new SearchResultRow( );
     result.setExtraFieldDescs( this.currentSelected.getExtraFieldDescs( ) );
     for ( int i = 0; i < values.size( ); i++ ) {
       result.addField( values.get( i ).getValue( ) );
     }
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing VM type definition ...", 0 );
+    
     this.clientFactory.getBackendService( ).setVmType( this.clientFactory.getLocalSession( ).getSession( ), result, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable cause ) {
-        LOG.log( Level.WARNING, "Failed to set configuration.", cause );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change VM type", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change VM type: " + result );
       }
 
       @Override
       public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "VM type changed", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Successfully changed VM type: " + result );        
         clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
       }

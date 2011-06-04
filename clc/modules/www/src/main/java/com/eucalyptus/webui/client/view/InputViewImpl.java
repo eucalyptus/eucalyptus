@@ -55,6 +55,8 @@ public class InputViewImpl extends DialogBox implements InputView {
   private static final String INDICATOR_WIDTH = "12px";
   
   private static final String PASSWORDS_NOT_MATCH = "Passwords do not match";
+
+  protected static final int TEXT_AREA_LINES = 10;
   
   @UiField
   Label subject;
@@ -183,7 +185,13 @@ public class InputViewImpl extends DialogBox implements InputView {
       case TEXTAREA:
         return new HasValueWidget( ) {
 
-          private TextArea input = new TextArea( );
+          private TextArea input = getTextArea( );
+          
+          protected final TextArea getTextArea( ) {
+            TextArea w = new TextArea( );
+            w.setVisibleLines( TEXT_AREA_LINES );
+            return w;
+          }
           
           @Override
           public Widget getWidget( ) {

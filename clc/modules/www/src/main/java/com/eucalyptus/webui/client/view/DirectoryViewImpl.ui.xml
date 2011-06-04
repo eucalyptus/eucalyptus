@@ -28,7 +28,7 @@
     
     <g:DockLayoutPanel styleName="{style.boundingBox}" unit="EM">
         <g:north size="1.5">
-            <g:Label styleName="{style.title}">BOOKMARKS</g:Label>
+            <g:Label styleName="{style.title}">QUICK LINKS</g:Label>
         </g:north>
         <g:center>
             <g:ScrollPanel styleName="{style.scroll}" ui:field="treePanel">
