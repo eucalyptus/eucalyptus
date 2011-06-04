@@ -32,6 +32,11 @@ from eucadmin.command import Command
 import re
 
 def get_openssl_version():
+    """
+    Run the "openssl version" command and grab the output
+    to use as the version string to use to select proper
+    command string.
+    """
     cmd = Command('openssl version')
     if cmd.status == 0:
         return cmd.stdout
@@ -39,8 +44,32 @@ def get_openssl_version():
         raise RuntimeError('Unable to determine OpenSSL version')
 
 def get_mysql_version():
+    """
+    At the moment, we do not have any version dependencies
+    with MySQL so we just return the empty string here.
+    """
     return ''
 
+"""
+Commands is a dictionary of available command strings.
+Each command string is identified by a name, the key
+in the dictionary.  The value associated with that key
+is itself a dictionary containing the following entries:
+
+ * get_version_fn - The function to call to determine
+                    the version of the corresponding
+                    application.
+
+ * commands - A list of tuples consisting of a compiled regular
+              expression that will be matched to the version
+              string, and a command string.  If the match returns
+              a non-None value it is assumed that the corresponding
+              command is the appropriate one to use for that version.
+              The list of commands are processed in order
+              and the first one that matches will be returned.
+              The list should always end with an entry that
+              will match any possible version string.
+"""
 Commands = {
     'openssl' : {
         'get_version_fn' : get_openssl_version,
@@ -59,6 +88,11 @@ Commands = {
     }
 
 def get_cmdstring(cmd_name, version_str=None):
+    """
+    Look up a command name and return the appropriate
+    command string for the installed version of the
+    application.
+    """
     if cmd_name not in Commands:
         raise KeyError('Unable to find cmd_name: %s' % cmd_name)
     cmd = Commands[cmd_name]
@@ -68,3 +102,9 @@ def get_cmdstring(cmd_name, version_str=None):
         if regex.match(version_str):
             return cmd_string
     return None
+
+def list_commands():
+    """
+    List all available commands.
+    """
+    return Commands.keys()
