@@ -65,6 +65,7 @@ public class Transactions {
     return Lists.newArrayList( );
   }
   
+  @Deprecated
   public static <T> T one( T search, final Tx<T> c ) throws ExecutionException {
     return one( search, new Callback<T>( ) {
       
