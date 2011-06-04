@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
+package com.eucalyptus.cloud.verify;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
@@ -70,6 +70,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;

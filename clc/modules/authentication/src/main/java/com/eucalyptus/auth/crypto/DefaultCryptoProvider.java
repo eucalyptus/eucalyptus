@@ -204,8 +204,12 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
 
   @Override
   public String getFingerPrint( Key privKey ) {
+    return getFingerPrint( privKey.getEncoded( ) );
+  }
+  @Override
+  public String getFingerPrint( byte[] data ) {
     try {
-      byte[] fp = Digest.SHA1.get( ).digest( privKey.getEncoded( ) );
+      byte[] fp = Digest.SHA1.get( ).digest( data );
       StringBuffer sb = new StringBuffer( );
       for ( byte b : fp )
         sb.append( String.format( "%02X:", b ) );

@@ -61,49 +61,28 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.verify;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.util.Counters;
+import com.eucalyptus.sla.NodeResourceAllocator;
+import com.eucalyptus.sla.PrivateNetworkAllocator;
+import com.eucalyptus.sla.PublicAddressAllocator;
+import com.eucalyptus.sla.ResourceAllocator;
+import com.eucalyptus.sla.SubnetIndexAllocator;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
-public class VmAdmissionControl {
+public class AdmissionControl {
   
-  private static Logger LOG = Logger.getLogger( VmAdmissionControl.class );
-  
-  public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
-    //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
-    VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
-    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
-      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
-    }
-    vmAllocInfo.setOwnerFullName( Contexts.lookup( ).getUserFullName( ) );
-    vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
-    
-    byte[] userData = new byte[0];
-    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
-      try {
-        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
-      } catch ( Exception e ) {
-      }
-    }
-    vmAllocInfo.setUserData( userData );
-    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
-    return vmAllocInfo;
-  }
+  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
   public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
     List<ResourceAllocator> pending = Lists.newArrayList( );

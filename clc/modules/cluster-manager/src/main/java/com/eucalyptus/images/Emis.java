@@ -68,6 +68,7 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -212,7 +213,7 @@ public class Emis {
     }
   }
   
-  public static BootableSet newBootableSet( String imageId ) throws EucalyptusCloudException {
+  public static BootableSet newBootableSet( VmTypeInfo vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
     try {
       return new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
     } catch ( AuthException ex ) {
