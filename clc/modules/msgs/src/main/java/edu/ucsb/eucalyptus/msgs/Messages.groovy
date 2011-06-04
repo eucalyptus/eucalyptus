@@ -62,24 +62,16 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.jibx.runtime.BindingDirectory;
-import org.jibx.runtime.IBindingFactory;
-import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.*;
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.empyrean.Empyrean;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import java.net.URI
+import java.util.ArrayList
+import java.util.NoSuchElementException
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.id.*
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
 
 public class HeartbeatType extends EucalyptusMessage {
@@ -320,7 +312,7 @@ public class VmTypeInfo extends EucalyptusData {
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "iqn://${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
   public void setRoot( String imageId, String location, Long sizeKb ) {

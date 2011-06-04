@@ -63,6 +63,8 @@
 
 package com.eucalyptus.images;
 
+import com.eucalyptus.cloud.Image;
+
 public interface BootableImageInfo {
   
   public abstract String getKernelId( );
@@ -72,5 +74,11 @@ public interface BootableImageInfo {
   public abstract boolean hasKernel( );
   
   public abstract boolean hasRamdisk( );
+
+  public abstract Image.Platform getPlatform( );
+
+  public abstract Long getImageSizeBytes( );
+
+  public abstract String getDisplayName( );
   
 }
