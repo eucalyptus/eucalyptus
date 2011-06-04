@@ -78,7 +78,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.Logs;
@@ -139,9 +138,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if ( Logs.EXTREME ) {
-            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
-          }
+          Logs.extreme( ).trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );
           Thread.currentThread( ).interrupt( );

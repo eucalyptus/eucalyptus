@@ -72,6 +72,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.util.Logs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class MappingHttpMessage extends DefaultHttpMessage implements HttpMessage {
@@ -153,14 +154,17 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
   }
   
   public void logMessage( ) {
-    LOG.trace( "============================================" );
-    LOG.trace( "HTTP" + this.getProtocolVersion( ) );
-    for( String s : this.getHeaderNames( ) ) {
-      LOG.trace( s + ": " + this.getHeader( s ) ); 
+    if( Logs.EXTREME ) {
+      StringBuffer buf = new StringBuffer();
+      buf.append( "============================================\n" );
+      buf.append( "HTTP" ).append( this.getProtocolVersion( ) ).append( '\n' );
+      for( String s : this.getHeaderNames( ) ) {
+        buf.append( s ).append( ": " ).append( this.getHeader( s ) ).append( '\n' );
+      }
+      buf.append( "============================================\n" );
+      buf.append( this.getContent( ).toString( "UTF-8" ) ).append( '\n' );;
+      buf.append( "============================================\n" );
     }
-    LOG.trace( "============================================" );
-    LOG.trace( this.getContent( ).toString( "UTF-8" ) );
-    LOG.trace( "============================================" );
   }
 
   /**

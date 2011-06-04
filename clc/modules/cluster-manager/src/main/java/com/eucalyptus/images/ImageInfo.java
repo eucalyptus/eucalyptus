@@ -194,11 +194,11 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   public Boolean getImagePublic( ) {
-    return imagePublic;
+    return this.imagePublic;
   }
   
   public void setImagePublic( Boolean aPublic ) {
-    imagePublic = aPublic;
+    this.imagePublic = aPublic;
   }
   
   private Set<LaunchPermission> getPermissions( ) {

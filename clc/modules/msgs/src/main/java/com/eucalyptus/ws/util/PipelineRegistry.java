@@ -120,10 +120,12 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
-      if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
-        ((MappingHttpMessage)request).logMessage( );
-        for( FilteredPipeline p : this.pipelines ) {
-          LOG.debug( "PIPELINE: " + p );
+      if( Logs.EXTREME ) {
+        if ( request instanceof MappingHttpMessage ) {
+          ((MappingHttpMessage)request).logMessage( );
+          for( FilteredPipeline p : this.pipelines ) {
+            LOG.debug( "PIPELINE: " + p );
+          }
         }
       }
       throw new NoAcceptingPipelineException( ); 

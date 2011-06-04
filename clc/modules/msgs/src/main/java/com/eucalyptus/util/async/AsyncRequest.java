@@ -50,7 +50,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       public void fire( R r ) {
         try {
           if ( Logs.EXTREME ) {
-            LOG.debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
+            Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
           try {
@@ -73,7 +73,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       @Override
       public void initialize( Q request ) throws Exception {
         if ( Logs.EXTREME ) {
-          LOG.debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
+          Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
       }
     };
@@ -102,12 +102,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   @Override
   public CheckedListenableFuture<R> dispatch( final ServiceConfiguration serviceConfig ) {
     Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
-                                                                                                                                    
-                                                                                                                                    @Override
-                                                                                                                                    public CheckedListenableFuture<R> call( ) throws Exception {
-                                                                                                                                      return AsyncRequest.this.execute( serviceConfig ).getResponse( );
-                                                                                                                                    }
-                                                                                                                                  } );
+                                                                                                                                                                             
+                                                                                                                                                                             @Override
+                                                                                                                                                                             public CheckedListenableFuture<R> call( ) throws Exception {
+                                                                                                                                                                               return AsyncRequest.this.execute( serviceConfig ).getResponse( );
+                                                                                                                                                                             }
+                                                                                                                                                                           } );
     try {
       res.get( ).get( );
       return res.get( );
