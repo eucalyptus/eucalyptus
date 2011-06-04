@@ -75,21 +75,26 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   @Column( name = "metadata_image_signature" )
   private String signature;
   
-  @Column( name = "metadata_image_unencrypted_checksum_sha1" )
-  private String checksumSha1;
+  @Column( name = "metadata_image_unencrypted_checksum" )
+  private String checksum;
+  
+  @Column( name = "metadata_image_unencrypted_checksum_type" )
+  private String checksumType;
   
   @Column( name = "metadata_image_path" )
-  private String imageLocation;
+  private String manifestLocation;
   
   @Column( name = "metadata_image_bundle_size" )
-  private Long   imageBundleSizeBytes;
+  private Long   bundleSizeBytes;
   
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
                              final Long imageSizeBytes, final Image.Architecture arch, final Image.Platform platform,
-                             final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum ) {
+                             final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
     super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform );
-    this.imageLocation = imageLocation;
-    this.imageBundleSizeBytes = imageBundleSizeBytes;
+    this.manifestLocation = manifestLocation;
+    this.bundleSizeBytes = imageBundleSizeBytes;
+    this.checksum = imageChecksum;
+    this.checksumType = checksumType;
   }
   
   protected PutGetImageInfo( ) {
@@ -110,20 +115,36 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   }
   
   @Override
-  public String getImageLocation( ) {
-    return this.imageLocation;
+  public String getManifestLocation( ) {
+    return this.manifestLocation;
   }
   
-  public void setImageLocation( final String imageLocation ) {
-    this.imageLocation = imageLocation;
+  public void setManifestLocation( final String manifestLocation ) {
+    this.manifestLocation = manifestLocation;
   }
   
-  public Long getImageBundleSizeBytes( ) {
-    return this.imageBundleSizeBytes;
+  public Long getBundleSizeBytes( ) {
+    return this.bundleSizeBytes;
   }
   
-  public void setImageBundleSizeBytes( final Long imageBundleSize ) {
-    this.imageBundleSizeBytes = imageBundleSize;
+  public void setBundleSizeBytes( final Long bundleSizeBytes ) {
+    this.bundleSizeBytes = bundleSizeBytes;
+  }
+
+  public String getChecksum( ) {
+    return this.checksum;
+  }
+
+  public void setChecksum( String checksum ) {
+    this.checksum = checksum;
+  }
+
+  public String getChecksumType( ) {
+    return this.checksumType;
+  }
+
+  public void setChecksumType( String checksumType ) {
+    this.checksumType = checksumType;
   }
   
 }

@@ -168,18 +168,18 @@ public class Emis {
     }
     
     public void populateVirtualBootRecord( VmTypeInfo vmType ) throws EucalyptusCloudException {
-      Long imgSize = ImageUtil.getSize( this.getMachine( ).getImageLocation( ) );
+      Long imgSize = ImageUtil.getSize( this.getMachine( ).getManifestLocation( ) );
       if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
         throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
       
-      vmType.setRoot( this.getMachine( ).getDisplayName( ), this.getMachine( ).getImageLocation( ), imgSize * 1024 );
+      vmType.setRoot( this.getMachine( ).getDisplayName( ), this.getMachine( ).getManifestLocation( ), imgSize * 1024 );
       if ( this.hasKernel( ) ) {
-        vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getImageLocation( ) );
+        vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
       }
       if ( this.hasRamdisk( ) ) {
-        vmType.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getImageLocation( ) );
+        vmType.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
       }
     }
   }

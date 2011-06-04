@@ -68,7 +68,7 @@ public class Images {
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -94,7 +94,7 @@ public class Images {
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -123,8 +123,8 @@ public class Images {
       i.setRootDeviceName( "/dev/sda1" );
       i.setRootDeviceType( "instance-store" );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -319,10 +319,12 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription, Image.Architecture imageArch, Image.Platform imagePlatform,
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription,
                                                    String eki, String eri, 
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
+    Image.Architecture imageArch = Image.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
+    Image.Platform imagePlatform = Image.Platform.linux;//TODO:GRZE:OMGFIXME: track parent vol info; needed here
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
@@ -375,17 +377,17 @@ public class Images {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
                                    imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ) );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ) );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), eki, eri );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
         break;
     }
     if ( ret == null ) {

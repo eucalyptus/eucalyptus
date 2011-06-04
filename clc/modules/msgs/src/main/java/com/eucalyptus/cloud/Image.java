@@ -10,7 +10,7 @@ import com.eucalyptus.util.HasOwningAccount;
 public interface Image extends HasFullName<Image>, HasOwningAccount {
   
   public interface StaticDiskImage extends Image {
-    public abstract String getImageLocation( );
+    public abstract String getManifestLocation( );
     public abstract String getSignature( );
   }
     

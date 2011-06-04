@@ -201,7 +201,7 @@ public class ImageUtil {
     if ( imgInfo != null ) try {
       Document inputSource = null;
       try {
-        String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
+        String[] imagePathParts = imgInfo.getManifestLocation( ).split( "/" );
         inputSource = WalrusUtil.getManifestData( imgInfo.getOwner( ), imagePathParts[0], imagePathParts[1] );
       } catch ( EucalyptusCloudException e ) {
         throw e;
@@ -213,7 +213,7 @@ public class ImageUtil {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
       if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
-      LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
+      LOG.info( "Triggering caching: " + imgInfo.getManifestLocation( ) );
       try {
         if( imgInfo instanceof Image.StaticDiskImage ) {
           WalrusUtil.triggerCaching( ( StaticDiskImage ) imgInfo );
@@ -221,10 +221,10 @@ public class ImageUtil {
       } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
       LOG.error( e );
-      LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation( ) );
+      LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getManifestLocation( ) );
       //TODO: we need to consider if this is a good semantic or not, it can have ugly side effects
       //        invalidateImageById( imgInfo.getImageId() );
-      throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation( ) );
+      throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getManifestLocation( ) );
       }
   }
   

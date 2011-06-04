@@ -214,18 +214,18 @@ public class ImageManager {
     final String rootDevName = ( request.getRootDeviceName( ) != null ) ? request.getRootDeviceName( ) : "/dev/sda1";
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
-    if ( request.getImageLocation( ) != null ) {
-      ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+    if ( request.getManifestLocation( ) != null ) {
+      ImageManifest manifest = ImageManifests.lookup( request.getManifestLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
       imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, manifest );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
-      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootDevName, request.getBlockDeviceMappings( ) );
+      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, rootDevName, request.getBlockDeviceMappings( ) );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="
-                                          + request.getImageLocation( ) + " blockDeviceMappings=" + request.getBlockDeviceMappings( ) );
+                                          + request.getManifestLocation( ) + " blockDeviceMappings=" + request.getBlockDeviceMappings( ) );
     }
     
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );

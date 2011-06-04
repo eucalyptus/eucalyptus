@@ -94,9 +94,9 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 
   public MachineImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
                            final Architecture arch, final Platform platform, 
-                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum,
+                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
                            final String kernelId, final String ramdiskId ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum );
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.setImageType( Image.Type.machine );
@@ -131,7 +131,7 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   }
 
   @Override
-  public String getImageLocation( ) {
-    return super.getImageLocation( );
+  public String getManifestLocation( ) {
+    return super.getManifestLocation( );
   }
 }

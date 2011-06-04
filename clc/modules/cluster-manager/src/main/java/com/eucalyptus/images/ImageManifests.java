@@ -452,6 +452,10 @@ public class ImageManifests {
     public String getChecksum( ) {
       return this.checksum;
     }
+
+    public String getChecksumType( ) {
+      return this.checksumType;
+    }
     
   }
   
