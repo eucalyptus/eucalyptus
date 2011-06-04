@@ -167,15 +167,17 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
                     final Image.Architecture arch, final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    assertThat( imageName, notNullValue( ) );
+    assertThat( imageSizeBytes, notNullValue( ) );
     assertThat( arch, notNullValue( ) );
-    assertThat( imageName, notNullValue( ) );
-    assertThat( imageName, notNullValue( ) );
     assertThat( platform, notNullValue( ) );
     this.setState( Image.State.pending );
-    this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
+    this.imageName = imageName;
+    this.description = imageDescription;
+    this.imageSizeBytes = imageSizeBytes;
     this.architecture = arch;
     this.platform = platform;
-    this.imageSizeBytes = imageSizeBytes;
+    this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
   
   public Image.Type getImageType( ) {
