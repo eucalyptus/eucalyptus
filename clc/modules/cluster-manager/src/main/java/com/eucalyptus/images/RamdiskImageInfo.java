@@ -87,8 +87,8 @@ public class RamdiskImageInfo extends PutGetImageInfo {
     this.setImageType( Image.Type.ramdisk );
   }
 
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, String imageLocation, Long imageSize, Long imageBundleSize, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageName, imageDescription, imageLocation, imageSize, imageBundleSize, arch, platform );
+  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes, Architecture arch, Platform platform, String imageLocation, Long imageBundleSizeBytes ) {
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes );
     this.setImageType( Image.Type.ramdisk );
   }
 

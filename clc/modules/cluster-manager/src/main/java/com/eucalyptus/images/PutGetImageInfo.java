@@ -73,64 +73,55 @@ import com.eucalyptus.cloud.Image;
 public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
   @Lob
   @Column( name = "metadata_image_signature" )
-  private String                signature;
+  private String signature;
+  
+  @Column( name = "metadata_image_unencrypted_checksum_sha1" )
+  private String checksumSha1;
   
   @Column( name = "metadata_image_path" )
-  private String                imageLocation;
-  
-  @Column( name = "metadata_image_size" )
-  private Long                  imageSize;
+  private String imageLocation;
   
   @Column( name = "metadata_image_bundle_size" )
-  private Long                  imageBundleSize;
-
+  private Long   imageBundleSizeBytes;
+  
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
-                    final String imageLocation, final Long imageSize, final Long imageBundleSize,
-                    final Image.Architecture arch, final Image.Platform platform ) {
-    super( userFullName, imageId, imageName, imageDescription, arch, platform );
+                             final Long imageSizeBytes, final Image.Architecture arch, final Image.Platform platform,
+                             final String imageLocation, final Long imageBundleSizeBytes ) {
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform );
     this.imageLocation = imageLocation;
-    this.imageSize = imageSize;
-    this.imageBundleSize = imageBundleSize;
+    this.imageBundleSizeBytes = imageBundleSizeBytes;
   }
-
+  
   protected PutGetImageInfo( ) {
     super( );
   }
-
+  
   protected PutGetImageInfo( String imageId ) {
     super( imageId );
   }
-
+  
   public String getSignature( ) {
     return this.signature;
   }
-
+  
   public void setSignature( String signature ) {
     this.signature = signature;
   }
-
+  
   public String getImageLocation( ) {
     return this.imageLocation;
   }
-
+  
   public void setImageLocation( String imageLocation ) {
     this.imageLocation = imageLocation;
   }
-
-  public Long getImageSize( ) {
-    return this.imageSize;
+  
+  public Long getImageBundleSizeBytes( ) {
+    return this.imageBundleSizeBytes;
   }
-
-  public void setImageSize( Long imageSize ) {
-    this.imageSize = imageSize;
+  
+  public void setImageBundleSizeBytes( Long imageBundleSize ) {
+    this.imageBundleSizeBytes = imageBundleSize;
   }
-
-  public Long getImageBundleSize( ) {
-    return this.imageBundleSize;
-  }
-
-  public void setImageBundleSize( Long imageBundleSize ) {
-    this.imageBundleSize = imageBundleSize;
-  }
-
+  
 }

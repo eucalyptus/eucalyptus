@@ -177,11 +177,6 @@ public class EmpyreanService {
               default:
                 return reply;
             }
-            if ( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
-              return reply;
-            } else {
-              comp.startTransition( a ).get( );
-            }
             break;
           case RESTART:
             switch ( a.lookupState( ) ) {

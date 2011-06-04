@@ -151,6 +151,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<DeviceMapping>    deviceMappings = new HashSet<DeviceMapping>( );
   
+  @Column( name = "metadata_image_size_bytes" )
+  private Long                  imageSizeBytes;
+  
   @Transient
   private FullName              fullName;
   
@@ -160,8 +163,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this( );
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
-
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Image.Architecture arch, final Image.Platform platform ) {
+  
+  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
+                    final Image.Architecture arch, final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     assertThat( arch, notNullValue( ) );
     assertThat( imageName, notNullValue( ) );
@@ -171,6 +175,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
     this.architecture = arch;
     this.platform = platform;
+    this.imageSizeBytes = imageSizeBytes;
   }
   
   public Image.Type getImageType( ) {
@@ -402,6 +407,14 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.imageType = imageType;
   }
   
+  public Long getImageSizeBytes( ) {
+    return this.imageSizeBytes;
+  }
+
+  public void setImageSizeBytes( Long imageSizeBytes ) {
+    this.imageSizeBytes = imageSizeBytes;
+  }
+
   public boolean addProductCode( final String prodCode ) {
     try {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );

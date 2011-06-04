@@ -319,7 +319,8 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription, Image.Architecture imageArch, Image.Platform imagePlatform, 
+                                                   String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
@@ -332,10 +333,13 @@ public class Images {
       Integer snapVolumeSize = snap.getVolumeSize( );
       Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null ) ? rootBlockDevice.getEbs( ).getVolumeSize( ) : -1; 
       suppliedVolumeSize = ( suppliedVolumeSize == null ) ? rootBlockDevice.getSize( ) : suppliedVolumeSize;
-      Integer targetVolumeSize = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
+      Integer targetVolumeSizeGB = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
+      Long imageSizeKB = targetVolumeSizeGB * 1024l * 1024l;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
-      BlockStorageImageInfo ret = new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
-                                                             snap.getDisplayName( ), targetVolumeSize, targetDeleteOnTermination );
+      String imageId = generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId );
+      
+      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeKB, imageArch, imagePlatform, 
+                                                             snap.getDisplayName( ), targetDeleteOnTermination );
       ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
         
         @Override
@@ -364,18 +368,18 @@ public class Images {
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                   imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                   imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ) );
         break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                    imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ) );
         break;
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ), eki, eri );
+                                    imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), eki, eri );
         break;
     }
     if ( ret == null ) {

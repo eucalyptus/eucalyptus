@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,74 +63,14 @@
 
 package com.eucalyptus.images;
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
-
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "machine" )
-public class MachineImageInfo extends PutGetImageInfo implements BootableImageInfo {
-  @Column( name = "metadata_image_kernel_id" )
-  private String kernelId;
-  @Column( name = "metadata_image_ramdisk_id" )
-  private String ramdiskId;
+public interface BootableImageInfo {
   
-  public MachineImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.machine );
-  }
-
-  public MachineImageInfo( String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.machine );
-  }
-
-  public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes, Architecture arch, Platform platform, 
-                           String imageLocation, Long imageBundleSizeBytes, 
-                           String kernelId, String ramdiskId ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes );
-    this.kernelId = kernelId;
-    this.ramdiskId = ramdiskId;
-    this.setImageType( Image.Type.machine );
-  }
-
-  @Override
-  public String getKernelId( ) {
-    return kernelId;
-  }
+  public abstract String getKernelId( );
   
-  public void setKernelId( String kernelId ) {
-    this.kernelId = kernelId;
-  }
+  public abstract String getRamdiskId( );
   
-  @Override
-  public String getRamdiskId( ) {
-    return ramdiskId;
-  }
+  public abstract boolean hasKernel( );
   
-  public void setRamdiskId( String ramdiskId ) {
-    this.ramdiskId = ramdiskId;
-  }
+  public abstract boolean hasRamdisk( );
   
-  @Override
-  public boolean hasKernel( ) {
-    return this.getKernelId( ) != null;
-  }
-
-  @Override
-  public boolean hasRamdisk( ) {
-    return this.getRamdiskId( ) != null;
-  }
-
-  @Override
-  public String getImageLocation( ) {
-    return super.getImageLocation( );
-  }
 }
