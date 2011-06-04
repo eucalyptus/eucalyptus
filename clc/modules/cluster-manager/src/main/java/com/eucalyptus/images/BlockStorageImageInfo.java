@@ -82,9 +82,9 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   private String  snapshotId;
   @Column( name = "metadata_image_del_vol_on_terminate" )
   private Boolean deleteOnTerminate;
-  @Column( name = "metadata_image_kernel_id" )
+  @Column( name = "metadata_image_bfe_kernel_id" )
   private String  kernelId;
-  @Column( name = "metadata_image_ramdisk_id" )
+  @Column( name = "metadata_image_bfe_ramdisk_id" )
   private String  ramdiskId;
   
   BlockStorageImageInfo( ) {
