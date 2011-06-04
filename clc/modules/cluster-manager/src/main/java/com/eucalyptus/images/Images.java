@@ -384,6 +384,7 @@ public class Images {
       try {
         ret = db.merge( ret );
         ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret ) ) );
+        ret.setState( Image.State.available );
         db.commit( );
         LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
       } catch ( Exception e ) {
