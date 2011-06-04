@@ -421,9 +421,11 @@ class EucaConf(object):
         if self.options.get_credentials:
             cls = boto.utils.find_class('eucadmin.getcredentials',
                                         'GetCredentials')
-            obj = cls(self.config, self.options.get_credentials,
-                      self.options.cred_account, self.options.cred_user)
-            obj.main()
+            obj = cls()
+            obj.main(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile=self.options.get_credentials)
 
     def do_setup(self):
         if self.options.do_setup:

@@ -85,8 +85,7 @@ public class LoginUserProfile implements Serializable {
   }
 
   public String getUserKeySearch( ) {
-    // TODO Auto-generated method stub
-    return null;
+    return this.userKeySearch;
   }
 
   public void setUserKeySearch( String userKeySearch ) {

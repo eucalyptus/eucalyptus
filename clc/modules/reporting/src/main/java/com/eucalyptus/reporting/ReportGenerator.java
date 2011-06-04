@@ -17,12 +17,21 @@ import com.eucalyptus.reporting.storage.StorageReportLineGenerator;
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.system.SubDirectory;
 
+/**
+ * <p>ReportGenerator is the main class by which the reporting system is
+ * accessed by outside modules. It acts as a facade for the various reporting
+ * sub-packages (instance, storage, and s3 sub-packages).
+ * 
+ * <p>ReportGenerator contains all the jasper-related stuff.
+ * 
+ * @author tom.werges
+ */
 public class ReportGenerator
 {
 	private static Logger log = Logger.getLogger( ReportGenerator.class );
 	
 	/**
-	 * <p>Generates a report and sends it to an OutputStream
+	 * <p>Generates a report and sends it to an OutputStream.
 	 * 
 	 * @param groupByCriterion Can be null if none selected
 	 */

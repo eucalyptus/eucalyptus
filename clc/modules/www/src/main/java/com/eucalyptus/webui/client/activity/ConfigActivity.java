@@ -16,7 +16,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class ConfigActivity extends AbstractSearchActivity implements ConfigView.Presenter, DetailView.Presenter {
   
-  public static final String TITLE = "SYSTEM CONFIGURATIONS";
+  public static final String TITLE = "SERVICE COMPONENTS";
   
   private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
 

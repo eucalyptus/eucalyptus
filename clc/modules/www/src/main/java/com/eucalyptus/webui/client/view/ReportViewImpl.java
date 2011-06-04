@@ -111,9 +111,13 @@ public class ReportViewImpl extends Composite implements ReportView {
 		@Override
 		public void onChange(ChangeEvent arg0)
 		{
-			  /* S3 Reports allow only User and Account
+			  /* NOTE: these are hard-coded Strings and do not access the
+			   * various enums, because this is compiled to JS for the browser
+			   * and has no access to the enums.
 			   */
 			  if (type.getSelectedIndex() == 2) {
+				  /* S3 Reports allow only User and Account
+				   */
 				  initList(criteria, new String[] {"User","Account"});
 				  initList(groupBy, new String[] {"None","Account"});
 			  } else {		  
@@ -132,6 +136,9 @@ public class ReportViewImpl extends Composite implements ReportView {
 		public void onChange(ChangeEvent arg0)
 		{
 			int oldGroupByInd = groupBy.getSelectedIndex();
+			/* Display only groupBy selections which are appropriate for this
+			 * report type and for the selected report criterion.
+			 */
 			if (type.getSelectedIndex() == 2) {
 				String[] list =
 					(criteria.getSelectedIndex() == 1)
@@ -160,14 +167,14 @@ public class ReportViewImpl extends Composite implements ReportView {
 			}			
 		}    	
     });
-    
-    
+
+
   }
 
   private void initDate( DateBox w, Date date ) {
     if ( date != null ) {
       w.setValue( date );
-    }    
+    }
   }
   
   private void initList( ListBox l, String[] list ) {

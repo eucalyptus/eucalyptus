@@ -43,7 +43,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 	  if (this.sessionId == null) return;
 
 	  final String reportUrl =
-		    "https://localhost:8443/reportservlet"
+		    "/reportservlet"
 			+ "?session=" + sessionId
 			+ "&type=" + type
 			+ "&format=" + format
@@ -52,15 +52,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 			+ "&criterion=" + criteria
 			+ "&groupByCriterion=" + groupBy;
 
-	  Timer t = new Timer( ) {
 
-	      @Override
-	      public void run( ) {
-	        clientFactory.getReportView( ).loadReport( reportUrl );
-	      }
-	      
-	    };
-	    t.schedule( 2000 );
+	  clientFactory.getReportView( ).loadReport( reportUrl );
   }
   
   @Override
@@ -94,7 +87,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
 
 	String sessionId = clientFactory.getLocalSession().getSession().getId();
-	final String reportUrl = "https://localhost:8443/reportservlet"
+	final String reportUrl =
+		"/reportservlet"
 		+ "?session=" + sessionId
 		+ "&type=" + type
 		+ "&format=HTML" 
@@ -103,15 +97,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 		+ "&criterion=" + criteria
 		+ "&groupByCriterion=" + groupBy;
   	
-	  Timer t = new Timer( ) {
-
-      @Override
-      public void run( ) {
-        clientFactory.getReportView( ).loadReport( reportUrl );
-      }
-      
-    };
-    t.schedule( 2000 );
+    clientFactory.getReportView( ).loadReport( reportUrl );
 
     this.sessionId = sessionId;
     this.fromDate = fromDate;
