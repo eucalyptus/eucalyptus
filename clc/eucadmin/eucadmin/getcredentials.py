@@ -31,6 +31,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 from eucadmin.command import Command
+from eucadmin.cmdstrings import get_cmdstring
 import eucadmin
 import os
 import time
@@ -81,12 +82,14 @@ class GetCredentials(AWSQueryRequest):
         return False
 
     def gen_cloudpk_file(self):
-        cmd = Command(OpenSSLCmd % (self.eucap12_file, self.cloudpk_file))
+        cmd_string = get_cmdstring('openssl')
+        cmd = Command(cmd_string % (self.eucap12_file, self.cloudpk_file))
                       
     def get_token(self, num_retries=10):
         i = 0
         while i < num_retries:
-            cmd = Command(MySQLCmd % (self.account, self.user, self.db_pass))
+            cmd_string = get_cmdstring('mysql')
+            cmd = Command(cmd_string % (self.account, self.user, self.db_pass))
             self.token = cmd.stdout.strip()
             if self.token:
                 break
@@ -105,7 +108,8 @@ class GetCredentials(AWSQueryRequest):
         fp.close()
 
     def get_dbpass(self):
-        cmd = Command(DBPassCmd % self.euca_home)
+        cmd_string = get_cmdstring('dbpass')
+        cmd = Command(cmd_string % self.euca_home)
         self.db_pass = cmd.stdout.strip()
 
     def cli_formatter(self, data):
