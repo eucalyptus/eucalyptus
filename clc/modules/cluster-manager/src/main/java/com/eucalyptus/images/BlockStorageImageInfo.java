@@ -123,21 +123,21 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   public void setDeleteOnTerminate( Boolean deleteOnTerminate ) {
     this.deleteOnTerminate = deleteOnTerminate;
   }
-
+  
   @Override
   public String getKernelId( ) {
     return this.kernelId;
   }
-
+  
   public void setKernelId( String kernelId ) {
     this.kernelId = kernelId;
   }
-
+  
   @Override
   public String getRamdiskId( ) {
     return this.ramdiskId;
   }
-
+  
   public void setRamdiskId( String ramdiskId ) {
     this.ramdiskId = ramdiskId;
   }
@@ -146,10 +146,10 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   public boolean hasKernel( ) {
     return this.getKernelId( ) != null;
   }
-
+  
   @Override
   public boolean hasRamdisk( ) {
     return this.getRamdiskId( ) != null;
   }
-
+  
 }

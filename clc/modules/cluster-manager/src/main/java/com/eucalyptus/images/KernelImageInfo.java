@@ -63,43 +63,41 @@
 
 package com.eucalyptus.images;
 
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
-import org.hibernate.annotations.Entity;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "kernel" )
 public class KernelImageInfo extends PutGetImageInfo {
-
+  
   public KernelImageInfo( ) {
     super( );
     this.setImageType( Image.Type.kernel );
   }
-
-  public KernelImageInfo( String imageId ) {
+  
+  public KernelImageInfo( final String imageId ) {
     super( imageId );
     this.setImageType( Image.Type.kernel );
   }
-
-  public KernelImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes, Architecture arch, Platform platform, String imageLocation, Long imageBundleSizeBytes ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes );
+  
+  public KernelImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
+                          final Architecture arch, final Platform platform, 
+                          final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum ) {
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum );
     this.setImageType( Image.Type.kernel );
   }
-
+  
   @Override
   public String getImageLocation( ) {
     return super.getImageLocation( );
   }
-
+  
 }

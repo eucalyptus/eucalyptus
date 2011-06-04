@@ -71,30 +71,33 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )
 public class RamdiskImageInfo extends PutGetImageInfo {
-
+  
   public RamdiskImageInfo( ) {
     super( );
     this.setImageType( Image.Type.ramdisk );
   }
-
-  public RamdiskImageInfo( String imageId ) {
+  
+  public RamdiskImageInfo( final String imageId ) {
     super( imageId );
     this.setImageType( Image.Type.ramdisk );
   }
-
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes, Architecture arch, Platform platform, String imageLocation, Long imageBundleSizeBytes ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes );
+  
+  public RamdiskImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                           final Architecture arch, final Platform platform,
+                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum ) {
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum );
     this.setImageType( Image.Type.ramdisk );
   }
-
+  
   @Override
   public String getImageLocation( ) {
     return super.getImageLocation( );
   }
-
+  
 }

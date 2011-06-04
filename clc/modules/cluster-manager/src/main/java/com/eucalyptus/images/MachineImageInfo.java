@@ -87,15 +87,16 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
     this.setImageType( Image.Type.machine );
   }
 
-  public MachineImageInfo( String imageId ) {
+  public MachineImageInfo( final String imageId ) {
     super( imageId );
     this.setImageType( Image.Type.machine );
   }
 
-  public MachineImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes, Architecture arch, Platform platform, 
-                           String imageLocation, Long imageBundleSizeBytes, 
-                           String kernelId, String ramdiskId ) {
-    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes );
+  public MachineImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
+                           final Architecture arch, final Platform platform, 
+                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum,
+                           final String kernelId, final String ramdiskId ) {
+    super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.setImageType( Image.Type.machine );
@@ -106,7 +107,7 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
     return kernelId;
   }
   
-  public void setKernelId( String kernelId ) {
+  public void setKernelId( final String kernelId ) {
     this.kernelId = kernelId;
   }
   
@@ -115,7 +116,7 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
     return ramdiskId;
   }
   
-  public void setRamdiskId( String ramdiskId ) {
+  public void setRamdiskId( final String ramdiskId ) {
     this.ramdiskId = ramdiskId;
   }
   

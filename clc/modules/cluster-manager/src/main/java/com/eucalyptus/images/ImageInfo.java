@@ -118,20 +118,20 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
    * Constraints: 3-128 alphanumeric characters, parenthesis (()), commas (,), slashes (/), dashes
    * (-), or underscores(_)
    */
-  @Column( name = "metadata_image_name" )
+  @Column( name = "metadata_image_name", nullable=false )
   private String                imageName;
   
   @Column( name = "metadata_image_description" )
   private String                description;
   
-  @Column( name = "metadata_image_arch" )
+  @Column( name = "metadata_image_arch", nullable=false )
   @Enumerated( EnumType.STRING )
   private Image.Architecture    architecture;
   
   @Column( name = "metadata_image_is_public", columnDefinition = "boolean default true" )
   private Boolean               imagePublic;
   
-  @Column( name = "metadata_image_platform" )
+  @Column( name = "metadata_image_platform", nullable=false )
   @Enumerated( EnumType.STRING )
   private Image.Platform        platform;
   
@@ -151,7 +151,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<DeviceMapping>    deviceMappings = new HashSet<DeviceMapping>( );
   
-  @Column( name = "metadata_image_size_bytes" )
+  @Column( name = "metadata_image_size_bytes", nullable=false )
   private Long                  imageSizeBytes;
   
   @Transient

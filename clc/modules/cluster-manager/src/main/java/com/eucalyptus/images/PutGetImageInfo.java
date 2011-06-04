@@ -86,7 +86,7 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
                              final Long imageSizeBytes, final Image.Architecture arch, final Image.Platform platform,
-                             final String imageLocation, final Long imageBundleSizeBytes ) {
+                             final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum ) {
     super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform );
     this.imageLocation = imageLocation;
     this.imageBundleSizeBytes = imageBundleSizeBytes;
@@ -96,23 +96,25 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
     super( );
   }
   
-  protected PutGetImageInfo( String imageId ) {
+  protected PutGetImageInfo( final String imageId ) {
     super( imageId );
   }
   
+  @Override
   public String getSignature( ) {
     return this.signature;
   }
   
-  public void setSignature( String signature ) {
+  public void setSignature( final String signature ) {
     this.signature = signature;
   }
   
+  @Override
   public String getImageLocation( ) {
     return this.imageLocation;
   }
   
-  public void setImageLocation( String imageLocation ) {
+  public void setImageLocation( final String imageLocation ) {
     this.imageLocation = imageLocation;
   }
   
@@ -120,7 +122,7 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
     return this.imageBundleSizeBytes;
   }
   
-  public void setImageBundleSizeBytes( Long imageBundleSize ) {
+  public void setImageBundleSizeBytes( final Long imageBundleSize ) {
     this.imageBundleSizeBytes = imageBundleSize;
   }
   

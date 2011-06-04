@@ -319,7 +319,8 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription, Image.Architecture imageArch, Image.Platform imagePlatform, 
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription, Image.Architecture imageArch, Image.Platform imagePlatform,
+                                                   String eki, String eri, 
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
@@ -334,11 +335,16 @@ public class Images {
       Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null ) ? rootBlockDevice.getEbs( ).getVolumeSize( ) : -1; 
       suppliedVolumeSize = ( suppliedVolumeSize == null ) ? rootBlockDevice.getSize( ) : suppliedVolumeSize;
       Integer targetVolumeSizeGB = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
-      Long imageSizeKB = targetVolumeSizeGB * 1024l * 1024l;
+      Long imageSizeBytes = targetVolumeSizeGB * 1024l * 1024l * 1024l;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
       String imageId = generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId );
-      
-      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeKB, imageArch, imagePlatform, 
+//GRZE:REVIEW: almost certainly do not want to assert a default kernel/ramdisk for bfe.
+//      eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
+//      eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+
+      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes, 
+                                                             imageArch, imagePlatform, 
+                                                             eki, eri, 
                                                              snap.getDisplayName( ), targetDeleteOnTermination );
       ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
         
