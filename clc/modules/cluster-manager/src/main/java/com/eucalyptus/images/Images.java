@@ -330,7 +330,7 @@ public class Images {
                                             + " because of: you must the owner of the source snapshot." );
       }
       Integer snapVolumeSize = snap.getVolumeSize( );
-      Integer suppliedVolumeSize = rootBlockDevice.getEbs( ).getVolumeSize( );
+      Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null ) ? rootBlockDevice.getEbs( ).getVolumeSize( ) : -1; 
       suppliedVolumeSize = ( suppliedVolumeSize == null ) ? rootBlockDevice.getSize( ) : suppliedVolumeSize;
       Integer targetVolumeSize = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
