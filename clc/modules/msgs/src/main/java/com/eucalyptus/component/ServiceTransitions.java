@@ -106,9 +106,22 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
-                                                                                                         Component.State.LOADED,
-                                                                                                         Component.State.NOTREADY, Component.State.DISABLED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
+      if ( State.STOPPED.isIn( config ) ) {
+        transition = Automata.sequenceTransitions( config,
+                                                   Component.State.INITIALIZED,
+                                                   Component.State.LOADED,
+                                                   Component.State.NOTREADY,
+                                                   Component.State.DISABLED );
+      } else if ( State.INITIALIZED.isIn( config ) ) {
+        transition = Automata.sequenceTransitions( config,
+                                                   Component.State.INITIALIZED,
+                                                   Component.State.LOADED,
+                                                   Component.State.NOTREADY,
+                                                   Component.State.DISABLED );
+      } else {
+        transition = Automata.sequenceTransitions( config, config.lookupState( ), Component.State.NOTREADY, Component.State.DISABLED );
+      }
       try {
         return transition.call( );
       } catch ( Exception ex ) {

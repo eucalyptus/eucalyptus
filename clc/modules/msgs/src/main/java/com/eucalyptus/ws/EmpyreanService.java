@@ -73,11 +73,8 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.Services;
 import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
@@ -96,15 +93,11 @@ import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -128,27 +121,62 @@ public class EmpyreanService {
       try {
         switch ( transition ) {
           case DISABLE:
-            if ( !Component.State.DISABLED.equals( a.lookupState( ) ) && !Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.disableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                comp.disableTransition( a ).get( );
+                break;
+              default:
+                return reply;
             }
             break;
           case ENABLE:
-            if ( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.enableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case LOADED:
+              case STOPPED:
+              case DISABLED:
+              case NOTREADY:
+                comp.enableTransition( a ).get( );
+                break;
+              case ENABLED:
+              default:
+                return reply;
             }
             break;
           case STOP:
-            if ( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.stopTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                comp.disableTransition( a ).get( );
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case STOPPED:
+              case LOADED:
+              case DISABLED:
+              case NOTREADY:
+                comp.stopTransition( a ).get( );
+                break;
+              default:
+                return reply;
             }
             break;
           case START:
+            switch ( a.lookupState( ) ) {
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case STOPPED:
+              case LOADED:
+              case DISABLED:
+              case NOTREADY:
+                comp.startTransition( a ).get( );
+                break;
+              case ENABLED:
+              default:
+                return reply;
+            }
             if ( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
               return reply;
             } else {
@@ -156,8 +184,20 @@ public class EmpyreanService {
             }
             break;
           case RESTART:
-            comp.stopTransition( a ).get( );
-            comp.enableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                comp.disableTransition( a ).get( );
+              case DISABLED:
+              case NOTREADY:
+                comp.stopTransition( a ).get( );
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case LOADED:
+              default:
+                comp.startTransition( a ).get( );
+                break;
+            }
             break;
         }
       } catch ( Exception ex ) {
