@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,56 +53,75 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************/
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.cloud.run;
 
-package com.eucalyptus.cloud.verify;
-
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.keys.KeyPairUtil;
-import com.eucalyptus.keys.SshKeyPair;
+import java.util.List;
+import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.sla.NodeResourceAllocator;
+import com.eucalyptus.sla.PrivateNetworkAllocator;
+import com.eucalyptus.sla.PublicAddressAllocator;
+import com.eucalyptus.sla.ResourceAllocator;
+import com.eucalyptus.sla.SubnetIndexAllocator;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
-/**
- * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
- */
-public class KeyPairVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest( ).getKeyName( ) ) || vmAllocInfo.getRequest( ).getKeyName( ) == null ) {
-//ASAP:FIXME:GRZE
-      if ( Image.Platform.windows.name( ).equals( vmAllocInfo.getPlatform( ) ) ) {
-        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest( ).getImageId( ) );
-      } else {
-        vmAllocInfo.setKeyInfo( new VmKeyInfo( ) );
-        return vmAllocInfo;
+public class AdmissionControl {
+  
+  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
+  
+  public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    List<ResourceAllocator> pending = Lists.newArrayList( );                                
+    pending.add( new NodeResourceAllocator() );
+    if( Clusters.getInstance( ).hasNetworking( ) ) {
+      pending.add( new PublicAddressAllocator() );
+      pending.add( new PrivateNetworkAllocator( ) );
+      pending.add( new SubnetIndexAllocator( ) );
+    }
+    List<ResourceAllocator> finished = Lists.newArrayList( );
+    
+    for( ResourceAllocator allocator : pending ) {
+      try {
+        allocator.allocate( vmAllocInfo );
+        finished.add( allocator );
+      } catch (ScriptExecutionFailedException e) {
+        if( e.getCause() != null ) {
+          throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
+        } else {
+          throw new EucalyptusCloudException( e.getMessage( ), e );
+        }
+      } catch ( Throwable e ) {
+        LOG.debug( e, e );
+        try {
+          allocator.fail( vmAllocInfo, e );
+        } catch ( Throwable e1 ) {
+          LOG.debug( e1, e1 );
+        }
+        for( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
+          try {
+            rollback.fail( vmAllocInfo, e );
+          } catch ( Throwable e1 ) {
+            LOG.debug( e1, e1 );
+          }
+        }
+        throw new EucalyptusCloudException( e.getMessage( ), e );
       }
     }
-    Context ctx = Contexts.lookup( );
-    RunInstancesType request = vmAllocInfo.getRequest( );
-    String action = PolicySpec.requestToAction( request );
-    String keyName = request.getKeyName( );
-    Account account = ctx.getAccount( );
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), keyName );
-    if ( keypair == null ) {
-      throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
-    }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
-    }
-    vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
+    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ).trace( );
     return vmAllocInfo;
   }
   

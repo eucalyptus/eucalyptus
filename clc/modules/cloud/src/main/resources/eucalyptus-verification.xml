@@ -43,7 +43,7 @@
       <inbound>
         <inbound-endpoint ref="StartVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.StartVerify" />
+      <component class="com.eucalyptus.cloud.run.StartVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="VmTypeVerifyWS" />
@@ -55,7 +55,7 @@
       <inbound>
         <inbound-endpoint ref="VmTypeVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.VmTypeVerify" />
+      <component class="com.eucalyptus.cloud.run.VmTypeVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="PartitionVerifyWS" />
@@ -67,7 +67,7 @@
       <inbound>
         <inbound-endpoint ref="PartitionVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.PartitionVerify" />
+      <component class="com.eucalyptus.cloud.run.PartitionVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="ImageVerifyWS" />
@@ -79,7 +79,7 @@
       <inbound>
         <inbound-endpoint ref="ImageVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.ImageVerify" />
+      <component class="com.eucalyptus.cloud.run.ImageVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="KeyPairVerifyWS" />
@@ -91,7 +91,7 @@
       <inbound>
         <inbound-endpoint ref="KeyPairVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.KeyPairVerify" />
+      <component class="com.eucalyptus.cloud.run.KeyPairVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="GroupsVerifyWS" />
@@ -103,7 +103,7 @@
       <inbound>
         <inbound-endpoint ref="GroupsVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.verify.NetworkGroupVerify" />
+      <component class="com.eucalyptus.cloud.run.NetworkGroupVerify" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="FinishedVerifyWS" />

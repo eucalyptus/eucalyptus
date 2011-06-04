@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,76 +53,48 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cloud.verify;
 
-import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.sla.NodeResourceAllocator;
-import com.eucalyptus.sla.PrivateNetworkAllocator;
-import com.eucalyptus.sla.PublicAddressAllocator;
-import com.eucalyptus.sla.ResourceAllocator;
-import com.eucalyptus.sla.SubnetIndexAllocator;
+package com.eucalyptus.cloud.run;
+
+import java.util.ArrayList;
+import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class AdmissionControl {
-  
-  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
-  
-  public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    List<ResourceAllocator> pending = Lists.newArrayList( );
-    pending.add( new NodeResourceAllocator() );
-    if( Clusters.getInstance( ).hasNetworking( ) ) {
-      pending.add( new PublicAddressAllocator() );
-      pending.add( new PrivateNetworkAllocator( ) );
-      pending.add( new SubnetIndexAllocator( ) );
-    }
-    List<ResourceAllocator> finished = Lists.newArrayList( );
+/**
+ * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
+ */
+public class ImageVerify {
+  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    RunInstancesType msg = vmAllocInfo.getRequest( );
+    String imageId = msg.getImageId( );
+    BootableSet bootSet = Emis.newBootableSet( imageId );
+    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ).name( ) );
     
-    for( ResourceAllocator allocator : pending ) {
-      try {
-        allocator.allocate( vmAllocInfo );
-        finished.add( allocator );
-      } catch (ScriptExecutionFailedException e) {
-        if( e.getCause() != null ) {
-          throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
-        } else {
-          throw new EucalyptusCloudException( e.getMessage( ), e );
-        }
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
-        try {
-          allocator.fail( vmAllocInfo, e );
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-        }
-        for( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
-          try {
-            rollback.fail( vmAllocInfo, e );
-          } catch ( Throwable e1 ) {
-            LOG.debug( e1, e1 );
-          }
-        }
-        throw new EucalyptusCloudException( e.getMessage( ), e );
-      }
+    if ( bootSet.isLinux( ) ) {
+      bootSet = Emis.bootsetWithKernel( bootSet );
+      bootSet = Emis.bootsetWithRamdisk( bootSet );
     }
-    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ).trace( );
+    ArrayList<String> ancestorIds = Lists.newArrayList( );//TODO:GRZE:OMGFIXME fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
+    
+    Emis.checkStoredImage( bootSet );
+    
+    VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
+    bootSet.populateVirtualBootRecord( vmType );
+    
     return vmAllocInfo;
   }
   
+
 }

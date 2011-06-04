@@ -61,40 +61,16 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.verify;
+package com.eucalyptus.cloud.run;
 
-import java.util.ArrayList;
-import com.eucalyptus.images.Emis;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 /**
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
-public class ImageVerify {
+public class PartitionVerify {
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    RunInstancesType msg = vmAllocInfo.getRequest( );
-    String imageId = msg.getImageId( );
-    BootableSet bootSet = Emis.newBootableSet( imageId );
-    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ).name( ) );
     
-    if ( bootSet.isLinux( ) ) {
-      bootSet = Emis.bootsetWithKernel( bootSet );
-      bootSet = Emis.bootsetWithRamdisk( bootSet );
-    }
-    ArrayList<String> ancestorIds = Lists.newArrayList( );//TODO:GRZE:OMGFIXME fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
-    
-    Emis.checkStoredImage( bootSet );
-    
-    VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
-    bootSet.populateVirtualBootRecord( vmType );
-    
-    return vmAllocInfo;
   }
-  
-
 }

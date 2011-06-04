@@ -61,14 +61,40 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.verify;
+package com.eucalyptus.cloud.run;
 
+import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
-public class PartitionVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {}
+public class StartVerify {
+  public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
+    //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
+    VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
+    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
+      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
+    }
+    vmAllocInfo.setOwnerFullName( Contexts.lookup( ).getUserFullName( ) );
+    vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
+    
+    byte[] userData = new byte[0];
+    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
+      try {
+        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
+      } catch ( Exception e ) {
+      }
+    }
+    vmAllocInfo.setUserData( userData );
+    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
+    return vmAllocInfo;
+  }
+  
+
 }

@@ -64,23 +64,13 @@
 package edu.ucsb.eucalyptus.cloud
 
 
+import java.util.ArrayList
+import java.util.List
+import com.eucalyptus.auth.principal.UserFullName
+import com.eucalyptus.component.Partition
+import com.eucalyptus.records.*
+import com.google.common.collect.*
 import edu.ucsb.eucalyptus.msgs.*
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.records.EventType;
-import org.apache.log4j.Logger;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentSkipListSet
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.records.*;
-import com.google.common.collect.*;
 
 public class Pair {
   
@@ -105,6 +95,7 @@ public class VmAllocationInfo extends EucalyptusMessage {
   RunInstancesResponseType reply;
   byte[] userData;
   UserFullName ownerFullName;
+  Partition partition;
   Long reservationIndex;
   String reservationId;
   VmKeyInfo keyInfo;

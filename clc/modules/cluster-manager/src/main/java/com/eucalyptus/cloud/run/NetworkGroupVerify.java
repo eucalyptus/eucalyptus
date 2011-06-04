@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.verify;
+package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
 import java.util.HashMap;

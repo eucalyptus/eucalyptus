@@ -61,40 +61,49 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.verify;
+package com.eucalyptus.cloud.run;
 
-import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.cloud.Image;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.Counters;
+import com.eucalyptus.keys.KeyPairUtil;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
-public class StartVerify {
-  public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
-    //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
-    VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
-    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
-      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
-    }
-    vmAllocInfo.setOwnerFullName( Contexts.lookup( ).getUserFullName( ) );
-    vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
-    
-    byte[] userData = new byte[0];
-    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
-      try {
-        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
-      } catch ( Exception e ) {
+public class KeyPairVerify {
+  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+    if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest( ).getKeyName( ) ) || vmAllocInfo.getRequest( ).getKeyName( ) == null ) {
+//ASAP:FIXME:GRZE
+      if ( Image.Platform.windows.name( ).equals( vmAllocInfo.getPlatform( ) ) ) {
+        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest( ).getImageId( ) );
+      } else {
+        vmAllocInfo.setKeyInfo( new VmKeyInfo( ) );
+        return vmAllocInfo;
       }
     }
-    vmAllocInfo.setUserData( userData );
-    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
+    Context ctx = Contexts.lookup( );
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    String action = PolicySpec.requestToAction( request );
+    String keyName = request.getKeyName( );
+    Account account = ctx.getAccount( );
+    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), keyName );
+    if ( keypair == null ) {
+      throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
+    }
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
+    }
+    vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
     return vmAllocInfo;
   }
   
-
 }

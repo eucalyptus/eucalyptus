@@ -350,7 +350,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
     ServiceConfiguration sc = Partitions.lookupService( Storage.class, volume.getPartition( ) );
-    ServiceConfiguration scVm = Partitions.lookupService( Storage.class, cluster.getName( ) );
+    ServiceConfiguration scVm = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
     if ( !sc.equals( scVm ) ) {
       throw new EucalyptusCloudException( "Can only attach volumes in the same cluster: " + request.getVolumeId( ) );
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
