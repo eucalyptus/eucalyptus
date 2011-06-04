@@ -73,7 +73,7 @@ import com.eucalyptus.cloud.Image;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
-  @Column( name = "metadata_image_manifest_path", nullable = false )
+  @Column( name = "metadata_image_manifest_path" )
   private String manifestLocation;
   
   @Lob
