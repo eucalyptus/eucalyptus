@@ -18,11 +18,9 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionFireException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -348,13 +346,17 @@ public class Images {
                                                              imageArch, imagePlatform, 
                                                              eki, eri, 
                                                              snap.getDisplayName( ), targetDeleteOnTermination );
-      ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
-        
-        @Override
-        public void fire( BlockStorageImageInfo t ) {
-          t.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( t ) ) );
-        }
-      } );
+      EntityWrapper<BlockStorageImageInfo> db = EntityWrapper.get( BlockStorageImageInfo.class );
+      try {
+        ret = db.merge( ret );
+        ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret ) ) );
+        db.commit( );
+        LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
+      } catch ( Exception e ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
+      }
+
       return ret;
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
