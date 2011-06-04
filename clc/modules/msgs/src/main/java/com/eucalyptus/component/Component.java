@@ -107,7 +107,7 @@ public class Component implements HasName<Component> {
   }
   
   public enum Transition implements Automata.Transition<Transition> {
-    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE, RELOADING;
+    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, STOPPING_NOTREADY, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE, RELOADING;
   }
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
