@@ -50,7 +50,7 @@ Commands = {
     'dbpass' : {
         'get_version_fn' : get_openssl_version,
         'commands' : [(re.compile('OpenSSL 1\.0\..*'), """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""),
-                      (re.compile('.*'), """echo -n eucalyptus | openssl dgst -sha256 -sign %(EUCALYPTUS)s/var/lib/eucalyptus/keys/cloud-pk.pem -hex | cut -d' ' -f2""")]
+                      (re.compile('.*'), """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex | cut -d' ' -f2""")]
         },
     'mysql' : {
         'get_version_fn' : get_mysql_version,

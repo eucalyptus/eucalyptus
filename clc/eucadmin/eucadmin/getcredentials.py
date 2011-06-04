@@ -31,7 +31,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 from eucadmin.command import Command
-from ecuadmin.cmdstings import get_cmdstring
+from eucadmin.cmdstrings import get_cmdstring
 import eucadmin
 import os
 import time
