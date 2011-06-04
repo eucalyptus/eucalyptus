@@ -40,7 +40,7 @@ public class KeyViewImpl extends Composite implements KeyView {
 
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeleteKey( );
   }
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {

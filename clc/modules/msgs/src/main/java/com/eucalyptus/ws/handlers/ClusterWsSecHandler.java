@@ -69,6 +69,9 @@ import com.eucalyptus.component.auth.SystemCredentialProvider;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
+import org.apache.axiom.soap.SOAP11Constants;
+import org.apache.axiom.soap.SOAPConstants;
+import org.apache.ws.security.WSConstants;
 
 public class ClusterWsSecHandler extends WsSecHandler {
   private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
@@ -79,14 +82,19 @@ public class ClusterWsSecHandler extends WsSecHandler {
 
   @Override
   public Collection<WSEncryptionPart> getSignatureParts() {
-    return Lists.newArrayList( new WSEncryptionPart( "To", WSA_NAMESPACE, "Content" ),new WSEncryptionPart( "MessageID", WSA_NAMESPACE, "Content" ), new WSEncryptionPart( "Action", WSA_NAMESPACE, "Content" ) );
+      return Lists.newArrayList(new WSEncryptionPart( "To", WSA_NAMESPACE, "Content" ),
+				new WSEncryptionPart( "MessageID", WSA_NAMESPACE, "Content" ), 
+				new WSEncryptionPart( "Action", WSA_NAMESPACE, "Content" ), 
+				new WSEncryptionPart(WSConstants.TIMESTAMP_TOKEN_LN, WSConstants.WSU_NS, "Content" ), 
+				new WSEncryptionPart( SOAPConstants.BODY_LOCAL_NAME, SOAP11Constants.SOAP_ENVELOPE_NAMESPACE_URI, "Content" ) );
+
   }
   
   
 
   @Override
   public boolean shouldTimeStamp() {
-    return false;
+      return true;
   }
 
 }

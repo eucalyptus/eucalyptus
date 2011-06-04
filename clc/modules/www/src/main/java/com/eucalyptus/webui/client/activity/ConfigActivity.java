@@ -16,7 +16,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class ConfigActivity extends AbstractSearchActivity implements ConfigView.Presenter, DetailView.Presenter {
   
-  public static final String TITLE = "SYSTEM CONFIGURATIONS";
+  public static final String TITLE = "SERVICE COMPONENTS";
   
   private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
 
@@ -70,7 +70,7 @@ public class ConfigActivity extends AbstractSearchActivity implements ConfigView
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
       LOG.log( Level.WARNING, "No valid values or empty selection" );
     }

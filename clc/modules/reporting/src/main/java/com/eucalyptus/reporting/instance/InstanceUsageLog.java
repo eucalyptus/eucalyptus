@@ -83,9 +83,7 @@ public class InstanceUsageLog
 	
 	
 	/**
-	 * <p>Find the latest snapshot before timestampMs, by iteratively
-	 * querying before the period beginning, moving backward in exponentially
-	 * growing intervals
+	 * <p>Find the latest snapshot before timestampMs.
 	 */
 	long findLatestAllSnapshotBefore(long timestampMs)
 	{
@@ -94,22 +92,25 @@ public class InstanceUsageLog
 		EntityWrapper<InstanceUsageSnapshot> entityWrapper = null;
 		try {
 
-	    	final long oneHourMs = 60*60*1000;
-			for ( int i=2 ;
-				  (timestampMs - oneHourMs*(long)i) > 0 ;
-				  i=(int)Math.pow(i, 2))
-			{
-				entityWrapper = EntityWrapper.get(InstanceUsageSnapshot.class);
+			/* Iteratively query before startingMs, moving backward in
+			 * exponentially growing intervals, starting at 3 hrs before
+			 */
+	        for (double minsBefore=180; /* 3 hrs */
+	        	 System.currentTimeMillis()-(long)(minsBefore*60*1000) > 0;
+	        	 minsBefore=Math.pow(minsBefore, 1.1))
+	        {
+	            long queryStartMs = System.currentTimeMillis()-(long)(minsBefore*60*1000);
+
+	        	entityWrapper = EntityWrapper.get(InstanceUsageSnapshot.class);
 				
-				long startingMs = timestampMs - (oneHourMs*i);
-				log.info("Searching for latest timestamp before beginning:" + startingMs);
+				log.info("Searching for latest timestamp before beginning:" + queryStartMs);
 				@SuppressWarnings("rawtypes")
 				List iuses =
 					entityWrapper.createQuery(
 						"from InstanceUsageSnapshot as ius"
 						+ " WHERE ius.timestampMs > ?"
 						+ " AND ius.timestampMs < ?")
-						.setLong(0, new Long(startingMs))
+						.setLong(0, new Long(queryStartMs))
 						.setLong(1, new Long(timestampMs))
 						.list();
 				for (Object obj: iuses) {
@@ -127,7 +128,7 @@ public class InstanceUsageLog
 			throw new RuntimeException(ex);
 		}
 		
-		return foundTimestampMs;
+		return foundTimestampMs;	
 	}
 
 	

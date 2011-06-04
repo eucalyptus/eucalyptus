@@ -20,4 +20,6 @@ public interface ShellView extends IsWidget {
   
   DetailView getDetailView( );
   
+  LogView getLogView( );
+  
 }

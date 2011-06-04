@@ -3,6 +3,7 @@
 
 include ../Makedefs
 
+SUBDIRS=generated .
 WSDLPATH=../wsdl/
 GLWSDLNAME=eucalyptus_gl.wsdl
 GLWSDL=$(WSDLPATH)/$(GLWSDLNAME)
@@ -10,10 +11,14 @@ SERVICE_SO=libEucalyptusGL.so
 SERVICE_NAME=EucalyptusGL
 CLIENT=GLclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
-
-all: server client
+#server client
+all: generated/stubs
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
 build: all
+
+buildall: server client
 
 generated/stubs: $(GLWSDL)
 	rm -rf generated
@@ -24,8 +29,7 @@ generated/stubs: $(GLWSDL)
 	sh $(WSDL2C) -uri $(GLWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
-	@echo Compiling the stubs
-	cd generated; $(CC) -c $(CFLAGS) $(INCLUDES) -I../../util *.c; cd ..
+	@cp ../tools/Makefile.gen generated/Makefile
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
@@ -34,7 +38,7 @@ generated/stubs: $(GLWSDL)
 
 server: $(SERVICE_SO)
 
-$(SERVICE_SO): generated/stubs gl-client-marshal-adb.o server-marshal.o handlers.o
+$(SERVICE_SO): generated/stubs $(GENERATEDOBJS) gl-client-marshal-adb.o server-marshal.o handlers.o
 	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) $(LDFLAGS) ../util/misc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
 
 client: $(CLIENT)

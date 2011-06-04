@@ -54,9 +54,7 @@ public class S3UsageLog
 	}
 	
 	/**
-	 * <p>Find the latest allSnapshot before timestampMs, by iteratively
-	 * querying before the period beginning, moving backward in exponentially
-	 * growing intervals
+	 * <p>Find the latest allSnapshot before timestampMs
 	 */
 	long findLatestAllSnapshotBefore(long timestampMs)
 	{
@@ -66,14 +64,16 @@ public class S3UsageLog
 			EntityWrapper.get(S3UsageSnapshot.class);
 		try {
 
-	    	final long oneHourMs = 60*60*1000;
-			for ( int i=2 ;
-				  (timestampMs - oneHourMs*(long)i) > 0 ;
-				  i=(int)Math.pow(i, 2))
-			{
+			/* Iteratively query before startingMs, moving backward in
+			 * exponentially growing intervals, starting at 3 hrs before
+			 */
+	        for (double minsBefore=180; /* 3 hrs */
+	        	 System.currentTimeMillis()-(long)(minsBefore*60*1000) > 0;
+	        	 minsBefore=Math.pow(minsBefore, 1.1))
+	        {
+	            long queryStartMs = System.currentTimeMillis()-(long)(minsBefore*60*1000);
 				
-				long startingMs = timestampMs - (oneHourMs*i);
-				log.info("Searching for latest timestamp before beginning:" + startingMs);
+				log.info("Searching for latest timestamp before beginning:" + queryStartMs);
 				@SuppressWarnings("rawtypes")
 				List list =
 					entityWrapper.createQuery(
@@ -81,7 +81,7 @@ public class S3UsageLog
 						+ " WHERE sus.key.timestampMs > ?"
 						+ " AND sus.key.timestampMs < ?"
 						+ " AND sus.allSnapshot = true")
-						.setLong(0, new Long(startingMs))
+						.setLong(0, new Long(queryStartMs))
 						.setLong(1, new Long(timestampMs))
 						.list();
 				for (Object obj: list) {

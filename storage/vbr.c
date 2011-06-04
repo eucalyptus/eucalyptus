@@ -385,7 +385,7 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
-            logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%d format=%s %s\n", 
+            logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n", 
                         instanceId, i, vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
             if (!strcmp(vbr->typeName, "machine")) 
                 found_image = 1;
@@ -617,7 +617,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     const char * ramdisk_path = NULL; 
     long long offset_bytes = 512 * MBR_BLOCKS; // first partition begins after MBR
     assert (disk);
-    for (int i=0; i<EUCA_MAX_PARTITIONS && a->deps[i]; i++) {
+    for (int i=0; i<MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         artifact * dep = a->deps[i];
         if (! dep->is_partition) {
             if (dep->vbr && dep->vbr->type==NC_RESOURCE_KERNEL)
@@ -1231,7 +1231,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
 
     return disk;
 free:
-    art_free (disk);
+    if(disk) art_free (disk);
     return NULL;
 }
 
@@ -1765,6 +1765,7 @@ static int check_blob (blobstore * bs, const char * keyword, int expect)
     if ((bytes = fread (buf, 1, sizeof (buf) - 1, f)) < 1) {
         printf ("error: failed to fread() from output of '%s' (returned %d)\n", cmd, bytes);
         perror ("test_vbr");
+        pclose (f);
         return 1;
     }
     buf [bytes] = '\0';

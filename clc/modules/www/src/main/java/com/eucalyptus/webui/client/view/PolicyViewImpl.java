@@ -40,7 +40,7 @@ public class PolicyViewImpl extends Composite implements PolicyView {
   
   @UiHandler( "delButton" )
   void handleDelButtonClick( ClickEvent e ) {
-    
+    this.presenter.onDeletePolicy( );
   }
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
