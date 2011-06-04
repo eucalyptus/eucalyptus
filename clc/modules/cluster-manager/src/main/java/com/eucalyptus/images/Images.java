@@ -329,12 +329,13 @@ public class Images {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must the owner of the source snapshot." );
       }
+      Integer snapVolumeSize = snap.getVolumeSize( );
+      Integer suppliedVolumeSize = rootBlockDevice.getEbs( ).getVolumeSize( );
+      suppliedVolumeSize = ( suppliedVolumeSize == null ) ? rootBlockDevice.getSize( ) : suppliedVolumeSize;
+      Integer targetVolumeSize = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
+      Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
       BlockStorageImageInfo ret = new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
-                                                             snap.getDisplayName( ),
-                                                             ( snap.getVolumeSize( ) >= rootBlockDevice.getSize( ) )
-                                                               ? snap.getVolumeSize( )
-                                                               : rootBlockDevice.getEbs( ).getVolumeSize( ),
-                                                             Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) ) );
+                                                             snap.getDisplayName( ), targetVolumeSize, targetDeleteOnTermination );
       ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
         
         @Override
