@@ -63,6 +63,8 @@
 
 package com.eucalyptus.images;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
@@ -71,6 +73,9 @@ import com.eucalyptus.cloud.Image;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
+  @Column( name = "metadata_image_manifest_path", nullable=false )
+  private String manifestLocation;
+  
   @Lob
   @Column( name = "metadata_image_signature" )
   private String signature;
@@ -81,9 +86,6 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   @Column( name = "metadata_image_unencrypted_checksum_type" )
   private String checksumType;
   
-  @Column( name = "metadata_image_path" )
-  private String manifestLocation;
-  
   @Column( name = "metadata_image_bundle_size" )
   private Long   bundleSizeBytes;
   
@@ -91,10 +93,11 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
                              final Long imageSizeBytes, final Image.Architecture arch, final Image.Platform platform,
                              final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
     super( userFullName, imageId, imageName, imageDescription, imageSizeBytes, arch, platform );
+    assertThat( manifestLocation, notNullValue( ) );
     this.manifestLocation = manifestLocation;
     this.bundleSizeBytes = imageBundleSizeBytes;
     this.checksum = imageChecksum;
-    this.checksumType = checksumType;
+    this.checksumType = imageChecksumType;
   }
   
   protected PutGetImageInfo( ) {
