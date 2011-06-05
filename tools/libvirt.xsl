@@ -64,6 +64,9 @@ that describes a Eucalyptus instance to be launched.
 				</xsl:if>
 			</os>
 			<features>
+			  <xsl:if test="/instance/hypervisor/@type = 'kvm'">
+			    <acpi/>
+			  </xsl:if>
 				<xsl:for-each select="instance/features">
 					<xsl:copy-of select="*"/>
 				</xsl:for-each>
