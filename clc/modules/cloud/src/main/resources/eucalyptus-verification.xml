@@ -115,7 +115,7 @@
       <inbound>
         <inbound-endpoint ref="FinishedVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.sla.VmAdmissionControl" />
+      <component class="com.eucalyptus.cloud.run.AdmissionControl" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="UpdateSystemWS" />
