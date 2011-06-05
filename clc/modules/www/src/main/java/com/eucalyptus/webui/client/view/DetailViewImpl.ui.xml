@@ -54,13 +54,13 @@
         .grid input[type='text'], .grid input[type='password'], .grid textarea {
         	color:#222222;
             width:98%;
-            background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
         .grid input[type='text'][readonly=''], .grid input[type='password'][readonly=''], .grid textarea[readonly=''] {
         	background-color:#EEEEEE;
+        	border:none;
         }
     </ui:style>
     
