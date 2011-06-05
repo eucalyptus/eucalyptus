@@ -13,6 +13,10 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {
 }
+public class DelegateType extends EucalyptusData {
+  String accountName;
+  public DelegateType() {  }
+}
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTGROUPPOLICY )
 public class PutGroupPolicyType extends EuareMessage {
   String groupName;
@@ -683,6 +687,7 @@ public class CreateLoginProfileResultType extends EucalyptusData {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTUSERS )
 public class ListUsersType extends EuareMessage {
+  DelegateType delegate;
   String pathPrefix;
   String marker;
   BigInteger maxItems;

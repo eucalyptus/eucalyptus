@@ -6,6 +6,9 @@
   <mapping class="com.eucalyptus.auth.euare.ResponseMetadataType" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
+  <mapping class="com.eucalyptus.auth.euare.DelegateType" abstract="true">
+    <value name="AccountName" field="accountName" usage="required"/>
+  </mapping>
   <mapping name="Error" class="com.eucalyptus.auth.euare.ErrorType">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
@@ -183,6 +186,7 @@
   </mapping>
   <mapping name="ListUsers" class="com.eucalyptus.auth.euare.ListUsersType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="Delegate" field="delegate" usage="optional" type="com.eucalyptus.auth.euare.DelegateType"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
