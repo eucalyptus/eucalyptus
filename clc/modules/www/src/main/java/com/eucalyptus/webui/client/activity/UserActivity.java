@@ -53,9 +53,9 @@ public class UserActivity extends AbstractSearchActivity
   
   public static final String CHANGE_PASSWORD_CAPTION = "Change password";
   public static final String CHANGE_PASSWORD_SUBJECT = "Enter new password:";
-  public static final String OLD_PASSWORD_INPUT_TITLE = "Old password";
-  public static final String NEW_PASSWORD_INPUT_TITLE = "New password";
-  public static final String NEW_PASSWORD2_INPUT_TITLE = "Type again";
+  public static final String OLD_PASSWORD_INPUT_TITLE = "Your current password";
+  public static final String NEW_PASSWORD_INPUT_TITLE = "New user password";
+  public static final String NEW_PASSWORD2_INPUT_TITLE = "New password again";
   
   public static final String APPROVE_USERS_CAPTION = "Approve selected users";
   public static final String APPROVE_USERS_SUBJECT = "Are you sure to approve following selected users?";

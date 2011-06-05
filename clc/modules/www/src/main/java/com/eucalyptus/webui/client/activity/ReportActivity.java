@@ -27,7 +27,6 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     ReportView reportView = this.clientFactory.getReportView( );
     reportView.setPresenter( this );
-
     
     reportView.init( new Date( ),
                      new Date( ),
@@ -38,9 +37,10 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
   }
 
   
-  private void downloadReport(String format)
-  {
-	  if (this.sessionId == null) return;
+  private void downloadReport(String format) {
+	  if (this.sessionId == null) {
+	    return;
+	  }
 
 	  final String reportUrl =
 		    "/reportservlet"
@@ -51,7 +51,6 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 			+ "&end=" + toDate.getTime()
 			+ "&criterion=" + criteria
 			+ "&groupByCriterion=" + groupBy;
-
 
 	  clientFactory.getReportView( ).loadReport( reportUrl );
   }
@@ -85,18 +84,17 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
   
   @Override
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
+    String sessionId = clientFactory.getLocalSession().getSession().getId();
+    final String reportUrl =
+      "/reportservlet"
+      + "?session=" + sessionId
+      + "&type=" + type
+      + "&format=HTML" 
+      + "&start="	+ fromDate.getTime()
+      + "&end=" + toDate.getTime()
+      + "&criterion=" + criteria
+      + "&groupByCriterion=" + groupBy;
 
-	String sessionId = clientFactory.getLocalSession().getSession().getId();
-	final String reportUrl =
-		"/reportservlet"
-		+ "?session=" + sessionId
-		+ "&type=" + type
-		+ "&format=HTML" 
-		+ "&start="	+ fromDate.getTime()
-		+ "&end=" + toDate.getTime()
-		+ "&criterion=" + criteria
-		+ "&groupByCriterion=" + groupBy;
-  	
     clientFactory.getReportView( ).loadReport( reportUrl );
 
     this.sessionId = sessionId;
@@ -105,7 +103,6 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     this.criteria = criteria;
     this.groupBy = groupBy;
     this.type = type;
-    
   }
   
 }

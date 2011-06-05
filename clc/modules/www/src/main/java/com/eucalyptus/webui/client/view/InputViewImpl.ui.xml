@@ -55,7 +55,7 @@
         }
         .grid input[type='text'], .grid input[type='password'], .grid textarea {
             color:#222222;
-            width:270px;
+            width:300px;
             /*background-color:#F2F2F2;*/
             border-style: solid;
             border-width: 1px;
