@@ -3911,6 +3911,7 @@ int reconfigureNetworkFromCLC() {
   fd = mkstemp(chainmapfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    unlink(clcnetfile);
     return(1);
   }
   chmod(chainmapfile, 0644);
@@ -3923,6 +3924,7 @@ int reconfigureNetworkFromCLC() {
   if (rc) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
     unlink(clcnetfile);
+    unlink(chainmapfile);
     return(1);
   }
 
