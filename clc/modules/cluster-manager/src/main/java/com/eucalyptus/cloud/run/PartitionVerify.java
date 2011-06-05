@@ -63,14 +63,25 @@
 
 package com.eucalyptus.cloud.run;
 
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
 public class PartitionVerify {
   public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    
+    RunInstancesType request = vmAllocInfo.getRequest( );
+    String clusterName = request.getAvailabilityZone( );
+    String zoneName = ( clusterName != null )
+      ? clusterName
+      : "default";
+    Partition partition = Partitions.lookupService( ClusterController.class, request.getAvailabilityZone( ) ).lookupPartition( );
+    vmAllocInfo.setPartition( partition );
+    return vmAllocInfo;
   }
 }
