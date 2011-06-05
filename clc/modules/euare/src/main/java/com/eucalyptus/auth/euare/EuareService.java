@@ -631,7 +631,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = getRealAccount( ctx, request.getDelegate( ) );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( request.getPathPrefix( ) != null && !"".equals(request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -1695,14 +1695,14 @@ public class EuareService {
     return path;
   }
   
-  private Account getRealAccount( Context ctx, DelegateType delegate ) throws EuareException {
+  private Account getRealAccount( Context ctx, String delegateAccount ) throws EuareException {
     Account requestAccount = ctx.getAccount( );
     if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
-      if ( delegate != null ) {
+      if ( delegateAccount != null ) {
         try {
-          return Accounts.lookupAccountByName( delegate.getAccountName( ) );
+          return Accounts.lookupAccountByName( delegateAccount );
         } catch ( AuthException e ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find delegate account " + delegate.getAccountName( ) );
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find delegate account " + delegateAccount );
         }
       }
     }
