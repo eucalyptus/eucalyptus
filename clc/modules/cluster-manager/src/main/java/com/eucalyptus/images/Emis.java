@@ -83,22 +83,24 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
   enum VBRTypes {
-    MACHINE("walrus://"),
-    EBS("iqn://"),
-    KERNEL("walrus://"),
-    RAMDISK("walrus://"),
+    MACHINE( "walrus://" ),
+    EBS( "iqn://" ),
+    KERNEL( "walrus://" ),
+    RAMDISK( "walrus://" ),
     EPHEMERAL,
     SWAP;
     String prefix;
-
+    
     private VBRTypes( ) {
-      this("");
+      this( "" );
     }
+    
     private VBRTypes( String prefix ) {
       this.prefix = prefix;
     }
     
   }
+  
   public enum LookupBlockStorage implements Lookup<BlockStorageImageInfo> {
     INSTANCE;
     @Override
@@ -106,7 +108,7 @@ public class Emis {
       return EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
     }
   }
-
+  
   public enum LookupMachine implements Lookup<MachineImageInfo> {
     INSTANCE;
     @Override
@@ -192,9 +194,12 @@ public class Emis {
         throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
-      if( this.getMachine( ) instanceof MachineImageInfo ) {
-        vmType.setRoot( this.getMachine( ).getDisplayName( ), ( ( MachineImageInfo ) this.getMachine( ) ).getManifestLocation( ), imgSize );
-      }       if ( this.hasKernel( ) ) {
+      if ( this.getMachine( ) instanceof StaticDiskImage ) {
+        vmType.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
+      } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
+        vmType.setEbsRoot( this.getMachine( ).getDisplayName( ), null, imgSize );
+      }
+      if ( this.hasKernel( ) ) {
         vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
       }
       if ( this.hasRamdisk( ) ) {
@@ -378,7 +383,7 @@ public class Emis {
   
   public static void checkStoredImage( BootableSet bootSet ) {
     try {
-      if( bootSet.getMachine( ) instanceof StaticDiskImage ) {
+      if ( bootSet.getMachine( ) instanceof StaticDiskImage ) {
         ImageUtil.checkStoredImage( ( StaticDiskImage ) bootSet.getMachine( ) );
       }
       if ( bootSet.hasKernel( ) ) {

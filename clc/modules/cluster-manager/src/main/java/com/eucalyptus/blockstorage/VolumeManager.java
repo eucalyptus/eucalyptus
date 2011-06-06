@@ -72,6 +72,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -83,7 +84,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -93,9 +93,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -104,7 +102,6 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
@@ -119,7 +116,6 @@ import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
 public class VolumeManager {
   private static final int VOL_CREATE_RETRIES = 10;
-  private static String    ID_PREFIX          = "vol";
   private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
@@ -143,7 +139,6 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
     
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
     if ( snapId != null ) {
       try {
         Snapshots.lookup( snapId );
@@ -151,29 +146,15 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
+    Integer newSize = new Integer( request.getSize( ) != null
+                                   ? request.getSize( )
+                                     : "-1" );
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
-      String newId = Crypto.generateId( ctx.getUserFullName( ).getAccountNumber( ), ID_PREFIX );
-      Integer newSize = new Integer( request.getSize( ) != null
-                                     ? request.getSize( )
-                                       : "-1" );
       try {
-        Volume newVol = Transactions.save( new Volume( ctx.getUserFullName( ), newId, newSize, sc.getName( ), sc.getPartition( ), snapId ), new Callback<Volume>( ) {
-          
-          @Override
-          public void fire( Volume t ) {
-            t.setState( State.GENERATING );
-            try {
-              ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ),
-                                                                           t.getOwnerAccountId( ), t.getScName( ), t.getPartition( ) ) );
-              CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
-              ServiceDispatcher.lookup( sc ).send( req );
-            } catch ( Exception ex ) {
-              LOG.error( "Failed to create volume: " + t.toString( ), ex );
-              Transactions.join( ).delete( t );
-            }
-          }
-        } );
+        final ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+        UserFullName owner = ctx.getUserFullName( );
+        Volume newVol = Volumes.createStorageVolume( sc, owner, snapId, newSize, request );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
         return reply;
@@ -184,7 +165,7 @@ public class VolumeManager {
     }
     throw new EucalyptusCloudException( "Failed to create volume after " + VOL_CREATE_RETRIES + " because of: " + lastEx, lastEx );
   }
-  
+
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );

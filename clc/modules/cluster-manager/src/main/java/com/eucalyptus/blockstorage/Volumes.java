@@ -64,24 +64,28 @@
 package com.eucalyptus.blockstorage;
 
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.NoSuchComponentException;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 
 public class Volumes {
-  private static Logger LOG = Logger.getLogger( Volumes.class );
+  private static Logger LOG       = Logger.getLogger( Volumes.class );
+  private static String ID_PREFIX = "vol";
   
   public static Volume checkVolumeReady( final Volume vol ) throws EucalyptusCloudException {
     if ( vol.isReady( ) ) {
@@ -114,5 +118,27 @@ public class Volumes {
       }
       return vol;
     }
+  }
+  
+  public static Volume createStorageVolume( final ServiceConfiguration sc, UserFullName owner, final String snapId, Integer newSize, final BaseMessage request ) throws ExecutionException {
+    String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
+    Volume newVol = Transactions.save( new Volume( owner, newId, newSize, sc.getName( ), sc.getPartition( ), snapId ), new Callback<Volume>( ) {
+      
+      @Override
+      public void fire( Volume t ) {
+        t.setState( State.GENERATING );
+        try {
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ),
+                                                                       t.getOwnerAccountId( ), t.getScName( ), t.getPartition( ) ) );
+          CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
+          ServiceDispatcher.lookup( sc ).send( req );
+        } catch ( Exception ex ) {
+          LOG.error( "Failed to create volume: " + t.toString( ), ex );
+          Transactions.join( ).delete( t );
+          throw new UndeclaredThrowableException( ex );
+        }
+      }
+    } );
+    return newVol;
   }
 }
