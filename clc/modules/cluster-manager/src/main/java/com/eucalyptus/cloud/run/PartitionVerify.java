@@ -64,13 +64,13 @@
 package com.eucalyptus.cloud.run;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Joiner;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
@@ -80,7 +80,7 @@ public class PartitionVerify {
   
   private static Logger LOG = Logger.getLogger( PartitionVerify.class );
   
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
+  public Allocation verify( Allocation vmAllocInfo ) throws NotEnoughResourcesAvailable {
     RunInstancesType request = vmAllocInfo.getRequest( );
     String zoneName = request.getAvailabilityZone( );
     if ( Clusters.getInstance( ).listValues( ).isEmpty( ) ) {

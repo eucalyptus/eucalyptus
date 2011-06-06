@@ -66,8 +66,6 @@ package edu.ucsb.eucalyptus.cloud
 
 import java.util.ArrayList
 import java.util.List
-import com.eucalyptus.auth.principal.UserFullName
-import com.eucalyptus.component.Partition
 import com.eucalyptus.records.*
 import com.google.common.collect.*
 import edu.ucsb.eucalyptus.msgs.*
@@ -88,44 +86,6 @@ public class Pair {
     this.right = right;
   }
   
-}
-public class VmAllocationInfo extends EucalyptusMessage {
-  
-  RunInstancesType request;
-  RunInstancesResponseType reply;
-  byte[] userData;
-  UserFullName ownerFullName;
-  Partition partition;
-  Long reservationIndex;
-  String reservationId;
-  VmKeyInfo keyInfo;
-  VmTypeInfo vmTypeInfo;
-  String platform;
-  List<Network> networks = new ArrayList<Network>();
-  
-  List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
-  List<String> addresses = new ArrayList<String>();
-  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
-  
-  def VmAllocationInfo() {
-  }
-  
-  def VmAllocationInfo(final RunInstancesType request) {
-    this.request = request;
-    this.reply = request.getReply();
-    regardingUserRequest(request);
-  }
-  
-  public EucalyptusMessage getRequestMessage() {
-    return this.getRequest();
-  }
-
-  public String getCorrelationId( ) {
-    return this.request.getCorrelationId( );
-  }
-
-  public void setCorrelationId( String correlationId ) {
-  }
 }
 
 public class VmDescribeType extends EucalyptusMessage {

@@ -74,6 +74,7 @@ import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -90,13 +91,6 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.vm.BundleInstanceResponseType;
-import com.eucalyptus.vm.BundleInstanceType;
-import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.CancelBundleTaskResponseType;
-import com.eucalyptus.vm.CancelBundleTaskType;
-import com.eucalyptus.vm.DescribeBundleTasksResponseType;
-import com.eucalyptus.vm.DescribeBundleTasksType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -106,7 +100,6 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
@@ -150,8 +143,8 @@ public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
   
-  public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    return vmAllocInfo;
+  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException {
+    return allocInfo;
   }
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {

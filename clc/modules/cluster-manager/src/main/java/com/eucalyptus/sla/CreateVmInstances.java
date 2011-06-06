@@ -68,39 +68,23 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
-  public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+  public Allocation allocate( final Allocation vmAllocInfo ) throws EucalyptusCloudException {
     long quantity = getVmAllocationNumber( vmAllocInfo );
-    RunInstancesType request = vmAllocInfo.getRequest( );
-    Context ctx;
-    try {
-      ctx = Contexts.lookup( vmAllocInfo.getCorrelationId( ) );
-    } catch ( NoSuchContextException ex ) {
-      LOG.debug( ex );
-      try {
-        ctx = Contexts.lookup( vmAllocInfo.getRequest( ).getCorrelationId( ) );
-      } catch ( NoSuchContextException ex1 ) {
-        LOG.debug( ex );
-        throw new EucalyptusCloudException( "CreateVmInstances failed because the user could not be looked up: " + ex.getMessage( ), ex );
-      }
-    }
+    Context ctx = vmAllocInfo.getContext( );
     User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
-    vmAllocInfo.setOwnerFullName( userFullName );
-    String action = PolicySpec.requestToAction( request );
+    String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
     String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
@@ -127,11 +111,10 @@ public class CreateVmInstances {
         }
       }
     }
-    vmAllocInfo.setReservationId( reservationId );
     return vmAllocInfo;
   }
   
-  private int getVmAllocationNumber( VmAllocationInfo vmAllocInfo ) {
+  private int getVmAllocationNumber( Allocation vmAllocInfo ) {
     int vmNum = 0;
     for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
@@ -143,13 +126,13 @@ public class CreateVmInstances {
     return vmNum;
   }
   
-  private VmInstance getVmInstance( UserFullName userFullName, VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
+  private VmInstance getVmInstance( UserFullName userFullName, Allocation vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
     VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index - 1 ), reservationId, 
                                         index - 1, token.getCluster( ),
                                         vmAllocInfo.getUserData( ),
                                         vmAllocInfo.getKeyInfo( ),
                                         vmAllocInfo.getVmTypeInfo( ),
-                                        vmAllocInfo.getPlatform( ),
+                                        vmAllocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
                                         vmAllocInfo.getNetworks( ),
                                         networkIndex.toString( ) );
     return vmInst;

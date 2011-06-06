@@ -122,7 +122,7 @@ public class Emis {
       this.disk = disk;
     }
     
-    public MachineImageInfo getMachine( ) {
+    public BootableImageInfo getMachine( ) {
       return this.disk;
     }
     

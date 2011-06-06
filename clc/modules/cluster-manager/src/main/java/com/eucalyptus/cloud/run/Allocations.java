@@ -65,6 +65,7 @@ package com.eucalyptus.cloud.run;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.FakePrincipals;
@@ -73,10 +74,14 @@ import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -88,6 +93,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
   public static class Allocation {
+    private final Context             context;
     private final RunInstancesType    request;
     private final UserFullName        ownerFullName;
     private final List<Network>       networks         = Lists.newArrayList( );
@@ -102,14 +108,27 @@ public class Allocations {
     private VmTypeInfo                vmTypeInfo;
     private BootableSet               bootSet;
     
-    private Allocation( RunInstancesType request ) {
+    private Allocation( ) {
       super( );
-      this.request = request;
-      UserFullName temp = FakePrincipals.NOBODY_USER_ERN; 
+      this.context = Contexts.lookup( );
+      this.request = ( RunInstancesType ) this.context.getRequest( );
+      UserFullName temp = FakePrincipals.NOBODY_USER_ERN;
       try {
         temp = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
       } catch ( NoSuchContextException ex ) {}
       this.ownerFullName = temp;
+      if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
+        this.request.setInstanceType( VmInstance.DEFAULT_TYPE );
+      }
+      this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
+      this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
+      byte[] userData = new byte[0];
+      if ( this.request.getUserData( ) != null ) {
+        try {
+          this.userData = Base64.decode( this.request.getUserData( ) );
+        } catch ( Exception e ) {}
+      }
+      this.request.setUserData( new String( Base64.encode( userData ) ) );
     }
     
     public RunInstancesType getRequest( ) {
@@ -180,7 +199,7 @@ public class Allocations {
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
       Network net = this.getPrimaryNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
-        for( int i = 0; i < rscToken.getAmount( ); i ++ ) {
+        for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
           Integer addrIndex = net.allocateNetworkIndex( rscToken.getCluster( ) );
           if ( addrIndex == null ) {
             throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net.getNetworkName( ) );
@@ -208,21 +227,79 @@ public class Allocations {
         }
       }
     }
-
+    
     public VmTypeInfo getVmTypeInfo( ) {
       return this.vmTypeInfo;
     }
-
+    
     public Partition getPartition( ) {
       return this.partition;
     }
-
+    
     public void setBootableSet( BootableSet bootSet ) {
       this.bootSet = bootSet;
     }
+    
+    /**
+     * @param asVmTypeInfo
+     */
+    public void setVmTypeInfo( VmTypeInfo vmTypeInfo ) {
+      this.vmTypeInfo = vmTypeInfo;
+    }
+    
+    public UserFullName getOwnerFullName( ) {
+      return this.ownerFullName;
+    }
+    
+    public List<ResourceToken> getAllocationTokens( ) {
+      return this.allocationTokens;
+    }
+    
+    public List<String> getAddresses( ) {
+      return this.addresses;
+    }
+    
+    public List<Integer> getNetworkIndexList( ) {
+      return this.networkIndexList;
+    }
+    
+    public byte[] getUserData( ) {
+      return this.userData;
+    }
+    
+    public Long getReservationIndex( ) {
+      return this.reservationIndex;
+    }
+    
+    public String getReservationId( ) {
+      return this.reservationId;
+    }
+    
+    public VmKeyInfo getKeyInfo( ) {
+      return this.keyInfo;
+    }
+    
+    public BootableSet getBootSet( ) {
+      return this.bootSet;
+    }
+
+    public Context getContext( ) {
+      return this.context;
+    }
+
+    /**
+     * @param vmKeyInfo
+     */
+    public void setKeyInfo( VmKeyInfo vmKeyInfo ) {
+      this.keyInfo = vmKeyInfo;
+    }
+
+    public void setPartition( Partition partition2 ) {
+      this.partition = partition2;
+    }
   }
   
-  public static Allocation begin( RunInstancesType request ) {
-    return new Allocation( request );
+  public static Allocation begin( ) {
+    return new Allocation( );
   }
 }

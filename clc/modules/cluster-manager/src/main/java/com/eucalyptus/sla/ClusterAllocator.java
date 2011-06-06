@@ -67,12 +67,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.UUID;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -96,7 +95,6 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -117,14 +115,12 @@ public class ClusterAllocator extends Thread {
   public static Boolean             SPLIT_REQUESTS = true;
   private StatefulMessageSet<State> messages;
   private Cluster                   cluster;
-  private VmAllocationInfo          vmAllocInfo;
   
-  public static void create( ResourceToken t, VmAllocationInfo vmAllocInfo ) {
-    Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, vmAllocInfo ) ).start( );
+  public static void create( ResourceToken t, Allocation allocInfo ) {
+    Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
   }
   
-  private ClusterAllocator( ResourceToken vmToken, VmAllocationInfo vmAllocInfo ) {
-    this.vmAllocInfo = vmAllocInfo;
+  private ClusterAllocator( ResourceToken vmToken, Allocation vmAllocInfo ) {
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );

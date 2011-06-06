@@ -70,16 +70,16 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class NetworkGroupVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+  public Allocation verify( Allocation vmAllocInfo ) throws EucalyptusCloudException {
     RunInstancesType request = vmAllocInfo.getRequest( );
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );

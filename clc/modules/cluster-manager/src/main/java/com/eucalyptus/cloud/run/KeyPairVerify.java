@@ -67,12 +67,12 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.keys.KeyPairUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
@@ -80,10 +80,10 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
 public class KeyPairVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+  public Allocation verify( Allocation vmAllocInfo ) throws EucalyptusCloudException {
     if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest( ).getKeyName( ) ) || vmAllocInfo.getRequest( ).getKeyName( ) == null ) {
 //ASAP:FIXME:GRZE
-      if ( Image.Platform.windows.name( ).equals( vmAllocInfo.getPlatform( ) ) ) {
+      if ( Image.Platform.windows.name( ).equals( vmAllocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest( ).getImageId( ) );
       } else {
         vmAllocInfo.setKeyInfo( new VmKeyInfo( ) );
