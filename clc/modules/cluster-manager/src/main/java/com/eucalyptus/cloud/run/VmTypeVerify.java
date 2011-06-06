@@ -70,7 +70,6 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 
@@ -79,7 +78,7 @@ public class VmTypeVerify {
   
   public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
     String instanceType = allocInfo.getRequest( ).getInstanceType( );
-    Context ctx = Contexts.lookup( );
+    Context ctx = allocInfo.getContext( );
     User user = ctx.getUser( );
     VmType v = VmTypes.getVmType( ( instanceType == null )
       ? VmType.M1_SMALL
