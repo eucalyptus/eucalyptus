@@ -81,6 +81,7 @@
 #include "walrus.h"
 #include "blobstore.h"
 #include "diskutil.h"
+#include "handlers.h" // connect_iscsi*
 
 #define VBR_SIZE_SCALING 1024 // TODO: remove this adjustment after CLC sends bytes instead of KBs
 
@@ -759,17 +760,29 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     if (diskutil_grub_mbr (blockblob_get_dev (a->bb), root_part)!=OK) {
         logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
-        goto unmount;
+        goto cleanup;
     }
-
     
     ret = OK;
  cleanup:
     return ret;
 }
 
-static int iqn_creator (artifact * a) // TODO!
+static int iqn_creator (artifact * a)
 {
+    assert (a);
+    virtualBootRecord * vbr = a->vbr;
+    assert (vbr);
+    /*    
+    char * dev = connect_iscsi_target (vbr->resourceLocation);
+    if (!dev || !strstr(dev, "/dev")) {
+        logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", a->instanceId);
+        return ERROR;
+    } 
+    // update VBR with device location
+    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    vbr->backingType = SOURCE_TYPE_BLOCK;
+    */
     return OK;
 }
 
