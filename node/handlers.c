@@ -1354,7 +1354,7 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
 	len = 0;
       } else {
-	logprintfl (EUCAINFO, "Attached device: %s\n", retval);
+	logprintfl (EUCAINFO, "connect_iscsi_target(): attached host device name: %s\n", retval);
 	len = strlen(retval);
       } 
       rc = write(filedes[1], &len, sizeof(int));
@@ -1543,3 +1543,25 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     
   return(ret);
 }
+
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml) {
+        int virtio_dev = 0;
+        int rc = 0;
+        struct stat statbuf;
+        /* only attach using virtio when the device is /dev/vdXX */
+        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+             virtio_dev = 1;
+        }
+        if (nc->config_use_virtio_disk && virtio_dev) {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+        } else {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+        }
+        rc = stat(remoteDev, &statbuf);
+        if (rc) {
+             logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+             rc = 1;
+        }
+        return rc;
+}
+
