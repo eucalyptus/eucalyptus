@@ -232,29 +232,33 @@ public class Emis {
   }
   
   public static BootableSet newBootableSet( VmTypeInfo vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
+    BootableSet bootSet = null;
     try {
-      BootableSet bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
-      if ( bootSet.isLinux( ) ) {
-        bootSet = Emis.bootsetWithKernel( bootSet );
-        bootSet = Emis.bootsetWithRamdisk( bootSet );
+      bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+    } catch ( Exception e ) {
+      try {
+        bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
+      } catch ( AuthException ex ) {
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( ex );
+      } catch ( IllegalContextAccessException ex ) {
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( ex );
+      } catch ( PersistenceException ex ) {
+        LOG.error( ex, ex );
+        throw new EucalyptusCloudException( ex );
       }
-      Emis.checkStoredImage( bootSet );
-      
-      bootSet.populateVirtualBootRecord( vmType );
-      return bootSet;
-    } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( IllegalContextAccessException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
     }
+    if ( bootSet.isLinux( ) ) {
+      bootSet = Emis.bootsetWithKernel( bootSet );
+      bootSet = Emis.bootsetWithRamdisk( bootSet );
+    }
+    Emis.checkStoredImage( bootSet );
+    bootSet.populateVirtualBootRecord( vmType );
+    return bootSet;
   }
   
   private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws EucalyptusCloudException {
