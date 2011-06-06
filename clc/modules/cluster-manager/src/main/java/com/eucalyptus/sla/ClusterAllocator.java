@@ -254,13 +254,13 @@ public class ClusterAllocator extends Thread {
             } catch ( Exception ex ) {
               LOG.error( ex , ex );
             }
-            for( String nodeTag : this.cluster.getNodeTags( ) ) {
-              try {
-                AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
-                childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
-              } catch ( Exception ex ) {
-                LOG.error( ex , ex );
-              }
+          }
+          for( String nodeTag : this.cluster.getNodeTags( ) ) {
+            try {
+              AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
+              childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
             }
           }
         }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
