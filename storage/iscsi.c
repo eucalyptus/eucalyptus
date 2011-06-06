@@ -73,6 +73,8 @@
 #include <signal.h>
 #include "eucalyptus.h"
 #include "misc.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 static char home [MAX_PATH] = "";
 static char connect_storage_cmd_path [MAX_PATH];

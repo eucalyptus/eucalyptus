@@ -516,7 +516,7 @@ doDetachVolume (	struct nc_state_t *nc,
 	    if (have_remote_device) {
 	      if (check_block(remoteDevReal)) {
 		logprintfl(EUCAERROR, "DetachVolume(): cannot verify that host device '%s' is available for hypervisor detach\n", remoteDevReal);
-		//		ret = ERROR;
+		if (!force) ret = ERROR;
 	      } else {
 		rc = generate_attach_xml(localDevReal, remoteDevReal, nc, xml);
 		if (!rc) {
@@ -527,10 +527,9 @@ doDetachVolume (	struct nc_state_t *nc,
 		  if (err) {
 		    logprintfl (EUCAERROR, "DetachVolume(): virDomainDetachDevice() failed (err=%d) XML=%s\n", err, xml);
 		    logprintfl (EUCAERROR, "DetachVolume(): failed to detach host device '%s' from guest device '%s' within instance '%s'\n", remoteDevReal, localDevReal, instanceId);
-		    //		    ret = ERROR;
+		    if (!force) ret = ERROR;
 		  } else {
 		    logprintfl (EUCAINFO, "DetachVolume(): success in detach of host device '%s' from guest device '%s' within instance '%s'\n", remoteDevReal, localDevReal, instanceId);
-		    logprintfl(EUCAINFO, "DetachVolume(): successfully detached volume '%s' to instance '%s'\n", volumeId, instanceId);
 		  }
 		} else {
 		  logprintfl(EUCAERROR, "DetachVolume(): could not produce detach device xml\n");
@@ -555,6 +554,7 @@ doDetachVolume (	struct nc_state_t *nc,
       logprintfl(EUCADEBUG, "DetachVolume(): attempting to disconnect iscsi target\n");
       if(disconnect_iscsi_target(remoteDev) != 0) {
 	logprintfl (EUCAERROR, "DetachVolume(): disconnect_iscsi_target failed for %s\n", remoteDev);
+	if (!force) ret = ERROR;
       }
     }
 
@@ -563,7 +563,11 @@ doDetachVolume (	struct nc_state_t *nc,
     save_instance_struct (instance);
     sem_v (inst_sem);
     if ( volume == NULL ) {
-      logprintfl (EUCAWARN, "DetachVolume(): Failed to free the volume record, considering volume detached\n");
+      logprintfl (EUCAWARN, "DetachVolume(): Failed to free the volume record\n");
+    }
+
+    if (ret == OK) {
+      logprintfl(EUCAINFO, "DetachVolume(): successfully detached volume '%s' from instance '%s'\n", volumeId, instanceId);
     }
     
     return ret;
