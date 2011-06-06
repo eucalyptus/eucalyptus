@@ -98,7 +98,7 @@ public class KeyPairVerify {
     if ( keypair == null ) {
       throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
+    if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
     }
     allocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );

@@ -94,7 +94,7 @@ public class NetworkGroupVerify {
     Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
     for ( String groupName : networkNames ) {
       NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), groupName );
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
+      if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, account, action, requestUser ) ) {
         throw new EucalyptusCloudException( "Not authorized to use network group " + groupName + " for " + requestUser.getName( ) );
       }
       networkRuleGroups.put( groupName, group );
