@@ -71,6 +71,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -80,6 +82,10 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -95,6 +101,7 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -109,13 +116,14 @@ public class ClusterAllocator extends Thread {
   private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
-    START, CREATE_NETWORK, CREATE_NETWORK_RULES, CREATE_VMS, ASSIGN_ADDRESSES, FINISHED, ROLLBACK;
+    START, CREATE_VOLS, CREATE_IGROUPS, CREATE_NETWORK, CREATE_NETWORK_RULES, CREATE_VMS, ATTACH_VOLS, ASSIGN_ADDRESSES, FINISHED, ROLLBACK;
   }
   
-  public static Boolean             SPLIT_REQUESTS = true;
+  public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
   private StatefulMessageSet<State> messages;
   private Cluster                   cluster;
-  private Allocation allocInfo;
+  private Allocation                allocInfo;
+  private ServiceConfiguration      sc;
   
   public static void create( ResourceToken t, Allocation allocInfo ) {
     Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
@@ -126,7 +134,27 @@ public class ClusterAllocator extends Thread {
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
+        this.sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
         this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
+        
+        if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+          VirtualBootRecord root = allocInfo.getVmTypeInfo( ).lookupRoot( );
+          if ( root.isBlockStorage( ) ) {
+            for ( int i = 0; i < vmToken.getAmount( ); i++ ) {
+              BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
+              String iqn = this.cluster.getNode( this.cluster.getNodeTags( ).first( ) ).getIqn( );//TODO:GRZE: verifying that iqns are available on all nodes matters, yes plox.
+              int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
+              LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and temporary iqn: " + iqn + " and vbr: " + root );
+              Volume vol = Volumes.createStorageVolume( this.sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, allocInfo.getRequest( ) );
+              if ( imgInfo.getDeleteOnTerminate( ) ) {
+                this.allocInfo.getTransientVolumes( ).add( vol );
+              } else {
+                this.allocInfo.getPersistentVolumes( ).add( vol );
+              }
+            }
+          }
+        }
+        
         for ( NetworkToken networkToken : vmToken.getNetworkTokens( ) )
           this.setupNetworkMessages( networkToken );
         this.setupVmMessages( vmToken );
@@ -206,7 +234,8 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo, this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
+        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo,
+                             this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
                              userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;

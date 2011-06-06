@@ -70,6 +70,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
@@ -97,10 +98,12 @@ public class Allocations {
     private final Context             context;
     private final RunInstancesType    request;
     private final UserFullName        ownerFullName;
-    private final List<Network>       networks         = Lists.newArrayList( );
-    private final List<ResourceToken> allocationTokens = Lists.newArrayList( );
-    private final List<String>        addresses        = Lists.newArrayList( );
-    private final List<Integer>       networkIndexList = Lists.newArrayList( );
+    private final List<Network>       networks          = Lists.newArrayList( );
+    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
+    private final List<String>        addresses         = Lists.newArrayList( );
+    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
+    private final List<Integer>       networkIndexList  = Lists.newArrayList( );
     private byte[]                    userData;
     private Partition                 partition;
     private Long                      reservationIndex;
@@ -283,20 +286,28 @@ public class Allocations {
     public BootableSet getBootSet( ) {
       return this.bootSet;
     }
-
+    
     public Context getContext( ) {
       return this.context;
     }
-
+    
     /**
      * @param vmKeyInfo
      */
     public void setKeyInfo( VmKeyInfo vmKeyInfo ) {
       this.keyInfo = vmKeyInfo;
     }
-
+    
     public void setPartition( Partition partition2 ) {
       this.partition = partition2;
+    }
+
+    public List<Volume> getPersistentVolumes( ) {
+      return this.persistentVolumes;
+    }
+
+    public List<Volume> getTransientVolumes( ) {
+      return this.transientVolumes;
     }
   }
   

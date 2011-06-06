@@ -214,6 +214,10 @@ public class VirtualBootRecord extends EucalyptusData {
 	  this.size = size;
 	  this.format = format;
   }
+  
+  public boolean isBlockStorage() {
+    return "ebs".equals( this.type );
+  }
 }
 
 public class VmKeyInfo extends EucalyptusData {
