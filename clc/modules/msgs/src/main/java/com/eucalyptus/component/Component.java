@@ -565,7 +565,7 @@ public class Component implements HasName<Component> {
      */
     public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
       if ( !this.services.containsKey( config ) ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
+        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config );
       } else {
         return this.services.get( config );
       }

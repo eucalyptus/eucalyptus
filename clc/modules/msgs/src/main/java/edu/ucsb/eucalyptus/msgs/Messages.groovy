@@ -339,6 +339,8 @@ public class VmTypeInfo extends EucalyptusData {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
       if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "/dev/sda1" || vbr.guestDeviceName == "xvda" ) })==null ) {
+        return ret;
+      } else {
         throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
       }
     } else {
