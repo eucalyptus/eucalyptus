@@ -115,12 +115,14 @@ public class ClusterAllocator extends Thread {
   public static Boolean             SPLIT_REQUESTS = true;
   private StatefulMessageSet<State> messages;
   private Cluster                   cluster;
+  private Allocation vmAllocInfo;
   
   public static void create( ResourceToken t, Allocation allocInfo ) {
     Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
   }
   
   private ClusterAllocator( ResourceToken vmToken, Allocation vmAllocInfo ) {
+    this.vmAllocInfo = vmAllocInfo;
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
@@ -204,7 +206,7 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, this.vmAllocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo, this.vmAllocInfo.getPlatform( ), vlan, networkNames,
+        cb = makeRunRequest( request, childToken, this.vmAllocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo, this.vmAllocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
                              userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;

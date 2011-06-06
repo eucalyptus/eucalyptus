@@ -79,7 +79,7 @@ public class VmReplyTransform {
 
   public RunInstancesResponseType allocate( Allocation vmAllocInfo ) throws EucalyptusCloudException
   {
-    RunInstancesResponseType reply = vmAllocInfo.getReply();
+    RunInstancesResponseType reply = vmAllocInfo.getRequest().getReply( );
     Context ctx = Contexts.lookup( );
 
     List<String> networkNames = new ArrayList<String>();
@@ -96,7 +96,7 @@ public class VmReplyTransform {
       }
 
     reply.setRsvInfo( reservation );
-    return vmAllocInfo.getReply();
+    return reply;
   }
 
 }

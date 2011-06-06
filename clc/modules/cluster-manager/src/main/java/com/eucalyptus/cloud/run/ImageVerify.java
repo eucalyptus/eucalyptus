@@ -82,14 +82,6 @@ public class ImageVerify {
     Partition partition = allocInfo.getPartition( );
     BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
     allocInfo.setBootableSet( bootSet );
-    if ( bootSet.isLinux( ) ) {
-      bootSet = Emis.bootsetWithKernel( bootSet );
-      bootSet = Emis.bootsetWithRamdisk( bootSet );
-    }
-    
-    Emis.checkStoredImage( bootSet );
-    
-    bootSet.populateVirtualBootRecord( vmType );
     
     return allocInfo;
   }

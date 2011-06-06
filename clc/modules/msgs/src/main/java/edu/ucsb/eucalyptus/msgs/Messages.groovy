@@ -311,12 +311,12 @@ public class VmTypeInfo extends EucalyptusData {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
-  public void setEbsRoot( String imageId, String iqn, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "iqn://${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+  public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "iqn://${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
-  public void setRoot( String imageId, String location, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
+  public void setRoot( String imageId, String location, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
@@ -327,8 +327,8 @@ public class VmTypeInfo extends EucalyptusData {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
   }
 
-  public void setSwap( String deviceName, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeKb, , type : "swap", format : "swap" ) );
+  public void setSwap( String deviceName, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
 
   public void setEphemeral( Integer index, String deviceName, Long sizeKb ) {

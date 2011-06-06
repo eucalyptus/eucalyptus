@@ -66,7 +66,7 @@ package com.eucalyptus.images;
 import com.eucalyptus.cloud.Image;
 
 public interface BootableImageInfo {
-  
+ 
   public abstract String getKernelId( );
   
   public abstract String getRamdiskId( );

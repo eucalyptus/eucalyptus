@@ -68,6 +68,7 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -81,6 +82,23 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
+  enum VBRTypes {
+    MACHINE("walrus://"),
+    EBS("iqn://"),
+    KERNEL("walrus://"),
+    RAMDISK("walrus://"),
+    EPHEMERAL,
+    SWAP;
+    String prefix;
+
+    private VBRTypes( ) {
+      this("");
+    }
+    private VBRTypes( String prefix ) {
+      this.prefix = prefix;
+    }
+    
+  }
   public enum LookupBlockStorage implements Lookup<BlockStorageImageInfo> {
     INSTANCE;
     @Override
@@ -116,10 +134,10 @@ public class Emis {
   private static Logger LOG = Logger.getLogger( Emis.class );
   
   public static class BootableSet {
-    private final MachineImageInfo disk;
+    private final BootableImageInfo disk;
     
-    private BootableSet( MachineImageInfo disk ) {
-      this.disk = disk;
+    private BootableSet( BootableImageInfo bootableImageInfo ) {
+      this.disk = bootableImageInfo;
     }
     
     public BootableImageInfo getMachine( ) {
@@ -169,14 +187,14 @@ public class Emis {
     }
     
     public void populateVirtualBootRecord( VmTypeInfo vmType ) throws EucalyptusCloudException {
-      Long imgSize = ImageUtil.getSize( this.getMachine( ).getManifestLocation( ) );
+      Long imgSize = this.getMachine( ).getImageSizeBytes( );
       if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
         throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
-      
-      vmType.setRoot( this.getMachine( ).getDisplayName( ), this.getMachine( ).getManifestLocation( ), imgSize * 1024 );
-      if ( this.hasKernel( ) ) {
+      if( this.getMachine( ) instanceof MachineImageInfo ) {
+        vmType.setRoot( this.getMachine( ).getDisplayName( ), ( ( MachineImageInfo ) this.getMachine( ) ).getManifestLocation( ), imgSize );
+      }       if ( this.hasKernel( ) ) {
         vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
       }
       if ( this.hasRamdisk( ) ) {
@@ -188,8 +206,8 @@ public class Emis {
   static class NoRamdiskBootableSet extends BootableSet {
     private final KernelImageInfo kernel;
     
-    private NoRamdiskBootableSet( MachineImageInfo disk, KernelImageInfo kernel ) {
-      super( disk );
+    private NoRamdiskBootableSet( BootableImageInfo bootableImageInfo, KernelImageInfo kernel ) {
+      super( bootableImageInfo );
       this.kernel = kernel;
     }
     
@@ -202,8 +220,8 @@ public class Emis {
   static class TrifectaBootableSet extends NoRamdiskBootableSet {
     private final RamdiskImageInfo ramdisk;
     
-    public TrifectaBootableSet( MachineImageInfo disk, KernelImageInfo kernel, RamdiskImageInfo ramdisk ) {
-      super( disk, kernel );
+    public TrifectaBootableSet( BootableImageInfo bootableImageInfo, KernelImageInfo kernel, RamdiskImageInfo ramdisk ) {
+      super( bootableImageInfo, kernel );
       this.ramdisk = ramdisk;
     }
     
@@ -215,7 +233,15 @@ public class Emis {
   
   public static BootableSet newBootableSet( VmTypeInfo vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
     try {
-      return new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      BootableSet bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      if ( bootSet.isLinux( ) ) {
+        bootSet = Emis.bootsetWithKernel( bootSet );
+        bootSet = Emis.bootsetWithRamdisk( bootSet );
+      }
+      Emis.checkStoredImage( bootSet );
+      
+      bootSet.populateVirtualBootRecord( vmType );
+      return bootSet;
     } catch ( AuthException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( ex );
@@ -231,7 +257,7 @@ public class Emis {
     }
   }
   
-  public static BootableSet bootsetWithKernel( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws EucalyptusCloudException {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
@@ -252,7 +278,7 @@ public class Emis {
     }
   }
   
-  public static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws EucalyptusCloudException {
     String ramdiskId = determineRamdiskId( bootSet );
     LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + bootSet.toString( ) );
     if ( ramdiskId == null ) {
@@ -278,7 +304,7 @@ public class Emis {
   }
   
   private static String determineKernelId( BootableSet bootSet ) throws EucalyptusCloudException {
-    MachineImageInfo disk = bootSet.getMachine( );
+    BootableImageInfo disk = bootSet.getMachine( );
     String kernelId = null;
     Context ctx = null;
     try {
@@ -299,7 +325,7 @@ public class Emis {
       ? ctx.getRequest( ).toSimpleString( )
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
-      throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getName( ) );
+      throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
     } else if ( !kernelId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
       throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelId );
     }
@@ -348,7 +374,9 @@ public class Emis {
   
   public static void checkStoredImage( BootableSet bootSet ) {
     try {
-      ImageUtil.checkStoredImage( bootSet.getMachine( ) );
+      if( bootSet.getMachine( ) instanceof StaticDiskImage ) {
+        ImageUtil.checkStoredImage( ( StaticDiskImage ) bootSet.getMachine( ) );
+      }
       if ( bootSet.hasKernel( ) ) {
         ImageUtil.checkStoredImage( bootSet.getKernel( ) );
       }
