@@ -101,7 +101,7 @@ public class AddressingConfiguration extends AbstractPersistent {
   @Column( name = "config_addr_reserved_public_addresses" )
   private Integer       systemReservedPublicAddresses;
   
-  protected AddressingConfiguration( ) {
+  public AddressingConfiguration( ) {
     super( );
   }
   
