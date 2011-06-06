@@ -81,6 +81,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class ReplyQueue {
   public static Logger LOG = Logger.getLogger( ReplyQueue.class );
@@ -104,6 +105,14 @@ public class ReplyQueue {
         return;
       } else {
         LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
+        cause = new WebServicesException( "Failed to identify request context for recieved error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
+        try {
+          Context ctx = Contexts.lookup( );
+          Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+        } catch ( IllegalContextAccessException ex ) {
+          LOG.error( ex );
+          LOG.error( cause, cause );
+        }
       }
     } else if ( cause instanceof MuleException ) {
       LOG.error( "Error service request: " + cause.getMessage( ), cause );
@@ -130,6 +139,8 @@ public class ReplyQueue {
     BaseMessage ret = null;
     if ( payload instanceof BaseMessage ) {
       ret = ( BaseMessage ) payload;
+    } else if ( payload instanceof HasRequest ) {
+      ret = ( ( HasRequest ) payload ).getRequest( );
     } else if ( payload instanceof String ) {
       try {
         ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
