@@ -285,7 +285,7 @@ public class DescribeResourcesResponseType extends EucalyptusMessage {
   }
 }
 
-public class VmTypeInfo extends EucalyptusData {
+public class VmTypeInfo extends EucalyptusData implements Cloneable {
   
   String name;
   Integer memory;
@@ -305,7 +305,14 @@ public class VmTypeInfo extends EucalyptusData {
     this.cores = cores;
     this.rootDeviceName = rootDevice;
   }
-  
+
+  public VmTypeInfo child( ) {
+    VmTypeInfo child = new VmTypeInfo( this.name, this.memory, this.disk, this.cores, this.rootDeviceName );
+    child.deviceMappings.addAll( this.deviceMappings );
+    child.virtualBootRecord.addAll( this.virtualBootRecord.collect{ (VirtualBootRecord) it.clone() } );
+    return child;
+  }
+    
   @Override
   public String toString() {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";

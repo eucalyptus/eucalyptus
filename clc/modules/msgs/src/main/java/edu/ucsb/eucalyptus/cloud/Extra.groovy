@@ -196,7 +196,7 @@ public class VmRunType extends EucalyptusMessage {
   
 }
 
-public class VirtualBootRecord extends EucalyptusData {
+public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String id = "none";
   String resourceLocation = "none";
   String type;
@@ -217,6 +217,10 @@ public class VirtualBootRecord extends EucalyptusData {
   
   public boolean isBlockStorage() {
     return "ebs".equals( this.type );
+  }
+  
+  public Object clone( ) {
+    return super.clone();
   }
 }
 

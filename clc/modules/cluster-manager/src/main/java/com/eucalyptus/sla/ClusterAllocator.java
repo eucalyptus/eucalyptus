@@ -88,12 +88,14 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
@@ -106,6 +108,8 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.cloud.VmRunType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
@@ -142,9 +146,8 @@ public class ClusterAllocator extends Thread {
           if ( root.isBlockStorage( ) ) {
             for ( int i = 0; i < vmToken.getAmount( ); i++ ) {
               BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
-              String iqn = this.cluster.getNode( this.cluster.getNodeTags( ).first( ) ).getIqn( );//TODO:GRZE: verifying that iqns are available on all nodes matters, yes plox.
               int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
-              LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and temporary iqn: " + iqn + " and vbr: " + root );
+              LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
               Volume vol = Volumes.createStorageVolume( this.sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, allocInfo.getRequest( ) );
               if ( imgInfo.getDeleteOnTerminate( ) ) {
                 this.allocInfo.getTransientVolumes( ).add( vol );
@@ -234,7 +237,21 @@ public class ClusterAllocator extends Thread {
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo,
+        VirtualBootRecord root = vmInfo.lookupRoot( );
+        VmTypeInfo childVmInfo = vmInfo;
+        if( root.isBlockStorage( ) ) {
+          childVmInfo = vmInfo.child( );
+          Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
+          for( String nodeTag : this.cluster.getNodeTags( ) ) {
+            try {
+              AttachStorageVolumeResponseType scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
+              childVmInfo.lookupRoot( ).setResourceLocation( "iqn://" + scAttachResponse.getRemoteDeviceString( ) );
+            } catch ( EucalyptusCloudException ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
+        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, childVmInfo,
                              this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
                              userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
@@ -253,10 +270,12 @@ public class ClusterAllocator extends Thread {
         return VmInstances.getAsMAC( instanceId );
       }
     } );
+    
     List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null )
       ? new ArrayList<String>( )
       : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.toStringFunction( ) ) );
     //TODO:GRZE:ASAP use ern here instead of string name -- see KeyPairManager.resolve()
+
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ),
                                    vmInfo, keyInfo, platform != null
                                      ? platform
