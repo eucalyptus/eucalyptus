@@ -82,6 +82,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
+import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
@@ -111,6 +112,8 @@ import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -242,12 +245,23 @@ public class ClusterAllocator extends Thread {
         if( root.isBlockStorage( ) ) {
           childVmInfo = vmInfo.child( );
           Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
-          for( String nodeTag : this.cluster.getNodeTags( ) ) {
+          Dispatcher sc = ServiceDispatcher.lookup( Partitions.lookupService( Storage.class, vol.getPartition( ) ) );
+          for( int i = 0; i < 60; i++ ) { 
             try {
-              AttachStorageVolumeResponseType scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
-              childVmInfo.lookupRoot( ).setResourceLocation( "iqn://" + scAttachResponse.getRemoteDeviceString( ) );
+              DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );    
+              if( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
+                break;
+              }
             } catch ( EucalyptusCloudException ex ) {
               LOG.error( ex , ex );
+            }
+            for( String nodeTag : this.cluster.getNodeTags( ) ) {
+              try {
+                AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
+                childVmInfo.lookupRoot( ).setResourceLocation( "iqn://" + scAttachResponse.getRemoteDeviceString( ) );
+              } catch ( EucalyptusCloudException ex ) {
+                LOG.error( ex , ex );
+              }
             }
           }
         }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
