@@ -78,6 +78,7 @@ permission notice:
 #include "eucalyptus.h"
 #include "euca_auth.h"
 #include "backing.h"
+#include "iscsi.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -96,9 +97,6 @@ static int doInitialize (struct nc_state_t *nc)
 	/* set up paths of Eucalyptus commands NC relies on */
 	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
-	snprintf (nc->connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, nc->home, nc->home);
-	snprintf (nc->get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
         nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
