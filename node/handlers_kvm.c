@@ -556,7 +556,7 @@ doDetachVolume (	struct nc_state_t *nc,
             sem_v (inst_sem);
         if ( volume == NULL ) {
             logprintfl (EUCAFATAL, "ERROR: Failed to find and remove volume record, aborting volume detachment\n");
-            return ERROR;
+            ret =  ERROR;
         }
     }
     
