@@ -1332,12 +1332,12 @@ void parse_target(char *dev_string) {
     }  
 }
 
-char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
+char* connect_iscsi_target(const char *dev_string) {
     char buf [MAX_PATH];
     char *retval=NULL;
     int pid, status, rc, len, rbytes, filedes[2];
     
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", nc_state.connect_storage_cmd_path, nc_state.home, dev_string);
     logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     
     rc = pipe(filedes);
@@ -1354,7 +1354,7 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *
 	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
 	len = 0;
       } else {
-	logprintfl (EUCAINFO, "Attached device: %s\n", retval);
+	logprintfl (EUCAINFO, "connect_iscsi_target(): attached host device name: %s\n", retval);
 	len = strlen(retval);
       } 
       rc = write(filedes[1], &len, sizeof(int));
@@ -1392,12 +1392,12 @@ char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *
     return retval;
 }
 
-int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
+int disconnect_iscsi_target(const char *dev_string) {
   int pid, retval, status;
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     pid = fork();
     if (!pid) {
-      if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
+      if (vrun("%s %s,%s", nc_state.disconnect_storage_cmd_path, nc_state.home, dev_string) != 0) {
 	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
 	exit(1);
       }
@@ -1414,12 +1414,12 @@ int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char 
     return retval;
 }
 
-char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
+char* get_iscsi_target(const char *dev_string) {
     char buf [MAX_PATH];
     char *retval=NULL;
     int pid, status, rc, len, rbytes, filedes[2];
     
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
+    snprintf (buf, MAX_PATH, "%s %s,%s", nc_state.get_storage_cmd_path, nc_state.home, dev_string);
     logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
     
     rc = pipe(filedes);
@@ -1543,3 +1543,25 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     
   return(ret);
 }
+
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml) {
+        int virtio_dev = 0;
+        int rc = 0;
+        struct stat statbuf;
+        /* only attach using virtio when the device is /dev/vdXX */
+        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+             virtio_dev = 1;
+        }
+        if (nc->config_use_virtio_disk && virtio_dev) {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+        } else {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+        }
+        rc = stat(remoteDev, &statbuf);
+        if (rc) {
+             logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+             rc = 1;
+        }
+        return rc;
+}
+
