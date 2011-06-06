@@ -338,7 +338,7 @@ public class VmTypeInfo extends EucalyptusData {
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
-      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "/dev/sda1" || vbr.guestDeviceName == "xvda" ) };
+      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "sda1" || vbr.guestDeviceName == "xvda" ) };
     }
     if( ret != null ) {
       return ret;
