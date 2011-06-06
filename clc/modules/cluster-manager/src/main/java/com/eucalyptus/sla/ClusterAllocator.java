@@ -89,7 +89,6 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Request;
@@ -252,14 +251,14 @@ public class ClusterAllocator extends Thread {
               if( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
                 break;
               }
-            } catch ( EucalyptusCloudException ex ) {
+            } catch ( Exception ex ) {
               LOG.error( ex , ex );
             }
             for( String nodeTag : this.cluster.getNodeTags( ) ) {
               try {
                 AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
                 childVmInfo.lookupRoot( ).setResourceLocation( "iqn://" + scAttachResponse.getRemoteDeviceString( ) );
-              } catch ( EucalyptusCloudException ex ) {
+              } catch ( Exception ex ) {
                 LOG.error( ex , ex );
               }
             }
