@@ -63,10 +63,13 @@
 
 package com.eucalyptus.cloud.run;
 
+import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.google.common.base.Joiner;
 import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
@@ -74,14 +77,24 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
 public class PartitionVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
+  
+  private static Logger LOG = Logger.getLogger( PartitionVerify.class );
+  
+  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws NotEnoughResourcesAvailable {
     RunInstancesType request = vmAllocInfo.getRequest( );
-    String clusterName = request.getAvailabilityZone( );
-    String zoneName = ( clusterName != null )
-      ? clusterName
-      : "default";
-    Partition partition = Partitions.lookupService( ClusterController.class, request.getAvailabilityZone( ) ).lookupPartition( );
-    vmAllocInfo.setPartition( partition );
+    String zoneName = request.getAvailabilityZone( );
+    if ( Clusters.getInstance( ).listValues( ).isEmpty( ) ) {
+      LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
+      LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
+      throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster controller is currently available to run instances." );
+    } else if ( Partitions.exists( zoneName ) ) {
+      Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
+      vmAllocInfo.setPartition( partition );
+    } else {
+      String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
+      Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
+      vmAllocInfo.setPartition( partition );
+    }
     return vmAllocInfo;
   }
 }

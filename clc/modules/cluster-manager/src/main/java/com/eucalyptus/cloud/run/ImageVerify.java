@@ -63,11 +63,11 @@
 
 package com.eucalyptus.cloud.run;
 
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -75,14 +75,13 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
 public class ImageVerify {
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    RunInstancesType msg = vmAllocInfo.getRequest( );
+  public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
+    RunInstancesType msg = allocInfo.getRequest( );
     String imageId = msg.getImageId( );
-    VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
-    Partition partition = vmAllocInfo.getPartition( );
+    VmTypeInfo vmType = allocInfo.getVmTypeInfo( );
+    Partition partition = allocInfo.getPartition( );
     BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
-    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ).name( ) );
-    vmAllocInfo.getPlatform( );
+    allocInfo.setBootableSet( bootSet );
     if ( bootSet.isLinux( ) ) {
       bootSet = Emis.bootsetWithKernel( bootSet );
       bootSet = Emis.bootsetWithRamdisk( bootSet );
@@ -92,7 +91,7 @@ public class ImageVerify {
     
     bootSet.populateVirtualBootRecord( vmType );
     
-    return vmAllocInfo;
+    return allocInfo;
   }
   
 

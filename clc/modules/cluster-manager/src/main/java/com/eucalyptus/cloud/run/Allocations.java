@@ -76,6 +76,7 @@ import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -99,7 +100,7 @@ public class Allocations {
     private String                    reservationId;
     private VmKeyInfo                 keyInfo;
     private VmTypeInfo                vmTypeInfo;
-    private String                    platform;
+    private BootableSet               bootSet;
     
     private Allocation( RunInstancesType request ) {
       super( );
@@ -206,6 +207,18 @@ public class Allocations {
           Addresses.release( Addresses.getInstance( ).lookup( addr ) );
         }
       }
+    }
+
+    public VmTypeInfo getVmTypeInfo( ) {
+      return this.vmTypeInfo;
+    }
+
+    public Partition getPartition( ) {
+      return this.partition;
+    }
+
+    public void setBootableSet( BootableSet bootSet ) {
+      this.bootSet = bootSet;
     }
   }
   

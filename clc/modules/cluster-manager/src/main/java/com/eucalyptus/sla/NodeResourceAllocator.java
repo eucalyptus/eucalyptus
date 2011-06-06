@@ -108,7 +108,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
       }
       if ( sorted.isEmpty( ) ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster is available on which you have permissions to run instances." );
+        throw new NotEnoughResourcesAvailable( "Not enough resources: no availability zone is available in which you have permissions to run instances." );
       } else {
         return Lists.newArrayList( sorted.values( ) );
       }
