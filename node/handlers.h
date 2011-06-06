@@ -273,10 +273,9 @@ void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
 int check_iscsi(char* dev_string);
-//void parse_target(char *dev_string);
-char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
-int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
-char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
+char* connect_iscsi_target(const char *dev_string);
+int disconnect_iscsi_target(const char *dev_string);
+char* get_iscsi_target(const char *dev_string);
 int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml);
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);

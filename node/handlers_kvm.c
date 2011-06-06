@@ -368,7 +368,7 @@ doAttachVolume (	struct nc_state_t *nc,
 	      is_iscsi_target = 1;
 	      /*get credentials, decrypt them*/
 	      /*login to target*/
-	      remoteDevStr = connect_iscsi_target(nc->connect_storage_cmd_path, nc->home, remoteDev);
+	      remoteDevStr = connect_iscsi_target(remoteDev);
 	      if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
 		logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
 		remoteDevReal[0] = '\0';
@@ -444,7 +444,7 @@ doAttachVolume (	struct nc_state_t *nc,
       // should try to disconnect (if iSCSI) the volume, here
       if(is_iscsi_target && have_remote_device) {
 	logprintfl(EUCADEBUG, "AttachVolume(): attempting to disconnect iscsi target due to attachment failure\n");
-	if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, nc->home, remoteDev) != 0) {
+	if(disconnect_iscsi_target(remoteDev) != 0) {
 	  logprintfl (EUCAERROR, "AttachVolume(): disconnect_iscsi_target failed for %s\n", remoteDev);
 	}
       }
@@ -506,7 +506,7 @@ doDetachVolume (	struct nc_state_t *nc,
                 /*get credentials, decrypt them*/
                 //parse_target(remoteDev);
                 /*logout from target*/
-                if((local_iscsi_dev = get_iscsi_target(nc->get_storage_cmd_path, nc->home, remoteDev)) == NULL)
+                if((local_iscsi_dev = get_iscsi_target(remoteDev)) == NULL)
                     return ERROR;
                 if (nc->config_use_virtio_disk && virtio_dev) {
                     snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", local_iscsi_dev, localDevReal);
@@ -532,7 +532,7 @@ doDetachVolume (	struct nc_state_t *nc,
             }
             virDomainFree(dom);
             if(is_iscsi_target) {
-                if(disconnect_iscsi_target(nc->disconnect_storage_cmd_path, nc->home, remoteDev) != 0) {
+                if(disconnect_iscsi_target(remoteDev) != 0) {
                     logprintfl (EUCAERROR, "disconnect_iscsi_target failed for %s\n", remoteDev);
                     ret = ERROR;
                 }

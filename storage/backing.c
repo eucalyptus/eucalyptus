@@ -91,7 +91,6 @@ static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
 
-extern struct nc_state_t nc_state; // TODO: remove this extern
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
     logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
@@ -404,7 +403,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
     }
         
     case NC_LOCATION_IQN: {
-        char * dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, nc_state.home, vbr->resourceLocation);
+        char * dev = connect_iscsi_target(vbr->resourceLocation);
 		if (!dev || !strstr(dev, "/dev")) {
             logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", instance->instanceId);
             goto i_error;
@@ -745,7 +744,7 @@ int destroy_instance_backing1 (ncInstance * instance, int destroy_files) // TODO
                 virtualBootRecord * vbr = parts [i][j][k];
                 if (vbr) {  
                     if (vbr->locationType==NC_LOCATION_IQN) {
-                        if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+                        if (disconnect_iscsi_target (vbr->resourceLocation)) {
                             logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
                         } 
                     } else {
@@ -925,7 +924,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
         if (vbr->locationType==NC_LOCATION_IQN) {
-            if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+            if (disconnect_iscsi_target (vbr->resourceLocation)) {
                 logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
             } 
         }
