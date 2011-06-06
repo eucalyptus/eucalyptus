@@ -81,7 +81,7 @@
 #include "walrus.h"
 #include "blobstore.h"
 #include "diskutil.h"
-#include "handlers.h" // connect_iscsi*
+#include "iscsi.h"
 
 #define VBR_SIZE_SCALING 1024 // TODO: remove this adjustment after CLC sends bytes instead of KBs
 
@@ -773,7 +773,7 @@ static int iqn_creator (artifact * a)
     assert (a);
     virtualBootRecord * vbr = a->vbr;
     assert (vbr);
-    /*    
+
     char * dev = connect_iscsi_target (vbr->resourceLocation);
     if (!dev || !strstr(dev, "/dev")) {
         logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", a->instanceId);
@@ -782,7 +782,25 @@ static int iqn_creator (artifact * a)
     // update VBR with device location
     strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
-    */
+
+    return OK;
+}
+
+static int aoe_creator (artifact * a)
+{
+    assert (a);
+    virtualBootRecord * vbr = a->vbr;
+    assert (vbr);
+
+    char * dev = vbr->resourceLocation;
+    if (!dev || !strstr(dev, "/dev") || check_block(dev)!=0) {
+        logprintfl(EUCAERROR, "[%s] error: failed to locate AoE device %s\n", a->instanceId, dev);
+        return ERROR;
+    } 
+    // update VBR with device location
+    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    vbr->backingType = SOURCE_TYPE_BLOCK;
+
     return OK;
 }
 
@@ -1016,7 +1034,6 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     case NC_LOCATION_URL:
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
-    case NC_LOCATION_AOE:
         logprintfl (EUCAERROR, "[%s] error: location of type %d is NOT IMPLEMENTED\n", current_instanceId, vbr->locationType);
         return NULL;
 
@@ -1048,6 +1065,13 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         assert (!make_work_copy);
         assert (!must_be_file);
         a = art_alloc (NULL, NULL, -1, FALSE, FALSE, iqn_creator, vbr);
+        break;
+    }
+
+    case NC_LOCATION_AOE: {
+        assert (!make_work_copy);
+        assert (!must_be_file);
+        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, aoe_creator, vbr);
         break;
     }
 

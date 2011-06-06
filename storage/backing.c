@@ -80,7 +80,7 @@
 #include "blobstore.h"
 #include "walrus.h"
 #include "backing.h"
-#include "handlers.h" // connect_iscsi*
+#include "iscsi.h"
 #include "vbr.h"
 
 #define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 
