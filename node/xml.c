@@ -189,7 +189,7 @@ int gen_instance_xml (const ncInstance * instance)
             _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
             if (nc_state.config_use_virtio_root) {
                 char virtiostr[SMALL_CHAR_BUFFER_SIZE];
-                snprintf(virtiostr, "%s", vbr->guestDeviceName);
+                snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
                 virtiostr[0] = 'v';
                 _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
                 _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
