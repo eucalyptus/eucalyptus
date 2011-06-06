@@ -84,7 +84,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class Emis {
   enum VBRTypes {
     MACHINE( "walrus://" ),
-    EBS( "iqn://" ),
+    EBS,
     KERNEL( "walrus://" ),
     RAMDISK( "walrus://" ),
     EPHEMERAL,

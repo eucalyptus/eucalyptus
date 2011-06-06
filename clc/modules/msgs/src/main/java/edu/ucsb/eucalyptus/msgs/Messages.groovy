@@ -319,7 +319,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "iqn://${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
   public void setRoot( String imageId, String location, Long sizeBytes ) {

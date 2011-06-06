@@ -257,7 +257,7 @@ public class ClusterAllocator extends Thread {
             for( String nodeTag : this.cluster.getNodeTags( ) ) {
               try {
                 AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
-                childVmInfo.lookupRoot( ).setResourceLocation( "iqn://" + scAttachResponse.getRemoteDeviceString( ) );
+                childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
               } catch ( Exception ex ) {
                 LOG.error( ex , ex );
               }
