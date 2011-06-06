@@ -115,14 +115,14 @@ public class ClusterAllocator extends Thread {
   public static Boolean             SPLIT_REQUESTS = true;
   private StatefulMessageSet<State> messages;
   private Cluster                   cluster;
-  private Allocation vmAllocInfo;
+  private Allocation allocInfo;
   
   public static void create( ResourceToken t, Allocation allocInfo ) {
     Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
   }
   
-  private ClusterAllocator( ResourceToken vmToken, Allocation vmAllocInfo ) {
-    this.vmAllocInfo = vmAllocInfo;
+  private ClusterAllocator( ResourceToken vmToken, Allocation allocInfo ) {
+    this.allocInfo = allocInfo;
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
@@ -197,16 +197,16 @@ public class ClusterAllocator extends Thread {
     }
     
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
-    RunInstancesType request = this.vmAllocInfo.getRequest( );
-    String rsvId = this.vmAllocInfo.getReservationId( );
-    VmKeyInfo keyInfo = this.vmAllocInfo.getKeyInfo( );
-    VmTypeInfo vmInfo = this.vmAllocInfo.getVmTypeInfo( );
-    String userData = this.vmAllocInfo.getRequest( ).getUserData( );
+    RunInstancesType request = this.allocInfo.getRequest( );
+    String rsvId = this.allocInfo.getReservationId( );
+    VmKeyInfo keyInfo = this.allocInfo.getKeyInfo( );
+    VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
+    String userData = this.allocInfo.getRequest( ).getUserData( );
     Request cb = null;
     int index = 0;
     try {
       for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        cb = makeRunRequest( request, childToken, this.vmAllocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo, this.vmAllocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
+        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, vmInfo, this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
                              userData );
         this.messages.addRequest( State.CREATE_VMS, cb );
         index++;

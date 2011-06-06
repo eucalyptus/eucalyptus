@@ -72,17 +72,16 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class NetworkGroupVerify {
-  public Allocation verify( Allocation vmAllocInfo ) throws EucalyptusCloudException {
-    RunInstancesType request = vmAllocInfo.getRequest( );
+  public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
+    RunInstancesType request = allocInfo.getRequest( );
     String action = PolicySpec.requestToAction( request );
-    Context ctx = Contexts.lookup( );
+    Context ctx = allocInfo.getContext( );
     User requestUser = ctx.getUser( );
     Account account = Permissions.getAccountByUserId( requestUser.getUserId( ) );
     
@@ -99,14 +98,14 @@ public class NetworkGroupVerify {
         throw new EucalyptusCloudException( "Not authorized to use network group " + groupName + " for " + requestUser.getName( ) );
       }
       networkRuleGroups.put( groupName, group );
-      vmAllocInfo.getNetworks( ).add( group.getVmNetwork( ) );
+      allocInfo.getNetworks( ).add( group.getVmNetwork( ) );
     }
     ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet( ) );
     if ( !userNetworks.containsAll( networkNames ) ) {
       networkNames.removeAll( userNetworks );
       throw new EucalyptusCloudException( "Failed to find " + networkNames );
     }
-    return vmAllocInfo;
+    return allocInfo;
   }
   
 }

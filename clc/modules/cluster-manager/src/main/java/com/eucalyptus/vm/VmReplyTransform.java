@@ -77,20 +77,20 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 
 public class VmReplyTransform {
 
-  public RunInstancesResponseType allocate( Allocation vmAllocInfo ) throws EucalyptusCloudException
+  public RunInstancesResponseType allocate( Allocation allocInfo ) throws EucalyptusCloudException
   {
-    RunInstancesResponseType reply = vmAllocInfo.getRequest().getReply( );
+    RunInstancesResponseType reply = allocInfo.getRequest().getReply( );
     Context ctx = Contexts.lookup( );
 
     List<String> networkNames = new ArrayList<String>();
-    if ( vmAllocInfo.getNetworks() != null ) {
-      for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+    if ( allocInfo.getNetworks() != null ) {
+      for( Network vmNet : allocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
     }
-    ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
+    ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId(),
                                                                ctx.getUserFullName().getNamespace( ),
                                                                networkNames );
 
-    for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
+    for( ResourceToken allocToken : allocInfo.getAllocationTokens() )
       for( String instId : allocToken.getInstanceIds() ) {
         reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( ) );
       }

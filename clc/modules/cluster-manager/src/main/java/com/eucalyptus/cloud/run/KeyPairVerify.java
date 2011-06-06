@@ -69,7 +69,6 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.keys.KeyPairUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -80,18 +79,18 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
  */
 public class KeyPairVerify {
-  public Allocation verify( Allocation vmAllocInfo ) throws EucalyptusCloudException {
-    if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest( ).getKeyName( ) ) || vmAllocInfo.getRequest( ).getKeyName( ) == null ) {
+  public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
+    if ( SshKeyPair.NO_KEY_NAME.equals( allocInfo.getRequest( ).getKeyName( ) ) || allocInfo.getRequest( ).getKeyName( ) == null ) {
 //ASAP:FIXME:GRZE
-      if ( Image.Platform.windows.name( ).equals( vmAllocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
-        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest( ).getImageId( ) );
+      if ( Image.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
+        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + allocInfo.getRequest( ).getImageId( ) );
       } else {
-        vmAllocInfo.setKeyInfo( new VmKeyInfo( ) );
-        return vmAllocInfo;
+        allocInfo.setKeyInfo( new VmKeyInfo( ) );
+        return allocInfo;
       }
     }
-    Context ctx = Contexts.lookup( );
-    RunInstancesType request = vmAllocInfo.getRequest( );
+    Context ctx = allocInfo.getContext( );
+    RunInstancesType request = allocInfo.getRequest( );
     String action = PolicySpec.requestToAction( request );
     String keyName = request.getKeyName( );
     Account account = ctx.getAccount( );
@@ -102,8 +101,8 @@ public class KeyPairVerify {
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
     }
-    vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
-    return vmAllocInfo;
+    allocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
+    return allocInfo;
   }
   
 }

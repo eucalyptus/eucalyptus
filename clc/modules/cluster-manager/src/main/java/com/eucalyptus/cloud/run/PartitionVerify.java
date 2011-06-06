@@ -80,8 +80,8 @@ public class PartitionVerify {
   
   private static Logger LOG = Logger.getLogger( PartitionVerify.class );
   
-  public Allocation verify( Allocation vmAllocInfo ) throws NotEnoughResourcesAvailable {
-    RunInstancesType request = vmAllocInfo.getRequest( );
+  public Allocation verify( Allocation allocInfo ) throws NotEnoughResourcesAvailable {
+    RunInstancesType request = allocInfo.getRequest( );
     String zoneName = request.getAvailabilityZone( );
     if ( Clusters.getInstance( ).listValues( ).isEmpty( ) ) {
       LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
@@ -89,12 +89,12 @@ public class PartitionVerify {
       throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster controller is currently available to run instances." );
     } else if ( Partitions.exists( zoneName ) ) {
       Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
-      vmAllocInfo.setPartition( partition );
+      allocInfo.setPartition( partition );
     } else {
       String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
       Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
-      vmAllocInfo.setPartition( partition );
+      allocInfo.setPartition( partition );
     }
-    return vmAllocInfo;
+    return allocInfo;
   }
 }
