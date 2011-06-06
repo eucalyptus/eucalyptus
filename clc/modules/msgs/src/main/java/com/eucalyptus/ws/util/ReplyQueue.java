@@ -72,7 +72,6 @@ import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -141,8 +140,8 @@ public class ReplyQueue {
       payload = RequestContext.getEvent( ).getMessage( ).getPayload( );
       if ( payload instanceof BaseMessage ) {
         ret = ( BaseMessage ) payload;
-      } else if ( payload instanceof Allocation ) {
-        ret = ( ( Allocation ) payload ).getRequest( );
+//      } else if ( payload instanceof Allocation ) {
+//        ret = ( ( Allocation ) payload ).getRequest( );
       } else if ( payload instanceof String ) {
         try {
           ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
