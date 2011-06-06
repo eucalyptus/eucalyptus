@@ -202,7 +202,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( request.getPathPrefix( ) != null && !"".equals(request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -232,7 +232,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -261,7 +261,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( request.getUserName( ) != null ) {
       try {
@@ -306,7 +306,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -356,7 +356,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -385,7 +385,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -426,7 +426,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -469,7 +469,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -507,7 +507,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -540,7 +540,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -569,7 +569,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -602,7 +602,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -662,7 +662,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -702,7 +702,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -733,7 +733,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + requestUser.getName( ) );
     }
@@ -760,7 +760,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -795,7 +795,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -830,7 +830,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( request.getUserName( ) != null ) {
       try {
@@ -871,7 +871,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -899,7 +899,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -938,7 +938,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + requestUser.getName( ) );
     }
@@ -971,7 +971,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1014,7 +1014,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
@@ -1052,7 +1052,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1099,7 +1099,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1134,7 +1134,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1170,7 +1170,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1205,7 +1205,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( request.getUserName( ) != null ) {
       try {
@@ -1247,7 +1247,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1277,7 +1277,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1319,7 +1319,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1357,7 +1357,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
@@ -1389,7 +1389,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
@@ -1432,7 +1432,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( request.getUserName( ) != null ) {
       try {
@@ -1479,7 +1479,7 @@ public class EuareService {
     String action = PolicySpec.requestToAction( request );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account account = ctx.getAccount( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( request.getUserName( ) != null ) {
       try {
