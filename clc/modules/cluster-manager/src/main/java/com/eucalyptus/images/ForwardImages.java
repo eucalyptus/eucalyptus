@@ -77,11 +77,7 @@ public class ForwardImages {
   public static String defaultRamdisk( ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      List<ImageInfo> images = db.query( new ImageInfo( ) {
-        {
-          setImageType( Image.Type.ramdisk );
-        }
-      } );
+      List<ImageInfo> images = db.query( new ImageInfo( Image.Type.ramdisk ) );
       if( images.size( ) > 0 ) {
         db.commit( );
         return images.get( 0 ).getDisplayName( );
@@ -102,11 +98,7 @@ public class ForwardImages {
   public static String defaultKernel( ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      List<ImageInfo> images = db.query( new ImageInfo( ) {
-        {
-          setImageType( Image.Type.kernel );
-        }
-      } );
+      List<ImageInfo> images = db.query( new ImageInfo( Image.Type.kernel ) );
       if( images.size( ) > 0 ) {
         db.commit( );
         return images.get( 0 ).getDisplayName( );

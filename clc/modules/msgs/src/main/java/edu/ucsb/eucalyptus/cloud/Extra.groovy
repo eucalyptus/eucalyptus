@@ -64,23 +64,11 @@
 package edu.ucsb.eucalyptus.cloud
 
 
+import java.util.ArrayList
+import java.util.List
+import com.eucalyptus.records.*
+import com.google.common.collect.*
 import edu.ucsb.eucalyptus.msgs.*
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.records.EventType;
-import org.apache.log4j.Logger;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentSkipListSet
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.records.*;
-import com.google.common.collect.*;
 
 public class Pair {
   
@@ -98,43 +86,6 @@ public class Pair {
     this.right = right;
   }
   
-}
-public class VmAllocationInfo extends EucalyptusMessage {
-  
-  RunInstancesType request;
-  RunInstancesResponseType reply;
-  byte[] userData;
-  UserFullName ownerFullName;
-  Long reservationIndex;
-  String reservationId;
-  VmKeyInfo keyInfo;
-  VmTypeInfo vmTypeInfo;
-  String platform;
-  List<Network> networks = new ArrayList<Network>();
-  
-  List<ResourceToken> allocationTokens = new ArrayList<ResourceToken>();
-  List<String> addresses = new ArrayList<String>();
-  ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
-  
-  def VmAllocationInfo() {
-  }
-  
-  def VmAllocationInfo(final RunInstancesType request) {
-    this.request = request;
-    this.reply = request.getReply();
-    regardingUserRequest(request);
-  }
-  
-  public EucalyptusMessage getRequestMessage() {
-    return this.getRequest();
-  }
-
-  public String getCorrelationId( ) {
-    return this.request.getCorrelationId( );
-  }
-
-  public void setCorrelationId( String correlationId ) {
-  }
 }
 
 public class VmDescribeType extends EucalyptusMessage {
@@ -245,7 +196,7 @@ public class VmRunType extends EucalyptusMessage {
   
 }
 
-public class VirtualBootRecord extends EucalyptusData {
+public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String id = "none";
   String resourceLocation = "none";
   String type;
@@ -262,6 +213,14 @@ public class VirtualBootRecord extends EucalyptusData {
 	  this.guestDeviceName = guestDeviceName;
 	  this.size = size;
 	  this.format = format;
+  }
+  
+  public boolean isBlockStorage() {
+    return "ebs".equals( this.type );
+  }
+  
+  public Object clone( ) {
+    return super.clone();
   }
 }
 
