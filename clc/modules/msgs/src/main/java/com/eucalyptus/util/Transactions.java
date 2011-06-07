@@ -16,10 +16,10 @@ import com.google.common.collect.Lists;
 public class Transactions {
   private static Logger                        LOG  = Logger.getLogger( Transactions.class );
   private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
-  
-  public static <T> EntityWrapper<T> join( ) {
-    return ( EntityWrapper<T> ) dbtl.get( );
-  }
+//  
+//  public static <T> EntityWrapper<T> join( ) {
+//    return ( EntityWrapper<T> ) dbtl.get( );
+//  }
   
   /**
    * TODO:GRZE: make this friendly wrt multiple types

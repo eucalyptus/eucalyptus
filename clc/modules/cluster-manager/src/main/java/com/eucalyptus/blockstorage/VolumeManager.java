@@ -126,7 +126,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
     }
     
-    Long volSize = Long.parseLong( request.getSize( ) );
+    Long volSize = request.getSize( ) != null ? Long.parseLong( request.getSize( ) ) : null;
     final String snapId = request.getSnapshotId( );
     String partition = request.getAvailabilityZone( );
     
