@@ -72,13 +72,6 @@ import com.eucalyptus.component.id.Eucalyptus
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
 
-public class HeartbeatType extends EucalyptusMessage {
-  ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
-  ArrayList<ComponentType> started = new ArrayList<ComponentType>();
-  ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
-}
-public class HeartbeatResponseType extends EucalyptusMessage {}
-
 
 public class HeartbeatType extends EucalyptusMessage {
   ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
@@ -117,37 +110,37 @@ public class ComponentProperty extends EucalyptusData {
   private String displayName;
   private String value;
   private String qualifiedName;
-		
+    
   public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
     this.type = type;
-	this.displayName = displayName;
-	this.value = value;
-	this.qualifiedName = qualifiedName;
-  }	
+  this.displayName = displayName;
+  this.value = value;
+  this.qualifiedName = qualifiedName;
+  }     
   public String getType() {
-	return type;
+  return type;
   }
   public void setType(String type) {
-	this.type = type;
+  this.type = type;
   }
   public String getQualifiedName() {
-	return qualifiedName;
+  return qualifiedName;
   }
   public void setQualifiedName(String qualifiedName) {
-	this.qualifiedName = qualifiedName;
+  this.qualifiedName = qualifiedName;
   }
   public String getDisplayName() {
-	return displayName;
+  return displayName;
   }
   public void setDisplayName(String displayName) {
-	this.displayName = displayName;
+  this.displayName = displayName;
   }
   public String getValue() {
-	return value;
+  return value;
   }
   public void setValue(String value) {
-	this.value = value;
-  }	
+  this.value = value;
+  }     
 }
 public class StorageStateType extends EucalyptusMessage{
   private String name;
