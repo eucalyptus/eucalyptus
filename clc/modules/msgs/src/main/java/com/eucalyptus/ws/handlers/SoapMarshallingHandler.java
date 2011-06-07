@@ -78,6 +78,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "all" )
 public class SoapMarshallingHandler extends MessageStackHandler {
@@ -102,7 +103,9 @@ public class SoapMarshallingHandler extends MessageStackHandler {
         }
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
       } catch( Exception ex ) {
+        LOG.error( "Failed to marshall response: " + content );
         LOG.error( ex, ex );
+        throw new WebServicesException( "Failed to marshall response: " + content, ex );
       } finally {
         HoldMe.canHas.unlock( );
       }
