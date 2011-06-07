@@ -84,6 +84,7 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.vm.VmType;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -109,8 +110,9 @@ public class Allocations {
     private Long                      reservationIndex;
     private String                    reservationId;
     private VmKeyInfo                 keyInfo;
-    private VmTypeInfo                vmTypeInfo;
     private BootableSet               bootSet;
+    private VmType                    vmType;
+    private VmTypeInfo vmTypeInfo;
     
     private Allocation( ) {
       super( );
@@ -235,20 +237,22 @@ public class Allocations {
     public VmTypeInfo getVmTypeInfo( ) {
       return this.vmTypeInfo;
     }
+
+    public VmType getVmType( ) {
+      return this.vmType;
+    }
     
     public Partition getPartition( ) {
       return this.partition;
     }
     
     public void setBootableSet( BootableSet bootSet ) {
+      this.vmTypeInfo = bootSet.populateVirtualBootRecord( this.vmType );
       this.bootSet = bootSet;
     }
     
-    /**
-     * @param asVmTypeInfo
-     */
-    public void setVmTypeInfo( VmTypeInfo vmTypeInfo ) {
-      this.vmTypeInfo = vmTypeInfo;
+    public void setVmType( VmType vmType ) {
+      this.vmType = vmType;
     }
     
     public UserFullName getOwnerFullName( ) {

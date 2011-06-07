@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -77,6 +78,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
+import com.eucalyptus.vm.VmType;
 import com.google.common.base.Preconditions;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -188,23 +190,34 @@ public class Emis {
                                 this.isLinux( ) );
     }
     
-    public void populateVirtualBootRecord( VmTypeInfo vmType ) throws EucalyptusCloudException {
+    public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws EucalyptusCloudException {
       Long imgSize = this.getMachine( ).getImageSizeBytes( );
       if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
         throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
-      if ( this.getMachine( ) instanceof StaticDiskImage ) {
-        vmType.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
-      } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
-        vmType.setEbsRoot( this.getMachine( ).getDisplayName( ), null, imgSize );
-      }
+      VmTypeInfo vmTypeInfo = createVmTypeInfo( vmType, imgSize );
       if ( this.hasKernel( ) ) {
-        vmType.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
+        vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
       }
       if ( this.hasRamdisk( ) ) {
-        vmType.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+        vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
       }
+      return vmTypeInfo;
+    }
+
+    private VmTypeInfo createVmTypeInfo( VmType vmType, Long imgSize ) throws EucalyptusCloudException {
+      VmTypeInfo vmTypeInfo = null;
+      if ( this.getMachine( ) instanceof StaticDiskImage ) {
+        vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
+      } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
+        vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
+        vmTypeInfo.setEbsRoot( this.getMachine( ).getDisplayName( ), null, imgSize );
+      } else {
+        throw new EucalyptusCloudException( "Failed to identify the root machine image type: " + this.getMachine( ) );
+      }
+      return vmTypeInfo;
     }
   }
   
@@ -236,7 +249,7 @@ public class Emis {
     }
   }
   
-  public static BootableSet newBootableSet( VmTypeInfo vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
+  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
     BootableSet bootSet = null;
     try {
       bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
@@ -262,7 +275,7 @@ public class Emis {
       bootSet = Emis.bootsetWithRamdisk( bootSet );
     }
     Emis.checkStoredImage( bootSet );
-    bootSet.populateVirtualBootRecord( vmType );
+//    bootSet.populateVirtualBootRecord( vmType );
     return bootSet;
   }
   

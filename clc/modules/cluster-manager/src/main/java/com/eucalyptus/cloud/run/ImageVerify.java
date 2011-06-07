@@ -68,8 +68,8 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 /**
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
@@ -78,7 +78,7 @@ public class ImageVerify {
   public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
     RunInstancesType msg = allocInfo.getRequest( );
     String imageId = msg.getImageId( );
-    VmTypeInfo vmType = allocInfo.getVmTypeInfo( );
+    VmType vmType = allocInfo.getVmType( );
     Partition partition = allocInfo.getPartition( );
     BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
     allocInfo.setBootableSet( bootSet );

@@ -95,7 +95,7 @@ public class VmTypeVerify {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
     }
-    allocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
+    allocInfo.setVmType( v );
     return allocInfo;
   }
   

@@ -75,9 +75,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Entity
 @javax.persistence.Entity
@@ -183,30 +180,6 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
     return 0;
   }
   
-  @TypeMapper
-  public enum InstanceStoreVmTypeTypeInfoMapper implements Function<VmType, VmTypeInfo> {
-    INSTANCE;
-    
-    @Override
-    public VmTypeInfo apply( VmType arg0 ) {
-      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
-        {
-          this.setSwap( "sda2", 512 * 1024l * 1024l );
-        }
-      };
-    }
-  };
-
-  @TypeMapper
-  public enum BlockStorageVmTypeTypeInfoMapper implements Function<VmType, VmTypeInfo> {
-    INSTANCE;
-    
-    @Override
-    public VmTypeInfo apply( VmType arg0 ) {
-      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
-    }
-  };
-
   @Override
   public String toString( ) {
     return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
