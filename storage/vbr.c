@@ -399,7 +399,7 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
             logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n", 
-                        instanceId, i, vbr->id, vbr->typeName, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
+                        instanceId, i, vbr->typeName, vbr->id, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
             if (!strcmp(vbr->typeName, "machine")) 
                 found_image = 1;
             if (!strcmp(vbr->typeName, "kernel")) 
@@ -1068,7 +1068,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
 
     case NC_LOCATION_AOE: {
         a = art_alloc (NULL, NULL, -1, FALSE, FALSE, aoe_creator, vbr);
-        goto out;;
+        goto out;
     }
 
     case NC_LOCATION_NONE: {
@@ -1356,7 +1356,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                     }
                     if (vbr->type == NC_RESOURCE_EBS) // EBS-backed instances need no additional artifacts
                         continue;
-                    if (k==0)  { // if this is a disk artifact, insert a work copy in front of it
+                    if (k==0) { // if this is a disk artifact, insert a work copy in front of it
                         if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
                             logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
                             goto out;
@@ -1627,7 +1627,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
-                	update_vbr_with_backing_info (root);
+                    update_vbr_with_backing_info (root);
             }
         }
 
@@ -1654,9 +1654,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
 #define EMI1 "emi-1CDE345"
 #define EMI2 "emi-2DEF456"
 #define GEN_ID gen_id (id, sizeof(id), "12345678")
-#define SERIAL_ITERATIONS 5
+#define SERIAL_ITERATIONS 3
 #define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 10
+#define COMPETITIVE_ITERATIONS 3
 
 static blobstore * cache_bs;
 static blobstore * work_bs;

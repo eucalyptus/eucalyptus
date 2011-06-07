@@ -560,6 +560,7 @@ void *startup_thread (void * arg)
     strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
     instance->combinePartitions = nc_state.convert_to_disk; 
+    instance->do_inject_key = nc_state.do_inject_key;
 
     char xslt_path [1024];
     snprintf (xslt_path, sizeof (xslt_path), "%s/etc/eucalyptus/libvirt.xsl", nc_state.home);
@@ -721,7 +722,7 @@ static int init (void)
 		*bridge,
 		*hypervisor,
 		*s,
-	       	*tmp;
+        *tmp;
 	struct stat mystat;
 	struct statfs fs;
 	struct handlers ** h; 
@@ -787,12 +788,14 @@ static int init (void)
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
 	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
-
-	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
-	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
-
-        add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
-
+    int disable_injection = 0;
+    GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION); 
+    nc_state.do_inject_key = !disable_injection;
+    nc_state.config_network_port = NC_NET_PORT_DEFAULT;
+    strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+                
+    add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
+                
 	if (euca_init_cert ()) {
 	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
 	  return 1;
@@ -825,15 +828,15 @@ static int init (void)
 	nc_state.get_info_cmd_path[0] = '\0';
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
-        // backing store configuration
-        int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
-        int work_size_mb = DEFAULT_NC_WORK_SIZE;
-        GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
-        GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
-        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-	if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
-            logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
-            return ERROR_FATAL;
+    // backing store configuration
+    int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
+    int work_size_mb = DEFAULT_NC_WORK_SIZE;
+    GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
+    GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
+    char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+    if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+        logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+        return ERROR_FATAL;
 	}
 	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
 		logprintfl(EUCAWARN, "Failed to stat %s\n", instance_path);
@@ -845,9 +848,9 @@ static int init (void)
 
 		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, instance_path);
 	}
-        if (instance_path) free (instance_path);
+    if (instance_path) free (instance_path);
 
-	/* determine the hypervisor to use */
+	// determine the hypervisor to use
 	
 	//if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
 	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
@@ -856,7 +859,7 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 
-	/* let's look for the right hypervisor driver */
+	// let's look for the right hypervisor driver
 	for (h = available_handlers; *h; h++ ) {
 		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
 			nc_state.D = *h; 
@@ -869,15 +872,16 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 	
-	/* only load virtio config for kvm */
+	// only load virtio config for kvm
 	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
 		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
 		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET);
 		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK);
 		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT);
 	}
-
 	free (hypervisor);
+
+    // 
 
 	/* NOTE: this is the only call which needs to be called on both
 	 * the default and the specific handler! All the others will be
