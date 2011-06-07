@@ -1062,17 +1062,13 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     }        
 
     case NC_LOCATION_IQN: {
-        assert (!make_work_copy);
-        assert (!must_be_file);
         a = art_alloc (NULL, NULL, -1, FALSE, FALSE, iqn_creator, vbr);
-        break;
+        goto out;
     }
 
     case NC_LOCATION_AOE: {
-        assert (!make_work_copy);
-        assert (!must_be_file);
         a = art_alloc (NULL, NULL, -1, FALSE, FALSE, aoe_creator, vbr);
-        break;
+        goto out;;
     }
 
     case NC_LOCATION_NONE: {
@@ -1358,6 +1354,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
+                    if (vbr->type == NC_RESOURCE_EBS) // EBS-backed instances need no additional artifacts
+                        continue;
                     if (k==0)  { // if this is a disk artifact, insert a work copy in front of it
                         if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
                             logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
