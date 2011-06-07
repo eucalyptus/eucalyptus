@@ -22,6 +22,7 @@ import org.mortbay.log.Log;
 
 // Auth
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -108,6 +109,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();
+    private static Map<String, String> safeUserMap = new HashMap<String, String>();
 
     public upgrade_20_30() {
         super(1);        
@@ -339,8 +341,20 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
         conn.rows('SELECT * FROM auth_users').each {
-            def account = Accounts.addAccount( it.auth_user_name );
-            def user = account.addUser( it.auth_user_name, "/", true/* skipRegistration */, true/* enabled */, null);
+            def account = null;
+            def userName = makeSafeUserName(it.auth_user_name);
+            while (account == null) {
+                try { 
+                    println "adding account ${ userName }"
+                    account = Accounts.addAccount( userName );
+                    safeUserMap.put(it.auth_user_name, userName);
+                } catch (AuthException e) {
+                    // The account already existed
+                    userName = userName + "-";
+                }
+            }
+            
+            def user = account.addUser( userName, "/", true/* skipRegistration */, true/* enabled */, null);
             user.setPassword( it.auth_user_password );
             user.setToken(it.auth_user_token );
             println "added " + account;
@@ -354,15 +368,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             }
             // The test data I have includes duplicate rows here.  Why?
             def uInfo = gen_conn.firstRow("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }""");
-            Map<String, String> info = new HashMap<String, String>( );
-            // Might want to drop NULLs here
-            info.put("Full Name", uInfo.user_real_name);
-            info.put("Email", uInfo.user_email);
-            info.put("Telephone", uInfo.user_telephone_number);
-            info.put("Affiliation", uInfo.user_affiliation);
-            info.put("ProjectDescription", uInfo.user_project_description);
-            info.put("ProjectPI", uInfo.user_project_pi_name);
-            user.setInfo( info );
+            if (uInfo != null) {
+                Map<String, String> info = new HashMap<String, String>( );
+                if (uInfo.user_real_name != null)
+                    info.put("Full Name", uInfo.user_real_name);
+                if (uInfo.user_email != null)
+                    info.put("Email", uInfo.user_email);
+                if (uInfo.user_telephone_number != null)
+                    info.put("Telephone", uInfo.user_telephone_number);
+                if (uInfo.user_affiliation != null)
+                    info.put("Affiliation", uInfo.user_affiliation);
+                if (uInfo.user_project_description != null)
+                    info.put("ProjectDescription", uInfo.user_project_description);
+                if (uInfo.user_project_pi_name != null)
+                    info.put("ProjectPI", uInfo.user_project_pi_name);
+                user.setInfo( info );
+            }
             def ufn = UserFullName.getInstance(user);
             
             gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
@@ -371,25 +392,31 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def path = img.image_path.split("/");
                 // TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
                 // Do I have to actually fetch and read the manifest?
-                def imgSize = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
+                def imgSize = 1;
+                def platform = Image.Platform.valueOf("linux");
+                def cachedImg = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
                                                       WHERE bucket_name=${ path[0] }
-                                                      AND manifest_name=${ path[1] }""").sz.toInteger();
+                                                      AND manifest_name=${ path[1] }""");
+                if (cachedImg != null)
+                    cachedImg.sz.toInteger();
+                if (img.image_platform != null)
+                    platform = Image.Platform.valueOf(img.image_platform);
                 def ii = null;
                 switch ( img.image_type ) {
                     case "kernel":
                         ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
                                                  "No Description", img.image_path, imgSize, 1,
-                                                 Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform) );
+                                                 Image.Architecture.valueOf(img.image_arch), platform );
                         break;
                     case "ramdisk":
                         ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", img.image_path, imgSize, 1,
-                                                  Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform) );
+                                                  Image.Architecture.valueOf(img.image_arch), platform );
                         break;
                     case "machine":
                         ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", img.image_path, imgSize, 1,
-                                                  Image.Architecture.valueOf(img.image_arch), Image.Platform.valueOf(img.image_platform),
+                                                  Image.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
@@ -400,14 +427,16 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 dbGen.add(ii);
                 dbGen.commit();
                 gen_conn.rows("""SELECT image_product_code_value FROM image_product_code
-                                 JOIN image_has_product_codes USING (image_product_code_id)
+                                 JOIN image_has_product_codes 
+                                 ON image_product_code.image_product_code_id=image_has_product_codes.image_product_code_id
                                  WHERE image_id=${ img.image_id }""").each { prodCode ->
                     EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
                     dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
                     dbPC.commit();
                 }
                 gen_conn.rows("""SELECT * FROM image_authorization
-                                 JOIN image_has_user_auth USING (image_auth_id)
+                                 JOIN image_has_user_auth
+                                 ON image_authorization.image_auth_id=image_has_user_auth.image_auth_id
                                  WHERE image_id=${ img.image_id }""").each { imgAuth ->
                     EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
                     dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
@@ -444,6 +473,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         obj.metaClass = emc;
     }
 
+    public String makeSafeUserName(String user_name) {
+        return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-")
+    }
+
     public boolean upgradeWalrus() {
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
         walrus_conn.rows('SELECT * FROM Buckets').each{
@@ -451,7 +484,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             
             EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
             try {
-                BucketInfo b = new BucketInfo(it.owner_id,it.owner_id,it.bucket_name,it.bucket_creation_date);
+                BucketInfo b = new BucketInfo(safeUserMap.get(it.owner_id),it.owner_id,it.bucket_name,it.bucket_creation_date);
                 initMetaClass(b, b.class);
                 b.setLocation(it.bucket_location);
                 b.setGlobalRead(it.global_read);
@@ -469,7 +502,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     println "--> grant: ${it.bucket_id}/${grant.user_id}"
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
-                    grantInfo.setUserId(grant.user_id);
+                    
+                    grantInfo.setUserId(safeUserMap.get(grant.user_id));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -492,7 +526,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
                                 initMetaClass(objectInfo, objectInfo.class);
                 objectInfo.setObjectName(it.object_name);
-                objectInfo.setOwnerId(it.owner_id);
+                objectInfo.setOwnerId(safeUserMap.get(it.owner_id));
                 objectInfo.setGlobalRead(it.global_read);
                 objectInfo.setGlobalWrite(it.global_write);
                 objectInfo.setGlobalReadACP(it.global_read_acp);
@@ -512,7 +546,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     println "--> grant: ${it.object_name}/${grant.user_id}"
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
-                    grantInfo.setUserId(grant.user_id);
+                    grantInfo.setUserId(safeUserMap.get(grant.user_id));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -549,12 +583,13 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
-                def account = Accounts.lookupAccountByName(it.metadata_user_name);
+                def userName = safeUserMap.get(it.metadata_user_name);
+                def account = Accounts.lookupAccountByName(userName);
                 AccountFullName eucaAfn = new AccountFullName(account);
-                def rulesGroup = new NetworkRulesGroup(eucaAfn, it.metadata_user_name + "_" + it.metadata_display_name,
+                def rulesGroup = new NetworkRulesGroup(eucaAfn, userName + "_" + it.metadata_display_name,
                                                        it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                println "Adding network rules for ${it.metadata_user_name}/${it.metadata_display_name}";
+                println "Adding network rules for ${userName}/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
