@@ -768,7 +768,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     return(1);
   }
   logprintfl(EUCAINFO, "DetachVolume(): called \n");
-  logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+  logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
     logprintfl(EUCAERROR, "DetachVolume(): bad input params\n");
     return(1);
@@ -793,7 +793,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   
   for (j=start; j<stop; j++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
     if (rc) {
       ret = 1;
     } else {
@@ -3911,6 +3911,7 @@ int reconfigureNetworkFromCLC() {
   fd = mkstemp(chainmapfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    unlink(clcnetfile);
     return(1);
   }
   chmod(chainmapfile, 0644);
@@ -3923,6 +3924,7 @@ int reconfigureNetworkFromCLC() {
   if (rc) {
     logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
     unlink(clcnetfile);
+    unlink(chainmapfile);
     return(1);
   }
 

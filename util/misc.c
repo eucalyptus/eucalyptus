@@ -386,6 +386,22 @@ int check_file_newer_than(char *file, time_t mtime) {
   return(1);
 }
 
+int check_block (const char *file)
+{
+  int rc;
+  struct stat mystat;
+
+  if (!file) {
+    return(1);
+  }
+
+  rc = lstat(file, &mystat);
+  if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
+    return(1);
+  }
+  return(0);
+}
+
 // returns 0 if file is a readable regular file, 1 otherwise
 int check_file (const char *file) 
 {
