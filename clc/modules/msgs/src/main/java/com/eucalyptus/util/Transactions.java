@@ -88,7 +88,33 @@ public class Transactions {
     } );
   }
   
-  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      boolean r = false;
+      if( r = c.apply( entity ) ) {
+        db.delete( entity );
+        db.commit( );
+        return true;
+      } else {
+        db.commit( );
+        return false;
+      }
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+
+  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -108,7 +134,7 @@ public class Transactions {
     }
   }
   
-  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -199,4 +225,5 @@ public class Transactions {
     }
     return res;
   }
+
 }

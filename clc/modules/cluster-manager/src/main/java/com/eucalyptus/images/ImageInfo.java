@@ -92,7 +92,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
@@ -234,7 +233,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-          EntityWrapper<ImageInfo> db = Transactions.join( );
+//          EntityWrapper<ImageInfo> db = Transactions.join( );
           LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
 //            db.recast( LaunchPermission.class ).add( imgAuth );
