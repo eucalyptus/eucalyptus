@@ -62,6 +62,14 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.id.Eucalyptus
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
+
 
 
 public class HeartbeatType extends EucalyptusMessage {
