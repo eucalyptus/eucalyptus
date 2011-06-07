@@ -1559,6 +1559,10 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             do_create = FALSE;
             
         } else {
+
+            if (root->vbr && root->vbr->type == NC_RESOURCE_EBS)
+                goto create; // EBS artifacts have no disk manifestation and no dependencies, so cut to the chase
+
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
@@ -1615,13 +1619,14 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry;
             }
 
+        create:
             ret = root->creator (root);
             if (ret != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact
                 blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
-            } else {
-                update_vbr_with_backing_info (root);
+		if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
+		    update_vbr_with_backing_info (root);
             }
         }
 
