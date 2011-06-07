@@ -714,7 +714,13 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     axis2_char_t * volumeId = adb_ncDetachVolumeType_get_volumeId(input, env);
     axis2_char_t * remoteDev = adb_ncDetachVolumeType_get_remoteDev(input, env);
     axis2_char_t * localDev = adb_ncDetachVolumeType_get_localDev(input, env);
-    int force = adb_ncDetachVolumeType_get_force(input, env);
+    int force=0;
+    axis2_bool_t forceBool = adb_ncDetachVolumeType_get_force(input, env);
+    if (forceBool == AXIS2_TRUE) {
+      force = 1;
+    } else {
+      force = 0;
+    }
 
     //    eventlog("NC", userId, correlationId, "DetachVolume", "begin");
     { // do it

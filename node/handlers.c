@@ -93,6 +93,7 @@ permission notice:
 #include "euca_auth.h"
 #include "xml.h"
 #include "vbr.h"
+#include "iscsi.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -741,8 +742,9 @@ static int init (void)
 	if (!tmp) {
 		nc_state.home[0] = '\0';
 		do_warn = 1;
-	} else 
+	} else {
 		strncpy(nc_state.home, tmp, MAX_PATH);
+    }
 
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
@@ -812,6 +814,8 @@ static int init (void)
         logprintfl (EUCAFATAL, "failed to find all dependencies\n");
 		return ERROR_FATAL;
     }
+
+    init_iscsi (nc_state.home);
 
 	/* set default in the paths. the driver will override */
 	nc_state.config_network_path[0] = '\0';
@@ -1314,164 +1318,6 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
     
 	return ret;
-}
-
-int check_iscsi(char* dev_string) {
-    if(strchr(dev_string, ',') == NULL)
-	return 0;
-    return 1;
-}
-
-void parse_target(char *dev_string) {
-    char *delimiter = ",";
-    char *brk, *part;
-    char dev_name[256];
-    snprintf(dev_name, 256, "%s", dev_string);
-
-    for (part = strtok_r(dev_name, delimiter, &brk); part != NULL; part = strtok_r(NULL, delimiter, &brk)) {
-    }  
-}
-
-char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-    char buf [MAX_PATH];
-    char *retval=NULL;
-    int pid, status, rc, len, rbytes, filedes[2];
-    
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
-    logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    
-    rc = pipe(filedes);
-    if (rc) {
-      logprintfl(EUCAERROR, "connect_iscsi_target: cannot create pipe\n");
-      return(NULL);
-    }
-
-    pid = fork();
-    if (!pid) {
-      close(filedes[0]);
-
-      if ((retval = system_output(buf)) == NULL) {
-	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
-	len = 0;
-      } else {
-	logprintfl (EUCAINFO, "connect_iscsi_target(): attached host device name: %s\n", retval);
-	len = strlen(retval);
-      } 
-      rc = write(filedes[1], &len, sizeof(int));
-      if (retval) {
-	rc = write(filedes[1], retval, sizeof(char) * len);
-      }
-
-      if (rc == len) {
-	exit(0);
-      }
-      exit(1);
-
-    } else {
-      close(filedes[1]);
-
-      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
-      if (rbytes <= 0) {
-	kill(pid, SIGKILL);
-      } else {
-	retval = malloc(sizeof(char) * (len+1));
-	bzero(retval, len+1);
-	rbytes = timeread(filedes[0], retval, len, 15);
-	if (rbytes <= 0) {
-	  kill(pid, SIGKILL);
-	}
-      }
-      
-      rc = timewait(pid, &status, 15);
-      if (rc) {
-	rc = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-      }
-    }
-    return retval;
-}
-
-int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-  int pid, retval, status;
-    logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    pid = fork();
-    if (!pid) {
-      if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
-	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
-	exit(1);
-      }
-      exit(0);
-    } else {
-      retval = timewait(pid, &status, 15);
-      if (retval) {
-	retval = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-	retval = -1;
-      }
-    }
-    return retval;
-}
-
-char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-    char buf [MAX_PATH];
-    char *retval=NULL;
-    int pid, status, rc, len, rbytes, filedes[2];
-    
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
-    logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    
-    rc = pipe(filedes);
-    if (rc) {
-      logprintfl(EUCAERROR, "get_iscsi_target: cannot create pipe\n");
-      return(NULL);
-    }
-
-    pid = fork();
-    if (!pid) {
-      close(filedes[0]);
-
-      if ((retval = system_output(buf)) == NULL) {
-	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
-	len = 0;
-      } else {
-	logprintfl (EUCAINFO, "Device: %s\n", retval);
-	len = strlen(retval);
-      } 
-      rc = write(filedes[1], &len, sizeof(int));
-      if (retval) {
-	rc = write(filedes[1], retval, sizeof(char) * len);
-      }
-
-      if (rc == len) {
-	exit(0);
-      }
-      exit(1);
-
-    } else {
-      close(filedes[1]);
-
-      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
-      if (rbytes <= 0) {
-	kill(pid, SIGKILL);
-      } else {
-	retval = malloc(sizeof(char) * (len+1));
-	bzero(retval, len+1);
-	rbytes = timeread(filedes[0], retval, len, 15);
-	if (rbytes <= 0) {
-	  kill(pid, SIGKILL);
-	}
-      }
-      
-      rc = timewait(pid, &status, 15);
-      if (rc) {
-	rc = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-      }
-    }
-    return retval;
 }
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance)

@@ -15,7 +15,7 @@ CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
-STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
 
@@ -62,6 +62,9 @@ server: $(SERVICE_SO)
 	make -C ../storage
 
 ../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
+../storage/iscsi.o: ../storage/iscsi.c 
 	make -C ../storage
 
 ../storage/http.o: ../storage/http.c ../util/misc.o ../util/data.o
