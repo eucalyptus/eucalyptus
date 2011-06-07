@@ -621,3 +621,12 @@ public class ComponentMessageType extends BaseMessage {
   }
 
   def ComponentMessageType(String component) {
+    this.component = component;
+  }
+}
+
+public class ComponentMessageResponseType extends BaseMessage {
+  def ComponentMessageResponseType() {
+  }
+}
+
