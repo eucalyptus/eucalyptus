@@ -259,7 +259,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      uri = String.format( this.getUriPattern( ) + "Internal", hostName, port, this.getCapitalizedName( ) );
     }
     try {
       URI u = new URI( uri );
