@@ -100,6 +100,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
@@ -250,7 +251,11 @@ public class ClusterAllocator extends Thread {
               DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );    
               if( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
                 break;
+              } else {
+                TimeUnit.SECONDS.sleep( 1 );
               }
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
             } catch ( Exception ex ) {
               LOG.error( ex , ex );
             }
