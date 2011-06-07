@@ -67,9 +67,17 @@ import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentMessage
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
+
+public class HeartbeatType extends EucalyptusMessage {
+  ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
+  ArrayList<ComponentType> started = new ArrayList<ComponentType>();
+  ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
+}
+public class HeartbeatResponseType extends EucalyptusMessage {}
 
 
 public class HeartbeatType extends EucalyptusMessage {
@@ -613,11 +621,3 @@ public class ComponentMessageType extends BaseMessage {
   }
 
   def ComponentMessageType(String component) {
-    this.component = component;
-  }
-}
-
-public class ComponentMessageResponseType extends BaseMessage {
-  def ComponentMessageResponseType() {
-  }
-}
