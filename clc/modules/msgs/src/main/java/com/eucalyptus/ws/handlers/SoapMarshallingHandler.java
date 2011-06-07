@@ -101,6 +101,8 @@ public class SoapMarshallingHandler extends MessageStackHandler {
           soapBuilder = new StAXSOAPModelBuilder( HoldMe.getXMLStreamReader( content ), factory , SOAP12Constants.SOAP_ENVELOPE_NAMESPACE_URI );
         }
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
+      } catch( Exception ex ) {
+        LOG.error( ex, ex );
       } finally {
         HoldMe.canHas.unlock( );
       }
