@@ -83,6 +83,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.Counters;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
 import com.google.common.collect.Lists;
@@ -246,7 +247,7 @@ public class Allocations {
       return this.partition;
     }
     
-    public void setBootableSet( BootableSet bootSet ) {
+    public void setBootableSet( BootableSet bootSet ) throws EucalyptusCloudException {
       this.vmTypeInfo = bootSet.populateVirtualBootRecord( this.vmType );
       this.bootSet = bootSet;
     }
