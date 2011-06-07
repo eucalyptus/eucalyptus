@@ -129,7 +129,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   adb_detachVolumeType_t *dvt=NULL;
   
   int rc;
-  axis2_bool_t status=AXIS2_TRUE;
+  axis2_bool_t status=AXIS2_TRUE, forceBool=AXIS2_FALSE;
   char statusMessage[256];
   char *volumeId=NULL, *instanceId=NULL, *remoteDev=NULL, *localDev=NULL;
   int force;
@@ -143,7 +143,12 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
   remoteDev = adb_detachVolumeType_get_remoteDev(dvt, env);
   localDev = adb_detachVolumeType_get_localDev(dvt, env);
-  force = adb_detachVolumeType_get_force(dvt, env);
+  forceBool = adb_detachVolumeType_get_force(dvt, env);
+  if (forceBool == AXIS2_TRUE) {
+    force = 1;
+  } else {
+    force = 0;
+  }
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {

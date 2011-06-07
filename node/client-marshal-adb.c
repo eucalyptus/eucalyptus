@@ -716,7 +716,11 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncDetachVolumeType_set_volumeId(request, env, volumeId);
     adb_ncDetachVolumeType_set_remoteDev(request, env, remoteDev);
     adb_ncDetachVolumeType_set_localDev(request, env, localDev);
-    adb_ncDetachVolumeType_set_force(request, env, force);
+    if (force) {
+      adb_ncDetachVolumeType_set_force(request, env, AXIS2_TRUE);
+    } else {
+      adb_ncDetachVolumeType_set_force(request, env, AXIS2_FALSE);
+    }
     adb_ncDetachVolume_set_ncDetachVolume(input, env, request);
 
     int status = 0;
