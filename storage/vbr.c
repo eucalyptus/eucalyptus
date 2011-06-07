@@ -1559,6 +1559,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             do_create = FALSE;
             
         } else {
+
             if (root->vbr && root->vbr->type == NC_RESOURCE_EBS)
                 goto create; // EBS artifacts have no disk manifestation and no dependencies, so cut to the chase
 

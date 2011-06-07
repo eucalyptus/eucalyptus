@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
@@ -19,7 +20,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class NodeResourceAllocator implements ResourceAllocator {
@@ -27,8 +27,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
   private static String ALLOCATOR = "euca.cluster.allocator";
   
   @Override
-  public void allocate( VmAllocationInfo vmInfo ) throws Exception {
-    RunInstancesType request = vmInfo.getRequest( );
+  public void allocate( Allocation allocInfo ) throws Exception {
+    RunInstancesType request = allocInfo.getRequest( );
     String clusterName = request.getAvailabilityZone( );
     String vmTypeName = request.getInstanceType( );
     final int minAmount = request.getMinCount( );
@@ -55,7 +55,6 @@ public class NodeResourceAllocator implements ResourceAllocator {
       if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
         throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
-        List<ResourceToken> tokens = Lists.newArrayList( );
         for ( ClusterNodeState state : Lists.transform( authorizedClusters, new Function<Cluster, ClusterNodeState>( ) {
           @Override
           public ClusterNodeState apply( Cluster arg0 ) {
@@ -66,14 +65,12 @@ public class NodeResourceAllocator implements ResourceAllocator {
             int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
               ? state.getAvailability( vmTypeName ).getAvailable( )
               : remaining;
-            ResourceToken token = state.getResourceAllocation( ctx.getCorrelationId( ), ctx.getUserFullName( ), vmTypeName, tryAmount, maxAmount );
+            
+            ResourceToken token = allocInfo.requestResourceToken( state, vmTypeName, tryAmount, maxAmount );
             remaining -= token.getAmount( );
-            tokens.add( token );
           } catch ( Throwable t ) {
             if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
-              for ( ResourceToken token : tokens ) {
-                Clusters.getInstance( ).lookup( token.getCluster( ) ).getNodeState( ).releaseToken( token );
-              }
+              allocInfo.releaseAllocationTokens( );
               throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
             } else {
               LOG.error( t, t );
@@ -81,7 +78,6 @@ public class NodeResourceAllocator implements ResourceAllocator {
             }
           }
         }
-        vmInfo.getAllocationTokens( ).addAll( tokens );
       }
     }
   }
@@ -112,7 +108,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
       }
       if ( sorted.isEmpty( ) ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster is available on which you have permissions to run instances." );
+        throw new NotEnoughResourcesAvailable( "Not enough resources: no availability zone is available in which you have permissions to run instances." );
       } else {
         return Lists.newArrayList( sorted.values( ) );
       }
@@ -129,10 +125,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
   }
   
   @Override
-  public void fail( VmAllocationInfo vmInfo, Throwable t ) {
-    for ( ResourceToken token : vmInfo.getAllocationTokens( ) ) {
-      Clusters.getInstance( ).lookup( token.getCluster( ) ).getNodeState( ).releaseToken( token );
-    }
+  public void fail( Allocation allocInfo, Throwable t ) {
+    allocInfo.releaseAllocationTokens( );
   }
   
 }

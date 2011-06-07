@@ -190,12 +190,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           try {
             AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
             return true;
-          } catch ( ExecutionException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
-          } catch ( InterruptedException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
+          } catch ( Throwable t ) {
+            return input.filterExceptions( t );
           }
         } else {
           return false;
@@ -209,12 +205,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           try {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
-          } catch ( ExecutionException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
-          } catch ( InterruptedException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
+          } catch ( Throwable t ) {
+            return input.filterExceptions( t );
           } finally {
             try {
               Clusters.getInstance( ).enable( input.getName( ) );
@@ -240,12 +232,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           try {
             AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
-          } catch ( ExecutionException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
-          } catch ( InterruptedException ex ) {
-            input.errors.add( ex.getCause( ) );
-            return false;
+          } catch ( Throwable t ) {
+            return input.filterExceptions( t );
           }
         } else {
           return false;
@@ -275,23 +263,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
-          } catch ( final ExecutionException e ) {
-            if ( e.getCause( ) instanceof FailedRequestException ) {
-              LOG.error( e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
-              LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else {
-              LOG.error( e, e );
-              parent.errors.add( e );
-            }
-          } catch ( final InterruptedException e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
+          } catch ( Throwable t ) {
+            parent.filterExceptions( t );
           }
         }
       };
@@ -465,7 +438,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           try {
             Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
       }
@@ -626,9 +599,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             this.configuration.info( error );
           }
         } catch ( InterruptedException ex1 ) {
-          LOG.error( ex1 , ex1 );
+          LOG.error( ex1, ex1 );
         } catch ( ExecutionException ex1 ) {
-          LOG.error( ex1 , ex1 );
+          LOG.error( ex1, ex1 );
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;
@@ -933,6 +906,31 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     } catch ( final CancellationException ex ) {
       /** operation self-cancelled **/
     }
+  }
+  
+  private <T extends Throwable> boolean filterExceptions( final T t ) {
+    if ( t instanceof ExecutionException ) {
+      Throwable fin = t.getCause( ) != null
+        ? t.getCause( )
+        : t;
+      if ( fin instanceof FailedRequestException ) {
+        LOG.error( fin );
+      } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+        LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
+        LOG.trace( fin, fin );
+      } else {
+        LOG.error( fin, fin );
+      }
+      this.errors.add( fin );
+    } else if ( t instanceof InterruptedException ) {
+      Thread.currentThread( ).interrupt( );
+      LOG.error( t );
+    } else {
+      this.errors.add( t );
+      LOG.error( t );
+      LOG.trace( t, t );
+    }
+    return false;
   }
   
   public void check( ) throws CheckException {

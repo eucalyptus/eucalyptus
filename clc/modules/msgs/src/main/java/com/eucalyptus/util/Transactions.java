@@ -16,10 +16,10 @@ import com.google.common.collect.Lists;
 public class Transactions {
   private static Logger                        LOG  = Logger.getLogger( Transactions.class );
   private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
-  
-  public static <T> EntityWrapper<T> join( ) {
-    return ( EntityWrapper<T> ) dbtl.get( );
-  }
+//  
+//  public static <T> EntityWrapper<T> join( ) {
+//    return ( EntityWrapper<T> ) dbtl.get( );
+//  }
   
   /**
    * TODO:GRZE: make this friendly wrt multiple types
@@ -65,6 +65,7 @@ public class Transactions {
     return Lists.newArrayList( );
   }
   
+  @Deprecated
   public static <T> T one( T search, final Tx<T> c ) throws ExecutionException {
     return one( search, new Callback<T>( ) {
       
@@ -87,7 +88,33 @@ public class Transactions {
     } );
   }
   
-  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      boolean r = false;
+      if( r = c.apply( entity ) ) {
+        db.delete( entity );
+        db.commit( );
+        return true;
+      } else {
+        db.commit( );
+        return false;
+      }
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+
+  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -107,7 +134,7 @@ public class Transactions {
     }
   }
   
-  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -198,4 +225,5 @@ public class Transactions {
     }
     return res;
   }
+
 }

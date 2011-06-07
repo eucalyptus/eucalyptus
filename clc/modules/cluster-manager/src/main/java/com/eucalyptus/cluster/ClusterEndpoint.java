@@ -76,6 +76,7 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -92,7 +93,6 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
@@ -135,9 +135,9 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
-  public void enqueue( VmAllocationInfo vmAllocInfo ) {
-    for ( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {
-      ClusterAllocator.create( t, vmAllocInfo );
+  public void enqueue( Allocation allocInfo ) {
+    for ( ResourceToken t : allocInfo.getAllocationTokens( ) ) {
+      ClusterAllocator.create( t, allocInfo );
     }
     RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
