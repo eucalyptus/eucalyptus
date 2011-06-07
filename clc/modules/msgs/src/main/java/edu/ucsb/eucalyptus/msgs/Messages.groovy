@@ -319,7 +319,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : "sda", type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
   public void setRoot( String imageId, String location, Long sizeBytes ) {
@@ -345,7 +345,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
-      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "sda1" || vbr.guestDeviceName == "xvda" ) };
+      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "sda1" || vbr.guestDeviceName == "sda" || vbr.guestDeviceName == "xvda" ) };
     }
     if( ret != null ) {
       return ret;
