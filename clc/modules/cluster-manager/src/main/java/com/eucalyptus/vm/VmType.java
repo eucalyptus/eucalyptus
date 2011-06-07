@@ -182,7 +182,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   
   public VmTypeInfo getAsVmTypeInfo( ) {
     return new VmTypeInfo( this.getName( ), this.getMemory( ), this.getDisk( ), this.getCpu( ), "sda1" ) {{
-      this.setSwap( "sda2",  524288l );
+      this.setSwap( "sda2",  512*1024l*1024l );
     }};
   }
   

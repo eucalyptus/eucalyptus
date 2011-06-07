@@ -62,16 +62,6 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
-import java.net.URI
-import java.util.ArrayList
-import java.util.NoSuchElementException
-import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentMessage
-import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.component.ServiceConfigurations
-import com.eucalyptus.component.id.*
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
 
 public class HeartbeatType extends EucalyptusMessage {
@@ -320,6 +310,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : "sda", type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+    this.virtualBootRecord.removeAll( this.virtualBootRecord.collect{ VirtualBootRecord vbr -> vbr.type == "swap" } );
   }
 
   public void setRoot( String imageId, String location, Long sizeBytes ) {
