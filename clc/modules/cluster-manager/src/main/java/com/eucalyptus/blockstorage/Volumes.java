@@ -134,7 +134,6 @@ public class Volumes {
           ServiceDispatcher.lookup( sc ).send( req );
         } catch ( Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
-          Transactions.join( ).delete( t );
           throw new UndeclaredThrowableException( ex );
         }
       }
