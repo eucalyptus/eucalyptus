@@ -187,6 +187,13 @@ int gen_instance_xml (const ncInstance * instance)
             xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
             _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
             _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
+            if (nc_state.config_use_virtio_root) {
+                char virtiostr[SMALL_CHAR_BUFFER_SIZE];
+                snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
+                virtiostr[0] = 'v';
+                _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
+                _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
+            }
             _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
             _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
         }

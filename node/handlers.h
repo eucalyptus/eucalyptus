@@ -104,9 +104,6 @@ struct nc_state_t {
 	char virsh_cmd_path[MAX_PATH];
 	char xm_cmd_path[MAX_PATH];
 	char detach_cmd_path[MAX_PATH];
-	char connect_storage_cmd_path[MAX_PATH];
-	char disconnect_storage_cmd_path[MAX_PATH];
-	char get_storage_cmd_path[MAX_PATH];
 	// virtio
 	int config_use_virtio_net;	// KVM: use virtio for network
 	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
@@ -272,12 +269,7 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
-int check_iscsi(char* dev_string);
-//void parse_target(char *dev_string);
-char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
-int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
-char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string);
-
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml);
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 
 // bundling structure

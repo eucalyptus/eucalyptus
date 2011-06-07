@@ -54,13 +54,10 @@ public class QueryBuilder {
   }
   
   public String url( String base ) {
-    try {
-      StringBuilder sb = new StringBuilder( );
-      sb.append( base ).append( SHARP ).append( UriUtils.encodeFragment( this.query.toString( ), "UTF-8" ) );
-      return sb.toString( );
-    } catch ( UnsupportedEncodingException e ) {
-      throw new RuntimeException( "Failed to use UTF-8 in URL encoding" );
-    }    
+    if ( base != null ) {
+      return base + url( );
+    }
+    return url( );
   }
   
 }

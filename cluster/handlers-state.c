@@ -190,6 +190,7 @@ int doEnableService(ncMetadata *ccMeta) {
   config->kick_network = 1;
   config->kick_dhcp = 1;
   config->kick_enabled = 1;
+  ccChangeState(ENABLED);
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");

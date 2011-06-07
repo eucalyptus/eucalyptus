@@ -81,6 +81,7 @@
 #include "walrus.h"
 #include "blobstore.h"
 #include "diskutil.h"
+#include "iscsi.h"
 
 #define VBR_SIZE_SCALING 1024 // TODO: remove this adjustment after CLC sends bytes instead of KBs
 
@@ -251,28 +252,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
         }
         
         {
-            int letters_len = 3; // e.g. "sda"
-            if (vbr->guestDeviceName [0] == 'x') letters_len = 4; // e.g., "xvda"
             char t = vbr->guestDeviceName [0]; // type
-            char d = vbr->guestDeviceName [letters_len-2]; // the 'd'
-            char n = vbr->guestDeviceName [letters_len-1]; // the disk number
-            long long int p = 0;
-            if (strlen (vbr->guestDeviceName) > letters_len) {
-                errno = 0;
-                p = strtoll (vbr->guestDeviceName + letters_len, NULL, 10);
-                if (errno!=0) { 
-                    logprintfl (EUCAERROR, "Error: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
-                    return ERROR; 
-                } 
-                if (p<1 || p>EUCA_MAX_PARTITIONS) {
-                    logprintfl (EUCAERROR, "Error: unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
-                    return ERROR;
-                }
-                vbr->partitionNumber = p;
-            } else {
-                vbr->partitionNumber = 0;
-            }
-            
             switch (t) {
             case 'h': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_IDE; break;
             case 's': vbr->guestDeviceType = DEV_TYPE_DISK;   vbr->guestDeviceBus = BUS_TYPE_SCSI; break;
@@ -283,19 +263,52 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
                 logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
                 return ERROR; 
             }
-            if (d!='d') {
-                logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                return ERROR; 
+
+            int letters_len = 3; // e.g. "sda"
+            if (t == 'x') letters_len = 4; // e.g., "xvda"
+            if (t == 'f') letters_len = 2; // e.g., "fd0"
+            char d = vbr->guestDeviceName [letters_len-2]; // when 3+, the 'd'
+            char n = vbr->guestDeviceName [letters_len-1]; // when 3+, the disk number
+            if (strlen (vbr->guestDeviceName) > letters_len) {
+                long long int p = 0; // partition or floppy drive number
+                errno = 0;
+                p = strtoll (vbr->guestDeviceName + letters_len, NULL, 10);
+                if (errno!=0) { 
+                    logprintfl (EUCAERROR, "Error: failed to parse partition number in guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    return ERROR; 
+                } 
+                if (p<0 || p>EUCA_MAX_PARTITIONS) {
+                    logprintfl (EUCAERROR, "Error: unexpected partition or disk number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                    return ERROR;
+                }
+                if (t=='f') {
+                    vbr->diskNumber = p;
+                } else {
+                    if (p<1) {
+                        logprintfl (EUCAERROR, "Error: unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                        return ERROR;
+                    }
+                    vbr->partitionNumber = p;
+                }
+            } else {
+                vbr->partitionNumber = 0;
             }
-            assert (EUCA_MAX_DISKS >= 'z'-'a');
-            if (!(n>='a' && n<='z')) {
-                logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
-                return ERROR; 
+            
+            if (vbr->guestDeviceType != DEV_TYPE_FLOPPY) {
+                if (d!='d') {
+                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    return ERROR; 
+                }
+                assert (EUCA_MAX_DISKS >= 'z'-'a');
+                if (!(n>='a' && n<='z')) {
+                    logprintfl (EUCAERROR, "Error: failed to parse disk type guestDeviceName '%s'\n", vbr->guestDeviceName);
+                    return ERROR; 
+                }
+                vbr->diskNumber = n - 'a';
             }
-            vbr->diskNumber = n - 'a';
         }
     }
-    
+
     // parse ID
     if (strlen (vbr->id)<4) {
         logprintfl (EUCAERROR, "Error: failed to parse VBR resource ID '%s' (use 'none' when no ID)\n", vbr->id);
@@ -747,17 +760,47 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     if (diskutil_grub_mbr (blockblob_get_dev (a->bb), root_part)!=OK) {
         logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
-        goto unmount;
+        goto cleanup;
     }
-
     
     ret = OK;
  cleanup:
     return ret;
 }
 
-static int iqn_creator (artifact * a) // TODO!
+static int iqn_creator (artifact * a)
 {
+    assert (a);
+    virtualBootRecord * vbr = a->vbr;
+    assert (vbr);
+
+    char * dev = connect_iscsi_target (vbr->resourceLocation);
+    if (!dev || !strstr(dev, "/dev")) {
+        logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", a->instanceId);
+        return ERROR;
+    } 
+    // update VBR with device location
+    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    vbr->backingType = SOURCE_TYPE_BLOCK;
+
+    return OK;
+}
+
+static int aoe_creator (artifact * a)
+{
+    assert (a);
+    virtualBootRecord * vbr = a->vbr;
+    assert (vbr);
+
+    char * dev = vbr->resourceLocation;
+    if (!dev || !strstr(dev, "/dev") || check_block(dev)!=0) {
+        logprintfl(EUCAERROR, "[%s] error: failed to locate AoE device %s\n", a->instanceId, dev);
+        return ERROR;
+    } 
+    // update VBR with device location
+    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    vbr->backingType = SOURCE_TYPE_BLOCK;
+
     return OK;
 }
 
@@ -991,7 +1034,6 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
     case NC_LOCATION_URL:
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
-    case NC_LOCATION_AOE:
         logprintfl (EUCAERROR, "[%s] error: location of type %d is NOT IMPLEMENTED\n", current_instanceId, vbr->locationType);
         return NULL;
 
@@ -1023,6 +1065,13 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
         assert (!make_work_copy);
         assert (!must_be_file);
         a = art_alloc (NULL, NULL, -1, FALSE, FALSE, iqn_creator, vbr);
+        break;
+    }
+
+    case NC_LOCATION_AOE: {
+        assert (!make_work_copy);
+        assert (!must_be_file);
+        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, aoe_creator, vbr);
         break;
     }
 
