@@ -75,9 +75,9 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -180,32 +180,26 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
     return 0;
   }
   
-  public VmTypeInfo getAsVmTypeInfo( ) {
-    return new VmTypeInfo( this.getName( ), this.getMemory( ), this.getDisk( ), this.getCpu( ), "sda1" ) {{
-      this.setSwap( "sda2",  524288l );
-    }};
-  }
-  
   @Override
   public String toString( ) {
     return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
   }
-
+  
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
   }
-
+  
   @Override
   public String getOwnerAccountId( ) {
     return FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( );
   }
-
+  
   @Override
   public FullName getOwner( ) {
     return FakePrincipals.SYSTEM_USER_ERN;
   }
-
+  
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )
@@ -213,5 +207,5 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
                           .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
   }
-
+  
 }

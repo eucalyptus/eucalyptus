@@ -73,9 +73,6 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
-  LDAP( BaseDirectory.VAR, "ldap" ),
-  MODULES( BaseDirectory.VAR, "modules" ),
-/* TODO: wtf is this? SERVICES( BaseDirectory.VAR, "services" ),*/  
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),

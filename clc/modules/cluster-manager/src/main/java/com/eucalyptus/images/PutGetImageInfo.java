@@ -63,6 +63,8 @@
 
 package com.eucalyptus.images;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
@@ -71,66 +73,82 @@ import com.eucalyptus.cloud.Image;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
+  @Column( name = "metadata_image_manifest_path" )
+  private String manifestLocation;
+  
   @Lob
   @Column( name = "metadata_image_signature" )
-  private String                signature;
+  private String signature;
   
-  @Column( name = "metadata_image_path" )
-  private String                imageLocation;
+  @Column( name = "metadata_image_unencrypted_checksum" )
+  private String checksum;
   
-  @Column( name = "metadata_image_size" )
-  private Long                  imageSize;
+  @Column( name = "metadata_image_unencrypted_checksum_type" )
+  private String checksumType;
   
   @Column( name = "metadata_image_bundle_size" )
-  private Long                  imageBundleSize;
-
-  protected PutGetImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription,
-                    final String imageLocation, final Long imageSize, final Long imageBundleSize,
-                    final Image.Architecture arch, final Image.Platform platform ) {
-    super( userFullName, imageId, imageName, imageDescription, arch, platform );
-    this.imageLocation = imageLocation;
-    this.imageSize = imageSize;
-    this.imageBundleSize = imageBundleSize;
+  private Long   bundleSizeBytes;
+  
+  protected PutGetImageInfo( final UserFullName userFullName, final String imageId,
+                             final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                             final Image.Architecture arch, final Image.Platform platform,
+                             final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
+    super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform );
+    assertThat( manifestLocation, notNullValue( ) );
+    this.manifestLocation = manifestLocation;
+    this.bundleSizeBytes = imageBundleSizeBytes;
+    this.checksum = imageChecksum;
+    this.checksumType = imageChecksumType;
   }
-
-  protected PutGetImageInfo( ) {
-    super( );
+  
+  protected PutGetImageInfo( final Image.Type imageType ) {
+    super( imageType );
   }
-
-  protected PutGetImageInfo( String imageId ) {
-    super( imageId );
+  
+  protected PutGetImageInfo( final Image.Type imageType, final String imageId ) {
+    super( imageType, imageId );
   }
-
+  
+  @Override
   public String getSignature( ) {
     return this.signature;
   }
-
-  public void setSignature( String signature ) {
+  
+  public void setSignature( final String signature ) {
     this.signature = signature;
   }
-
-  public String getImageLocation( ) {
-    return this.imageLocation;
+  
+  @Override
+  public String getManifestLocation( ) {
+    return this.manifestLocation;
   }
-
-  public void setImageLocation( String imageLocation ) {
-    this.imageLocation = imageLocation;
+  
+  public void setManifestLocation( final String manifestLocation ) {
+    this.manifestLocation = manifestLocation;
   }
-
-  public Long getImageSize( ) {
-    return this.imageSize;
+  
+  public Long getBundleSizeBytes( ) {
+    return this.bundleSizeBytes;
   }
-
-  public void setImageSize( Long imageSize ) {
-    this.imageSize = imageSize;
+  
+  public void setBundleSizeBytes( final Long bundleSizeBytes ) {
+    this.bundleSizeBytes = bundleSizeBytes;
   }
-
-  public Long getImageBundleSize( ) {
-    return this.imageBundleSize;
+  
+  public String getChecksum( ) {
+    return this.checksum;
   }
-
-  public void setImageBundleSize( Long imageBundleSize ) {
-    this.imageBundleSize = imageBundleSize;
+  
+  public void setChecksum( String checksum ) {
+    this.checksum = checksum;
   }
-
+  
+  public String getChecksumType( ) {
+    return this.checksumType;
+  }
+  
+  public void setChecksumType( String checksumType ) {
+    this.checksumType = checksumType;
+  }
+  
 }

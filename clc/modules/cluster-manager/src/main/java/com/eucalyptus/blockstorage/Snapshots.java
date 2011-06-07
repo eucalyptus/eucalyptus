@@ -147,11 +147,7 @@ public class Snapshots {
   }
   
   public static Snapshot named( final String snapshotId ) {
-    return new Snapshot( ) {
-      {
-        setDisplayName( snapshotId );
-      }
-    };
+    return new Snapshot( ( UserFullName ) null, snapshotId );
   }
   
   public static Snapshot lookup( UserFullName userFullName, String snapshotId ) throws ExecutionException {

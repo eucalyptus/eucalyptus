@@ -96,7 +96,7 @@ public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
   public static void triggerCaching( Image.StaticDiskImage imgInfo ) {
-    String[] parts = imgInfo.getImageLocation( ).split( "/" );
+    String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
@@ -104,7 +104,7 @@ public class WalrusUtil {
   }
   
   public static void invalidate( Image.StaticDiskImage imgInfo ) {
-    String[] parts = imgInfo.getImageLocation( ).split( "/" );
+    String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     try {
       ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}

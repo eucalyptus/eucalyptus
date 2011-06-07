@@ -63,8 +63,6 @@
  */
 package com.eucalyptus.ws.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
@@ -75,18 +73,16 @@ import org.mule.message.ExceptionMessage;
 import com.eucalyptus.auth.euare.ErrorResponseType;
 import com.eucalyptus.auth.euare.ErrorType;
 import com.eucalyptus.auth.euare.EuareException;
-import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import com.eucalyptus.records.EventRecord;
 
 public class EuareReplyQueue {
   private static Logger                                 LOG                   = Logger.getLogger( EuareReplyQueue.class );
