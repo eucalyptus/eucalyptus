@@ -58,6 +58,7 @@
   <model name="empyrean-internal">
     <service name="EmpyreanInternal">
       <inbound>
+        <inbound-endpoint ref="EmpyreanInternalWS" />
         <inbound-endpoint ref="EmpyreanInternalVM" />
       </inbound>
       <component class="com.eucalyptus.ws.EmpyreanService" />
