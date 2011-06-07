@@ -11,7 +11,7 @@
   <endpoint name="EmpyreanVM" address="vm://Empyrean" synchronous="false" />
   <endpoint name="EmpyreanInternalVM" address="vm://EmpyreanInternal" synchronous="true" />
   <endpoint name="EmpyreanReplyQueueVM" address="vm://EmpyreanReplyQueue" synchronous="false" />
-  <euca:endpoint name="EmpyreanWS" connector-ref="eucaws" address="http://127.0.0.1:8773/internal/Empyrean"
+  <euca:endpoint name="EmpyreanInternalWS" connector-ref="eucaws" address="http://127.0.0.1:8773/internal/Empyrean"
     synchronous="true" />
   <euca:endpoint name="EmpyreanAltInternalWS" connector-ref="eucaws"
     address="http://127.0.0.1:8773/internal/EmpyreanInternal" synchronous="true" />
