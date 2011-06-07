@@ -1625,8 +1625,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact
                 blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
-		if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
-		    update_vbr_with_backing_info (root);
+            } else {
+                if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
+                	update_vbr_with_backing_info (root);
             }
         }
 
