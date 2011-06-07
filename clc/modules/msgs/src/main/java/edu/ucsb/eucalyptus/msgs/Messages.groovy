@@ -318,8 +318,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : "sda", type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
-    this.virtualBootRecord.removeAll( this.virtualBootRecord.collect{ VirtualBootRecord vbr -> vbr.type == "swap" } );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
   public void setRoot( String imageId, String location, Long sizeBytes ) {
@@ -334,7 +333,7 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
   }
 
-  public void setSwap( String deviceName, Long sizeBytes ) {
+  protected void setSwap( String deviceName, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
 
