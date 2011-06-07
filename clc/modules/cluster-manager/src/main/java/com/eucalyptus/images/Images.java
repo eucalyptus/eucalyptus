@@ -21,6 +21,7 @@ import com.eucalyptus.util.TransactionFireException;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -139,7 +140,6 @@ public class Images {
       return i;
     }
   }
-
   
   @TypeMapper
   public enum MachineImageDetails implements TypeMapping<MachineImageInfo, ImageDetails> {
@@ -304,6 +304,7 @@ public class Images {
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }
+  
   public static BlockStorageImageInfo exampleBlockStorageWithImageId( final String imageId ) {
     return new BlockStorageImageInfo( imageId );
   }
@@ -352,7 +353,7 @@ public class Images {
   }
   
   public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription,
-                                                   String eki, String eri, 
+                                                   String eki, String eri,
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     Image.Architecture imageArch = Image.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
@@ -366,19 +367,25 @@ public class Images {
                                             + " because of: you must the owner of the source snapshot." );
       }
       Integer snapVolumeSize = snap.getVolumeSize( );
-      Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null ) ? rootBlockDevice.getEbs( ).getVolumeSize( ) : -1; 
-      suppliedVolumeSize = ( suppliedVolumeSize == null ) ? rootBlockDevice.getSize( ) : suppliedVolumeSize;
-      Integer targetVolumeSizeGB = ( snapVolumeSize <= suppliedVolumeSize ) ? suppliedVolumeSize : snapVolumeSize;
+      Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null )
+        ? rootBlockDevice.getEbs( ).getVolumeSize( )
+        : -1;
+      suppliedVolumeSize = ( suppliedVolumeSize == null )
+        ? rootBlockDevice.getSize( )
+        : suppliedVolumeSize;
+      Integer targetVolumeSizeGB = ( snapVolumeSize <= suppliedVolumeSize )
+        ? suppliedVolumeSize
+        : snapVolumeSize;
       Long imageSizeBytes = targetVolumeSizeGB * 1024l * 1024l * 1024l;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
       String imageId = generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId );
 //GRZE:REVIEW: almost certainly do not want to assert a default kernel/ramdisk for bfe.
 //      eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
 //      eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
-
-      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes, 
-                                                             imageArch, imagePlatform, 
-                                                             eki, eri, 
+      
+      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
+                                                             imageArch, imagePlatform,
+                                                             eki, eri,
                                                              snap.getDisplayName( ), targetDeleteOnTermination );
       EntityWrapper<BlockStorageImageInfo> db = EntityWrapper.get( BlockStorageImageInfo.class );
       try {
@@ -391,7 +398,7 @@ public class Images {
         db.rollback( );
         throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
       }
-
+      
       return ret;
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
@@ -406,10 +413,18 @@ public class Images {
     String imageName = ( imageNameArg != null )
       ? imageNameArg
       : manifest.getName( );
-    eki = ( eki != null ) ? eki : manifest.getKernelId( );
-    eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
-    eri = ( eri != null ) ? eri : manifest.getRamdiskId( );
-    eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+    eki = ( eki != null )
+      ? eki
+      : manifest.getKernelId( );
+    eki = ( eki != null )
+      ? eki
+      : ImageConfiguration.getInstance( ).getDefaultKernelId( );
+    eri = ( eri != null )
+      ? eri
+      : manifest.getRamdiskId( );
+    eri = ( eri != null )
+      ? eri
+      : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
@@ -446,11 +461,39 @@ public class Images {
 //      imageInfo.addProductCode( p );
 //    }
 //    imageInfo.grantPermission( ctx.getAccount( ) );
+      maybeUpdateDefault( ret );
       LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
       if ( ret instanceof Image.StaticDiskImage ) {
         WalrusUtil.triggerCaching( ( StaticDiskImage ) ret );
       }
       return ret;
+    }
+  }
+
+  private static void maybeUpdateDefault( PutGetImageInfo ret ) {
+    final String id = ret.getDisplayName( );
+    if ( Image.Type.kernel.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultKernelId( ) == null ) {
+      try {
+        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
+          @Override
+          public void fire( ImageConfiguration t ) {
+            t.setDefaultKernelId( id );
+          }
+        } );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex , ex );
+      }
+    } else if ( Image.Type.ramdisk.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) == null ) {
+      try {
+        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
+          @Override
+          public void fire( ImageConfiguration t ) {
+            t.setDefaultRamdiskId( id );
+          }
+        } );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex , ex );
+      }
     }
   }
   
