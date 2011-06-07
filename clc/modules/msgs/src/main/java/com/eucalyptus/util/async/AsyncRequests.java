@@ -71,9 +71,12 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
-  public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, A msg ) throws Throwable {
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Throwable {
     try {
       return newRequest( new MessageCallback<A, B>( ) {
+        {
+          this.setRequest( msg );
+        }
         
         @Override
         public void fire( B msg ) {
